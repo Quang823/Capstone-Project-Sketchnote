@@ -160,6 +160,61 @@ export default function NavigationDrawer({
               Thư viện
             </Text>
           </Pressable>
+
+          {/* New: Blogs */}
+          <Pressable 
+            style={[
+              drawerStyles.drawerItem, 
+              activeNavItem === 'blogAll' && drawerStyles.drawerItemActive
+            ]}
+            onPress={() => onNavPress('blogAll')}
+          >
+            <View style={[
+              drawerStyles.iconContainer,
+              activeNavItem === 'blogAll' && drawerStyles.iconContainerActive
+            ]}>
+              <Icon 
+                name="dynamic-feed" 
+                size={20} 
+                color={activeNavItem === 'blogAll' ? "#FFFFFF" : "#6B7280"} 
+              />
+            </View>
+            <Text 
+              style={[
+                drawerStyles.drawerText,
+                activeNavItem === 'blogAll' && drawerStyles.drawerTextActive
+              ]}
+            >
+              Xem tất cả blog
+            </Text>
+          </Pressable>
+
+          <Pressable 
+            style={[
+              drawerStyles.drawerItem, 
+              activeNavItem === 'blogMine' && drawerStyles.drawerItemActive
+            ]}
+            onPress={() => onNavPress('blogMine')}
+          >
+            <View style={[
+              drawerStyles.iconContainer,
+              activeNavItem === 'blogMine' && drawerStyles.iconContainerActive
+            ]}>
+              <Icon 
+                name="person-outline" 
+                size={20} 
+                color={activeNavItem === 'blogMine' ? "#FFFFFF" : "#6B7280"} 
+              />
+            </View>
+            <Text 
+              style={[
+                drawerStyles.drawerText,
+                activeNavItem === 'blogMine' && drawerStyles.drawerTextActive
+              ]}
+            >
+              Blog của tôi
+            </Text>
+          </Pressable>
           
           <View style={drawerStyles.divider} />
           

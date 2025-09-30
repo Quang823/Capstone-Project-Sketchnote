@@ -183,6 +183,12 @@ export default function HomeScreen() {
           case 'courses':
             navigation.navigate("CoursesScreen");
             break;
+          case 'blogAll':
+            navigation.navigate("BlogList");
+            break;
+          case 'blogMine':
+            navigation.navigate("BlogMyList");
+            break;
           case 'create':
             navigation.navigate("DrawingScreen");
             break;
