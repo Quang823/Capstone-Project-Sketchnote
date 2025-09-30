@@ -1,16 +1,33 @@
 import { Skia } from "@shopify/react-native-skia";
 
-export function makePathFromPoints(points) {
+/**
+ * Vẽ path từ mảng điểm. Nếu smooth=true thì dùng quadratic để mượt hơn. Optimized for GoodNotes-like smooth rendering.
+ */
+export function makePathFromPoints(points, smooth = true) {
   const path = Skia.Path.Make();
   if (!points || points.length === 0) return path;
   path.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length; i++) {
-    const p = points[i];
-    path.lineTo(p.x, p.y);
+
+  if (smooth) {
+    for (let i = 1; i < points.length - 1; i++) {
+      const midX = (points[i].x + points[i + 1].x) / 2;
+      const midY = (points[i].y + points[i + 1].y) / 2;
+      path.quadTo(points[i].x, points[i].y, midX, midY);
+    }
+    const last = points[points.length - 1];
+    path.lineTo(last.x, last.y);
+  } else {
+    for (let i = 1; i < points.length; i++) {
+      path.lineTo(points[i].x, points[i].y);
+    }
   }
+
   return path;
 }
 
+/**
+ * Giảm opacity khi dùng bút chì.
+ */
 export function applyPencilAlpha(color) {
   try {
     const hex = color.replace("#", "");
@@ -29,6 +46,9 @@ export function isInsidePage(x, y, page) {
   );
 }
 
+/**
+ * Kiểm tra stroke có khép kín không (dùng cho shape detection).
+ */
 export function isStrokeClosed(points) {
   if (!points || points.length < 4) return false;
   const first = points[0];
@@ -39,6 +59,9 @@ export function isStrokeClosed(points) {
   return distSq < 4000;
 }
 
+/**
+ * Heuristic nhận diện shape từ points.
+ */
 export function detectShapeFromPoints(points) {
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
@@ -51,17 +74,14 @@ export function detectShapeFromPoints(points) {
 
   if (w < 10 || h < 10) return null;
 
-  // Square
   if (Math.abs(w - h) < Math.max(15, Math.min(w, h) * 0.2)) {
     return { tool: "square", shape: { x: minX, y: minY, w: h, h: h } };
   }
 
-  // Rectangle
   if (Math.abs(w - h) > Math.max(20, Math.min(w, h) * 0.3)) {
     return { tool: "rect", shape: { x: minX, y: minY, w, h } };
   }
 
-  // Circle
   if (Math.abs(w - h) < Math.max(30, Math.min(w, h) * 0.4)) {
     return {
       tool: "circle",
@@ -69,7 +89,6 @@ export function detectShapeFromPoints(points) {
     };
   }
 
-  // Triangle heuristic
   if (points.length >= 3) {
     const p1 = points[0];
     const p2 = points[Math.floor(points.length / 2)];
@@ -80,13 +99,15 @@ export function detectShapeFromPoints(points) {
     };
   }
 
-  // Oval fallback
   return {
     tool: "oval",
     shape: { cx: minX + w / 2, cy: minY + h / 2, rx: w / 2, ry: h / 2 },
   };
 }
 
+/**
+ * Build shape data từ points khi tool đã rõ ràng.
+ */
 export function buildShapeFromPoints(tool, points) {
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
@@ -123,7 +144,153 @@ export function buildShapeFromPoints(tool, points) {
           y3: maxY,
         },
       };
+    case "line": {
+      const start = points[0];
+      const end = points[points.length - 1];
+      return { shape: { x1: start.x, y1: start.y, x2: end.x, y2: end.y } };
+    }
+    case "arrow": {
+      const start = points[0];
+      const end = points[points.length - 1];
+      return { shape: { x1: start.x, y1: start.y, x2: end.x, y2: end.y } };
+    }
+    case "polygon": {
+      const sampled = points.filter((_, i) => i % 3 === 0); // Reduce points for polygon
+      return { shape: { points: sampled } };
+    }
+    case "star": {
+      // 5-point star based on bbox center and radius
+      const cx = minX + w / 2;
+      const cy = minY + h / 2;
+      const outerR = Math.max(w, h) / 2;
+      const innerR = outerR * 0.5;
+      const pts = [];
+      for (let i = 0; i < 10; i++) {
+        const angle = -Math.PI / 2 + (i * Math.PI) / 5; // start at top
+        const r = i % 2 === 0 ? outerR : innerR;
+        pts.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+      }
+      return { shape: { points: pts } };
+    }
     default:
       return null;
   }
+}
+
+/**
+ * Tính bounding box cho stroke/shape để tăng tốc kiểm tra hit-test (eraser).
+ */
+export function getBoundingBoxForStroke(s) {
+  if (s.points && s.points.length) {
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    for (const p of s.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const pad = (s.width || 10) * 1.5;
+    return {
+      minX: minX - pad,
+      minY: minY - pad,
+      maxX: maxX + pad,
+      maxY: maxY + pad,
+    };
+  }
+
+  if (s.shape) {
+    const sh = s.shape;
+    if (s.tool === "circle") {
+      const { cx, cy, r } = sh;
+      return { minX: cx - r, minY: cy - r, maxX: cx + r, maxY: cy + r };
+    }
+    if (s.tool === "rect" || s.tool === "square") {
+      const { x, y, w, h } = sh;
+      return { minX: x, minY: y, maxX: x + w, maxY: y + h };
+    }
+    if (s.tool === "triangle") {
+      const { x1, y1, x2, y2, x3, y3 } = sh;
+      const minX = Math.min(x1, x2, x3);
+      const minY = Math.min(y1, y2, y3);
+      const maxX = Math.max(x1, x2, x3);
+      const maxY = Math.max(y1, y2, y3);
+      return { minX, minY, maxX, maxY };
+    }
+    if (s.tool === "oval") {
+      const { cx, cy, rx, ry } = sh;
+      return { minX: cx - rx, minY: cy - ry, maxX: cx + rx, maxY: cy + ry };
+    }
+    if (s.tool === "line") {
+      const { x1, y1, x2, y2 } = sh;
+      const minX = Math.min(x1, x2);
+      const minY = Math.min(y1, y2);
+      const maxX = Math.max(x1, x2);
+      const maxY = Math.max(y1, y2);
+      const pad = (s.width || 10) * 1.5;
+      return {
+        minX: minX - pad,
+        minY: minY - pad,
+        maxX: maxX + pad,
+        maxY: maxY + pad,
+      };
+    }
+    if (s.tool === "arrow") {
+      const { x1, y1, x2, y2 } = sh;
+      const minX = Math.min(x1, x2);
+      const minY = Math.min(y1, y2);
+      const maxX = Math.max(x1, x2);
+      const maxY = Math.max(y1, y2);
+      const pad = (s.width || 12) * 2;
+      return {
+        minX: minX - pad,
+        minY: minY - pad,
+        maxX: maxX + pad,
+        maxY: maxY + pad,
+      };
+    }
+    if (s.tool === "polygon" || s.tool === "star") {
+      const pts = sh.points || [];
+      if (pts.length === 0) return null;
+      const xs2 = pts.map((p) => p.x);
+      const ys2 = pts.map((p) => p.y);
+      const minX2 = Math.min(...xs2);
+      const maxX2 = Math.max(...xs2);
+      const minY2 = Math.min(...ys2);
+      const maxY2 = Math.max(...ys2);
+      const pad = (s.width || 10) * 1.2;
+      return {
+        minX: minX2 - pad,
+        minY: minY2 - pad,
+        maxX: maxX2 + pad,
+        maxY: maxY2 + pad,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Kiểm tra 1 điểm có nằm bên trong polygon không (ray casting).
+ */
+export function pointInPolygon(polygonPoints, x, y) {
+  if (!polygonPoints || polygonPoints.length < 3) return false;
+  let inside = false;
+  for (
+    let i = 0, j = polygonPoints.length - 1;
+    i < polygonPoints.length;
+    j = i++
+  ) {
+    const xi = polygonPoints[i].x,
+      yi = polygonPoints[i].y;
+    const xj = polygonPoints[j].x,
+      yj = polygonPoints[j].y;
+    const intersect =
+      yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
 }
