@@ -1,22 +1,24 @@
-// components/ToolbarContainer.jsx
+// ToolbarContainer.jsx
 import React from "react";
 import { View, ScrollView, StyleSheet } from "react-native";
-import {
-  Ionicons,
-  MaterialCommunityIcons,
-  FontAwesome5,
-} from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
 import ToolGroup from "./ToolGroup";
 import ToolButton from "./ToolButton";
 import ColorPalette from "./ColorPalette";
 
-const ICON_SIZE = 20;
+const ICON_SIZE = 18; // nhỏ gọn, tinh tế
+const ICON_COLOR = "#374151"; // xám đậm, giống bút chì
 
 export default function ToolbarContainer({
   tool,
   setTool,
   color,
   setColor,
+  onIncSize,
+  onDecSize,
+  onIncOpacity,
+  onDecOpacity,
   onUndo,
   onRedo,
   onClear,
@@ -35,7 +37,11 @@ export default function ToolbarContainer({
         <ToolGroup
           label="Pens"
           mainIcon={
-            <MaterialCommunityIcons name="pen" size={ICON_SIZE} color="#fff" />
+            <MaterialCommunityIcons
+              name="draw"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
           }
           options={[
             {
@@ -43,9 +49,9 @@ export default function ToolbarContainer({
               label: "Pen",
               icon: (
                 <MaterialCommunityIcons
-                  name="pen"
+                  name="lead-pencil"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -53,7 +59,11 @@ export default function ToolbarContainer({
               name: "pencil",
               label: "Pencil",
               icon: (
-                <FontAwesome5 name="pencil-alt" size={ICON_SIZE} color="#fff" />
+                <MaterialCommunityIcons
+                  name="pencil-outline"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
               ),
             },
             {
@@ -63,7 +73,7 @@ export default function ToolbarContainer({
                 <MaterialCommunityIcons
                   name="brush-variant"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -74,7 +84,7 @@ export default function ToolbarContainer({
                 <MaterialCommunityIcons
                   name="fountain-pen"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -85,7 +95,7 @@ export default function ToolbarContainer({
                 <MaterialCommunityIcons
                   name="marker"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -94,6 +104,42 @@ export default function ToolbarContainer({
           setTool={setTool}
         />
 
+        {/* Size controls */}
+        <ToolButton onPress={onDecSize}>
+          <MaterialCommunityIcons
+            name="minus-circle-outline"
+            size={ICON_SIZE}
+            color={ICON_COLOR}
+          />
+        </ToolButton>
+        <ToolButton onPress={onIncSize}>
+          <MaterialCommunityIcons
+            name="plus-circle-outline"
+            size={ICON_SIZE}
+            color={ICON_COLOR}
+          />
+        </ToolButton>
+
+        {/* Opacity controls */}
+        {["brush", "calligraphy"].includes(tool) && (
+          <>
+            <ToolButton onPress={onDecOpacity}>
+              <MaterialCommunityIcons
+                name="opacity"
+                size={ICON_SIZE}
+                color={ICON_COLOR}
+              />
+            </ToolButton>
+            <ToolButton onPress={onIncOpacity}>
+              <MaterialCommunityIcons
+                name="format-color-highlight"
+                size={ICON_SIZE}
+                color={ICON_COLOR}
+              />
+            </ToolButton>
+          </>
+        )}
+
         {/* 🧽 Eraser Group */}
         <ToolGroup
           label="Eraser"
@@ -101,7 +147,7 @@ export default function ToolbarContainer({
             <MaterialCommunityIcons
               name="eraser"
               size={ICON_SIZE}
-              color="#fff"
+              color={ICON_COLOR}
             />
           }
           options={[
@@ -112,7 +158,7 @@ export default function ToolbarContainer({
                 <MaterialCommunityIcons
                   name="eraser"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -121,9 +167,9 @@ export default function ToolbarContainer({
               label: "Object Eraser",
               icon: (
                 <MaterialCommunityIcons
-                  name="selection-ellipse-remove"
+                  name="eraser-variant"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -137,9 +183,9 @@ export default function ToolbarContainer({
           label="Shapes"
           mainIcon={
             <MaterialCommunityIcons
-              name="shape"
+              name="shape-outline"
               size={ICON_SIZE}
-              color="#fff"
+              color={ICON_COLOR}
             />
           }
           options={[
@@ -148,9 +194,9 @@ export default function ToolbarContainer({
               label: "Line",
               icon: (
                 <MaterialCommunityIcons
-                  name="vector-line"
+                  name="ray-start-end"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -159,9 +205,9 @@ export default function ToolbarContainer({
               label: "Arrow",
               icon: (
                 <MaterialCommunityIcons
-                  name="arrow-top-right"
+                  name="arrow-top-right-thin"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -172,7 +218,7 @@ export default function ToolbarContainer({
                 <MaterialCommunityIcons
                   name="rectangle-outline"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -180,10 +226,21 @@ export default function ToolbarContainer({
               name: "circle",
               label: "Circle",
               icon: (
-                <Ionicons
-                  name="ellipse-outline"
+                <MaterialCommunityIcons
+                  name="circle-outline"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
+                />
+              ),
+            },
+            {
+              name: "triangle",
+              label: "Triangle",
+              icon: (
+                <MaterialCommunityIcons
+                  name="triangle-outline"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -194,7 +251,7 @@ export default function ToolbarContainer({
                 <MaterialCommunityIcons
                   name="star-outline"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -203,9 +260,9 @@ export default function ToolbarContainer({
               label: "Polygon",
               icon: (
                 <MaterialCommunityIcons
-                  name="pentagon-outline"
+                  name="hexagon-outline"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -214,18 +271,39 @@ export default function ToolbarContainer({
           setTool={setTool}
         />
 
-        {/* 🔤 Text & Notes */}
+        {/* 🪣 Fill Tool */}
+        <ToolButton
+          icon={
+            <MaterialCommunityIcons
+              name="format-color-fill"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
+          }
+          isActive={tool === "fill"}
+          onPress={() => setTool("fill")}
+        />
+
+        {/* 🔤 Text */}
         <ToolGroup
           label="Text"
           mainIcon={
-            <Ionicons name="text-outline" size={ICON_SIZE} color="#fff" />
+            <MaterialCommunityIcons
+              name="format-text-variant"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
           }
           options={[
             {
               name: "text",
               label: "Text",
               icon: (
-                <Ionicons name="text-outline" size={ICON_SIZE} color="#fff" />
+                <MaterialCommunityIcons
+                  name="format-text-variant"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
               ),
             },
             {
@@ -233,9 +311,9 @@ export default function ToolbarContainer({
               label: "Sticky Note",
               icon: (
                 <MaterialCommunityIcons
-                  name="note-text-outline"
+                  name="note-outline"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -243,10 +321,10 @@ export default function ToolbarContainer({
               name: "comment",
               label: "Comment",
               icon: (
-                <Ionicons
-                  name="chatbubble-ellipses-outline"
+                <MaterialCommunityIcons
+                  name="comment-outline"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -259,21 +337,33 @@ export default function ToolbarContainer({
         <ToolGroup
           label="Media"
           mainIcon={
-            <Ionicons name="image-outline" size={ICON_SIZE} color="#fff" />
+            <MaterialCommunityIcons
+              name="image-multiple-outline"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
           }
           options={[
             {
               name: "image",
               label: "Insert Image",
               icon: (
-                <Ionicons name="image-outline" size={ICON_SIZE} color="#fff" />
+                <MaterialCommunityIcons
+                  name="image-multiple-outline"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
               ),
             },
             {
               name: "camera",
               label: "Camera",
               icon: (
-                <Ionicons name="camera-outline" size={ICON_SIZE} color="#fff" />
+                <MaterialCommunityIcons
+                  name="camera-outline"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
               ),
             },
             {
@@ -281,9 +371,9 @@ export default function ToolbarContainer({
               label: "Stickers",
               icon: (
                 <MaterialCommunityIcons
-                  name="sticker"
+                  name="emoticon-outline"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -296,17 +386,21 @@ export default function ToolbarContainer({
         <ToolGroup
           label="Pages"
           mainIcon={
-            <Ionicons name="documents-outline" size={ICON_SIZE} color="#fff" />
+            <MaterialCommunityIcons
+              name="file-document-outline"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
           }
           options={[
             {
               name: "add-page",
               label: "Add Page",
               icon: (
-                <Ionicons
-                  name="add-circle-outline"
+                <MaterialCommunityIcons
+                  name="file-plus-outline"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -315,9 +409,9 @@ export default function ToolbarContainer({
               label: "Duplicate",
               icon: (
                 <MaterialCommunityIcons
-                  name="content-copy"
+                  name="file-multiple-outline"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -325,7 +419,11 @@ export default function ToolbarContainer({
               name: "delete-page",
               label: "Delete",
               icon: (
-                <Ionicons name="trash-outline" size={ICON_SIZE} color="#fff" />
+                <MaterialCommunityIcons
+                  name="file-remove-outline"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
               ),
             },
           ]}
@@ -338,9 +436,9 @@ export default function ToolbarContainer({
           label="Navigation"
           mainIcon={
             <MaterialCommunityIcons
-              name="cursor-default-gesture-outline"
+              name="gesture"
               size={ICON_SIZE}
-              color="#fff"
+              color={ICON_COLOR}
             />
           }
           options={[
@@ -349,9 +447,9 @@ export default function ToolbarContainer({
               label: "Lasso Select",
               icon: (
                 <MaterialCommunityIcons
-                  name="lasso"
+                  name="selection-drag"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -359,7 +457,11 @@ export default function ToolbarContainer({
               name: "zoom",
               label: "Zoom",
               icon: (
-                <Ionicons name="search-outline" size={ICON_SIZE} color="#fff" />
+                <MaterialCommunityIcons
+                  name="magnify-plus-outline"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
               ),
             },
             {
@@ -369,7 +471,7 @@ export default function ToolbarContainer({
                 <MaterialCommunityIcons
                   name="cursor-move"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -377,10 +479,10 @@ export default function ToolbarContainer({
               name: "rotate",
               label: "Rotate",
               icon: (
-                <Ionicons
-                  name="refresh-circle-outline"
+                <MaterialCommunityIcons
+                  name="rotate-orbit"
                   size={ICON_SIZE}
-                  color="#fff"
+                  color={ICON_COLOR}
                 />
               ),
             },
@@ -392,50 +494,76 @@ export default function ToolbarContainer({
         {/* ↩️ Undo / Redo / Clear */}
         <ToolButton
           icon={
-            <Ionicons name="arrow-undo-outline" size={ICON_SIZE} color="#fff" />
+            <MaterialCommunityIcons
+              name="undo"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
           }
           onPress={onUndo}
         />
         <ToolButton
           icon={
-            <Ionicons name="arrow-redo-outline" size={ICON_SIZE} color="#fff" />
+            <MaterialCommunityIcons
+              name="redo"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
           }
           onPress={onRedo}
         />
         <ToolButton
-          icon={<Ionicons name="trash-outline" size={ICON_SIZE} color="#fff" />}
+          icon={
+            <MaterialCommunityIcons
+              name="delete-outline"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
+          }
           onPress={onClear}
         />
 
         {/* ☁️ Import / Export */}
         <ToolButton
-          icon={<Ionicons name="image-outline" size={ICON_SIZE} color="#fff" />}
+          icon={
+            <MaterialCommunityIcons
+              name="export-variant"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
+          }
           onPress={onExportPNG}
         />
         <ToolButton
           icon={
-            <Ionicons
-              name="cloud-upload-outline"
+            <MaterialCommunityIcons
+              name="file-export-outline"
               size={ICON_SIZE}
-              color="#fff"
+              color={ICON_COLOR}
             />
           }
           onPress={onExportJSON}
         />
         <ToolButton
           icon={
-            <Ionicons
-              name="cloud-download-outline"
+            <MaterialCommunityIcons
+              name="file-import-outline"
               size={ICON_SIZE}
-              color="#fff"
+              color={ICON_COLOR}
             />
           }
           onPress={onImportJSON}
         />
-        {/* 🎨 Color palette only for drawing tools */}
-        {["pen", "pencil", "brush", "calligraphy", "highlighter"].includes(
-          tool
-        ) && <ColorPalette color={color} setColor={setColor} />}
+
+        {/* 🎨 Color palette */}
+        {[
+          "pen",
+          "pencil",
+          "brush",
+          "calligraphy",
+          "highlighter",
+          "fill",
+        ].includes(tool) && <ColorPalette color={color} setColor={setColor} />}
       </ScrollView>
     </View>
   );
@@ -443,13 +571,21 @@ export default function ToolbarContainer({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#111827",
+    backgroundColor: "#F7FAFC",
     borderBottomWidth: 1,
-    borderBottomColor: "#374151",
-    paddingVertical: 6,
+    borderBottomColor: "#E2E8F0",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   scrollContent: {
-    paddingHorizontal: 10,
+    flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 4,
+    gap: 6,
   },
 });
