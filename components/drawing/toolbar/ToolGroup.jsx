@@ -21,17 +21,18 @@ export default function ToolGroup({ label, mainIcon, options, tool, setTool }) {
           options.some((o) => o.name === tool) && styles.activeButton,
         ]}
         onPress={() => setShowPopover(true)}
+        activeOpacity={0.7}
       >
         {mainIcon}
       </TouchableOpacity>
 
-      {/* Popover dropdown anchored to button */}
+      {/* Popover dropdown */}
       <Popover
         isVisible={showPopover}
         from={buttonRef}
         onRequestClose={() => setShowPopover(false)}
         placement="bottom"
-        arrowStyle={{ backgroundColor: "#1f2937" }}
+        arrowStyle={{ backgroundColor: "#3b82f6" }}
       >
         <View style={styles.menu}>
           {options.map((o) => (
@@ -44,7 +45,14 @@ export default function ToolGroup({ label, mainIcon, options, tool, setTool }) {
               onPress={() => handleSelect(o.name)}
             >
               {o.icon}
-              <Text style={styles.menuText}>{o.label}</Text>
+              <Text
+                style={[
+                  styles.menuText,
+                  tool === o.name && styles.activeMenuTest,
+                ]}
+              >
+                {o.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -55,25 +63,36 @@ export default function ToolGroup({ label, mainIcon, options, tool, setTool }) {
 
 const styles = StyleSheet.create({
   button: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    backgroundColor: "transparent",
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 6,
+    marginHorizontal: 4,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: "#d1d5db",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   activeButton: {
-    backgroundColor: "#2563eb",
-    borderColor: "#3b82f6",
+    backgroundColor: "#3b82f6",
+    borderColor: "#2563eb",
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   menu: {
-    backgroundColor: "#1f2937",
-    paddingVertical: 4,
-    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    paddingVertical: 6,
+    borderRadius: 12,
     minWidth: 160,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   menuItem: {
     flexDirection: "row",
@@ -81,10 +100,15 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   activeMenuItem: {
-    backgroundColor: "#2563eb",
+    backgroundColor: "#3b82f6",
   },
   menuText: {
-    color: "#fff",
+    color: "#1f2937",
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  activeMenuTest: {
+    color: "#ffffff",
     marginLeft: 8,
     fontSize: 14,
   },

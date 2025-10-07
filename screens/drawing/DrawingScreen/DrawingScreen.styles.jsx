@@ -10,7 +10,6 @@ export default StyleSheet.create({
     backgroundColor: "#FFFFFF",
     width: "100%",
     height: "100%",
-    // bỏ margin/border/shadow để không bị cắt khi xoay ngang
   },
   canvasPortrait: {
     flex: 1,

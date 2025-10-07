@@ -1,9 +1,12 @@
+// CanvasContainer.jsx
 import React, {
   forwardRef,
   useImperativeHandle,
   useState,
   useRef,
   useEffect,
+  memo,
+  useCallback,
 } from "react";
 import {
   View,
@@ -32,14 +35,16 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     color,
     strokeWidth,
     pencilWidth,
-    eraserWidth,
+    eraserSize,
     brushWidth = 8,
     brushOpacity = 0.6,
     calligraphyWidth = 6,
     calligraphyOpacity = 0.9,
     paperStyle = "plain",
     shapeType = "auto",
-    onZoomChange, // báo cho MultiPageCanvas khi zoom
+    onZoomChange,
+    toolConfigs = {},
+    eraserMode,
   },
   ref
 ) {
@@ -49,13 +54,24 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   const [strokes, setStrokes] = useState([]);
   const [currentPoints, setCurrentPoints] = useState([]);
+
+  // ✅ New: use 2 stacks for undo/redo
+  const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
+
   const [showZoomOverlay, setShowZoomOverlay] = useState(false);
   const [zoomLocked, setZoomLocked] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
 
   const idCounter = useRef(1);
   const rendererRef = useRef(null);
+
+  // ====== Config cho tool hiện tại ======
+  const activeConfig = toolConfigs?.[tool] || {
+    pressure: 0.5,
+    thickness: 1.5,
+    stabilization: 0.2,
+  };
 
   const page = {
     x: PAGE_MARGIN_H,
@@ -64,22 +80,16 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     h: PAGE_HEIGHT,
   };
   const canvasHeight = page.y + page.h + PAGE_BOTTOM_SPACER;
+  const nextId = () => `s_${idCounter.current++}`;
 
-  const nextId = () => {
-    const id = idCounter.current++;
-    return `s_${id}`;
-  };
-
-  // ===== Zoom / Pan states =====
+  // ====== ZOOM / PAN ======
   const scale = useSharedValue(1);
   const baseScale = useSharedValue(1);
-
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const baseTranslateX = useSharedValue(0);
   const baseTranslateY = useSharedValue(0);
 
-  // Clamp pan trong canvas
   const clampPan = () => {
     "worklet";
     const maxX = Math.max(0, (PAGE_WIDTH * scale.value - width) / 2);
@@ -90,7 +100,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   const lastZoomState = useRef(false);
 
-  // 👆 Pinch zoom gesture
   const pinch = Gesture.Pinch()
     .enabled(!zoomLocked)
     .onStart(() => {
@@ -99,30 +108,22 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     })
     .onUpdate((e) => {
       scale.value = baseScale.value * e.scale;
-
       const isZoomed = scale.value > 1.01;
       if (isZoomed !== lastZoomState.current) {
         lastZoomState.current = isZoomed;
-        if (typeof onZoomChange === "function") {
-          runOnJS(onZoomChange)(isZoomed);
-        }
+        if (typeof onZoomChange === "function") runOnJS(onZoomChange)(isZoomed);
       }
     })
     .onEnd(() => {
       if (scale.value < 1) scale.value = withTiming(1);
       if (scale.value > 3) scale.value = withTiming(3);
-
       runOnJS(setShowZoomOverlay)(false);
-
       if (scale.value <= 1.01 && lastZoomState.current) {
         lastZoomState.current = false;
-        if (typeof onZoomChange === "function") {
-          runOnJS(onZoomChange)(false);
-        }
+        if (typeof onZoomChange === "function") runOnJS(onZoomChange)(false);
       }
     });
 
-  // 👆 Pan move gesture
   const pan = Gesture.Pan()
     .onStart(() => {
       baseTranslateX.value = translateX.value;
@@ -134,7 +135,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       clampPan();
     });
 
-  // 👆 Double-tap reset
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .onEnd(() => {
@@ -142,9 +142,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       translateX.value = withTiming(0);
       translateY.value = withTiming(0);
       lastZoomState.current = false;
-      if (typeof onZoomChange === "function") {
-        runOnJS(onZoomChange)(false);
-      }
+      if (typeof onZoomChange === "function") runOnJS(onZoomChange)(false);
     });
 
   const composedGesture = Gesture.Simultaneous(pinch, pan, doubleTap);
@@ -157,53 +155,134 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     ],
   }));
 
-  // Derived zoom percent
-  const derivedZoom = useDerivedValue(() => {
-    return Math.round(scale.value * 100);
-  });
+  const derivedZoom = useDerivedValue(() => Math.round(scale.value * 100));
   useEffect(() => {
-    const id = setInterval(() => {
-      setZoomPercent(derivedZoom.value);
-    }, 100);
+    const id = setInterval(() => setZoomPercent(derivedZoom.value), 80);
     return () => clearInterval(id);
   }, [derivedZoom]);
+
+  // ====== Helpers for History ======
+  const pushUndo = (action) => {
+    setUndoStack((u) => [...u, action]);
+    setRedoStack([]); // reset redo
+  };
+
+  const addStrokeInternal = (stroke) => {
+    setStrokes((prev) => [...prev, stroke]);
+    pushUndo({ type: "add", stroke });
+  };
+
+  const deleteStrokeAt = (index) => {
+    setStrokes((prev) => {
+      if (index < 0 || index >= prev.length) return prev;
+      const removed = prev[index];
+      const next = [...prev.slice(0, index), ...prev.slice(index + 1)];
+      pushUndo({ type: "delete", index, stroke: removed });
+      return next;
+    });
+  };
+
+  const modifyStrokeAt = (index, newProps) => {
+    setStrokes((prev) => {
+      if (index < 0 || index >= prev.length) return prev;
+      const old = prev[index];
+      const updated = { ...old, ...newProps };
+      const next = [...prev.slice(0, index), updated, ...prev.slice(index + 1)];
+      pushUndo({ type: "modify", index, before: old, after: updated });
+      return next;
+    });
+  };
 
   // ====== Expose API ======
   useImperativeHandle(ref, () => ({
     undo: () => {
-      setStrokes((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.length - 1;
-        const popped = prev[idx];
-        setRedoStack((redo) => [...redo, { stroke: popped, index: idx }]);
-        return prev.slice(0, -1);
-      });
-    },
-    redo: () => {
-      setRedoStack((prev) => {
-        if (prev.length === 0) return prev;
-        const { stroke, index } = prev[prev.length - 1];
+      setUndoStack((prevUndo) => {
+        if (prevUndo.length === 0) return prevUndo;
+        const last = prevUndo[prevUndo.length - 1];
+        setRedoStack((r) => [...r, last]);
         setStrokes((s) => {
-          const next = [...s];
-          const insertAt = Math.min(Math.max(0, index), next.length);
-          next.splice(insertAt, 0, stroke);
-          return next;
+          if (!s) return s;
+          if (last.type === "add") {
+            const id = last.stroke?.id;
+            if (id) {
+              const idx = s.findIndex((x) => x.id === id);
+              if (idx !== -1) return [...s.slice(0, idx), ...s.slice(idx + 1)];
+            }
+            return s.slice(0, -1);
+          } else if (last.type === "delete") {
+            const idx = Math.min(Math.max(0, last.index), s.length);
+            const next = [...s];
+            next.splice(idx, 0, last.stroke);
+            return next;
+          } else if (last.type === "modify") {
+            const next = [...s];
+            next[last.index] = last.before;
+            return next;
+          }
+          return s;
         });
-        return prev.slice(0, -1);
+        return prevUndo.slice(0, -1);
       });
     },
+
+    redo: () => {
+      setRedoStack((prevRedo) => {
+        if (prevRedo.length === 0) return prevRedo;
+        const last = prevRedo[prevRedo.length - 1];
+        setUndoStack((u) => [...u, last]);
+        setStrokes((s) => {
+          if (!s) return s;
+          if (last.type === "add") {
+            return [...s, last.stroke];
+          } else if (last.type === "delete") {
+            const idx = last.index;
+            if (idx < 0 || idx >= s.length) return s;
+            return [...s.slice(0, idx), ...s.slice(idx + 1)];
+          } else if (last.type === "modify") {
+            const next = [...s];
+            next[last.index] = last.after;
+            return next;
+          }
+          return s;
+        });
+        return prevRedo.slice(0, -1);
+      });
+    },
+
     clear: () => {
       setStrokes([]);
+      setUndoStack([]);
       setRedoStack([]);
       setCurrentPoints([]);
     },
+
     getStrokes: () => strokes,
-    snapshotBase64: () => rendererRef.current?.snapshotBase64?.(),
+
     addStrokeDirect: (stroke) => {
-      setStrokes((prev) => [...prev, { ...stroke, id: stroke.id ?? nextId() }]);
-      setRedoStack([]);
+      const s = { ...stroke, id: stroke.id ?? nextId() };
+      addStrokeInternal(s);
     },
+
+    // optional: expose modifyStrokeAt to fill
+    modifyStrokeAt,
   }));
+
+  // ====== Khi kết thúc stroke từ GestureHandler ======
+  const handleAddStroke = useCallback(
+    (strokeData) => {
+      const strokeSnapshot = {
+        ...strokeData,
+        id: nextId(),
+        tool,
+        color,
+        pressure: activeConfig.pressure,
+        thickness: activeConfig.thickness,
+        stabilization: activeConfig.stabilization,
+      };
+      addStrokeInternal(strokeSnapshot);
+    },
+    [tool, color, activeConfig]
+  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -212,32 +291,38 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           <GestureHandler
             page={page}
             tool={tool}
-            eraserMode={tool === "object-eraser" ? "object" : "pixel"}
+            color={color}
+            eraserMode={eraserMode}
+            onAddStroke={handleAddStroke}
+            onModifyStroke={modifyStrokeAt}
+            onDeleteStroke={deleteStrokeAt}
             strokes={strokes}
             setStrokes={setStrokes}
+            setRedoStack={setRedoStack}
             currentPoints={currentPoints}
             setCurrentPoints={setCurrentPoints}
-            setRedoStack={setRedoStack}
-            color={color}
             strokeWidth={strokeWidth}
             pencilWidth={pencilWidth}
-            eraserWidth={eraserWidth}
+            eraserSize={eraserSize}
             brushWidth={brushWidth}
             brushOpacity={brushOpacity}
             calligraphyWidth={calligraphyWidth}
             calligraphyOpacity={calligraphyOpacity}
-            containerRef={ref}
+            pressure={activeConfig.pressure}
+            thickness={activeConfig.thickness}
+            stabilization={activeConfig.stabilization}
+            configByTool={toolConfigs}
           >
             <CanvasRenderer
               ref={rendererRef}
               strokes={strokes}
               currentPoints={currentPoints}
               tool={tool}
-              eraserMode={tool === "object-eraser" ? "object" : "pixel"}
               color={color}
               strokeWidth={strokeWidth}
               pencilWidth={pencilWidth}
-              eraserWidth={eraserWidth}
+              eraserSize={eraserSize}
+              eraserMode={eraserMode}
               brushWidth={brushWidth}
               brushOpacity={brushOpacity}
               calligraphyWidth={calligraphyWidth}
@@ -245,12 +330,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               paperStyle={paperStyle}
               page={page}
               canvasHeight={canvasHeight}
+              shapeType={shapeType}
             />
           </GestureHandler>
         </Animated.View>
       </GestureDetector>
 
-      {/* Floating Zoom Panel */}
       {showZoomOverlay && (
         <View
           style={{
@@ -290,4 +375,4 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   );
 });
 
-export default CanvasContainer;
+export default memo(CanvasContainer);

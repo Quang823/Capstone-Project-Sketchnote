@@ -1,31 +1,65 @@
-// ToolbarContainer.jsx
-import React from "react";
-import { View, ScrollView, StyleSheet } from "react-native";
+import React, { useState, useRef, useEffect } from "react";
+import { View, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import ToolGroup from "./ToolGroup";
 import ToolButton from "./ToolButton";
 import ColorPalette from "./ColorPalette";
+import { DEFAULT_COLORS } from "./constants";
 
-const ICON_SIZE = 18; // nhỏ gọn, tinh tế
-const ICON_COLOR = "#374151"; // xám đậm, giống bút chì
+const ICON_SIZE = 18;
+const ICON_COLOR = "#1e293b";
 
 export default function ToolbarContainer({
   tool,
   setTool,
   color,
   setColor,
-  onIncSize,
-  onDecSize,
-  onIncOpacity,
-  onDecOpacity,
+  strokeWidth,
+  setStrokeWidth,
+
   onUndo,
   onRedo,
   onClear,
   onExportPNG,
   onExportJSON,
   onImportJSON,
+
+  eraserMode,
+  setEraserMode,
+  eraserSize,
+  setEraserSize,
+  eraserDropdownVisible,
+  setEraserDropdownVisible,
+  eraserButtonRef,
 }) {
+  // 🎨 ===== COLOR STATE =====
+  const [colors, setColors] = useState(DEFAULT_COLORS);
+  const [selectedColor, setSelectedColor] = useState(color ?? colors[0]);
+
+  // Đồng bộ nếu prop color thay đổi từ bên ngoài
+  useEffect(() => {
+    if (color) setSelectedColor(color);
+  }, [color]);
+
+  const handleSelectColor = (colorHex, index) => {
+    setSelectedColor(colorHex);
+    setColors((prev) => {
+      const updated = [...prev];
+      const idx = typeof index === "number" ? index : 0;
+      updated[idx] = colorHex;
+      return updated;
+    });
+    if (typeof setColor === "function") setColor(colorHex);
+  };
+
+  const handleSelectColorSet = (newColors) => {
+    setColors(newColors);
+    setSelectedColor(newColors[0]);
+    if (typeof setColor === "function") setColor(newColors[0]);
+  };
+
+  // 🧱 ===== RENDER =====
   return (
     <View style={styles.container}>
       <ScrollView
@@ -33,6 +67,31 @@ export default function ToolbarContainer({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {/* ↩️ Undo / Redo / Clear */}
+        <ToolButton onPress={onUndo}>
+          <MaterialCommunityIcons
+            name="undo"
+            size={ICON_SIZE}
+            color={ICON_COLOR}
+          />
+        </ToolButton>
+        <ToolButton onPress={onRedo}>
+          <MaterialCommunityIcons
+            name="redo"
+            size={ICON_SIZE}
+            color={ICON_COLOR}
+          />
+        </ToolButton>
+        <ToolButton onPress={onClear}>
+          <MaterialCommunityIcons
+            name="delete-outline"
+            size={ICON_SIZE}
+            color={ICON_COLOR}
+          />
+        </ToolButton>
+
+        <View style={styles.divider} />
+
         {/* ✍️ Pen Group */}
         <ToolGroup
           label="Pens"
@@ -104,79 +163,42 @@ export default function ToolbarContainer({
           setTool={setTool}
         />
 
-        {/* Size controls */}
-        <ToolButton onPress={onDecSize}>
-          <MaterialCommunityIcons
-            name="minus-circle-outline"
-            size={ICON_SIZE}
-            color={ICON_COLOR}
-          />
-        </ToolButton>
-        <ToolButton onPress={onIncSize}>
-          <MaterialCommunityIcons
-            name="plus-circle-outline"
-            size={ICON_SIZE}
-            color={ICON_COLOR}
-          />
-        </ToolButton>
-
-        {/* Opacity controls */}
-        {["brush", "calligraphy"].includes(tool) && (
-          <>
-            <ToolButton onPress={onDecOpacity}>
+        {/* 🧽 Eraser */}
+        <View ref={eraserButtonRef}>
+          <TouchableOpacity
+            style={[
+              styles.eraserButton,
+              tool.includes("eraser") && styles.eraserButtonActive,
+            ]}
+            onPress={() => {
+              if (tool.includes("eraser")) {
+                setEraserDropdownVisible(true);
+              } else {
+                setTool("eraser");
+                setEraserMode?.("pixel");
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={{ alignItems: "center", justifyContent: "center" }}>
               <MaterialCommunityIcons
-                name="opacity"
+                name="eraser"
                 size={ICON_SIZE}
-                color={ICON_COLOR}
+                color={tool.includes("eraser") ? "#fff" : ICON_COLOR}
               />
-            </ToolButton>
-            <ToolButton onPress={onIncOpacity}>
-              <MaterialCommunityIcons
-                name="format-color-highlight"
-                size={ICON_SIZE}
-                color={ICON_COLOR}
-              />
-            </ToolButton>
-          </>
-        )}
+              {tool.includes("eraser") && (
+                <MaterialCommunityIcons
+                  name="chevron-down"
+                  size={12}
+                  color="rgba(255,255,255,0.8)"
+                  style={{ position: "absolute", bottom: -10 }}
+                />
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
 
-        {/* 🧽 Eraser Group */}
-        <ToolGroup
-          label="Eraser"
-          mainIcon={
-            <MaterialCommunityIcons
-              name="eraser"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          options={[
-            {
-              name: "eraser",
-              label: "Stroke Eraser",
-              icon: (
-                <MaterialCommunityIcons
-                  name="eraser"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "object-eraser",
-              label: "Object Eraser",
-              icon: (
-                <MaterialCommunityIcons
-                  name="eraser-variant"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-          ]}
-          tool={tool}
-          setTool={setTool}
-        />
+        <View style={styles.divider} />
 
         {/* 🔷 Shapes */}
         <ToolGroup
@@ -280,7 +302,7 @@ export default function ToolbarContainer({
               color={ICON_COLOR}
             />
           }
-          isActive={tool === "fill"}
+          active={tool === "fill"}
           onPress={() => setTool("fill")}
         />
 
@@ -476,6 +498,17 @@ export default function ToolbarContainer({
               ),
             },
             {
+              name: "move-text",
+              label: "Move Text",
+              icon: (
+                <MaterialCommunityIcons
+                  name="cursor-text"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
+              ),
+            },
+            {
               name: "rotate",
               label: "Rotate",
               icon: (
@@ -489,38 +522,6 @@ export default function ToolbarContainer({
           ]}
           tool={tool}
           setTool={setTool}
-        />
-
-        {/* ↩️ Undo / Redo / Clear */}
-        <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="undo"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          onPress={onUndo}
-        />
-        <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="redo"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          onPress={onRedo}
-        />
-        <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="delete-outline"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          onPress={onClear}
         />
 
         {/* ☁️ Import / Export */}
@@ -555,7 +556,44 @@ export default function ToolbarContainer({
           onPress={onImportJSON}
         />
 
-        {/* 🎨 Color palette */}
+        {/* 🧪 Extra Tools */}
+        <ToolButton
+          icon={
+            <MaterialCommunityIcons
+              name="eyedropper"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
+          }
+          onPress={() => setTool("eyedropper")}
+          active={tool === "eyedropper"}
+        />
+        <ToolButton
+          icon={
+            <MaterialCommunityIcons
+              name="grid"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
+          }
+          onPress={() => setTool("grid-toggle")}
+          active={tool === "grid-toggle"}
+        />
+        <ToolButton
+          icon={
+            <MaterialCommunityIcons
+              name="shape-plus"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
+          }
+          onPress={() => setTool("toggle-fill")}
+          active={tool === "toggle-fill"}
+        />
+
+        <View style={styles.divider} />
+
+        {/* 🎨 Color Palette */}
         {[
           "pen",
           "pencil",
@@ -563,19 +601,78 @@ export default function ToolbarContainer({
           "calligraphy",
           "highlighter",
           "fill",
-        ].includes(tool) && <ColorPalette color={color} setColor={setColor} />}
+        ].includes(tool) && (
+          <ColorPalette
+            colors={colors}
+            selectedColor={selectedColor}
+            onSelectColor={handleSelectColor}
+            onSelectColorSet={handleSelectColorSet}
+          />
+        )}
+
+        <View style={styles.divider} />
+
+        {/* ⚫ Size Selector (Pen or Eraser) */}
+        <View style={styles.widthGroup}>
+          {tool.includes("eraser")
+            ? // 🧽 Hiển thị 3 kích thước gôm
+              [8, 20, 40].map((size) => (
+                <ToolButton
+                  key={size}
+                  icon={
+                    <View
+                      style={[
+                        styles.widthDot,
+                        {
+                          width: size / 2,
+                          height: size / 2,
+                          borderRadius: size / 2,
+                          backgroundColor:
+                            eraserSize === size ? "#2563EB" : "#475569",
+                          opacity: 0.8,
+                        },
+                      ]}
+                    />
+                  }
+                  active={eraserSize === size}
+                  onPress={() => setEraserSize(size)}
+                />
+              ))
+            : // ✍️ Hiển thị 3 kích thước bút
+              [2, 4, 6].map((size) => (
+                <ToolButton
+                  key={size}
+                  icon={
+                    <View
+                      style={[
+                        styles.widthDot,
+                        {
+                          width: size * 2,
+                          height: size * 2,
+                          borderRadius: size,
+                          backgroundColor:
+                            strokeWidth === size ? "#2563EB" : "#475569",
+                        },
+                      ]}
+                    />
+                  }
+                  active={strokeWidth === size}
+                  onPress={() => setStrokeWidth(size)}
+                />
+              ))}
+        </View>
       </ScrollView>
     </View>
   );
 }
 
+// 💅 ===== STYLES =====
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#F7FAFC",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
     paddingVertical: 8,
-    paddingHorizontal: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -587,5 +684,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 4,
     gap: 6,
+  },
+  divider: {
+    width: 1,
+    height: 22,
+    backgroundColor: "#CBD5E1",
+    marginHorizontal: 6,
+  },
+  eraserButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+  },
+  eraserButtonActive: {
+    backgroundColor: "#3b82f6",
+    borderColor: "#2563eb",
+  },
+  widthGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  widthDot: {
+    borderRadius: 50,
   },
 });
