@@ -1,4 +1,3 @@
-// ToolButton.jsx
 import React from "react";
 import { TouchableOpacity, StyleSheet } from "react-native";
 
@@ -6,38 +5,35 @@ export default function ToolButton({ active, icon, children, onPress }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[
-        styles.button,
-        active && styles.buttonActive,
-        active && styles.buttonShadow,
-      ]}
+      style={[styles.button, active && styles.buttonActive]}
+      activeOpacity={0.7}
     >
-      {icon || children} {/* <- supports both props.icon and children */}
+      {icon || children}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    backgroundColor: "transparent",
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 4,
+    marginHorizontal: 3,
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: "#d1d5db",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   buttonActive: {
-    backgroundColor: "#2563eb",
-    borderColor: "#3b82f6",
-  },
-  buttonShadow: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    backgroundColor: "#3b82f6",
+    borderColor: "#2563eb",
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
   },
 });

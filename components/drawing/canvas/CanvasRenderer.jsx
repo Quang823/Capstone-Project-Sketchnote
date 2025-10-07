@@ -1,18 +1,64 @@
-// CanvasRenderer.jsx
 import React, { forwardRef, useImperativeHandle } from "react";
 import {
   Canvas,
   Path,
   Rect,
+  Group,
   Skia,
   Text as SkiaText,
   useCanvasRef,
+  useFont,
+  Circle,
 } from "@shopify/react-native-skia";
 import PaperGuides from "./PaperGuides";
 import { applyPencilAlpha, makePathFromPoints } from "./utils";
 
-const DESK_BGCOLOR = "#e9ecef"; // Light desk background giống GoodNotes
-const PAGE_BGCOLOR = "#ffffff"; // Page trắng tinh
+const DESK_BGCOLOR = "#e9ecef";
+const PAGE_BGCOLOR = "#ffffff";
+
+/**
+ * Simple stabilization smoothing:
+ * - stabilization in [0..1], where 0 = no smoothing, 1 = max smoothing.
+ * - we implement exponential moving average: smoothed = prev + (pt - prev) * (1 - stab)
+ *   so larger stab => slower following => smoother.
+ */
+function smoothPoints(points = [], stabilization = 0) {
+  if (!Array.isArray(points) || points.length === 0 || stabilization <= 0) {
+    return points;
+  }
+  const out = [];
+  let prev = { x: points[0].x, y: points[0].y };
+  out.push({ ...prev });
+  const alpha = 1 - Math.max(0, Math.min(1, stabilization)); // alpha = responsiveness
+  for (let i = 1; i < points.length; i++) {
+    const p = points[i];
+    const nx = prev.x + (p.x - prev.x) * alpha;
+    const ny = prev.y + (p.y - prev.y) * alpha;
+    const newP = { ...p, x: nx, y: ny };
+    out.push(newP);
+    prev = newP;
+  }
+  return out;
+}
+
+/**
+ * Compute effective stroke width:
+ * - baseWidth: stroke's stored width (or tool default)
+ * - thickness: user multiplier (recommended range used in UI, e.g. 0.2..5)
+ * - pressure: user "pressure sensitivity" factor in [0..1], center 0.5 = neutral
+ *
+ * We compute a gentle mapping so that:
+ * - thickness scales baseWidth
+ * - pressure nudges width around neutral (0.5)
+ */
+function computeEffectiveWidth(baseWidth = 1, thickness = 1, pressure = 0.5) {
+  const safeThickness = Math.max(0.1, thickness); // avoid zero
+  // pressureFactor: map pressure 0..1 to multiplier around 1: e.g. 0.5 => 1.0
+  // keep effect modest so lines don't explode: scale range ~ [0.7, 1.3]
+  const pressureFactor = 1 + (pressure - 0.5) * 1.2; // -> 0.4..1.6 (clamp below)
+  const pf = Math.max(0.35, Math.min(1.6, pressureFactor));
+  return baseWidth * safeThickness * pf;
+}
 
 const CanvasRenderer = forwardRef(function CanvasRenderer(
   {
@@ -23,32 +69,95 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     color,
     strokeWidth,
     pencilWidth,
-    eraserWidth,
+    eraserSize,
     brushWidth,
     calligraphyWidth,
     paperStyle,
     page,
     canvasHeight,
+    selectedId, // kept
+    toolConfigs = {},
+    pressure = 0.5,
+    thickness = 1,
+    stabilization = 0,
   },
   ref
 ) {
   const canvasRef = useCanvasRef();
 
-  // Kiểm tra và fallback cho page
+  // FONT LOADING
+  let fontAsset;
+  try {
+    fontAsset = require("../../../assets/fonts/Roboto-Regular.ttf");
+  } catch (err) {
+    fontAsset = null;
+  }
+
+  const font12 = useFont(fontAsset, 12);
+  const font14 = useFont(fontAsset, 14);
+  const font16 = useFont(fontAsset, 16);
+  const font18 = useFont(fontAsset, 18);
+  const font20 = useFont(fontAsset, 20);
+  const font24 = useFont(fontAsset, 24);
+  const font32 = useFont(fontAsset, 32);
+
+  const fontMap = {
+    12: font12,
+    14: font14,
+    16: font16,
+    18: font18,
+    20: font20,
+    24: font24,
+    32: font32,
+  };
+
+  const getClosestFont = (size) => {
+    if (!size) size = 18;
+    if (fontMap[size]) return fontMap[size];
+    const sizes = Object.keys(fontMap).map((s) => parseInt(s, 10));
+    let closest = sizes[0];
+    let bestDiff = Math.abs(size - closest);
+    for (let s of sizes) {
+      const d = Math.abs(size - s);
+      if (d < bestDiff) {
+        bestDiff = d;
+        closest = s;
+      }
+    }
+    return fontMap[closest] || null;
+  };
+
+  const makeFallbackFont = (size) => {
+    try {
+      const typeface = Skia.Typeface.MakeDefault();
+      return Skia.Font ? new Skia.Font(typeface, size) : null;
+    } catch (err) {
+      return null;
+    }
+  };
+
   const safePage = {
     x: page?.x ?? 0,
     y: page?.y ?? 0,
     w: page?.w ?? 0,
     h: page?.h ?? 0,
   };
-
-  // Kiểm tra canvasHeight
   const safeCanvasHeight = canvasHeight ?? 0;
 
   useImperativeHandle(ref, () => ({
     snapshotBase64: () =>
       canvasRef.current?.makeImageSnapshot()?.encodeToBase64?.(),
   }));
+
+  const approxTextWidth = (text, fontSize) => {
+    if (!text) return 0;
+    return text.length * (fontSize || 18) * 0.6;
+  };
+
+  const lastPt = currentPoints.at(-1);
+  const dynamicPressure = lastPt?.pressure ?? pressure;
+  const dynamicThickness = lastPt?.thickness ?? thickness;
+  const dynamicStab = lastPt?.stabilization ?? stabilization;
 
   return (
     <Canvas
@@ -63,7 +172,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         height={safeCanvasHeight}
         color={DESK_BGCOLOR}
       />
-      {/* Page shadow và border (bỏ gradient/blur nếu không hỗ trợ) */}
+
+      {/* Page shadow + border */}
       {safePage.w > 0 && safePage.h > 0 && (
         <>
           <Rect
@@ -81,76 +191,33 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             height={safePage.h}
             color={PAGE_BGCOLOR}
             strokeWidth={1}
-            strokeColor="#ced4da" // Border mỏng giống GoodNotes
+            strokeColor="#ced4da"
           />
         </>
       )}
 
-      {/* Paper Guides */}
+      {/* Paper guides */}
       {safePage.w > 0 && safePage.h > 0 && (
         <PaperGuides paperStyle={paperStyle} page={safePage} />
       )}
 
       {/* Render strokes */}
+      {/* 1️⃣ FILL LAYER – vẽ nền fill (shape hoặc vùng kín) trước */}
       {strokes &&
         strokes.map((s) => {
           if (!s) return null;
 
-          // TEXT, STICKY NOTE, COMMENT
-          if (
-            s.tool === "text" ||
-            s.tool === "sticky" ||
-            s.tool === "comment"
-          ) {
-            const elements = [];
-
-            // Add background for sticky note and comment
-            if (s.tool === "sticky" || s.tool === "comment") {
-              const textWidth =
-                (s.text?.length || 0) * (s.fontSize || 16) * 0.6 +
-                (s.padding || 0) * 2;
-              const textHeight = (s.fontSize || 16) + (s.padding || 0) * 2;
-
-              elements.push(
-                <Rect
-                  key={`${s.id}-bg`}
-                  x={s.x - (s.padding || 0)}
-                  y={s.y - (s.fontSize || 16) - (s.padding || 0)}
-                  width={textWidth}
-                  height={textHeight}
-                  color={s.backgroundColor || "#FFEB3B"}
-                  rx={s.tool === "sticky" ? 4 : 8}
-                  ry={s.tool === "sticky" ? 4 : 8}
-                />
-              );
-            }
-
-            // Add text
-            elements.push(
-              <SkiaText
-                key={s.id}
-                x={s.x || 0}
-                y={s.y || 0}
-                text={s.text || ""}
-                font={{ size: s.fontSize || 18 }}
-                color={s.color || "#000000"}
-              />
-            );
-
-            return elements;
-          }
-
-          // SHAPES (rect/circle/triangle/oval) -> if filled => draw fill then stroke
+          // FILL cho SHAPE (rect, circle, triangle, polygon, ...)
           if (
             s.shape &&
+            s.fill &&
+            !["line", "arrow"].includes(s.tool) &&
             [
               "square",
               "rect",
               "circle",
               "triangle",
               "oval",
-              "line",
-              "arrow",
               "polygon",
               "star",
             ].includes(s.tool)
@@ -178,10 +245,6 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             } else if (s.tool === "oval") {
               const { cx = 0, cy = 0, rx = 0, ry = 0 } = s.shape;
               path.addOval({ cx, cy, rx, ry });
-            } else if (s.tool === "line" || s.tool === "arrow") {
-              const { x1 = 0, y1 = 0, x2 = 0, y2 = 0 } = s.shape;
-              path.moveTo(x1, y1);
-              path.lineTo(x2, y2);
             } else if (s.tool === "polygon" || s.tool === "star") {
               const pts = s.shape.points || [];
               if (pts.length > 0) {
@@ -192,25 +255,156 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               }
             }
 
-            if (s.fill && !["line", "arrow"].includes(s.tool)) {
-              return (
-                <React.Fragment key={s.id}>
-                  <Path
-                    path={path}
-                    color={s.fillColor || "#ffffff"}
-                    style="fill"
+            return (
+              <Path
+                key={`${s.id}-fill`}
+                path={path}
+                color={s.fillColor || "#ffffff"}
+                style="fill"
+              />
+            );
+          }
+
+          // FILL cho vùng kín (freehand)
+          if (s.fill && s.points?.length > 0) {
+            const path = makePathFromPoints(s.points);
+            try {
+              path.close();
+            } catch {}
+            return (
+              <Path
+                key={`${s.id}-fill`}
+                path={path}
+                color={s.fillColor || "#ffffff"}
+                style="fill"
+              />
+            );
+          }
+
+          return null;
+        })}
+
+      {/* 2️⃣ STROKE + TEXT + EFFECT LAYER */}
+      <Group layer>
+        {strokes &&
+          strokes.map((s) => {
+            if (!s) return null;
+
+            // TEXT / STICKY / COMMENT
+            if (["text", "sticky", "comment"].includes(s.tool)) {
+              const elements = [];
+
+              const fontSize = s.fontSize || 18;
+              let font = getClosestFont(fontSize);
+              if (!font) font = makeFallbackFont(fontSize);
+              const hasFont = !!font;
+
+              const textWidth =
+                approxTextWidth(s.text || "", fontSize) + (s.padding || 0) * 2;
+              const textHeight = fontSize + (s.padding || 0) * 2;
+
+              if (s.tool === "sticky" || s.tool === "comment") {
+                elements.push(
+                  <Rect
+                    key={`${s.id}-bg`}
+                    x={s.x - (s.padding || 0)}
+                    y={s.y - fontSize - (s.padding || 0)}
+                    width={textWidth}
+                    height={textHeight}
+                    color={s.backgroundColor || "#FFEB3B"}
+                    rx={s.tool === "sticky" ? 4 : 8}
+                    ry={s.tool === "sticky" ? 4 : 8}
                   />
-                  <Path
-                    path={path}
+                );
+              }
+
+              if (hasFont) {
+                elements.push(
+                  <SkiaText
+                    key={s.id}
+                    x={s.x || 0}
+                    y={s.y || 0}
+                    text={s.text || ""}
+                    font={font}
                     color={s.color || "#000000"}
-                    strokeWidth={s.width || 1}
-                    style="stroke"
-                    strokeCap="round"
-                    strokeJoin="round"
                   />
-                </React.Fragment>
-              );
-            } else {
+                );
+              }
+
+              if (selectedId === s.id) {
+                elements.push(
+                  <Rect
+                    key={`${s.id}-border`}
+                    x={s.x - (s.padding || 0)}
+                    y={s.y - fontSize - (s.padding || 0)}
+                    width={textWidth}
+                    height={textHeight}
+                    color="transparent"
+                    strokeWidth={1}
+                    strokeColor="#2563EB"
+                    style="stroke"
+                    strokeJoin="round"
+                    strokeCap="round"
+                    dashEffect={[6, 4]}
+                  />
+                );
+              }
+
+              return elements;
+            }
+
+            // SHAPES (rect/circle/arrow/...)
+            if (
+              s.shape &&
+              [
+                "square",
+                "rect",
+                "circle",
+                "triangle",
+                "oval",
+                "line",
+                "arrow",
+                "polygon",
+                "star",
+              ].includes(s.tool)
+            ) {
+              const path = Skia.Path.Make();
+              if (s.tool === "circle") {
+                const { cx = 0, cy = 0, r = 0 } = s.shape;
+                path.addCircle(cx, cy, r);
+              } else if (s.tool === "rect" || s.tool === "square") {
+                const { x = 0, y = 0, w = 0, h = 0 } = s.shape;
+                path.addRect({ x, y, width: w, height: h });
+              } else if (s.tool === "triangle") {
+                const {
+                  x1 = 0,
+                  y1 = 0,
+                  x2 = 0,
+                  y2 = 0,
+                  x3 = 0,
+                  y3 = 0,
+                } = s.shape;
+                path.moveTo(x1, y1);
+                path.lineTo(x2, y2);
+                path.lineTo(x3, y3);
+                path.close();
+              } else if (s.tool === "oval") {
+                const { cx = 0, cy = 0, rx = 0, ry = 0 } = s.shape;
+                path.addOval({ cx, cy, rx, ry });
+              } else if (s.tool === "line" || s.tool === "arrow") {
+                const { x1 = 0, y1 = 0, x2 = 0, y2 = 0 } = s.shape;
+                path.moveTo(x1, y1);
+                path.lineTo(x2, y2);
+              } else if (s.tool === "polygon" || s.tool === "star") {
+                const pts = s.shape.points || [];
+                if (pts.length > 0) {
+                  path.moveTo(pts[0]?.x ?? 0, pts[0]?.y ?? 0);
+                  for (let i = 1; i < pts.length; i++)
+                    path.lineTo(pts[i]?.x ?? 0, pts[i]?.y ?? 0);
+                  path.close();
+                }
+              }
+
               const main = (
                 <Path
                   key={s.id}
@@ -222,8 +416,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   strokeJoin="round"
                 />
               );
+
               if (s.tool === "arrow") {
-                // draw simple arrow head at end
                 const { x1 = 0, y1 = 0, x2 = 0, y2 = 0 } = s.shape;
                 const angle = Math.atan2(y2 - y1, x2 - x1);
                 const headLen = Math.max(10, (s.width || 1) * 2);
@@ -252,153 +446,157 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               }
               return main;
             }
-          }
 
-          // FREEHAND STROKES
-          if (s.points && s.points.length > 0) {
-            const path = makePathFromPoints(s.points);
-            // If stroke was marked fillable and filled, ensure path is closed before fill
-            if (s.fill) {
-              try {
-                path.close();
-              } catch (err) {
-                // ignore
+            // FREEHAND
+            if (s.points && s.points.length > 0) {
+              const smoothed = smoothPoints(
+                s.points,
+                s.stabilization ?? stabilization
+              );
+              const path = makePathFromPoints(smoothed);
+
+              let strokeColor = s.color || "#000000";
+              if (s.tool === "pencil")
+                strokeColor = applyPencilAlpha(strokeColor);
+              if (s.tool === "brush" || s.tool === "calligraphy") {
+                if (typeof s.opacity === "number") {
+                  try {
+                    const hex = strokeColor.replace("#", "");
+                    const r = parseInt(hex.slice(0, 2), 16);
+                    const g = parseInt(hex.slice(2, 4), 16);
+                    const b = parseInt(hex.slice(4, 6), 16);
+                    strokeColor = `rgba(${r}, ${g}, ${b}, ${s.opacity})`;
+                  } catch {}
+                }
               }
+
+              let baseW = s.width;
+              if (!baseW) {
+                if (s.tool === "pencil") baseW = pencilWidth || 1;
+                else if (s.tool === "brush") baseW = brushWidth || 1;
+                else if (s.tool === "calligraphy")
+                  baseW = calligraphyWidth || 1;
+                else if (s.tool === "eraser") baseW = eraserSize || 1;
+                else baseW = strokeWidth || 1;
+              }
+              const effWidth = computeEffectiveWidth(
+                baseW,
+                s.thickness ?? thickness,
+                s.pressure ?? pressure
+              );
+
               return (
-                <React.Fragment key={s.id}>
-                  <Path
-                    path={path}
-                    color={s.fillColor || "#ffffff"}
-                    style="fill"
-                  />
-                  <Path
-                    path={path}
-                    color={s.color || "#000000"}
-                    strokeWidth={s.width || 1}
-                    style="stroke"
-                    strokeCap="round"
-                    strokeJoin="round"
-                    blendMode={s.tool === "eraser" ? "clear" : "srcOver"}
-                  />
-                </React.Fragment>
+                <Path
+                  key={s.id}
+                  path={path}
+                  color={strokeColor}
+                  strokeWidth={effWidth}
+                  style="stroke"
+                  strokeCap="round"
+                  strokeJoin="round"
+                  blendMode={
+                    s.tool === "eraser"
+                      ? "dstOut"
+                      : s.tool === "highlighter"
+                      ? "multiply"
+                      : "srcOver"
+                  }
+                />
               );
             }
 
-            let strokeColor = s.color || "#000000";
-            if (s.tool === "pencil")
-              strokeColor = applyPencilAlpha(strokeColor);
-            if (s.tool === "brush" || s.tool === "calligraphy") {
-              if (typeof s.opacity === "number") {
+            return null;
+          })}
+
+        {/* --- Preview hiện tại --- */}
+        {currentPoints?.length > 0 &&
+          tool !== "eraser" &&
+          eraserMode !== "object" && (
+            <Path
+              key="current"
+              path={makePathFromPoints(
+                smoothPoints(currentPoints, dynamicStab)
+              )}
+              color={tool === "pencil" ? applyPencilAlpha(color) : color}
+              strokeWidth={computeEffectiveWidth(
+                tool === "pen"
+                  ? strokeWidth || 1
+                  : tool === "pencil"
+                  ? pencilWidth || 1
+                  : tool === "highlighter"
+                  ? (strokeWidth || 1) * 2
+                  : strokeWidth || 1,
+                dynamicThickness,
+                dynamicPressure
+              )}
+              style="stroke"
+              strokeCap="round"
+              strokeJoin="round"
+            />
+          )}
+
+        {/* --- Soft preview cho brush / calligraphy --- */}
+        {currentPoints?.length > 0 &&
+          (tool === "brush" || tool === "calligraphy") && (
+            <Path
+              key="current-soft"
+              path={makePathFromPoints(
+                smoothPoints(currentPoints, stabilization)
+              )}
+              color={(() => {
                 try {
-                  const hex = strokeColor.replace("#", "");
+                  const hex = color.replace("#", "");
                   const r = parseInt(hex.slice(0, 2), 16);
                   const g = parseInt(hex.slice(2, 4), 16);
                   const b = parseInt(hex.slice(4, 6), 16);
-                  strokeColor = `rgba(${r}, ${g}, ${b}, ${s.opacity})`;
-                } catch {}
-              }
-            }
+                  const alpha = tool === "brush" ? 0.6 : 0.9;
+                  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                } catch {
+                  return color;
+                }
+              })()}
+              strokeWidth={computeEffectiveWidth(
+                tool === "brush" ? brushWidth || 1 : calligraphyWidth || 1,
+                thickness,
+                pressure
+              )}
+              style="stroke"
+              strokeCap="round"
+              strokeJoin="round"
+            />
+          )}
 
-            return (
-              <Path
-                key={s.id}
-                path={path}
-                color={strokeColor}
-                strokeWidth={s.width || 1}
-                style="stroke"
-                strokeCap="round"
-                strokeJoin="round"
-                blendMode={s.tool === "eraser" ? "clear" : "srcOver"}
-              />
-            );
-          }
-
-          return null;
-        })}
-
-      {/* Render current drawing (preview) */}
-      {currentPoints &&
-        Array.isArray(currentPoints) &&
-        currentPoints.length > 0 &&
-        tool !== "eraser" &&
-        tool !== "object-eraser" && (
-          <Path
-            key="current"
-            path={makePathFromPoints(currentPoints)}
-            color={tool === "pencil" ? applyPencilAlpha(color) : color}
-            strokeWidth={
-              tool === "pen"
-                ? strokeWidth || 1
-                : tool === "pencil"
-                ? pencilWidth || 1
-                : tool === "highlighter"
-                ? (strokeWidth || 1) * 2
-                : strokeWidth || 1
-            }
-            style="stroke"
-            strokeCap="round"
-            strokeJoin="round"
-          />
-        )}
-      {currentPoints &&
-        Array.isArray(currentPoints) &&
-        currentPoints.length > 0 &&
-        (tool === "brush" || tool === "calligraphy") && (
-          <Path
-            key="current-soft"
-            path={makePathFromPoints(currentPoints)}
-            color={(() => {
-              try {
-                const hex = color.replace("#", "");
-                const r = parseInt(hex.slice(0, 2), 16);
-                const g = parseInt(hex.slice(2, 4), 16);
-                const b = parseInt(hex.slice(4, 6), 16);
-                const alpha = tool === "brush" ? 0.6 : 0.9;
-                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-              } catch {
-                return color;
-              }
-            })()}
-            strokeWidth={
-              tool === "brush" ? brushWidth || 1 : calligraphyWidth || 1
-            }
-            style="stroke"
-            strokeCap="round"
-            strokeJoin="round"
-          />
-        )}
-
-      {/* Pixel eraser live preview */}
-      {tool === "eraser" &&
-        currentPoints &&
-        Array.isArray(currentPoints) &&
-        currentPoints.length > 0 && (
+        {/* --- Eraser preview --- */}
+        {tool === "eraser" && currentPoints?.length > 0 && (
           <Path
             key="eraser-preview"
             path={makePathFromPoints(currentPoints, false)}
             color={PAGE_BGCOLOR}
-            strokeWidth={eraserWidth || 1}
+            strokeWidth={eraserSize || 1}
             style="stroke"
             strokeCap="round"
             strokeJoin="round"
-            blendMode="clear"
+            blendMode="dstOut"
           />
         )}
+      </Group>
 
-      {/* Object eraser lasso preview (dashed-like by skipping points) */}
-      {tool === "object-eraser" &&
-        currentPoints &&
+      {/* --- Object eraser (lasso) preview --- */}
+      {tool === "eraser" &&
+        eraserMode === "object" &&
         Array.isArray(currentPoints) &&
         currentPoints.length > 1 &&
         (() => {
           const pts = currentPoints;
           const segments = [];
+
           for (let i = 0; i < pts.length - 1; i += 3) {
             const sub = [
               pts[i] || { x: 0, y: 0 },
               pts[i + 1] || pts[i] || { x: 0, y: 0 },
               pts[i + 2] || pts[i + 1] || pts[i] || { x: 0, y: 0 },
             ];
+
             segments.push(
               <Path
                 key={`lasso-${i}`}
@@ -411,8 +609,30 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               />
             );
           }
+
           return segments;
         })()}
+
+      {tool === "eraser" &&
+        eraserMode === "pixel" &&
+        currentPoints?.length > 0 && (
+          <Group key="pixel-eraser-preview">
+            <Circle
+              cx={currentPoints[currentPoints.length - 1]?.x ?? 0}
+              cy={currentPoints[currentPoints.length - 1]?.y ?? 0}
+              r={eraserSize / 2}
+              color="rgba(255,255,255,0.8)" // trong suốt nhẹ, nền trắng
+            />
+            <Circle
+              cx={currentPoints[currentPoints.length - 1]?.x ?? 0}
+              cy={currentPoints[currentPoints.length - 1]?.y ?? 0}
+              r={eraserSize / 2}
+              color="rgba(0,0,0,0.25)" // viền xám nhạt
+              style="stroke"
+              strokeWidth={1.2}
+            />
+          </Group>
+        )}
     </Canvas>
   );
 });

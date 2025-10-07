@@ -1,190 +1,271 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   PanResponder,
+  Animated,
 } from "react-native";
 import Slider from "@react-native-community/slider";
-import {
-  MaterialIcons,
-  MaterialCommunityIcons,
-  FontAwesome5,
-} from "@expo/vector-icons";
+import { MaterialCommunityIcons, MaterialIcons } from "@expo/vector-icons";
 
 const ICON_SIZE = 26;
+const PANEL_WIDTH_COLLAPSED = 60;
+const PANEL_WIDTH_EXPANDED = 300;
 
 export default function PenSettingsPanel({
   tool,
   setTool,
-  pressure,
-  setPressure,
-  thickness,
-  setThickness,
-  stabilization,
-  setStabilization,
+  config,
+  onSettingChange,
   visible,
 }) {
   const [expanded, setExpanded] = useState(false);
-  const [position, setPosition] = useState({ x: 50, y: 200 });
 
-  // PanResponder để kéo modal
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onPanResponderMove: (_, gesture) => {
-      setPosition({
-        x: position.x + gesture.dx,
-        y: position.y + gesture.dy,
+  // 🔹 Animation refs
+  const position = useRef(new Animated.ValueXY({ x: 50, y: 200 })).current;
+  const widthAnim = useRef(new Animated.Value(PANEL_WIDTH_COLLAPSED)).current;
+  const tapStartTime = useRef(0);
+
+  // 🟦 Toggle width animation (pop in/out style)
+  const toggleExpand = useCallback(() => {
+    const targetWidth = expanded ? PANEL_WIDTH_COLLAPSED : PANEL_WIDTH_EXPANDED;
+
+    setExpanded((prev) => !prev);
+
+    Animated.spring(widthAnim, {
+      toValue: targetWidth,
+      friction: 6,
+      tension: 120,
+      useNativeDriver: false,
+    }).start();
+  }, [expanded, widthAnim]);
+
+  // 🟩 Pan (drag & tap toggle)
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          tapStartTime.current = Date.now();
+          position.setOffset({
+            x: position.x._value,
+            y: position.y._value,
+          });
+        },
+        onPanResponderMove: Animated.event(
+          [null, { dx: position.x, dy: position.y }],
+          { useNativeDriver: false }
+        ),
+        onPanResponderRelease: (_, gesture) => {
+          position.flattenOffset();
+          const pressDuration = Date.now() - tapStartTime.current;
+
+          if (
+            Math.abs(gesture.dx) < 5 &&
+            Math.abs(gesture.dy) < 5 &&
+            pressDuration < 200
+          ) {
+            toggleExpand();
+          }
+        },
+      }),
+    [position, toggleExpand]
+  );
+
+  // 🟨 Giảm render khi kéo slider
+  const handleValueChange = useCallback(
+    (key, value) => {
+      requestAnimationFrame(() => {
+        onSettingChange(tool, key, value);
       });
     },
-    onPanResponderRelease: () => {},
-  });
+    [tool, onSettingChange]
+  );
 
   if (!visible) return null;
 
   return (
-    <View
+    <Animated.View
       style={[
         styles.container,
-        { top: position.y, left: position.x, width: expanded ? 280 : 50 },
+        {
+          width: widthAnim,
+          transform: [{ translateX: position.x }, { translateY: position.y }],
+        },
       ]}
       {...panResponder.panHandlers}
     >
-      {/* Drag handle + nút toggle */}
+      {/* Header */}
       <View style={styles.header}>
-        {expanded && <View style={styles.dragHandle} />}
-        <TouchableOpacity
-          onPress={() => setExpanded(!expanded)}
-          style={styles.toggleButton}
-        >
+        <View style={styles.dragZone}>
           {expanded ? (
-            <Text style={styles.title}>Pen Settings</Text>
+            <Text style={styles.title}>🖊 Pen Settings</Text>
           ) : (
-            <MaterialIcons name="settings" size={24} color="#fff" />
+            <MaterialIcons name="edit" size={ICON_SIZE} color="#fff" />
           )}
-        </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Nội dung */}
+      {/* Content */}
       {expanded && (
         <View style={styles.content}>
-          {/* Icon các bút */}
-          <View style={styles.row}>
-            <TouchableOpacity onPress={() => setTool("pen")}>
-              <MaterialCommunityIcons
-                name="pen"
-                size={ICON_SIZE}
-                color={tool === "pen" ? "#007AFF" : "#bbb"}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setTool("pencil")}>
-              <FontAwesome5
-                name="pencil-alt"
-                size={ICON_SIZE}
-                color={tool === "pencil" ? "#007AFF" : "#bbb"}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setTool("brush")}>
-              <MaterialCommunityIcons
-                name="brush-variant"
-                size={ICON_SIZE}
-                color={tool === "brush" ? "#007AFF" : "#bbb"}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setTool("calligraphy")}>
-              <MaterialCommunityIcons
-                name="fountain-pen"
-                size={ICON_SIZE}
-                color={tool === "calligraphy" ? "#007AFF" : "#bbb"}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setTool("highlighter")}>
-              <MaterialCommunityIcons
-                name="marker"
-                size={ICON_SIZE}
-                color={tool === "highlighter" ? "#007AFF" : "#bbb"}
-              />
-            </TouchableOpacity>
+          {/* Tool selector */}
+          <View style={styles.toolRow}>
+            {[
+              { name: "pen", icon: "pen" },
+              { name: "pencil", icon: "pencil-outline" },
+              { name: "brush", icon: "brush" },
+              { name: "calligraphy", icon: "fountain-pen" },
+              { name: "highlighter", icon: "marker" },
+            ].map((item) => (
+              <TouchableOpacity
+                key={item.name}
+                onPress={() => setTool(item.name)}
+                style={[
+                  styles.toolButton,
+                  tool === item.name && styles.activeTool,
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name={item.icon}
+                  size={ICON_SIZE}
+                  color={tool === item.name ? "#2563eb" : "#aaa"}
+                />
+              </TouchableOpacity>
+            ))}
           </View>
 
-          {/* Pressure */}
-          <Text style={styles.label}>
-            Pressure sensitivity: {Math.round(pressure * 100)}%
-          </Text>
-          <Slider
-            value={pressure}
-            onValueChange={setPressure}
-            minimumValue={0}
-            maximumValue={1}
-            step={0.1}
-          />
-
-          {/* Thickness */}
-          <Text style={styles.label}>Thickness: {thickness.toFixed(2)} mm</Text>
-          <Slider
-            value={thickness}
-            onValueChange={setThickness}
-            minimumValue={0.1}
-            maximumValue={2}
-            step={0.05}
-          />
-
-          {/* Stabilization */}
-          <Text style={styles.label}>
-            Stroke Stabilization: {Math.round(stabilization * 100)}%
-          </Text>
-          <Slider
-            value={stabilization}
-            onValueChange={setStabilization}
-            minimumValue={0}
-            maximumValue={1}
-            step={0.1}
-          />
+          {/* Settings */}
+          {[
+            {
+              key: "pressure",
+              label: "Pressure",
+              icon: "gesture-tap",
+              color: "#3b82f6",
+              min: 0,
+              max: 1,
+              step: 0.01,
+              valueLabel: `${Math.round(config.pressure * 100)}%`,
+            },
+            {
+              key: "thickness",
+              label: "Thickness",
+              icon: "circle-outline",
+              color: "#10b981",
+              min: 0.2,
+              max: 5,
+              step: 0.05,
+              valueLabel: `${config.thickness.toFixed(2)} mm`,
+            },
+            {
+              key: "stabilization",
+              label: "Stabilization",
+              icon: "gesture",
+              color: "#f59e0b",
+              min: 0,
+              max: 1,
+              step: 0.01,
+              valueLabel: `${Math.round(config.stabilization * 100)}%`,
+            },
+          ].map((item) => (
+            <View key={item.key} style={styles.sliderBlock}>
+              <View style={styles.sliderHeader}>
+                <MaterialCommunityIcons
+                  name={item.icon}
+                  size={16}
+                  color="#111"
+                />
+                <Text style={styles.label}>{` ${item.label}`}</Text>
+                <Text style={styles.valueText}>{item.valueLabel}</Text>
+              </View>
+              <Slider
+                value={config[item.key]}
+                onValueChange={(v) => handleValueChange(item.key, v)}
+                minimumValue={item.min}
+                maximumValue={item.max}
+                step={item.step}
+                minimumTrackTintColor={item.color}
+                maximumTrackTintColor="#ccc"
+                thumbTintColor="#000"
+              />
+            </View>
+          ))}
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    backgroundColor: "#1E1E1E",
-    borderRadius: 12,
-    padding: 8,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 10,
     zIndex: 999,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
   },
   header: {
     alignItems: "center",
   },
-  dragHandle: {
-    width: 30,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#888",
-    marginBottom: 6,
-  },
-  toggleButton: {
+  dragZone: {
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#3b82f6",
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    width: "100%",
   },
   title: {
     color: "#fff",
     fontWeight: "600",
-    marginBottom: 8,
+    fontSize: 15,
   },
   content: {
-    marginTop: 6,
+    marginTop: 12,
   },
-  row: {
+  toolRow: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginBottom: 12,
+    marginBottom: 14,
+  },
+  toolButton: {
+    padding: 6,
+    borderRadius: 12,
+  },
+  activeTool: {
+    backgroundColor: "rgba(59,130,246,0.2)",
+    shadowColor: "#3b82f6",
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+  },
+  sliderBlock: {
+    marginBottom: 14,
+  },
+  sliderHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
   },
   label: {
-    color: "#ccc",
+    flex: 1,
+    color: "#111",
+    fontWeight: "500",
     fontSize: 13,
-    marginBottom: 4,
+    marginLeft: 4,
+  },
+  valueText: {
+    color: "#111",
+    fontSize: 12,
+    fontWeight: "500",
   },
 });
