@@ -1,7 +1,10 @@
-import React from "react";
-import { View, Text, Pressable, Animated } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, Pressable, Animated,ScrollView } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { drawerStyles } from "./NavigationDrawer.styles";
+import { useNavigation } from "@react-navigation/native";
+import { getUserFromToken } from "../../../utils/AuthUtils";
+import { authService } from "../../../service/authService";
 
 export default function NavigationDrawer({ 
   drawerOpen, 
@@ -11,6 +14,21 @@ export default function NavigationDrawer({
   onToggleDrawer, 
   onNavPress 
 }) {
+   const [user, setUser] = useState(null);
+  const navigation = useNavigation();
+  useEffect(() => {
+    const getUser = async () => {
+      const user = await getUserFromToken();
+      setUser(user);
+    };
+    getUser();
+  }, []);
+   const handleLogout = async () => {
+    const ok = await authService.logout();
+    if (ok) {
+      navigation.replace("Login"); 
+    }
+  };
   return (
     <>
       {/* Overlay khi drawer mở */}
@@ -47,12 +65,12 @@ export default function NavigationDrawer({
           <View style={drawerStyles.avatar}>
             <Icon name="account-circle" size={48} color="#4F46E5" />
           </View>
-          <Text style={drawerStyles.userName}>Người dùng</Text>
-          <Text style={drawerStyles.userEmail}>user@example.com</Text>
+          <Text style={drawerStyles.userName}>{user?.name || "Người dùng"}</Text>
+          <Text style={drawerStyles.userEmail}>{user?.email || "user@example.com"}</Text>
         </View>
         
         {/* Navigation Items */}
-        <View style={drawerStyles.drawerItems}>
+        <ScrollView style={drawerStyles.drawerItems}>
           <Pressable 
             style={[
               drawerStyles.drawerItem, 
@@ -158,6 +176,62 @@ export default function NavigationDrawer({
               ]}
             >
               Thư viện
+            </Text>
+          </Pressable>
+
+          {/* Store Section */}
+          <Pressable 
+            style={[
+              drawerStyles.drawerItem, 
+              activeNavItem === 'store' && drawerStyles.drawerItemActive
+            ]}
+            onPress={() => onNavPress('store')}
+          >
+            <View style={[
+              drawerStyles.iconContainer,
+              activeNavItem === 'store' && drawerStyles.iconContainerActive
+            ]}>
+              <Icon 
+                name="store" 
+                size={20} 
+                color={activeNavItem === 'store' ? "#FFFFFF" : "#6B7280"} 
+              />
+            </View>
+            <Text 
+              style={[
+                drawerStyles.drawerText,
+                activeNavItem === 'store' && drawerStyles.drawerTextActive
+              ]}
+            >
+              Cửa hàng Resource
+            </Text>
+          </Pressable>
+
+
+          <Pressable 
+            style={[
+              drawerStyles.drawerItem, 
+              activeNavItem === 'wallet' && drawerStyles.drawerItemActive
+            ]}
+            onPress={() => onNavPress('wallet')}
+          >
+            <View style={[
+              drawerStyles.iconContainer,
+              activeNavItem === 'wallet' && drawerStyles.iconContainerActive
+            ]}>
+              <Icon 
+                name="account-balance-wallet" 
+                size={20} 
+                color={activeNavItem === 'wallet' ? "#FFFFFF" : "#6B7280"} 
+              />
+            </View>
+            <Text 
+              style={[
+                drawerStyles.drawerText,
+                activeNavItem === 'wallet' && drawerStyles.drawerTextActive
+              ]}
+            >
+              Ví điện tử
             </Text>
           </Pressable>
 
@@ -271,11 +345,11 @@ export default function NavigationDrawer({
               Cài đặt
             </Text>
           </Pressable>
-        </View>
+        </ScrollView>
         
         {/* Footer */}
         <View style={drawerStyles.drawerFooter}>
-          <Pressable style={drawerStyles.logoutButton}>
+          <Pressable style={drawerStyles.logoutButton} onPress={handleLogout}>
             <Icon name="logout" size={20} color="#EF4444" />
             <Text style={drawerStyles.logoutText}>Đăng xuất</Text>
           </Pressable>

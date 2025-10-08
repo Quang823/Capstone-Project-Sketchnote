@@ -20,6 +20,7 @@ import Reanimated, {
 import heroImage from "../../../assets/logo1.webp";
 import { loginStyles } from "./LoginScreen.styles";
 import { useNavigation } from "@react-navigation/native";
+import { authService } from "../../../service/authService";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 
@@ -58,27 +59,40 @@ export default function LoginScreen({ onBack }) {
     buttonScale.value = withTiming(1, { duration: 150 });
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       toast({
-        title: "Thiếu thông tin đăng nhập",
-        description: "Vui lòng nhập email và mật khẩu",
+        title: "Please fill in both email and password",
         variant: "destructive",
       });
       return;
     }
+  try {
+    const {roles} = await authService.login(email, password);
     toast({
-      title: "Chào mừng đến với SketchNote! 🎨",
-      description: "Đăng nhập thành công! Bắt đầu sáng tạo ngay.",
+      title: "Login successful",
+      variant: "success",
     });
-    // Chuyển đến màn hình Home sau khi đăng nhập
-    navigation.navigate("Home");
+        if (roles.includes("CUSTOMER")) {
+      navigation.navigate("Home");
+    } else if (roles.includes("DESIGNER")) {
+      navigation.navigate("DesignerDashboard");
+    } else if (roles.includes("ADMIN")) {
+      navigation.navigate("AdminDashboard");
+    }
+  } catch (error) {
+    toast({
+      title: "Login failed",
+      description: error.message,
+      variant: "destructive",
+    });
+  }
   };
 
   const handleSocialLogin = (provider) => {
     toast({
-      title: `Đăng nhập với ${provider}`,
-      description: `Tiếp tục với tích hợp ${provider}`,
+      title: `Login with ${provider}`,
+      description: `Continue with ${provider} integration`,
     });
   };
 

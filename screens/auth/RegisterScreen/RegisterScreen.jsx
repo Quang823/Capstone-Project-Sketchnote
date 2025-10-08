@@ -19,16 +19,18 @@ import Reanimated, {
 import heroImage from "../../../assets/logo1.webp";
 import { registerStyles } from "./RegisterScreen.styles";
 import { useNavigation } from "@react-navigation/native";
+import { authService } from "../../../service/authService";
+import ImageUploader from "../../../common/ImageUploader";
+
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 
 export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [email, setEmail] = useState("");
+ const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const { toast } = useToast();
   const navigation = useNavigation();
 
@@ -60,38 +62,54 @@ export default function RegisterScreen() {
     buttonScale.value = withTiming(1, { duration: 150 });
   };
 
-  const handleRegister = () => {
-    if (!email || !password || !confirmPassword || !fullName) {
-      toast({
-        title: "Thiếu thông tin",
-        description: "Vui lòng điền đầy đủ thông tin đăng ký",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast({
-        title: "Mật khẩu không khớp",
-        description: "Mật khẩu và xác nhận mật khẩu phải giống nhau",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleRegister = async () => {
+  console.log("Register button pressed");
+  if (!email || !password || !fullName) {
     toast({
-      title: "Đăng ký thành công! 🎨",
-      description: "Chào mừng bạn đến với SketchNote!",
+      title: "Please fill in all fields",
+      description: "Please fill in all fields",
+      variant: "destructive",
     });
+    return;
+  }
+
+  const [firstName, ...rest] = fullName.trim().split(" ");
+  const lastName = rest.join(" ");
+
+  try {
+    console.log("Sending data:", { email, password, firstName, lastName, avatarUrl });
+    const res = await authService.register({
+      email,
+      password,
+      firstName,
+      lastName,
+      avatarUrl,
+    });
+    console.log("Register response:", res);
+
     
-    // Chuyển đến màn hình đăng nhập sau khi đăng ký thành công
+    toast({
+      title: "Register Successful! 🎨",
+      description: "Welcome to SketchNote!",
+    });
+
     navigation.navigate("Login");
-  };
+  } catch (error) {
+   
+    console.error("Register error:", error);
+    toast({
+      title: "Register Failed",
+      description: error.message || "An error occurred while registering",
+      variant: "destructive",
+    });
+  }
+};
+
 
   const handleSocialRegister = (provider) => {
     toast({
-      title: `Đăng ký với ${provider}`,
-      description: `Tiếp tục đăng ký với ${provider}`,
+      title: `Register with ${provider}`,
+      description: `Continue registering with ${provider}`,
     });
   };
 
@@ -127,14 +145,14 @@ export default function RegisterScreen() {
               </View>
 
               <Text style={registerStyles.heroTitle}>
-                Bắt đầu hành trình{" "}
-                <Text style={registerStyles.heroHighlight}>sáng tạo</Text>{" "}
-                của bạn
+                Start your creative journey{" "}
+                <Text style={registerStyles.heroHighlight}>with SketchNote</Text>{" "}
+                today!
               </Text>
 
               <Text style={registerStyles.heroDescription}>
-                Chuyển đổi ý tưởng thành những bản phác thảo và ghi chú tuyệt đẹp. 
-                Tham gia cùng hàng nghìn nghệ sĩ và người sáng tạo tin tưởng SketchNote.
+                Convert your ideas into beautiful sketches and notes. 
+                Join thousands of artists and creative thinkers on SketchNote.
               </Text>
 
               <View style={registerStyles.featuresGrid}>
@@ -157,7 +175,7 @@ export default function RegisterScreen() {
                     style={registerStyles.featureIcon}
                   />
                   <Text style={registerStyles.featureText}>
-                    Gợi ý thông minh AI
+                    Gợi ý thông minh  AI
                   </Text>
                 </View>
               </View>
@@ -170,19 +188,19 @@ export default function RegisterScreen() {
           <Shadow distance={12} startColor="#00000020" finalColor="#00000005">
             <ReanimatedView style={[registerStyles.registerCard, animatedStyle]}>
               <View style={registerStyles.cardHeader}>
-                <Text style={registerStyles.cardTitle}>Đăng ký tài khoản</Text>
+                <Text style={registerStyles.cardTitle}>Register Account</Text>
                 <Text style={registerStyles.cardDescription}>
-                  Tạo tài khoản để bắt đầu hành trình sáng tạo
+                  Create your account to start your creative journey
                 </Text>
               </View>
 
               <View style={registerStyles.cardContent}>
                 <View style={registerStyles.form}>
                   <View style={registerStyles.inputGroup}>
-                    <Text style={registerStyles.label}>Họ và tên</Text>
+                    <Text style={registerStyles.label}>Full Name</Text>
                     <TextInput
                       style={registerStyles.input}
-                      placeholder="Nhập họ và tên của bạn"
+                      placeholder="Enter your full name"
                       value={fullName}
                       onChangeText={setFullName}
                       autoCapitalize="words"
@@ -225,28 +243,7 @@ export default function RegisterScreen() {
                     </View>
                   </View>
                   
-                  <View style={registerStyles.inputGroup}>
-                    <Text style={registerStyles.label}>Xác nhận mật khẩu</Text>
-                    <View style={registerStyles.passwordContainer}>
-                      <TextInput
-                        style={registerStyles.passwordInput}
-                        placeholder="••••••••"
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        secureTextEntry={!showConfirmPassword}
-                      />
-                      <Pressable
-                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                        style={registerStyles.passwordToggle}
-                      >
-                        <Icon
-                          name={showConfirmPassword ? "visibility-off" : "visibility"}
-                          size={20}
-                          color="#4F46E5"
-                        />
-                      </Pressable>
-                    </View>
-                  </View>
+               <ImageUploader onUploaded={setAvatarUrl} />
 
                   <Reanimated.View style={[animatedButtonStyle]}>
                     <Pressable
