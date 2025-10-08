@@ -1,25 +1,32 @@
 import React from "react";
 import { View, ScrollView } from "react-native";
 import ColorButton from "./ColorButton";
-import { DEFAULT_COLORS } from "./constants";
 
-export default function ColorPalette({ color, setColor }) {
+export default function ColorPalette({
+  colors,
+  selectedColor,
+  onSelectColor,
+  onSelectColorSet, // 👈 thêm prop mới
+}) {
   return (
-    <View style={{ paddingTop: 12, paddingBottom: 8 }}>
+    <View style={{ paddingVertical: 8 }}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{
-          paddingHorizontal: 16,
+          paddingHorizontal: 12,
           alignItems: "center",
         }}
       >
-        {DEFAULT_COLORS.map((c) => (
+        {colors.map((c, index) => (
           <ColorButton
-            key={c}
+            key={c + index}
             color={c}
-            isSelected={color === c}
-            onPress={() => setColor(c)}
+            isSelected={selectedColor === c}
+            selectedColor={selectedColor}
+            onPress={() => onSelectColor(c, index)}
+            onSelectColor={(newColor) => onSelectColor(newColor, index)}
+            onSelectColorSet={onSelectColorSet} // 👈 thêm
           />
         ))}
       </ScrollView>

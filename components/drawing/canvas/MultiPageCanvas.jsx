@@ -5,6 +5,7 @@ import {
   Text,
   TouchableOpacity,
   Dimensions,
+  Alert,
 } from "react-native";
 import CanvasContainer from "./CanvasContainer";
 
@@ -13,7 +14,7 @@ export default function MultiPageCanvas({
   color,
   strokeWidth,
   pencilWidth,
-  eraserWidth,
+  eraserSize,
   brushWidth,
   brushOpacity,
   calligraphyWidth,
@@ -22,21 +23,24 @@ export default function MultiPageCanvas({
   shapeType,
   onRequestTextInput,
   registerPageRef,
-  onPageChange, // callback báo cho DrawingScreen page active (pageId)
+  onActivePageChange,
+  toolConfigs,
+  pressure,
+  thickness,
+  stabilization,
+  eraserMode,
 }) {
   const [pages, setPages] = useState([{ id: 1 }]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [pageLayouts, setPageLayouts] = useState({}); // { [pageId]: height }
+  const [pageLayouts, setPageLayouts] = useState({});
   const scrollRef = useRef(null);
   const lastAddedRef = useRef(null);
 
   const { height } = Dimensions.get("window");
-  const PAGE_SPACING = 30; // marginBottom as used in layout
-
-  // fallback height when a page hasn't reported its layout yet
+  const PAGE_SPACING = 30;
   const fallbackHeight = Math.round(height * 0.9);
 
-  // offsets: cumulative top positions for each page (based on pages order)
+  // ✅ Tính offset cho từng page để scrollTo hoạt động chính xác
   const offsets = useMemo(() => {
     const offs = [];
     let acc = 0;
@@ -49,43 +53,46 @@ export default function MultiPageCanvas({
     return offs;
   }, [pages, pageLayouts, fallbackHeight]);
 
-  // add page: create id, set state, save lastAddedRef so we can auto-scroll when layout comes in
+  // ✅ Thêm page mới
   const addPage = () => {
+    if (pages.length >= 10) {
+      Alert.alert("Giới hạn", "Bạn chỉ có thể tạo tối đa 10 trang.");
+      return;
+    }
     const newId = Date.now();
     lastAddedRef.current = newId;
     setPages((prev) => [...prev, { id: newId }]);
-    // onPageChange will be triggered once layout measured (see effect below)
   };
 
-  // if user taps sidebar page (index), scroll to its offset
+  // ✅ Scroll đến page được chọn
   const scrollToPage = (index) => {
     const y = offsets[index] ?? 0;
     scrollRef.current?.scrollTo({ y, animated: true });
     setActiveIndex(index);
-    onPageChange?.(pages[index]?.id);
+    const id = pages[index]?.id;
+    if (id) onActivePageChange?.(id); // ✅ gọi callback cho DrawingScreen
   };
 
-  // When pageLayouts receives measurement for the lastAdded page, auto-scroll it and set active
+  // ✅ Khi page mới thêm được đo layout, tự scroll tới đó
   useEffect(() => {
     const id = lastAddedRef.current;
     if (!id) return;
-    // check if measured
+
     if (pageLayouts[id]) {
       const idx = pages.findIndex((p) => p.id === id);
       if (idx >= 0) {
         const y = offsets[idx] ?? 0;
-        // give the layout a tick before scrolling to ensure visual stability
         requestAnimationFrame(() => {
           scrollRef.current?.scrollTo({ y, animated: true });
           setActiveIndex(idx);
-          onPageChange?.(id);
+          onActivePageChange?.(id); // ✅ cập nhật lại active page
           lastAddedRef.current = null;
         });
       }
     }
-  }, [pageLayouts, pages, offsets, onPageChange]);
+  }, [pageLayouts, pages, offsets, onActivePageChange]);
 
-  // called when ScrollView is scrolled - determine visible page by offsets
+  // ✅ Theo dõi scroll để cập nhật trang hiện tại
   const handleScroll = (e) => {
     const offsetY = e.nativeEvent.contentOffset.y;
     let current = pages.length - 1;
@@ -103,14 +110,14 @@ export default function MultiPageCanvas({
     }
     if (current !== activeIndex) {
       setActiveIndex(current);
-      onPageChange?.(pages[current]?.id);
+      const id = pages[current]?.id;
+      if (id) onActivePageChange?.(id);
     }
   };
 
-  // helper to update measured layout height per page
+  // ✅ Cập nhật layout từng trang
   const onPageLayout = (pageId, layoutHeight) => {
     setPageLayouts((prev) => {
-      // avoid unnecessary state updates
       if (prev[pageId] === layoutHeight) return prev;
       return { ...prev, [pageId]: layoutHeight };
     });
@@ -118,7 +125,7 @@ export default function MultiPageCanvas({
 
   return (
     <View style={{ flex: 1, flexDirection: "row" }}>
-      {/* Sidebar page list */}
+      {/* Sidebar danh sách trang */}
       <View
         style={{
           width: 60,
@@ -158,7 +165,7 @@ export default function MultiPageCanvas({
             </TouchableOpacity>
           ))}
 
-          {/* Add page button (below list) */}
+          {/* Nút thêm trang */}
           <TouchableOpacity
             onPress={addPage}
             style={{
@@ -176,7 +183,7 @@ export default function MultiPageCanvas({
         </ScrollView>
       </View>
 
-      {/* Pages scroll */}
+      {/* Scroll các trang */}
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
@@ -200,14 +207,14 @@ export default function MultiPageCanvas({
           >
             <CanvasContainer
               ref={(ref) => {
-                // register or unregister ref in parent (DrawingScreen)
-                registerPageRef?.(p.id, ref ?? null);
+                registerPageRef?.(p.id, ref ?? null); // ✅ Đăng ký ref mỗi trang
               }}
               tool={tool}
               color={color}
               strokeWidth={strokeWidth}
               pencilWidth={pencilWidth}
-              eraserWidth={eraserWidth}
+              eraserSize={eraserSize}
+              eraserMode={eraserMode}
               brushWidth={brushWidth}
               brushOpacity={brushOpacity}
               calligraphyWidth={calligraphyWidth}
@@ -216,6 +223,10 @@ export default function MultiPageCanvas({
               pageId={p.id}
               shapeType={shapeType}
               onRequestTextInput={onRequestTextInput}
+              toolConfigs={toolConfigs}
+              pressure={pressure}
+              thickness={thickness}
+              stabilization={stabilization}
             />
           </View>
         ))}
