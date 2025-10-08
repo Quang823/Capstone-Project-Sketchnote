@@ -7,6 +7,14 @@ import CourseDetailScreen from "../screens/courses/CourseDetailScreen/CourseDeta
 import CoursesScreen from "../screens/courses/CoursesScreen/CoursesScreen";
 import LessonScreen from "../screens/courses/LessonScreen/LessonScreen";
 
+import BlogScreen from "../screens/blog/BlogScreen";
+import BlogDetailScreen from "../screens/blog/BlogDetailScreen";
+import ResourceStoreScreen from "../screens/store/ResourceStoreScreen/ResourceStoreScreen";
+import CartScreen from "../screens/store/CartScreen/CartScreen";
+import WalletScreen from "../screens/store/WalletScreen/WalletScreen";
+import MyBlogScreen from "../screens/auth/myblog/MyBlogScreen";
+import CreateBlogScreen from "../screens/auth/myblog/create/CreateBlogScreen";
+
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -19,6 +27,13 @@ export default function AppNavigator() {
       <Stack.Screen name="CourseDetailScreen" component={CourseDetailScreen} />
       <Stack.Screen name="CoursesScreen" component={CoursesScreen} />
       <Stack.Screen name="LessonScreen" component={LessonScreen} />
+      <Stack.Screen name="BlogList" component={BlogScreen} />
+      <Stack.Screen name="BlogDetail" component={BlogDetailScreen} />
+      <Stack.Screen name="ResourceStore" component={ResourceStoreScreen} />
+      <Stack.Screen name="Cart" component={CartScreen} />
+      <Stack.Screen name="Wallet" component={WalletScreen} />
+      <Stack.Screen name="MyBlog" component={MyBlogScreen} />
+      <Stack.Screen name="CreateBlog" component={CreateBlogScreen} />
     </Stack.Navigator>
   );
 }

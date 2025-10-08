@@ -7,6 +7,7 @@ import {
   Image,
   TextInput,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -19,78 +20,10 @@ import Reanimated, {
   Easing,
 } from "react-native-reanimated";
 import { coursesStyles } from "./CoursesScreen.styles";
+import { courseService } from "../../../service/courseService";
+
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
-
-// Dữ liệu mẫu cho các khóa học
-const allCourses = [
-  {
-    id: "1",
-    title: "Nghệ thuật Sketchnote cơ bản",
-    instructor: "Nguyễn Văn A",
-    image: require("../../../assets/logo1.webp"),
-    price: "299.000đ",
-    rating: 4.8,
-    students: 1240,
-    level: "Cơ bản",
-    category: "design",
-  },
-  {
-    id: "2",
-    title: "Sketchnote nâng cao cho doanh nghiệp",
-    instructor: "Trần Thị B",
-    image: require("../../../assets/logo1.webp"),
-    price: "499.000đ",
-    rating: 4.9,
-    students: 850,
-    level: "Nâng cao",
-    category: "business",
-  },
-  {
-    id: "3",
-    title: "Kỹ thuật vẽ biểu đồ trực quan",
-    instructor: "Lê Văn C",
-    image: require("../../../assets/logo1.webp"),
-    price: "399.000đ",
-    rating: 4.7,
-    students: 920,
-    level: "Trung cấp",
-    category: "design",
-  },
-  {
-    id: "4",
-    title: "Sketchnote cho học sinh, sinh viên",
-    instructor: "Phạm Thị D",
-    image: require("../../../assets/logo1.webp"),
-    price: "249.000đ",
-    rating: 4.6,
-    students: 1560,
-    level: "Cơ bản",
-    category: "education",
-  },
-  {
-    id: "5",
-    title: "Sketchnote trong lập kế hoạch dự án",
-    instructor: "Hoàng Văn E",
-    image: require("../../../assets/logo1.webp"),
-    price: "349.000đ",
-    rating: 4.5,
-    students: 720,
-    level: "Trung cấp",
-    category: "business",
-  },
-  {
-    id: "6",
-    title: "Nghệ thuật tạo mindmap trực quan",
-    instructor: "Ngô Thị F",
-    image: require("../../../assets/logo1.webp"),
-    price: "299.000đ",
-    rating: 4.8,
-    students: 980,
-    level: "Cơ bản",
-    category: "education",
-  },
-];
 
 // Danh mục khóa học
 const courseCategories = [
@@ -104,23 +37,61 @@ export default function CoursesScreen() {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [filteredCourses, setFilteredCourses] = useState(allCourses);
+  const [allCourses, setAllCourses] = useState([]);
+  const [filteredCourses, setFilteredCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
   // Animation cho các phần tử
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
 
+  // Fetch courses từ API
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  // Filter courses khi search hoặc category thay đổi
   useEffect(() => {
     opacity.value = withTiming(1, { duration: 800, easing: Easing.ease });
     translateY.value = withTiming(0, { duration: 800, easing: Easing.ease });
     
     filterCourses();
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, allCourses]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }],
   }));
+
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await courseService.getAllCourse();
+      
+      // Transform API data để phù hợp với UI
+      const transformedCourses = data.map(course => ({
+        id: course.courseId.toString(),
+        title: course.title,
+        instructor: "Giảng viên", // API không có thông tin này
+        image: require("../../../assets/logo1.webp"), // Placeholder image
+        price: `${course.price.toLocaleString('vi-VN')}đ`,
+        rating: 4.5, // API không có thông tin này
+        students: course.student_count,
+        level: "Cơ bản", // API không có thông tin này
+        category: course.category?.toLowerCase() || "all",
+      }));
+      
+      setAllCourses(transformedCourses);
+      setFilteredCourses(transformedCourses);
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching courses:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filterCourses = () => {
     let filtered = allCourses;
@@ -153,6 +124,10 @@ export default function CoursesScreen() {
 
   const handleBackPress = () => {
     navigation.goBack();
+  };
+
+  const handleRetry = () => {
+    fetchCourses();
   };
 
   return (
@@ -212,49 +187,64 @@ export default function CoursesScreen() {
       </View>
 
       <ReanimatedView style={[coursesStyles.coursesContainer, animatedStyle]}>
-        <FlatList
-          data={filteredCourses}
-  keyExtractor={(item) => item.id}
-  numColumns={5} 
-  columnWrapperStyle={coursesStyles.courseRow}
-  showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <Pressable
-              style={coursesStyles.courseCard}
-              onPress={() => handleViewCourse(item.id)}
-            >
-              <Shadow distance={5} startColor="#00000010" finalColor="#00000005">
-                <View style={coursesStyles.courseCardInner}>
-                  <Image source={item.image} style={coursesStyles.courseImage} />
-                  <View style={coursesStyles.courseContent}>
-                    <Text style={coursesStyles.courseTitle} numberOfLines={2}>
-                      {item.title}
-                    </Text>
-                    <Text style={coursesStyles.courseInstructor}>
-                      {item.instructor}
-                    </Text>
-                    <View style={coursesStyles.courseMetaContainer}>
-                      <View style={coursesStyles.courseRating}>
-                        <Icon name="star" size={14} color="#F59E0B" />
-                        <Text style={coursesStyles.courseRatingText}>{item.rating}</Text>
+        {loading ? (
+          <View style={coursesStyles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text style={coursesStyles.loadingText}>Đang tải khóa học...</Text>
+          </View>
+        ) : error ? (
+          <View style={coursesStyles.errorContainer}>
+            <Icon name="error-outline" size={64} color="#EF4444" />
+            <Text style={coursesStyles.errorText}>{error}</Text>
+            <Pressable style={coursesStyles.retryButton} onPress={handleRetry}>
+              <Text style={coursesStyles.retryButtonText}>Thử lại</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredCourses}
+            keyExtractor={(item) => item.id}
+            numColumns={5} 
+            columnWrapperStyle={coursesStyles.courseRow}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <Pressable
+                style={coursesStyles.courseCard}
+                onPress={() => handleViewCourse(item.id)}
+              >
+                <Shadow distance={5} startColor="#00000010" finalColor="#00000005">
+                  <View style={coursesStyles.courseCardInner}>
+                    <Image source={item.image} style={coursesStyles.courseImage} />
+                    <View style={coursesStyles.courseContent}>
+                      <Text style={coursesStyles.courseTitle} numberOfLines={2}>
+                        {item.title}
+                      </Text>
+                      <Text style={coursesStyles.courseInstructor}>
+                        {item.instructor}
+                      </Text>
+                      <View style={coursesStyles.courseMetaContainer}>
+                        <View style={coursesStyles.courseRating}>
+                          <Icon name="star" size={14} color="#F59E0B" />
+                          <Text style={coursesStyles.courseRatingText}>{item.rating}</Text>
+                        </View>
+                        <Text style={coursesStyles.courseLevel}>{item.level}</Text>
                       </View>
-                      <Text style={coursesStyles.courseLevel}>{item.level}</Text>
-                    </View>
-                    <View style={coursesStyles.coursePriceContainer}>
-                      <Text style={coursesStyles.coursePrice}>{item.price}</Text>
+                      <View style={coursesStyles.coursePriceContainer}>
+                        <Text style={coursesStyles.coursePrice}>{item.price}</Text>
+                      </View>
                     </View>
                   </View>
-                </View>
-              </Shadow>
-            </Pressable>
-          )}
-          ListEmptyComponent={
-            <View style={coursesStyles.emptyContainer}>
-              <Icon name="search-off" size={64} color="#9CA3AF" />
-              <Text style={coursesStyles.emptyText}>Không tìm thấy khóa học nào</Text>
-            </View>
-          }
-        />
+                </Shadow>
+              </Pressable>
+            )}
+            ListEmptyComponent={
+              <View style={coursesStyles.emptyContainer}>
+                <Icon name="search-off" size={64} color="#9CA3AF" />
+                <Text style={coursesStyles.emptyText}>Không tìm thấy khóa học nào</Text>
+              </View>
+            }
+          />
+        )}
       </ReanimatedView>
     </LinearGradient>
   );
