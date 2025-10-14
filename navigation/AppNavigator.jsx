@@ -14,6 +14,7 @@ import CartScreen from "../screens/store/CartScreen/CartScreen";
 import WalletScreen from "../screens/store/WalletScreen/WalletScreen";
 import MyBlogScreen from "../screens/auth/myblog/MyBlogScreen";
 import CreateBlogScreen from "../screens/auth/myblog/create/CreateBlogScreen";
+import UpdateBlogScreen from "../screens/auth/myblog/create/UpdateBlogScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -34,6 +35,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Wallet" component={WalletScreen} />
       <Stack.Screen name="MyBlog" component={MyBlogScreen} />
       <Stack.Screen name="CreateBlog" component={CreateBlogScreen} />
+      <Stack.Screen name="UpdateBlog" component={UpdateBlogScreen} />
     </Stack.Navigator>
   );
 }

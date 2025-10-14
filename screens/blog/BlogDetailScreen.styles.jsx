@@ -22,10 +22,12 @@ export const blogDetailStyles = StyleSheet.create({
 
   scrollContent: { padding: 16 },
   blogImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 12,
-    marginBottom: 16,
+      width: "100%",
+  height: 250,
+  borderRadius: 0,        
+  resizeMode: "cover",    
+  marginBottom: 16,
+  alignSelf: "center", 
   },
   blogTitle: {
     fontSize: 22,
