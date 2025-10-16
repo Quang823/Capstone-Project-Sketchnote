@@ -21,6 +21,7 @@ import Reanimated, {
 import heroImage from "../../../assets/logo1.webp";
 import { loginStyles } from "./LoginScreen.styles";
 import { useNavigation } from "@react-navigation/native";
+import { authService } from "../../../service/authService";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 
@@ -59,21 +60,34 @@ export default function LoginScreen({ onBack }) {
     buttonScale.value = withTiming(1, { duration: 150 });
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       toast({
-        title: "Missing login information",
-        description: "Please enter your email and password",
+        title: "Please fill in both email and password",
         variant: "destructive",
       });
       return;
     }
+  try {
+    const {roles} = await authService.login(email, password);
     toast({
-      title: "Welcome to SketchNote! 🎨",
-      description: "Login successful! Start creating now.",
+      title: "Login successful",
+      variant: "success",
     });
-    // Navigate to Home screen after login
-    navigation.navigate("Home");
+        if (roles.includes("CUSTOMER")) {
+      navigation.navigate("Home");
+    } else if (roles.includes("DESIGNER")) {
+      navigation.navigate("DesignerDashboard");
+    } else if (roles.includes("ADMIN")) {
+      navigation.navigate("AdminDashboard");
+    }
+  } catch (error) {
+    toast({
+      title: "Login failed",
+      description: error.message,
+      variant: "destructive",
+    });
+  }
   };
 
   const handleSocialLogin = (provider) => {

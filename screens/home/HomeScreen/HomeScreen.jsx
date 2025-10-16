@@ -183,11 +183,23 @@ export default function HomeScreen() {
           case 'courses':
             navigation.navigate("CoursesScreen");
             break;
+          case 'blogAll':
+            navigation.navigate("BlogList");
+            break;
+          case 'blogMine':
+            navigation.navigate("MyBlog");
+            break;
           case 'create':
             navigation.navigate("DrawingScreen");
             break;
           case 'gallery':
             navigation.navigate("GalleryScreen");
+            break;
+          case 'store':
+            navigation.navigate("ResourceStore");
+            break;
+          case 'wallet':
+            navigation.navigate("Wallet");
             break;
           case 'profile':
             navigation.navigate("ProfileScreen");
@@ -254,7 +266,22 @@ export default function HomeScreen() {
               <Pressable onPress={toggleDrawer} style={homeStyles.menuButton}>
                 <Icon name="menu" size={24} color="#1F2937" />
               </Pressable>
-              <View style={homeStyles.notificationContainer}>
+              <View style={homeStyles.headerActions}>
+                <Pressable 
+                  style={homeStyles.headerActionButton}
+                  onPress={() => navigation.navigate("Wallet")}
+                >
+                  <Icon name="account-balance-wallet" size={24} color="#6B7280" />
+                </Pressable>
+                <Pressable 
+                  style={homeStyles.headerActionButton}
+                  onPress={() => navigation.navigate("Cart")}
+                >
+                  <Icon name="shopping-cart" size={24} color="#6B7280" />
+                  <View style={homeStyles.cartBadge}>
+                    <Text style={homeStyles.cartBadgeText}>2</Text>
+                  </View>
+                </Pressable>
                 <Pressable style={homeStyles.notificationButton}>
                   <Icon name="notifications-none" size={24} color="#6B7280" />
                   <View style={homeStyles.notificationBadge}>

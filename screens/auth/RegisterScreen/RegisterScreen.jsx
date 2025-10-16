@@ -19,16 +19,18 @@ import Reanimated, {
 import heroImage from "../../../assets/logo1.webp";
 import { registerStyles } from "./RegisterScreen.styles";
 import { useNavigation } from "@react-navigation/native";
+import { authService } from "../../../service/authService";
+import ImageUploader from "../../../common/ImageUploader";
+
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 
 export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [email, setEmail] = useState("");
+ const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const { toast } = useToast();
   const navigation = useNavigation();
 
@@ -60,38 +62,54 @@ export default function RegisterScreen() {
     buttonScale.value = withTiming(1, { duration: 150 });
   };
 
-  const handleRegister = () => {
-    if (!email || !password || !confirmPassword || !fullName) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all registration fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast({
-        title: "Passwords do not match",
-        description: "Password and confirm password must be the same",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const handleRegister = async () => {
+  console.log("Register button pressed");
+  if (!email || !password || !fullName) {
     toast({
-      title: "Registration successful! 🎨",
+      title: "Please fill in all fields",
+      description: "Please fill in all fields",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const [firstName, ...rest] = fullName.trim().split(" ");
+  const lastName = rest.join(" ");
+
+  try {
+    console.log("Sending data:", { email, password, firstName, lastName, avatarUrl });
+    const res = await authService.register({
+      email,
+      password,
+      firstName,
+      lastName,
+      avatarUrl,
+    });
+    console.log("Register response:", res);
+
+    
+    toast({
+      title: "Register Successful! 🎨",
       description: "Welcome to SketchNote!",
     });
 
-    // Navigate to Login screen after successful registration
     navigation.navigate("Login");
-  };
+  } catch (error) {
+   
+    console.error("Register error:", error);
+    toast({
+      title: "Register Failed",
+      description: error.message || "An error occurred while registering",
+      variant: "destructive",
+    });
+  }
+};
+
 
   const handleSocialRegister = (provider) => {
     toast({
       title: `Register with ${provider}`,
-      description: `Continue registration with ${provider}`,
+      description: `Continue registering with ${provider}`,
     });
   };
 
@@ -127,14 +145,14 @@ export default function RegisterScreen() {
               </View>
 
               <Text style={registerStyles.heroTitle}>
-                Start your{" "}
-                <Text style={registerStyles.heroHighlight}>creative</Text>{" "}
-                journey
+                Start your creative journey{" "}
+                <Text style={registerStyles.heroHighlight}>with SketchNote</Text>{" "}
+                today!
               </Text>
 
               <Text style={registerStyles.heroDescription}>
-                Transform your ideas into beautiful sketches and notes. Join
-                thousands of artists and creators who trust SketchNote.
+                Convert your ideas into beautiful sketches and notes. 
+                Join thousands of artists and creative thinkers on SketchNote.
               </Text>
 
               <View style={registerStyles.featuresGrid}>
@@ -157,7 +175,7 @@ export default function RegisterScreen() {
                     style={registerStyles.featureIcon}
                   />
                   <Text style={registerStyles.featureText}>
-                    Smart AI suggestions
+                    Gợi ý thông minh  AI
                   </Text>
                 </View>
               </View>
@@ -172,9 +190,9 @@ export default function RegisterScreen() {
               style={[registerStyles.registerCard, animatedStyle]}
             >
               <View style={registerStyles.cardHeader}>
-                <Text style={registerStyles.cardTitle}>Create an account</Text>
+                <Text style={registerStyles.cardTitle}>Register Account</Text>
                 <Text style={registerStyles.cardDescription}>
-                  Sign up to start your creative journey
+                  Create your account to start your creative journey
                 </Text>
               </View>
 
@@ -226,35 +244,8 @@ export default function RegisterScreen() {
                       </Pressable>
                     </View>
                   </View>
-
-                  <View style={registerStyles.inputGroup}>
-                    <Text style={registerStyles.label}>Confirm Password</Text>
-                    <View style={registerStyles.passwordContainer}>
-                      <TextInput
-                        style={registerStyles.passwordInput}
-                        placeholder="••••••••"
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        secureTextEntry={!showConfirmPassword}
-                      />
-                      <Pressable
-                        onPress={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        style={registerStyles.passwordToggle}
-                      >
-                        <Icon
-                          name={
-                            showConfirmPassword
-                              ? "visibility-off"
-                              : "visibility"
-                          }
-                          size={20}
-                          color="#4F46E5"
-                        />
-                      </Pressable>
-                    </View>
-                  </View>
+                  
+               <ImageUploader onUploaded={setAvatarUrl} />
 
                   <Reanimated.View style={[animatedButtonStyle]}>
                     <Pressable
