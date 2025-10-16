@@ -670,7 +670,7 @@ export default function ToolbarContainer({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#F7FAFC",
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
     borderBottomColor: "#E2E8F0",
     paddingVertical: 8,
     shadowColor: "#000",

@@ -1,5 +1,4 @@
-// components/drawing/canvas/GestureHandler.jsx
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import {
   Alert,
   Modal,
@@ -18,11 +17,14 @@ import {
   pointInPolygon,
 } from "./utils";
 import { detectShape, buildShape } from "./ShapeDetector";
+import InlineTextEditor from "../text/InlineTextEditor";
+import TextSelectionBox from "../text/TextSelectionBox";
+import debounce from "lodash/debounce";
 
 export default function GestureHandler({
   page,
   tool,
-  eraserMode, // ✅ pixel | stroke | object
+  eraserMode,
   strokes,
   setStrokes,
   currentPoints,
@@ -41,71 +43,156 @@ export default function GestureHandler({
   onModifyStroke,
   onDeleteStroke,
   children,
+  isPenMode,
+  canvasRef,
+  setRealtimeText,
 }) {
   const liveRef = useRef([]);
   const rafScheduled = useRef(false);
   const lastEraserPointRef = useRef(null);
   const dragOffsetRef = useRef({ dx: 0, dy: 0 });
-
-  const [promptVisible, setPromptVisible] = useState(false);
-  const [promptText, setPromptText] = useState("");
-  const [promptMeta, setPromptMeta] = useState({
+  const [selectedBox, setSelectedBox] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [editorVisible, setEditorVisible] = useState(false);
+  const [editorProps, setEditorProps] = useState({
     x: 0,
     y: 0,
-    toolType: "text",
+    tool: "text",
+    data: {},
   });
-  const [selectedId, setSelectedId] = useState(null);
+  const [draggingText, setDraggingText] = useState(null);
+  const tapTimeout = useRef(null);
+  const lastTapTime = useRef(0);
+  useEffect(() => {
+    if (
+      !editorVisible &&
+      !selectedId &&
+      typeof setRealtimeText === "function"
+    ) {
+      requestAnimationFrame(() => setRealtimeText(null));
+    }
+  }, [editorVisible, selectedId]);
 
-  // Debug log
-  // useEffect(() => {
-  //   console.log("[GestureHandler] tool:", tool, "| eraserMode:", eraserMode);
-  // }, [tool, eraserMode]);
+  const handleTextChange = useCallback(
+    (data) => {
+      if (selectedId) {
+        setStrokes((prev) => {
+          const currentStroke = prev.find((s) => s.id === selectedId);
+          if (
+            currentStroke &&
+            (currentStroke.text !== data.text ||
+              currentStroke.bold !== data.bold ||
+              currentStroke.italic !== data.italic ||
+              currentStroke.underline !== data.underline ||
+              currentStroke.align !== data.align ||
+              currentStroke.color !== data.color ||
+              currentStroke.fontSize !== data.fontSize ||
+              currentStroke.fontFamily !== data.fontFamily)
+          ) {
+            return prev.map((s) =>
+              s.id === selectedId
+                ? {
+                    ...s,
+                    text: data.text,
+                    bold: data.bold,
+                    italic: data.italic,
+                    underline: data.underline,
+                    align: data.align,
+                    color: data.color,
+                    fontSize: data.fontSize,
+                    fontFamily: data.fontFamily,
+                  }
+                : s
+            );
+          }
+          return prev; // Không cập nhật nếu không có thay đổi
+        });
+        // 🔑 Sau phần setStrokes(...), thêm đoạn này:
+        if (typeof setRealtimeText === "function") {
+          if (data && typeof data.text === "string") {
+            setRealtimeText({
+              id: selectedId,
+              ...data,
+              x: Number.isFinite(editorProps.x) ? editorProps.x : 0,
+              y: Number.isFinite(editorProps.y) ? editorProps.y : 0,
+            });
+          }
+        }
+
+        // 🔑 Chỉ cập nhật selectedBox nếu cần
+        const currentStroke = strokes.find((s) => s.id === selectedId);
+        const avgCharWidth = (data.fontSize || 18) * 0.55;
+        const textWidth = (data.text?.length || 1) * avgCharWidth;
+        const padding = currentStroke?.padding || 0;
+
+        // setSelectedBox((prev) => {
+        //   const newBox = {
+        //     x: editorProps.x - padding - 1,
+        //     y: editorProps.y - (data.fontSize || 18) - padding - 1,
+        //     width: textWidth + padding * 2 + 2,
+        //     height: (data.fontSize || 18) + padding * 2 + 2,
+        //   };
+        //   // Chỉ cập nhật nếu box thay đổi
+        //   if (
+        //     !prev ||
+        //     prev.x !== newBox.x ||
+        //     prev.y !== newBox.y ||
+        //     prev.width !== newBox.width ||
+        //     prev.height !== newBox.height
+        //   ) {
+        //     return newBox;
+        //   }
+        //   return prev;
+        // });
+      }
+    },
+    [
+      selectedId,
+      editorProps.x,
+      editorProps.y,
+      strokes,
+      setStrokes,
+      setSelectedBox,
+    ]
+  );
 
   // ========= TEXT HANDLING =========
   const addTextStroke = (x, y, toolType, text) => {
+    const basePadding = ["sticky", "comment"].includes(tool) ? 8 : 0;
+    const baseBg =
+      tool === "sticky"
+        ? "#FFEB3B"
+        : tool === "comment"
+        ? "#E3F2FD"
+        : "transparent";
+
     const newTextStroke = {
-      id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-      tool: toolType,
-      x,
-      y,
-      text,
-      color,
-      fontSize: toolType === "sticky" ? 16 : toolType === "comment" ? 14 : 18,
-      backgroundColor:
-        toolType === "sticky"
-          ? "#FFEB3B"
-          : toolType === "comment"
-          ? "#E3F2FD"
-          : "transparent",
-      padding: toolType === "sticky" || toolType === "comment" ? 8 : 0,
+      id: tempId,
+      tool,
+      x: e.x,
+      y: e.y,
+      text: "",
+      color: color || "#000",
+      fontSize: tool === "sticky" ? 16 : tool === "comment" ? 14 : 18,
+      fontFamily: "Roboto-Regular",
+      bold: false,
+      italic: false,
+      underline: false,
+      align: "left",
+      backgroundColor: baseBg,
+      padding: basePadding,
     };
+
     setStrokes((prev) => [...prev, newTextStroke]);
     setRedoStack([]);
   };
 
   const showTextInputDialog = (x, y, toolType) => {
-    if (Platform.OS === "ios" && Alert.prompt) {
-      Alert.prompt(
-        "Thêm ghi chú",
-        `Nhập nội dung tại (${Math.round(x)}, ${Math.round(y)})`,
-        [
-          { text: "Hủy", style: "cancel" },
-          {
-            text: "OK",
-            onPress: (text) =>
-              text && addTextStroke(x, y, toolType, text.trim()),
-          },
-        ],
-        "plain-text",
-        ""
-      );
-      return;
-    }
-    setPromptMeta({ x, y, toolType });
-    setPromptText("");
-    setPromptVisible(true);
+    setEditorProps({ x, y, tool: toolType, data: {} });
+    setEditorVisible(true);
   };
 
+  // ========= HIT TEST =========
   const hitTestText = (x, y, strokes) => {
     for (let i = strokes.length - 1; i >= 0; i--) {
       const s = strokes[i];
@@ -127,36 +214,172 @@ export default function GestureHandler({
     return null;
   };
 
-  // ========= GESTURE =========
-  const pan = Gesture.Pan()
+  const getPointerType = (e) => e?.nativeEvent?.pointerType || "touch";
+  const isPenEvent = (e) => ["pen", "stylus"].includes(getPointerType(e));
+  const isTouchEvent = (e) => getPointerType(e) === "touch";
+
+  // 🟢 Double-tap gesture
+  const doubleTap = Gesture.Tap()
+    .numberOfTaps(2)
+    .maxDuration(300)
+    .maxDistance(15)
     .runOnJS(true)
     .onStart((e) => {
-      if (!isInsidePage(e.x, e.y, page)) {
-        liveRef.current = [];
-        setCurrentPoints([]);
-        return;
+      const hit = hitTestText(e.x, e.y, strokes);
+      if (hit) {
+        setSelectedId(hit.id);
+        setSelectedBox(null);
+        // ✨ thêm dòng này:
+        if (typeof setRealtimeText === "function")
+          setRealtimeText({ id: hit.id, ...hit });
+
+        setEditorProps({
+          x: hit.x,
+          y: hit.y,
+          tool: hit.tool,
+          data: hit,
+        });
+        setEditorVisible(true);
       }
-      /** 🟨 TEXT ADD / EDIT **/
+    });
+
+  // ====== TAP GESTURE ======
+  const tap = Gesture.Tap()
+    .runOnJS(true)
+    .onStart((e) => {
+      const hit = hitTestText(e.x, e.y, strokes);
       if (["text", "sticky", "comment"].includes(tool)) {
-        const hit = hitTestText(e.x, e.y, strokes);
         if (hit) {
-          setPromptMeta({ ...hit, toolType: hit.tool });
-          setPromptText(hit.text);
-          setPromptVisible(true);
-          setSelectedId(hit.id);
+          if (typeof setRealtimeText === "function")
+            setRealtimeText({ id: hit.id, ...hit });
+
+          const w =
+            (hit.text?.length || 1) * (hit.fontSize || 18) * 0.6 +
+            (hit.padding || 0) * 2;
+          const h = (hit.fontSize || 18) + (hit.padding || 0) * 2;
+          if (selectedId && hit.id === selectedId) {
+            setSelectedId(hit.id);
+            setSelectedBox(null);
+            setEditorProps({
+              x: hit.x,
+              y: hit.y,
+              tool: hit.tool,
+              data: hit,
+            });
+            setEditorVisible(true);
+          } else {
+            setSelectedId(hit.id);
+            setSelectedBox({
+              x: hit.x - (hit.padding || 0) - 1,
+              y: hit.y - (hit.fontSize || 18) - (hit.padding || 0) - 1,
+              width: w + 2,
+              height: h + 2,
+            });
+          }
         } else {
-          showTextInputDialog(e.x, e.y, tool);
+          if (!hitTestText(e.x, e.y, strokes)) {
+            setSelectedId(null);
+            setSelectedBox(null);
+          }
         }
-        return;
+      } else if (selectedId) {
+        if (hit && hit.id === selectedId) {
+          setSelectedId(hit.id);
+          setSelectedBox(null);
+          setEditorProps({
+            x: hit.x,
+            y: hit.y,
+            tool: hit.tool,
+            data: hit,
+          });
+          setEditorVisible(true);
+        } else {
+          setSelectedId(null);
+          setSelectedBox(null);
+        }
+      }
+    });
+
+  // ========= GESTURE =========
+  const pan = Gesture.Pan()
+    .minDistance(1)
+    .runOnJS(true)
+    .onStart((e) => {
+      /** 🟨 TEXT ADD / EDIT **/
+      const hit = hitTestText(e.x, e.y, strokes);
+      if (["text", "sticky", "comment"].includes(tool)) {
+        if (hit) {
+          const w =
+            (hit.text?.length || 1) * (hit.fontSize || 18) * 0.6 +
+            (hit.padding || 0) * 2;
+          const h = (hit.fontSize || 18) + (hit.padding || 0) * 2;
+          setSelectedBox({
+            x: hit.x - (hit.padding || 0) - 1,
+            y: hit.y - (hit.fontSize || 18) - (hit.padding || 0) - 1,
+            width: w + 2,
+            height: h + 2,
+          });
+          setSelectedId(hit.id);
+          setDraggingText({
+            id: hit.id,
+            offsetX: e.x - hit.x,
+            offsetY: e.y - hit.y,
+          });
+          return;
+        } else {
+          // 🟢 Tap trống => thêm text mới với stroke tạm để realtime render
+          const tempId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+          const newTextStroke = {
+            id: tempId,
+            tool,
+            x: e.x,
+            y: e.y,
+            text: "",
+            color,
+            fontSize: tool === "sticky" ? 16 : tool === "comment" ? 14 : 18,
+            fontFamily: "Roboto-Regular",
+            bold: false,
+            italic: false,
+            underline: false,
+            align: "left",
+            backgroundColor:
+              tool === "sticky"
+                ? "#FFEB3B"
+                : tool === "comment"
+                ? "#E3F2FD"
+                : "transparent",
+            padding: tool === "sticky" || tool === "comment" ? 8 : 0,
+          };
+
+          // 🟢 Add stroke tạm để CanvasRenderer vẽ realtime
+          // setStrokes((prev) => [...prev, newTextStroke]);
+          // setRedoStack([]);
+
+          setSelectedId(tempId);
+          if (!Number.isFinite(e.x) || !Number.isFinite(e.y)) return;
+
+          // 🟢 Đặt realtimeText để hiện chữ realtime
+          if (typeof setRealtimeText === "function") {
+            setRealtimeText({
+              ...newTextStroke,
+              text: "",
+              fontSize: newTextStroke.fontSize ?? 16,
+              color: newTextStroke.color ?? "#000",
+              backgroundColor: newTextStroke.backgroundColor ?? "transparent",
+            });
+          }
+
+          // 🟢 Mở editor
+          setEditorProps({ x: e.x, y: e.y, tool, data: newTextStroke });
+          setEditorVisible(true);
+          return;
+        }
       }
 
-      /** 🟦 MOVE TEXT **/
-      if (tool === "move-text") {
-        const hit = hitTestText(e.x, e.y, strokes);
-        if (hit) {
-          setSelectedId(hit.id);
-          dragOffsetRef.current = { dx: e.x - hit.x, dy: e.y - hit.y };
-        }
+      // ✅ Nếu người dùng đang chọn text mà bấm ra vùng trống => ẩn khung
+      if (selectedId && !hitTestText(e.x, e.y, strokes)) {
+        setSelectedId(null);
+        setSelectedBox(null);
         return;
       }
 
@@ -172,6 +395,7 @@ export default function GestureHandler({
       if (eraserMode === "object") {
         for (let i = strokes.length - 1; i >= 0; i--) {
           const s = strokes[i];
+          if (["text", "sticky", "comment"].includes(s.tool)) continue;
           const bbox = getBoundingBoxForStroke(s);
           if (
             bbox &&
@@ -204,67 +428,156 @@ export default function GestureHandler({
       }
 
       // Otherwise start drawing
-      liveRef.current = [{ x: e.x, y: e.y }];
+      const toolConfig = configByTool[tool] || {
+        pressure: 0.5,
+        thickness: 1,
+        stabilization: 0.2,
+      };
+
+      liveRef.current = [
+        {
+          x: e.x,
+          y: e.y,
+          pressure: toolConfig.pressure,
+          thickness: toolConfig.thickness,
+          stabilization: toolConfig.stabilization,
+        },
+      ];
+
       setCurrentPoints(liveRef.current);
+      const livePath = canvasRef?.current?.livePath;
+      if (livePath) {
+        livePath.reset();
+        livePath.moveTo(e.x, e.y);
+      }
     })
 
     .onUpdate((e) => {
-      if (!isInsidePage(e.x, e.y, page)) {
-        liveRef.current = [];
-        setCurrentPoints([]);
-        return;
-      }
-      /** 🟦 MOVE TEXT **/
-      if (tool === "move-text" && selectedId) {
+      if (!isInsidePage(e.x, e.y, page)) return;
+      if (selectedId && draggingText) {
+        const newX = e.x - draggingText.offsetX;
+        const newY = e.y - draggingText.offsetY;
+
         setStrokes((prev) =>
           prev.map((s) =>
-            s.id === selectedId
-              ? {
-                  ...s,
-                  x: e.x - dragOffsetRef.current.dx,
-                  y: e.y - dragOffsetRef.current.dy,
-                }
-              : s
+            s.id === selectedId ? { ...s, x: newX, y: newY } : s
           )
         );
-        return;
-      }
 
-      /** 🧾 OBJECT ERASER LASSO **/
-      if (eraserMode === "object") {
-        const last = liveRef.current.at(-1) || { x: 0, y: 0 };
-        const dx = e.x - last.x;
-        const dy = e.y - last.y;
-        if (dx * dx + dy * dy < 9) return;
-        liveRef.current.push({ x: e.x, y: e.y });
-        if (!rafScheduled.current) {
-          rafScheduled.current = true;
-          requestAnimationFrame(() => {
-            rafScheduled.current = false;
-            setCurrentPoints([...liveRef.current]);
-          });
+        setSelectedBox((box) =>
+          box
+            ? {
+                ...box,
+                x:
+                  newX -
+                  (strokes.find((s) => s.id === selectedId)?.padding || 0) -
+                  1,
+                y:
+                  newY -
+                  (strokes.find((s) => s.id === selectedId)?.fontSize || 18) -
+                  (strokes.find((s) => s.id === selectedId)?.padding || 0) -
+                  1,
+              }
+            : box
+        );
+
+        setEditorProps((prev) => ({ ...prev, x: newX, y: newY }));
+
+        // 🔥 FIX: cập nhật realtimeText để CanvasRenderer render đúng vị trí mới
+        if (typeof setRealtimeText === "function") {
+          const s = strokes.find((st) => st.id === selectedId);
+          if (s) {
+            setRealtimeText({
+              id: s.id,
+              tool: s.tool, // 🟡 cần để CanvasRenderer biết là sticky/comment
+              text: s.text || "",
+              color: s.color || "#000",
+              x: newX,
+              y: newY,
+              fontSize: s.fontSize || 16,
+              fontFamily: s.fontFamily || "Roboto-Regular",
+              padding: s.padding ?? 6,
+              backgroundColor: s.backgroundColor ?? "transparent",
+            });
+          }
         }
+
         return;
       }
 
-      /** 🧽 PAINT-LIKE ERASER (draw over white) **/
-      if (tool === "eraser" && eraserMode === "pixel") {
-        const last = liveRef.current.at(-1);
-        const dx = e.x - (last?.x ?? e.x);
-        const dy = e.y - (last?.y ?? e.y);
-        if (dx * dx + dy * dy < 9) return;
+      if (tool === "eraser") {
+        if (eraserMode === "stroke") {
+          if (!rafScheduled.current) {
+            rafScheduled.current = true;
+            requestAnimationFrame(() => {
+              rafScheduled.current = false;
+              setStrokes((prev) =>
+                prev.filter((s, i) => {
+                  if (!s.points) return true;
+                  const hit = s.points.some((p) => {
+                    const dx = p.x - e.x;
+                    const dy = p.y - e.y;
+                    return Math.sqrt(dx * dx + dy * dy) <= (s.width || 6) + 4;
+                  });
+                  if (hit) {
+                    setRedoStack((redo) => [...redo, { stroke: s, index: i }]);
+                    return false;
+                  }
+                  return true;
+                })
+              );
+            });
+          }
+          return;
+        }
 
-        liveRef.current.push({ x: e.x, y: e.y });
-        setCurrentPoints([...liveRef.current]);
-        return;
+        if (eraserMode === "pixel") {
+          const last = liveRef.current.at(-1);
+          const dx = e.x - (last?.x ?? e.x);
+          const dy = e.y - (last?.y ?? e.y);
+          if (dx * dx + dy * dy < 9) return;
+
+          liveRef.current.push({ x: e.x, y: e.y });
+          setCurrentPoints([...liveRef.current]);
+          return;
+        }
+
+        if (eraserMode === "object") {
+          const last = liveRef.current.at(-1) || { x: 0, y: 0 };
+          const dx = e.x - last.x;
+          const dy = e.y - last.y;
+          if (dx * dx + dy * dy < 9) return;
+          liveRef.current.push({ x: e.x, y: e.y });
+          if (!rafScheduled.current) {
+            rafScheduled.current = true;
+            requestAnimationFrame(() => {
+              rafScheduled.current = false;
+              setCurrentPoints([...liveRef.current]);
+            });
+            const livePath = canvasRef?.current?.livePath;
+            if (livePath) livePath.lineTo(e.x, e.y);
+          }
+          return;
+        }
       }
 
-      /** ✏️ DRAW **/
       const last = liveRef.current.at(-1) || { x: 0, y: 0 };
       const dx = e.x - last.x;
       const dy = e.y - last.y;
       if (dx * dx + dy * dy < 9) return;
-      liveRef.current.push({ x: e.x, y: e.y });
+      const toolConfig = configByTool[tool] || {
+        pressure: 0.5,
+        thickness: 1,
+        stabilization: 0.2,
+      };
+
+      liveRef.current.push({
+        x: e.x,
+        y: e.y,
+        pressure: toolConfig.pressure,
+        thickness: toolConfig.thickness,
+        stabilization: toolConfig.stabilization,
+      });
       if (!rafScheduled.current) {
         rafScheduled.current = true;
         requestAnimationFrame(() => {
@@ -275,12 +588,12 @@ export default function GestureHandler({
     })
 
     .onEnd(() => {
-      setSelectedId(null);
+      const livePath = canvasRef?.current?.livePath;
+      if (livePath) livePath.reset();
       const finalPoints = liveRef.current;
       liveRef.current = [];
       setCurrentPoints([]);
 
-      /** 🧾 OBJECT ERASER POLYGON **/
       if (eraserMode === "object" && finalPoints.length > 2) {
         const poly = finalPoints;
         setStrokes((prev) => {
@@ -302,25 +615,76 @@ export default function GestureHandler({
         return;
       }
 
-      /** 🧽 PAINT-LIKE ERASER END **/
       if (
         tool === "eraser" &&
         eraserMode === "pixel" &&
         finalPoints.length > 0
       ) {
-        const newStroke = {
-          id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-          tool: "eraser",
-          width: eraserSize,
-          points: finalPoints,
-        };
-        setStrokes((prev) => [...prev, newStroke]);
+        const erasePoints = finalPoints;
+
+        setStrokes((prev) => {
+          const next = [];
+
+          for (let s of prev) {
+            if (
+              !s.points ||
+              ["eraser", "text", "sticky", "comment"].includes(s.tool)
+            ) {
+              next.push(s);
+              continue;
+            }
+
+            const margin = 0.5 * (eraserSize || 6);
+            const hitIndexes = s.points
+              .map((p, i) => ({
+                i,
+                hit: erasePoints.some(
+                  (ep) => Math.hypot(p.x - ep.x, p.y - ep.y) <= margin
+                ),
+              }))
+              .filter((r) => r.hit)
+              .map((r) => r.i);
+
+            if (hitIndexes.length === 0) {
+              next.push(s);
+              continue;
+            }
+
+            const segments = [];
+            let segment = [];
+
+            for (let i = 0; i < s.points.length; i++) {
+              const isHit = hitIndexes.includes(i);
+              if (isHit) {
+                if (segment.length > 1) {
+                  segments.push(segment);
+                }
+                segment = [];
+              } else {
+                segment.push(s.points[i]);
+              }
+            }
+            if (segment.length > 1) segments.push(segment);
+
+            for (let idx = 0; idx < segments.length; idx++) {
+              const pts = segments[idx];
+              if (pts.length < 2) continue;
+              next.push({
+                ...s,
+                id: `${s.id}_part${idx + 1}_${Date.now()}`,
+                points: pts,
+              });
+            }
+          }
+
+          return next;
+        });
+
         setRedoStack([]);
         setCurrentPoints([]);
         return;
       }
 
-      /** 🟢 FILL TOOL **/
       if (tool === "fill") {
         const tapX = finalPoints[0]?.x;
         const tapY = finalPoints[0]?.y;
@@ -341,7 +705,6 @@ export default function GestureHandler({
         return;
       }
 
-      /** ✏️ DRAW END **/
       const w =
         {
           pen: strokeWidth,
@@ -373,8 +736,26 @@ export default function GestureHandler({
         ...toolConfig,
       };
 
-      // Ngăn không cho eraser vẽ stroke
-      // 🖋️ Chỉ thêm stroke nếu không phải đang dùng eraser
+      if (
+        [
+          "triangle",
+          "rect",
+          "square",
+          "circle",
+          "oval",
+          "line",
+          "arrow",
+          "polygon",
+          "star",
+        ].includes(tool)
+      ) {
+        const shape = buildShape(tool, finalPoints);
+        if (shape) newStroke.shape = shape.shape;
+      } else if (tool === "shape") {
+        const shape = detectShape(finalPoints);
+        if (shape) Object.assign(newStroke, shape);
+      }
+
       if (tool !== "eraser") {
         if (typeof onAddStroke === "function") onAddStroke(newStroke);
         else {
@@ -384,83 +765,200 @@ export default function GestureHandler({
       }
     });
 
+  const debouncedUpdate = debounce((updateFn) => updateFn(), 16);
+
   // ========= RENDER =========
   return (
     <>
-      <GestureDetector gesture={pan}>{children}</GestureDetector>
-
-      {/* Text Prompt Modal */}
-      <Modal
-        visible={promptVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPromptVisible(false)}
+      <GestureDetector
+        gesture={Gesture.Race(doubleTap, Gesture.Simultaneous(tap, pan))}
       >
-        <View style={styles.backdrop}>
-          <View style={styles.box}>
-            <Text style={styles.title}>
-              {promptMeta.toolType === "sticky"
-                ? "Sticky Note"
-                : promptMeta.toolType === "comment"
-                ? "Comment"
-                : "Text"}
-            </Text>
-            <Text style={styles.hint}>
-              ({Math.round(promptMeta.x)}, {Math.round(promptMeta.y)})
-            </Text>
-            <TextInput
-              value={promptText}
-              onChangeText={setPromptText}
-              placeholder="Nhập nội dung..."
-              multiline
-              style={styles.input}
-            />
-            <View style={styles.row}>
-              <TouchableOpacity
-                style={[styles.btn, styles.cancel]}
-                onPress={() => {
-                  setPromptVisible(false);
-                  setPromptText("");
-                  setSelectedId(null);
-                }}
-              >
-                <Text style={styles.btnText}>Hủy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.btn, styles.ok]}
-                onPress={() => {
-                  const text = (promptText || "").trim();
-                  if (!text) return setPromptVisible(false);
-                  if (selectedId) {
-                    setStrokes((prev) =>
-                      prev.map((s) =>
-                        s.id === selectedId ? { ...s, text } : s
-                      )
-                    );
-                  } else {
-                    addTextStroke(
-                      promptMeta.x,
-                      promptMeta.y,
-                      promptMeta.toolType,
-                      text
-                    );
-                  }
-                  setPromptVisible(false);
-                  setPromptText("");
-                  setSelectedId(null);
-                }}
-              >
-                <Text style={[styles.btnText, { color: "#fff" }]}>OK</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        {React.cloneElement(children, {
+          strokes: children.props.strokes ?? strokes,
+        })}
+      </GestureDetector>
+      {selectedBox && selectedId && !editorVisible && (
+        <TextSelectionBox
+          x={selectedBox.x}
+          y={selectedBox.y}
+          width={selectedBox.width}
+          height={selectedBox.height}
+          onMove={(dx, dy) => {
+            setSelectedBox((box) =>
+              box ? { ...box, x: box.x + dx, y: box.y + dy } : box
+            );
+
+            setStrokes((prev) =>
+              prev.map((s) =>
+                s.id === selectedId ? { ...s, x: s.x + dx, y: s.y + dy } : s
+              )
+            );
+
+            setEditorProps((prev) => ({
+              ...prev,
+              x: prev.x + dx,
+              y: prev.y + dy,
+            }));
+
+            if (typeof setRealtimeText === "function") {
+              setRealtimeText((prev) =>
+                prev && prev.id === selectedId
+                  ? { ...prev, x: prev.x + dx, y: prev.y + dy }
+                  : prev
+              );
+            }
+          }}
+          onResize={(corner, dx, dy) => {
+            const s = strokes.find((str) => str.id === selectedId);
+            if (!s) return;
+
+            const delta = corner === "tl" || corner === "bl" ? -dy : dy;
+            const newFontSize = Math.max(8, (s.fontSize || 18) + delta * 0.2);
+            const avgCharWidth = newFontSize * 0.55;
+            const textWidth = (s.text?.length || 1) * avgCharWidth;
+            const padding = s.padding || 0;
+
+            debouncedUpdate(() => {
+              setStrokes((prev) =>
+                prev.map((str) =>
+                  str.id === selectedId
+                    ? { ...str, fontSize: newFontSize }
+                    : str
+                )
+              );
+              setSelectedBox({
+                x: s.x - padding - 1,
+                y: s.y - newFontSize - padding - 1,
+                width: textWidth + padding * 2 + 2,
+                height: newFontSize + padding * 2 + 2,
+              });
+            });
+          }}
+          onCopy={() => {
+            const target = strokes.find((s) => s.id === selectedId);
+            if (target) {
+              setStrokes((prev) => [
+                ...prev,
+                {
+                  ...target,
+                  id: Date.now().toString(),
+                  x: target.x + 20,
+                  y: target.y + 20,
+                },
+              ]);
+              setSelectedId(null);
+              setSelectedBox(null);
+            }
+          }}
+          onCut={() => {
+            setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
+            setSelectedId(null);
+            setSelectedBox(null);
+          }}
+          onDelete={() => {
+            setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
+            setSelectedId(null);
+            setSelectedBox(null);
+          }}
+          onEdit={() => {
+            const hit = strokes.find((s) => s.id === selectedId);
+            if (hit) {
+              if (typeof setRealtimeText === "function")
+                setRealtimeText({ id: hit.id, ...hit });
+
+              setEditorProps({
+                x: hit.x,
+                y: hit.y,
+                tool: hit.tool,
+                data: hit,
+              });
+              setEditorVisible(true);
+            }
+          }}
+        />
+      )}
+
+      <InlineTextEditor
+        visible={editorVisible}
+        x={editorProps.x}
+        y={editorProps.y}
+        initialText={editorProps.data.text || ""}
+        initialData={editorProps.data}
+        isEditingExisting={!!selectedId}
+        onCancel={() => {
+          setEditorVisible(false);
+          setSelectedId(null);
+          setSelectedBox(null);
+          if (setRealtimeText) setRealtimeText(null);
+        }}
+        onSubmit={(data) => {
+          if (selectedId) {
+            // Edit existing
+            setStrokes((prev) =>
+              prev.map((s) =>
+                s.id === selectedId
+                  ? {
+                      ...s,
+                      ...data,
+                      x: editorProps.x,
+                      y: editorProps.y,
+                      padding: s.padding ?? 0,
+                      backgroundColor: s.backgroundColor ?? "transparent",
+                    }
+                  : s
+              )
+            );
+          } else {
+            // Add new
+            const basePadding =
+              editorProps.tool === "sticky" || editorProps.tool === "comment"
+                ? 8
+                : 0;
+            const baseBg =
+              editorProps.tool === "sticky"
+                ? "#FFEB3B"
+                : editorProps.tool === "comment"
+                ? "#E3F2FD"
+                : "transparent";
+
+            const newStroke = {
+              id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+              tool: editorProps.tool,
+              x: editorProps.x,
+              y: editorProps.y,
+              text: data.text || "",
+              bold: !!data.bold,
+              italic: !!data.italic,
+              underline: !!data.underline,
+              align: data.align || "left",
+              color: data.color || color,
+              fontSize: data.fontSize || 18,
+              fontFamily: data.fontFamily || "Roboto-Regular",
+              padding: basePadding,
+              backgroundColor: baseBg,
+            };
+
+            setStrokes((prev) => [...prev, newStroke]);
+            setRedoStack([]);
+          }
+
+          if (typeof setRealtimeText === "function") {
+            setRealtimeText(null);
+            setStrokes((prev) =>
+              prev.filter((s) => s.text && s.text.trim() !== "")
+            );
+          }
+
+          setEditorVisible(false);
+          setSelectedId(null);
+          setSelectedBox(null);
+        }}
+        onChange={handleTextChange}
+      />
     </>
   );
 }
 
-// ========= Styles =========
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,

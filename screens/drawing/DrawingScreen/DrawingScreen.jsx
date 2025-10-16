@@ -12,21 +12,32 @@ import PenSettingsPanel from "../../../components/drawing/toolbar/PenSettingsPan
 import MultiPageCanvas from "../../../components/drawing/canvas/MultiPageCanvas";
 import EraserDropdown from "../../../components/drawing/toolbar/EraserDropdown";
 import useOrientation from "../../../hooks/useOrientation";
+import { useNavigation } from "@react-navigation/native";
 import * as ExportUtils from "../../../utils/ExportUtils";
 import styles from "./DrawingScreen.styles";
+import useLoadFonts from "../../../hooks/useLoadFonts";
+import AppLoading from "expo-app-loading";
 
 export default function DrawingScreen() {
+  const navigation = useNavigation();
+
+  // HAND/PEN MODE
+  const [isPenMode, setIsPenMode] = useState(false);
+
+  // TOOL VISIBILITY
+  const [toolbarVisible, setToolbarVisible] = useState(true);
+
   // 🎨 ===== TOOL & COLOR =====
   const [tool, setTool] = useState("pen");
   const [color, setColor] = useState("#111827");
 
   // ✏️ ===== WIDTH & OPACITY =====
-  const [strokeWidth, setStrokeWidth] = useState(4);
-  const [pencilWidth] = useState(2);
-  const [brushWidth] = useState(8);
-  const [brushOpacity] = useState(0.6);
-  const [calligraphyWidth] = useState(6);
-  const [calligraphyOpacity] = useState(0.9);
+  const [strokeWidth, setStrokeWidth] = useState(2); // pen — mảnh, vừa đủ
+  const [pencilWidth] = useState(1.5); // pencil — mềm, chi tiết
+  const [brushWidth] = useState(4); // brush — mềm hơn, nhẹ
+  const [brushOpacity] = useState(0.45); // brush trong suốt hơn
+  const [calligraphyWidth] = useState(3); // calligraphy — nét thanh
+  const [calligraphyOpacity] = useState(0.8); // vẫn rõ mà không dày
 
   // 🧾 ===== PAGE & STYLE =====
   const [paperStyle] = useState("plain");
@@ -109,33 +120,37 @@ export default function DrawingScreen() {
     <View style={styles.container}>
       {/* 🧰 Header Toolbar */}
       <HeaderToolbar
-        tool={tool}
-        setTool={setTool}
-        color={color}
-        setColor={setColor}
+        onBack={() => navigation.navigate("Home")}
+        onToggleToolbar={() => setToolbarVisible((v) => !v)}
+        onTogglePenType={() => setIsPenMode((prev) => !prev)}
+        onLayers={() => console.log("Open layers")}
+        onAddPage={() => console.log("Add page")}
+        onPreview={() => console.log("Document preview")}
+        onSettings={() => console.log("Open settings")}
+        onMore={() => console.log("More options")}
       />
-
       {/* 🎨 Main Toolbar */}
-      <ToolbarContainer
-        tool={tool}
-        setTool={setTool}
-        color={color}
-        setColor={setColor}
-        strokeWidth={strokeWidth}
-        setStrokeWidth={setStrokeWidth}
-        onUndo={() => handleUndo(activePageId)}
-        onRedo={() => handleRedo(activePageId)}
-        onClear={() => handleClear(activePageId)}
-        onExportJSON={handleExportJSON}
-        eraserMode={eraserMode}
-        setEraserMode={setEraserMode}
-        eraserSize={eraserSize}
-        setEraserSize={setEraserSize}
-        eraserDropdownVisible={eraserDropdownVisible}
-        setEraserDropdownVisible={setEraserDropdownVisible}
-        eraserButtonRef={eraserButtonRef}
-      />
-
+      {toolbarVisible && (
+        <ToolbarContainer
+          tool={tool}
+          setTool={setTool}
+          color={color}
+          setColor={setColor}
+          strokeWidth={strokeWidth}
+          setStrokeWidth={setStrokeWidth}
+          onUndo={() => handleUndo(activePageId)}
+          onRedo={() => handleRedo(activePageId)}
+          onClear={() => handleClear(activePageId)}
+          onExportJSON={handleExportJSON}
+          eraserMode={eraserMode}
+          setEraserMode={setEraserMode}
+          eraserSize={eraserSize}
+          setEraserSize={setEraserSize}
+          eraserDropdownVisible={eraserDropdownVisible}
+          setEraserDropdownVisible={setEraserDropdownVisible}
+          eraserButtonRef={eraserButtonRef}
+        />
+      )}
       {/* 🧽 Eraser Dropdown */}
       {eraserDropdownVisible && (
         <EraserDropdown
@@ -170,6 +185,7 @@ export default function DrawingScreen() {
         <MultiPageCanvas
           tool={tool}
           color={color}
+          isPenMode={isPenMode}
           strokeWidth={activeStrokeWidth}
           pencilWidth={pencilWidth}
           eraserSize={eraserSize}
@@ -212,15 +228,17 @@ export default function DrawingScreen() {
           onChangeText={(t) => setEditingText({ ...editingText, text: t })}
           onBlur={() => {
             if (editingText.text.trim()) {
-              pageRefs.current[1]?.addStrokeDirect?.({
+              const newStroke = {
                 id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-                tool: "text",
+                tool: tool,
                 x: editingText.x,
                 y: editingText.y + 18,
                 text: editingText.text.trim(),
                 color,
                 fontSize: 18,
-              });
+                padding: 6,
+              };
+              pageRefs.current[1]?.addStrokeDirect?.(newStroke);
             }
             setEditingText(null);
           }}

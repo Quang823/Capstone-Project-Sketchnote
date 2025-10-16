@@ -29,6 +29,7 @@ export default function MultiPageCanvas({
   thickness,
   stabilization,
   eraserMode,
+  isPenMode,
 }) {
   const [pages, setPages] = useState([{ id: 1 }]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -70,7 +71,7 @@ export default function MultiPageCanvas({
     scrollRef.current?.scrollTo({ y, animated: true });
     setActiveIndex(index);
     const id = pages[index]?.id;
-    if (id) onActivePageChange?.(id); // ✅ gọi callback cho DrawingScreen
+    if (id) onActivePageChange?.(id);
   };
 
   // ✅ Khi page mới thêm được đo layout, tự scroll tới đó
@@ -85,7 +86,7 @@ export default function MultiPageCanvas({
         requestAnimationFrame(() => {
           scrollRef.current?.scrollTo({ y, animated: true });
           setActiveIndex(idx);
-          onActivePageChange?.(id); // ✅ cập nhật lại active page
+          onActivePageChange?.(id);
           lastAddedRef.current = null;
         });
       }
@@ -207,10 +208,11 @@ export default function MultiPageCanvas({
           >
             <CanvasContainer
               ref={(ref) => {
-                registerPageRef?.(p.id, ref ?? null); // ✅ Đăng ký ref mỗi trang
+                registerPageRef?.(p.id, ref ?? null);
               }}
               tool={tool}
               color={color}
+              isPenMode={isPenMode}
               strokeWidth={strokeWidth}
               pencilWidth={pencilWidth}
               eraserSize={eraserSize}
