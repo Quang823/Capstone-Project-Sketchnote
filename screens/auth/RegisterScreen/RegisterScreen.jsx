@@ -63,8 +63,8 @@ export default function RegisterScreen() {
   const handleRegister = () => {
     if (!email || !password || !confirmPassword || !fullName) {
       toast({
-        title: "Thiếu thông tin",
-        description: "Vui lòng điền đầy đủ thông tin đăng ký",
+        title: "Missing information",
+        description: "Please fill in all registration fields",
         variant: "destructive",
       });
       return;
@@ -72,37 +72,37 @@ export default function RegisterScreen() {
 
     if (password !== confirmPassword) {
       toast({
-        title: "Mật khẩu không khớp",
-        description: "Mật khẩu và xác nhận mật khẩu phải giống nhau",
+        title: "Passwords do not match",
+        description: "Password and confirm password must be the same",
         variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: "Đăng ký thành công! 🎨",
-      description: "Chào mừng bạn đến với SketchNote!",
+      title: "Registration successful! 🎨",
+      description: "Welcome to SketchNote!",
     });
-    
-    // Chuyển đến màn hình đăng nhập sau khi đăng ký thành công
+
+    // Navigate to Login screen after successful registration
     navigation.navigate("Login");
   };
 
   const handleSocialRegister = (provider) => {
     toast({
-      title: `Đăng ký với ${provider}`,
-      description: `Tiếp tục đăng ký với ${provider}`,
+      title: `Register with ${provider}`,
+      description: `Continue registration with ${provider}`,
     });
   };
 
   return (
     <LinearGradient
-      colors={["#E0F2FE", "#FEF3C7"]} // Gradient bắt mắt: Xanh nhạt đến vàng nhạt
+      colors={["#E0F2FE", "#FEF3C7"]} // Eye-catching gradient: light blue to light yellow
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={registerStyles.container}
     >
-      {/* Background Hero Image với overlay gradient */}
+      {/* Background Hero Image with overlay gradient */}
       <ImageBackground source={heroImage} style={registerStyles.heroBackground}>
         <LinearGradient
           colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.3)"]}
@@ -120,21 +120,21 @@ export default function RegisterScreen() {
                 <Icon
                   name="palette"
                   size={32}
-                  color="#4F46E5" // Primary color
+                  color="#4F46E5"
                   style={registerStyles.logoIcon}
                 />
                 <Text style={registerStyles.logoText}>SketchNote</Text>
               </View>
 
               <Text style={registerStyles.heroTitle}>
-                Bắt đầu hành trình{" "}
-                <Text style={registerStyles.heroHighlight}>sáng tạo</Text>{" "}
-                của bạn
+                Start your{" "}
+                <Text style={registerStyles.heroHighlight}>creative</Text>{" "}
+                journey
               </Text>
 
               <Text style={registerStyles.heroDescription}>
-                Chuyển đổi ý tưởng thành những bản phác thảo và ghi chú tuyệt đẹp. 
-                Tham gia cùng hàng nghìn nghệ sĩ và người sáng tạo tin tưởng SketchNote.
+                Transform your ideas into beautiful sketches and notes. Join
+                thousands of artists and creators who trust SketchNote.
               </Text>
 
               <View style={registerStyles.featuresGrid}>
@@ -142,11 +142,11 @@ export default function RegisterScreen() {
                   <Icon
                     name="edit"
                     size={24}
-                    color="#F59E0B" // Secondary color
+                    color="#F59E0B"
                     style={registerStyles.featureIcon}
                   />
                   <Text style={registerStyles.featureText}>
-                    Công cụ vẽ trực quan
+                    Intuitive drawing tools
                   </Text>
                 </View>
                 <View style={registerStyles.featureItem}>
@@ -157,7 +157,7 @@ export default function RegisterScreen() {
                     style={registerStyles.featureIcon}
                   />
                   <Text style={registerStyles.featureText}>
-                    Gợi ý thông minh AI
+                    Smart AI suggestions
                   </Text>
                 </View>
               </View>
@@ -168,27 +168,29 @@ export default function RegisterScreen() {
         {/* Right Side - Register Form */}
         <View style={registerStyles.formSection}>
           <Shadow distance={12} startColor="#00000020" finalColor="#00000005">
-            <ReanimatedView style={[registerStyles.registerCard, animatedStyle]}>
+            <ReanimatedView
+              style={[registerStyles.registerCard, animatedStyle]}
+            >
               <View style={registerStyles.cardHeader}>
-                <Text style={registerStyles.cardTitle}>Đăng ký tài khoản</Text>
+                <Text style={registerStyles.cardTitle}>Create an account</Text>
                 <Text style={registerStyles.cardDescription}>
-                  Tạo tài khoản để bắt đầu hành trình sáng tạo
+                  Sign up to start your creative journey
                 </Text>
               </View>
 
               <View style={registerStyles.cardContent}>
                 <View style={registerStyles.form}>
                   <View style={registerStyles.inputGroup}>
-                    <Text style={registerStyles.label}>Họ và tên</Text>
+                    <Text style={registerStyles.label}>Full Name</Text>
                     <TextInput
                       style={registerStyles.input}
-                      placeholder="Nhập họ và tên của bạn"
+                      placeholder="Enter your full name"
                       value={fullName}
                       onChangeText={setFullName}
                       autoCapitalize="words"
                     />
                   </View>
-                  
+
                   <View style={registerStyles.inputGroup}>
                     <Text style={registerStyles.label}>Email</Text>
                     <TextInput
@@ -203,7 +205,7 @@ export default function RegisterScreen() {
                   </View>
 
                   <View style={registerStyles.inputGroup}>
-                    <Text style={registerStyles.label}>Mật khẩu</Text>
+                    <Text style={registerStyles.label}>Password</Text>
                     <View style={registerStyles.passwordContainer}>
                       <TextInput
                         style={registerStyles.passwordInput}
@@ -224,9 +226,9 @@ export default function RegisterScreen() {
                       </Pressable>
                     </View>
                   </View>
-                  
+
                   <View style={registerStyles.inputGroup}>
-                    <Text style={registerStyles.label}>Xác nhận mật khẩu</Text>
+                    <Text style={registerStyles.label}>Confirm Password</Text>
                     <View style={registerStyles.passwordContainer}>
                       <TextInput
                         style={registerStyles.passwordInput}
@@ -236,11 +238,17 @@ export default function RegisterScreen() {
                         secureTextEntry={!showConfirmPassword}
                       />
                       <Pressable
-                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onPress={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                         style={registerStyles.passwordToggle}
                       >
                         <Icon
-                          name={showConfirmPassword ? "visibility-off" : "visibility"}
+                          name={
+                            showConfirmPassword
+                              ? "visibility-off"
+                              : "visibility"
+                          }
                           size={20}
                           color="#4F46E5"
                         />
@@ -256,13 +264,13 @@ export default function RegisterScreen() {
                       style={registerStyles.registerButton}
                     >
                       <LinearGradient
-                        colors={["#4F46E5", "#6366F1"]} // Gradient cho button
+                        colors={["#4F46E5", "#6366F1"]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={registerStyles.buttonGradient}
                       >
                         <Text style={registerStyles.buttonText}>
-                          Đăng ký tài khoản
+                          Create Account
                         </Text>
                       </LinearGradient>
                     </Pressable>
@@ -271,7 +279,7 @@ export default function RegisterScreen() {
                   <View style={registerStyles.separatorContainer}>
                     <View style={registerStyles.separator} />
                     <Text style={registerStyles.separatorText}>
-                      hoặc đăng ký với
+                      or register with
                     </Text>
                     <View style={registerStyles.separator} />
                   </View>
@@ -284,7 +292,9 @@ export default function RegisterScreen() {
                         onPress={() => handleSocialRegister("Google")}
                         style={registerStyles.socialButton}
                       >
-                        <Text style={registerStyles.socialButtonText}>Google</Text>
+                        <Text style={registerStyles.socialButtonText}>
+                          Google
+                        </Text>
                       </Pressable>
                     </Reanimated.View>
                     <Reanimated.View style={[animatedButtonStyle]}>
@@ -294,17 +304,17 @@ export default function RegisterScreen() {
                         onPress={() => handleSocialRegister("Apple")}
                         style={registerStyles.socialButton}
                       >
-                        <Text style={registerStyles.socialButtonText}>Apple</Text>
+                        <Text style={registerStyles.socialButtonText}>
+                          Apple
+                        </Text>
                       </Pressable>
                     </Reanimated.View>
                   </View>
 
                   <View style={registerStyles.loginPrompt}>
-                    <Text>Đã có tài khoản? </Text>
+                    <Text>Already have an account? </Text>
                     <Pressable onPress={() => navigation.navigate("Login")}>
-                      <Text style={registerStyles.loginLink}>
-                        Đăng nhập ngay
-                      </Text>
+                      <Text style={registerStyles.loginLink}>Log in now</Text>
                     </Pressable>
                   </View>
                 </View>

@@ -45,6 +45,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     onZoomChange,
     toolConfigs = {},
     eraserMode,
+    isPenMode,
   },
   ref
 ) {
@@ -54,6 +55,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   const [strokes, setStrokes] = useState([]);
   const [currentPoints, setCurrentPoints] = useState([]);
+  const [realtimeText, setRealtimeText] = useState(null);
 
   // ✅ New: use 2 stacks for undo/redo
   const [undoStack, setUndoStack] = useState([]);
@@ -104,7 +106,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     .enabled(!zoomLocked)
     .onStart(() => {
       baseScale.value = scale.value;
-      runOnJS(setShowZoomOverlay)(true);
+      runOnJS(() => {
+        setShowZoomOverlay((prev) => (prev ? prev : true));
+      })();
     })
     .onUpdate((e) => {
       scale.value = baseScale.value * e.scale;
@@ -280,6 +284,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         stabilization: activeConfig.stabilization,
       };
       addStrokeInternal(strokeSnapshot);
+
+      // ✅ Sửa tại đây:
+      // Nếu là sticky, text, hoặc comment, xóa realtimeText sau khi add
+      if (["text", "sticky", "comment"].includes(strokeSnapshot.tool)) {
+        setRealtimeText(null);
+      }
     },
     [tool, color, activeConfig]
   );
@@ -293,6 +303,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             tool={tool}
             color={color}
             eraserMode={eraserMode}
+            isPenMode={isPenMode}
             onAddStroke={handleAddStroke}
             onModifyStroke={modifyStrokeAt}
             onDeleteStroke={deleteStrokeAt}
@@ -312,10 +323,21 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             thickness={activeConfig.thickness}
             stabilization={activeConfig.stabilization}
             configByTool={toolConfigs}
+            setRealtimeText={setRealtimeText}
           >
             <CanvasRenderer
               ref={rendererRef}
-              strokes={strokes}
+              strokes={
+                realtimeText &&
+                ["text", "sticky", "comment"].includes(realtimeText.tool)
+                  ? strokes.filter((s) => s.id !== realtimeText.id)
+                  : strokes
+              }
+              realtimeText={
+                realtimeText && typeof realtimeText === "object"
+                  ? realtimeText
+                  : null
+              }
               currentPoints={currentPoints}
               tool={tool}
               color={color}
