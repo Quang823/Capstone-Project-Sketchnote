@@ -19,8 +19,10 @@ import {
 import { detectShape, buildShape } from "./ShapeDetector";
 import InlineTextEditor from "../text/InlineTextEditor";
 import TextSelectionBox from "../text/TextSelectionBox";
+import ImageTransformBox from "../image/ImageTransformBox";
+import ImageSelectionBox from "../image/ImageSelectionBox";
 import debounce from "lodash/debounce";
-
+import { useMemo } from "react";
 export default function GestureHandler({
   page,
   tool,
@@ -46,6 +48,7 @@ export default function GestureHandler({
   isPenMode,
   canvasRef,
   setRealtimeText,
+  zoomState,
 }) {
   const liveRef = useRef([]);
   const rafScheduled = useRef(false);
@@ -63,6 +66,7 @@ export default function GestureHandler({
   const [draggingText, setDraggingText] = useState(null);
   const tapTimeout = useRef(null);
   const lastTapTime = useRef(0);
+  const [rotateStart, setRotateStart] = useState({ angle: 0, rotation: 0 });
   useEffect(() => {
     if (
       !editorVisible &&
@@ -72,6 +76,50 @@ export default function GestureHandler({
       requestAnimationFrame(() => setRealtimeText(null));
     }
   }, [editorVisible, selectedId]);
+
+  // Trong GestureHandler function
+  const selectedStroke = useMemo(
+    () => strokes.find((s) => s.id === selectedId),
+    [strokes, selectedId]
+  );
+
+  const isUpdatingRef = useRef(false);
+
+  useEffect(() => {
+    if (isUpdatingRef.current) return; // ⛔ Bỏ qua nếu đang cập nhật từ thao tác người dùng
+
+    if (!selectedStroke || !["image", "sticker"].includes(selectedStroke.tool))
+      return;
+
+    const next = {
+      x: selectedStroke.x,
+      y: selectedStroke.y,
+      width: selectedStroke.width,
+      height: selectedStroke.height,
+      rotation: selectedStroke.rotation ?? 0,
+    };
+
+    setSelectedBox((prev) => {
+      if (
+        prev &&
+        prev.x === next.x &&
+        prev.y === next.y &&
+        prev.width === next.width &&
+        prev.height === next.height &&
+        prev.rotation === next.rotation
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [
+    selectedStroke?.x,
+    selectedStroke?.y,
+    selectedStroke?.width,
+    selectedStroke?.height,
+    selectedStroke?.rotation,
+    selectedStroke?.tool,
+  ]);
 
   const handleTextChange = useCallback(
     (data) => {
@@ -165,12 +213,12 @@ export default function GestureHandler({
         : tool === "comment"
         ? "#E3F2FD"
         : "transparent";
-
+    const tempId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const newTextStroke = {
       id: tempId,
       tool,
-      x: e.x,
-      y: e.y,
+      x: x,
+      y: y,
       text: "",
       color: color || "#000",
       fontSize: tool === "sticky" ? 16 : tool === "comment" ? 14 : 18,
@@ -196,18 +244,68 @@ export default function GestureHandler({
   const hitTestText = (x, y, strokes) => {
     for (let i = strokes.length - 1; i >= 0; i--) {
       const s = strokes[i];
-      if (["text", "sticky", "comment"].includes(s.tool)) {
-        const w =
-          (s.text?.length || 1) * (s.fontSize || 18) * 0.6 +
-          (s.padding || 0) * 2;
-        const h = (s.fontSize || 18) + (s.padding || 0) * 2;
+      if (["text", "sticky", "comment", "emoji"].includes(s.tool)) {
+        const fontSize = s.fontSize || 18;
+        const padding = s.padding || 0;
+        const w = (s.text?.length || 1) * fontSize * 0.6 + padding * 2;
+        const h = fontSize + padding * 2;
+
+        // 🟡 Với emoji, vùng chọn nằm giữa (tâm emoji)
+        let top, bottom;
+        if (s.tool === "emoji") {
+          top = s.y - h / 2;
+          bottom = s.y + h / 2;
+        } else {
+          top = s.y - h;
+          bottom = s.y;
+        }
+
         if (
-          x >= s.x - (s.padding || 0) &&
-          x <= s.x - (s.padding || 0) + w &&
-          y <= s.y &&
-          y >= s.y - h
+          x >= s.x - padding &&
+          x <= s.x - padding + w &&
+          y >= top &&
+          y <= bottom
         ) {
           return s;
+        }
+      }
+    }
+    return null;
+  };
+
+  // ========= HIT TEST IMAGE =========
+  // helper rotate point around center by angle degrees
+  const rotatePoint = (px, py, cx, cy, angleDeg) => {
+    const a = (angleDeg * Math.PI) / 180;
+    const s = Math.sin(-a); // note: -a to rotate point back
+    const c = Math.cos(-a);
+    const dx = px - cx;
+    const dy = py - cy;
+    const rx = dx * c - dy * s;
+    const ry = dx * s + dy * c;
+    return { x: rx + cx, y: ry + cy };
+  };
+
+  const hitTestImage = (x, y, strokes) => {
+    for (let i = strokes.length - 1; i >= 0; i--) {
+      const s = strokes[i];
+      if (["image", "sticker"].includes(s.tool)) {
+        const sx = s.x ?? 0;
+        const sy = s.y ?? 0;
+        const w = s.width ?? 0;
+        const h = s.height ?? 0;
+        const rot = s.rotation ?? 0;
+
+        if (!rot || rot === 0) {
+          if (x >= sx && x <= sx + w && y >= sy && y <= sy + h) return s;
+        } else {
+          // rotate the test point back by -rot around center, then check AABB
+          const cx = sx + w / 2;
+          const cy = sy + h / 2;
+          // rotate point (x,y) by -rot
+          const rel = rotatePoint(x, y, cx, cy, -rot);
+          if (rel.x >= sx && rel.x <= sx + w && rel.y >= sy && rel.y <= sy + h)
+            return s;
         }
       }
     }
@@ -226,6 +324,22 @@ export default function GestureHandler({
     .runOnJS(true)
     .onStart((e) => {
       const hit = hitTestText(e.x, e.y, strokes);
+      if (!hit) return;
+
+      if (hit.tool === "emoji") {
+        // Emoji: chỉ chọn, không mở editor
+        setSelectedId(hit.id);
+        setSelectedBox({
+          x: hit.x - (hit.padding || 0) - 1,
+          y: hit.y - (hit.fontSize || 18) / 2 - (hit.padding || 0) - 1,
+          width:
+            (hit.text?.length || 1) * (hit.fontSize || 18) * 0.6 +
+            (hit.padding || 0) * 2 +
+            2,
+          height: (hit.fontSize || 18) + (hit.padding || 0) * 2 + 2,
+        });
+        return;
+      }
       if (hit) {
         setSelectedId(hit.id);
         setSelectedBox(null);
@@ -247,7 +361,45 @@ export default function GestureHandler({
   const tap = Gesture.Tap()
     .runOnJS(true)
     .onStart((e) => {
+      // 🔹 Ưu tiên kiểm tra hình ảnh / sticker trước
+      const hitImage = hitTestImage(e.x, e.y, strokes);
+      if (hitImage) {
+        setSelectedId(hitImage.id);
+        setSelectedBox({
+          x: hitImage.x,
+          y: hitImage.y,
+          width: hitImage.width,
+          height: hitImage.height,
+          rotation: hitImage.rotation ?? 0,
+        });
+        setEditorVisible(false);
+        return;
+      }
+
+      // 🔹 Sau đó mới xử lý text / emoji
       const hit = hitTestText(e.x, e.y, strokes);
+      if (!hit) {
+        // Tap trống => bỏ chọn
+        setSelectedId(null);
+        setSelectedBox(null);
+        return;
+      }
+
+      if (hit.tool === "emoji") {
+        setSelectedId(hit.id);
+        setSelectedBox({
+          x: hit.x - (hit.padding || 0) - 1,
+          y: hit.y - (hit.fontSize || 18) / 2 - (hit.padding || 0) - 1,
+          width:
+            (hit.text?.length || 1) * (hit.fontSize || 18) * 0.6 +
+            (hit.padding || 0) * 2 +
+            2,
+          height: (hit.fontSize || 18) + (hit.padding || 0) * 2 + 2,
+        });
+        setEditorVisible(false);
+        return;
+      }
+
       if (["text", "sticky", "comment"].includes(tool)) {
         if (hit) {
           if (typeof setRealtimeText === "function")
@@ -257,7 +409,9 @@ export default function GestureHandler({
             (hit.text?.length || 1) * (hit.fontSize || 18) * 0.6 +
             (hit.padding || 0) * 2;
           const h = (hit.fontSize || 18) + (hit.padding || 0) * 2;
+
           if (selectedId && hit.id === selectedId) {
+            // Đang chọn lại cùng text => mở editor
             setSelectedId(hit.id);
             setSelectedBox(null);
             setEditorProps({
@@ -268,6 +422,7 @@ export default function GestureHandler({
             });
             setEditorVisible(true);
           } else {
+            // Chọn mới
             setSelectedId(hit.id);
             setSelectedBox({
               x: hit.x - (hit.padding || 0) - 1,
@@ -276,28 +431,13 @@ export default function GestureHandler({
               height: h + 2,
             });
           }
-        } else {
-          if (!hitTestText(e.x, e.y, strokes)) {
-            setSelectedId(null);
-            setSelectedBox(null);
-          }
         }
-      } else if (selectedId) {
-        if (hit && hit.id === selectedId) {
-          setSelectedId(hit.id);
-          setSelectedBox(null);
-          setEditorProps({
-            x: hit.x,
-            y: hit.y,
-            tool: hit.tool,
-            data: hit,
-          });
-          setEditorVisible(true);
-        } else {
-          setSelectedId(null);
-          setSelectedBox(null);
-        }
+        return;
       }
+
+      // Nếu tool khác, bỏ chọn
+      setSelectedId(null);
+      setSelectedBox(null);
     });
 
   // ========= GESTURE =========
@@ -306,6 +446,9 @@ export default function GestureHandler({
     .runOnJS(true)
     .onStart((e) => {
       /** 🟨 TEXT ADD / EDIT **/
+      if (["image", "sticker", "camera"].includes(tool)) {
+        return;
+      }
       const hit = hitTestText(e.x, e.y, strokes);
       if (["text", "sticky", "comment"].includes(tool)) {
         if (hit) {
@@ -427,6 +570,35 @@ export default function GestureHandler({
         }
       }
 
+      // 🖼️ IMAGE / STICKER TOOL: thêm media mới
+      if (["image", "sticker"].includes(tool)) {
+        const tempId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const newMedia = {
+          id: tempId,
+          tool,
+          x: e.x,
+          y: e.y,
+          width: 200,
+          height: 200,
+          rotation: 0,
+          uri: "", // sẽ cập nhật khi chọn xong ảnh hoặc sticker
+        };
+
+        setSelectedId(tempId);
+        setSelectedBox({
+          x: e.x,
+          y: e.y,
+          width: newMedia.width,
+          height: newMedia.height,
+          rotation: 0,
+        });
+
+        setStrokes((prev) => [...prev, newMedia]);
+        setRedoStack([]);
+
+        return;
+      }
+
       // Otherwise start drawing
       const toolConfig = configByTool[tool] || {
         pressure: 0.5,
@@ -453,6 +625,7 @@ export default function GestureHandler({
     })
 
     .onUpdate((e) => {
+      if (["image", "sticker", "camera"].includes(tool)) return;
       if (!isInsidePage(e.x, e.y, page)) return;
       if (selectedId && draggingText) {
         const newX = e.x - draggingText.offsetX;
@@ -588,6 +761,7 @@ export default function GestureHandler({
     })
 
     .onEnd(() => {
+      if (["image", "sticker", "camera"].includes(tool)) return;
       const livePath = canvasRef?.current?.livePath;
       if (livePath) livePath.reset();
       const finalPoints = liveRef.current;
@@ -777,106 +951,125 @@ export default function GestureHandler({
           strokes: children.props.strokes ?? strokes,
         })}
       </GestureDetector>
-      {selectedBox && selectedId && !editorVisible && (
-        <TextSelectionBox
-          x={selectedBox.x}
-          y={selectedBox.y}
-          width={selectedBox.width}
-          height={selectedBox.height}
-          onMove={(dx, dy) => {
-            setSelectedBox((box) =>
-              box ? { ...box, x: box.x + dx, y: box.y + dy } : box
-            );
-
-            setStrokes((prev) =>
-              prev.map((s) =>
-                s.id === selectedId ? { ...s, x: s.x + dx, y: s.y + dy } : s
-              )
-            );
-
-            setEditorProps((prev) => ({
-              ...prev,
-              x: prev.x + dx,
-              y: prev.y + dy,
-            }));
-
-            if (typeof setRealtimeText === "function") {
-              setRealtimeText((prev) =>
-                prev && prev.id === selectedId
-                  ? { ...prev, x: prev.x + dx, y: prev.y + dy }
-                  : prev
+      {selectedBox &&
+        selectedId &&
+        !editorVisible &&
+        ["text", "sticky", "comment", "emoji"].includes(
+          selectedStroke?.tool
+        ) && (
+          <TextSelectionBox
+            x={selectedBox.x}
+            y={selectedBox.y}
+            width={selectedBox.width}
+            height={selectedBox.height}
+            onMove={(dx, dy) => {
+              setSelectedBox((box) =>
+                box ? { ...box, x: box.x + dx, y: box.y + dy } : box
               );
-            }
-          }}
-          onResize={(corner, dx, dy) => {
-            const s = strokes.find((str) => str.id === selectedId);
-            if (!s) return;
 
-            const delta = corner === "tl" || corner === "bl" ? -dy : dy;
-            const newFontSize = Math.max(8, (s.fontSize || 18) + delta * 0.2);
-            const avgCharWidth = newFontSize * 0.55;
-            const textWidth = (s.text?.length || 1) * avgCharWidth;
-            const padding = s.padding || 0;
-
-            debouncedUpdate(() => {
               setStrokes((prev) =>
-                prev.map((str) =>
-                  str.id === selectedId
-                    ? { ...str, fontSize: newFontSize }
-                    : str
+                prev.map((s) =>
+                  s.id === selectedId ? { ...s, x: s.x + dx, y: s.y + dy } : s
                 )
               );
-              setSelectedBox({
-                x: s.x - padding - 1,
-                y: s.y - newFontSize - padding - 1,
-                width: textWidth + padding * 2 + 2,
-                height: newFontSize + padding * 2 + 2,
-              });
-            });
-          }}
-          onCopy={() => {
-            const target = strokes.find((s) => s.id === selectedId);
-            if (target) {
-              setStrokes((prev) => [
+
+              setEditorProps((prev) => ({
                 ...prev,
-                {
-                  ...target,
-                  id: Date.now().toString(),
-                  x: target.x + 20,
-                  y: target.y + 20,
-                },
-              ]);
+                x: prev.x + dx,
+                y: prev.y + dy,
+              }));
+
+              if (typeof setRealtimeText === "function") {
+                setRealtimeText((prev) =>
+                  prev && prev.id === selectedId
+                    ? { ...prev, x: prev.x + dx, y: prev.y + dy }
+                    : prev
+                );
+              }
+            }}
+            onResize={(corner, dx, dy) => {
+              let newX = selectedBox.x;
+              let newY = selectedBox.y;
+              let newWidth = Math.max(20, selectedBox.width + dx);
+              let newHeight = Math.max(20, selectedBox.height + dy);
+
+              // Adjust position dựa trên corner để giữ corner cố định
+              if (corner.includes("l")) {
+                // Left corners: tl, bl
+                newX += dx < 0 ? dx : 0; // Nếu dx âm (co trái), shift x
+                newWidth = Math.abs(newWidth); // Đảm bảo positive
+              }
+              if (corner.includes("t")) {
+                // Top corners: tl, tr
+                newY += dy < 0 ? dy : 0;
+                newHeight = Math.abs(newHeight);
+              }
+              // Tương tự cho right/bottom nếu cần, nhưng dx/dy dương cho right/bottom
+
+              setSelectedBox((b) => ({
+                ...b,
+                x: newX,
+                y: newY,
+                width: newWidth,
+                height: newHeight,
+              }));
+              setStrokes((prev) =>
+                prev.map((s) =>
+                  s.id === selectedId
+                    ? {
+                        ...s,
+                        x: newX,
+                        y: newY,
+                        width: newWidth,
+                        height: newHeight,
+                      }
+                    : s
+                )
+              );
+            }}
+            onCopy={() => {
+              const target = strokes.find((s) => s.id === selectedId);
+              if (target) {
+                setStrokes((prev) => [
+                  ...prev,
+                  {
+                    ...target,
+                    id: Date.now().toString(),
+                    x: target.x + 20,
+                    y: target.y + 20,
+                  },
+                ]);
+                setSelectedId(null);
+                setSelectedBox(null);
+              }
+            }}
+            onCut={() => {
+              setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
               setSelectedId(null);
               setSelectedBox(null);
-            }
-          }}
-          onCut={() => {
-            setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
-            setSelectedId(null);
-            setSelectedBox(null);
-          }}
-          onDelete={() => {
-            setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
-            setSelectedId(null);
-            setSelectedBox(null);
-          }}
-          onEdit={() => {
-            const hit = strokes.find((s) => s.id === selectedId);
-            if (hit) {
-              if (typeof setRealtimeText === "function")
-                setRealtimeText({ id: hit.id, ...hit });
+            }}
+            onDelete={() => {
+              setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
+              setSelectedId(null);
+              setSelectedBox(null);
+            }}
+            onEdit={() => {
+              const hit = strokes.find((s) => s.id === selectedId);
+              if (hit) {
+                if (typeof setRealtimeText === "function")
+                  setRealtimeText({ id: hit.id, ...hit });
 
-              setEditorProps({
-                x: hit.x,
-                y: hit.y,
-                tool: hit.tool,
-                data: hit,
-              });
-              setEditorVisible(true);
-            }
-          }}
-        />
-      )}
+                setEditorProps({
+                  x: hit.x,
+                  y: hit.y,
+                  tool: hit.tool,
+                  data: hit,
+                });
+                setEditorVisible(true);
+              }
+            }}
+          />
+        )}
 
       <InlineTextEditor
         visible={editorVisible}
@@ -955,6 +1148,156 @@ export default function GestureHandler({
         }}
         onChange={handleTextChange}
       />
+
+      {selectedId &&
+        selectedBox &&
+        ["image", "sticker"].includes(selectedStroke?.tool) && (
+          <>
+            <ImageTransformBox
+              {...selectedBox}
+              x={selectedStroke.x}
+              y={selectedStroke.y}
+              width={selectedStroke.width}
+              height={selectedStroke.height}
+              rotation={selectedStroke?.rotation ?? 0}
+              onMove={(dx, dy) => {
+                isUpdatingRef.current = true;
+                setSelectedBox((b) => ({ ...b, x: b.x + dx, y: b.y + dy }));
+                setStrokes((prev) =>
+                  prev.map((s) =>
+                    s.id === selectedId ? { ...s, x: s.x + dx, y: s.y + dy } : s
+                  )
+                );
+              }}
+              onResize={(corner, dx, dy) => {
+                isUpdatingRef.current = true;
+                setSelectedBox((b) => {
+                  const ratio = b.width / b.height;
+                  let newWidth = b.width;
+                  let newHeight = b.height;
+                  let newX = b.x;
+                  let newY = b.y;
+
+                  switch (corner) {
+                    case "br":
+                      newWidth = Math.max(20, b.width + dx);
+                      newHeight = newWidth / ratio;
+                      break;
+                    case "tr":
+                      newWidth = Math.max(20, b.width + dx);
+                      newHeight = newWidth / ratio;
+                      newY = b.y - (newHeight - b.height);
+                      break;
+                    case "bl":
+                      newWidth = Math.max(20, b.width - dx);
+                      newHeight = newWidth / ratio;
+                      newX = b.x + dx;
+                      break;
+                    case "tl":
+                      newWidth = Math.max(20, b.width - dx);
+                      newHeight = newWidth / ratio;
+                      newX = b.x + dx;
+                      newY = b.y - (newHeight - b.height);
+                      break;
+                  }
+
+                  return {
+                    ...b,
+                    x: newX,
+                    y: newY,
+                    width: newWidth,
+                    height: newHeight,
+                  };
+                });
+
+                setStrokes((prev) =>
+                  prev.map((s) =>
+                    s.id === selectedId
+                      ? {
+                          ...s,
+                          ...(() => {
+                            const ratio = s.width / s.height;
+                            let newWidth = s.width;
+                            let newHeight = s.height;
+                            let newX = s.x;
+                            let newY = s.y;
+
+                            switch (corner) {
+                              case "br":
+                                newWidth = Math.max(20, s.width + dx);
+                                newHeight = newWidth / ratio;
+                                break;
+                              case "tr":
+                                newWidth = Math.max(20, s.width + dx);
+                                newHeight = newWidth / ratio;
+                                newY = s.y - (newHeight - s.height);
+                                break;
+                              case "bl":
+                                newWidth = Math.max(20, s.width - dx);
+                                newHeight = newWidth / ratio;
+                                newX = s.x + dx;
+                                break;
+                              case "tl":
+                                newWidth = Math.max(20, s.width - dx);
+                                newHeight = newWidth / ratio;
+                                newX = s.x + dx;
+                                newY = s.y - (newHeight - s.height);
+                                break;
+                            }
+
+                            return {
+                              x: newX,
+                              y: newY,
+                              width: newWidth,
+                              height: newHeight,
+                            };
+                          })(),
+                        }
+                      : s
+                  )
+                );
+              }}
+              onRotate={(newRotation) => {
+                isUpdatingRef.current = true;
+                setSelectedBox((b) => ({ ...b, rotation: newRotation }));
+                setStrokes((prev) =>
+                  prev.map((s) =>
+                    s.id === selectedId ? { ...s, rotation: newRotation } : s
+                  )
+                );
+              }}
+            />
+            <ImageSelectionBox // Thêm menu
+              {...selectedBox}
+              onCopy={() => {
+                const target = strokes.find((s) => s.id === selectedId);
+                if (target) {
+                  setStrokes((prev) => [
+                    ...prev,
+                    {
+                      ...target,
+                      id: Date.now().toString(),
+                      x: target.x + 20,
+                      y: target.y + 20,
+                    },
+                  ]);
+                  setSelectedId(null);
+                  setSelectedBox(null);
+                }
+              }}
+              onCut={() => {
+                setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
+                setSelectedId(null);
+                setSelectedBox(null);
+              }}
+              onDelete={() => {
+                setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
+                setSelectedId(null);
+                setSelectedBox(null);
+              }}
+            />
+          </>
+        )}
     </>
   );
 }

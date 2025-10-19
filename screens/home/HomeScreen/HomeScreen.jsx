@@ -25,96 +25,126 @@ import NavigationDrawer from "../nav/NavigationDrawer";
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 const { width } = Dimensions.get("window");
 
-// Dữ liệu mẫu cho các khóa học đã mua
+// Sample purchased courses
 const purchasedCourses = [
   {
     id: "1",
-    title: "Nghệ thuật Sketchnote cơ bản",
-    instructor: "Nguyễn Văn A",
+    title: "Basic Sketchnote Art",
+    instructor: "John Nguyen",
     image: require("../../../assets/logo1.webp"),
     progress: 45,
-    lastAccessed: "Hôm nay, 10:30",
-    level: "Cơ bản",
-    duration: "2.5 giờ"
+    lastAccessed: "Today, 10:30 AM",
+    level: "Beginner",
+    duration: "2.5h",
   },
   {
     id: "2",
-    title: "Sketchnote nâng cao cho doanh nghiệp",
-    instructor: "Trần Thị B",
+    title: "Advanced Sketchnote for Business",
+    instructor: "Mary Tran",
     image: require("../../../assets/logo1.webp"),
     progress: 20,
-    lastAccessed: "Hôm qua, 15:45",
-    level: "Nâng cao",
-    duration: "4 giờ"
+    lastAccessed: "Yesterday, 3:45 PM",
+    level: "Advanced",
+    duration: "4h",
   },
   {
     id: "3",
-    title: "Kỹ thuật vẽ biểu đồ trực quan",
-    instructor: "Lê Văn C",
+    title: "Visual Chart Techniques",
+    instructor: "Liam Le",
     image: require("../../../assets/logo1.webp"),
     progress: 75,
-    lastAccessed: "24/06/2023",
-    level: "Trung cấp",
-    duration: "3 giờ"
+    lastAccessed: "06/24/2023",
+    level: "Intermediate",
+    duration: "3h",
   },
 ];
 
-// Dữ liệu mẫu cho các dự án gần đây
+// Recent projects
 const recentProjects = [
   {
     id: "1",
-    title: "Bài học Toán học",
+    title: "Math Lesson Plan",
     preview: require("../../../assets/logo1.webp"),
-    date: "Hôm nay",
-    time: "10:30",
-    color: "#FFE4E1",
-    category: "Giáo dục"
+    date: "Today",
+    time: "10:30 AM",
+    color: "#E0F7FA",
+    category: "Education",
   },
   {
     id: "2",
-    title: "Ý tưởng dự án mới",
+    title: "New Project Ideas",
     preview: require("../../../assets/logo1.webp"),
-    date: "Hôm qua",
-    time: "15:45",
-    color: "#E1F5FE",
-    category: "Brainstorm"
+    date: "Yesterday",
+    time: "3:45 PM",
+    color: "#E8F5E9",
+    category: "Brainstorm",
   },
   {
     id: "3",
-    title: "Lịch trình tuần ",
+    title: "Weekly Schedule",
     preview: require("../../../assets/logo1.webp"),
-    date: "3 ngày trước",
-    time: "09:15",
-    color: "#F1F8E9",
-    category: "Lập kế hoạch"
+    date: "3 days ago",
+    time: "9:15 AM",
+    color: "#FFF3E0",
+    category: "Planning",
   },
 ];
 
-// Quick actions data
+// Quick actions
 const quickActions = [
-  { id: 1, title: "Sketchnote mới", icon: "edit", color: "#4F46E5", action: "create" },
-  { id: 2, title: "Từ template", icon: "content-copy", color: "#059669", action: "template" },
-  { id: 3, title: "Scan & Edit", icon: "camera", color: "#DC2626", action: "scan" },
-  { id: 4, title: "Cộng tác", icon: "group", color: "#7C3AED", action: "collaborate" },
+  {
+    id: 1,
+    title: "New Sketchnote",
+    icon: "edit",
+    color: "#2563EB",
+    action: "create",
+  },
+  {
+    id: 2,
+    title: "From Template",
+    icon: "content-copy",
+    color: "#059669",
+    action: "template",
+  },
+  {
+    id: 3,
+    title: "Scan & Edit",
+    icon: "camera",
+    color: "#DC2626",
+    action: "scan",
+  },
+  {
+    id: 4,
+    title: "Collaborate",
+    icon: "group",
+    color: "#7C3AED",
+    action: "collaborate",
+  },
 ];
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const [userName, setUserName] = useState("Nguyễn Văn A");
+  const [userName, setUserName] = useState("John Nguyen");
   const [activeNavItem, setActiveNavItem] = useState("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  
-  // Animation cho drawer
+
+  // Drawer animation
   const drawerAnimation = useRef(new Animated.Value(-320)).current;
   const overlayAnimation = useRef(new Animated.Value(0)).current;
-  
-  // Animation cho các phần tử
+
+  // Header animation
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
 
   useEffect(() => {
-    opacity.value = withTiming(1, { duration: 800, easing: Easing.ease });
-    translateY.value = withTiming(0, { duration: 800, easing: Easing.ease });
+    opacity.value = withTiming(1, {
+      duration: 800,
+      easing: Easing.out(Easing.ease),
+    });
+    translateY.value = withTiming(0, {
+      duration: 800,
+      easing: Easing.out(Easing.ease),
+    });
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -124,7 +154,6 @@ export default function HomeScreen() {
 
   const toggleDrawer = () => {
     if (drawerOpen) {
-      // Đóng drawer
       Animated.parallel([
         Animated.timing(drawerAnimation, {
           toValue: -320,
@@ -136,12 +165,8 @@ export default function HomeScreen() {
           duration: 300,
           useNativeDriver: true,
         }),
-      ]).start(() => {
-        // Callback để đảm bảo animation hoàn tất
-        setDrawerOpen(false);
-      });
+      ]).start(() => setDrawerOpen(false));
     } else {
-      // Mở drawer
       setDrawerOpen(true);
       Animated.parallel([
         Animated.timing(drawerAnimation, {
@@ -160,8 +185,6 @@ export default function HomeScreen() {
 
   const handleNavPress = (navItem) => {
     setActiveNavItem(navItem);
-    
-    // Đóng drawer trước khi navigate
     if (drawerOpen) {
       Animated.parallel([
         Animated.timing(drawerAnimation, {
@@ -176,35 +199,32 @@ export default function HomeScreen() {
         }),
       ]).start(() => {
         setDrawerOpen(false);
-        // Navigation sau khi đóng drawer
-        switch(navItem) {
-          case 'home':
-            break;
-          case 'courses':
+        switch (navItem) {
+          case "courses":
             navigation.navigate("CoursesScreen");
             break;
-          case 'blogAll':
+          case "blogAll":
             navigation.navigate("BlogList");
             break;
-          case 'blogMine':
+          case "blogMine":
             navigation.navigate("MyBlog");
             break;
-          case 'create':
+          case "create":
             navigation.navigate("DrawingScreen");
             break;
-          case 'gallery':
+          case "gallery":
             navigation.navigate("GalleryScreen");
             break;
-          case 'store':
+          case "store":
             navigation.navigate("ResourceStore");
             break;
-          case 'wallet':
+          case "wallet":
             navigation.navigate("Wallet");
             break;
-          case 'profile':
+          case "profile":
             navigation.navigate("ProfileScreen");
             break;
-          case 'settings':
+          case "settings":
             navigation.navigate("SettingsScreen");
             break;
           default:
@@ -215,17 +235,17 @@ export default function HomeScreen() {
   };
 
   const handleQuickAction = (action) => {
-    switch(action) {
-      case 'create':
+    switch (action) {
+      case "create":
         navigation.navigate("DrawingScreen");
         break;
-      case 'template':
+      case "template":
         navigation.navigate("TemplateScreen");
         break;
-      case 'scan':
+      case "scan":
         navigation.navigate("ScanScreen");
         break;
-      case 'collaborate':
+      case "collaborate":
         navigation.navigate("CollaborationScreen");
         break;
       default:
@@ -233,21 +253,21 @@ export default function HomeScreen() {
     }
   };
 
-  const getCurrentGreeting = () => {
+  const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Chào buổi sáng";
-    if (hour < 18) return "Chào buổi chiều";
-    return "Chào buổi tối";
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
   };
 
   return (
     <LinearGradient
-      colors={["#F0F9FF", "#FEF7CD"]}
+      colors={["#F0FAFF", "#FFFFFF"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={homeStyles.container}
     >
-      {/* Navigation Drawer */}
+      {/* Drawer */}
       <NavigationDrawer
         drawerOpen={drawerOpen}
         drawerAnimation={drawerAnimation}
@@ -259,59 +279,75 @@ export default function HomeScreen() {
 
       {/* Main Content */}
       <View style={homeStyles.mainContent}>
-        <ScrollView style={homeStyles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Header với thiết kế mới */}
+        <ScrollView
+          style={homeStyles.scrollView}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
           <ReanimatedView style={[homeStyles.header, animatedStyle]}>
             <View style={homeStyles.headerTop}>
               <Pressable onPress={toggleDrawer} style={homeStyles.menuButton}>
-                <Icon name="menu" size={24} color="#1F2937" />
+                <Icon name="menu" size={24} color="#1E40AF" />
               </Pressable>
+
               <View style={homeStyles.headerActions}>
-                <Pressable 
+                <Pressable
                   style={homeStyles.headerActionButton}
                   onPress={() => navigation.navigate("Wallet")}
                 >
-                  <Icon name="account-balance-wallet" size={24} color="#6B7280" />
+                  <Icon
+                    name="account-balance-wallet"
+                    size={24}
+                    color="#1E3A8A"
+                  />
                 </Pressable>
-                <Pressable 
+                <Pressable
                   style={homeStyles.headerActionButton}
                   onPress={() => navigation.navigate("Cart")}
                 >
-                  <Icon name="shopping-cart" size={24} color="#6B7280" />
+                  <Icon name="shopping-cart" size={24} color="#1E3A8A" />
                   <View style={homeStyles.cartBadge}>
                     <Text style={homeStyles.cartBadgeText}>2</Text>
                   </View>
                 </Pressable>
                 <Pressable style={homeStyles.notificationButton}>
-                  <Icon name="notifications-none" size={24} color="#6B7280" />
+                  <Icon name="notifications-none" size={24} color="#1E3A8A" />
                   <View style={homeStyles.notificationBadge}>
                     <Text style={homeStyles.notificationCount}>3</Text>
                   </View>
                 </Pressable>
               </View>
             </View>
-            
+
             <View style={homeStyles.welcomeContainer}>
-              <Text style={homeStyles.greetingText}>{getCurrentGreeting()}</Text>
+              <Text style={homeStyles.greetingText}>{getGreeting()},</Text>
               <Text style={homeStyles.userName}>{userName}!</Text>
               <Text style={homeStyles.motivationText}>
-                Hãy tạo ra những sketchnote tuyệt vời hôm nay 🎨
+                Create amazing sketchnotes today 🎨
               </Text>
             </View>
           </ReanimatedView>
 
           {/* Quick Actions */}
           <View style={homeStyles.sectionContainer}>
-            <Text style={homeStyles.sectionTitle}>Thao tác nhanh</Text>
+            <Text style={homeStyles.sectionTitle}>Quick Actions</Text>
             <View style={homeStyles.quickActionsContainer}>
               {quickActions.map((action) => (
                 <Pressable
                   key={action.id}
-                  style={[homeStyles.quickActionButton, { backgroundColor: action.color + '15' }]}
+                  style={[
+                    homeStyles.quickActionButton,
+                    { backgroundColor: action.color + "15" },
+                  ]}
                   onPress={() => handleQuickAction(action.action)}
                 >
-                  <View style={[homeStyles.quickActionIcon, { backgroundColor: action.color }]}>
-                    <Icon name={action.icon} size={20} color="#FFFFFF" />
+                  <View
+                    style={[
+                      homeStyles.quickActionIcon,
+                      { backgroundColor: action.color },
+                    ]}
+                  >
+                    <Icon name={action.icon} size={20} color="#fff" />
                   </View>
                   <Text style={homeStyles.quickActionText}>{action.title}</Text>
                 </Pressable>
@@ -319,37 +355,52 @@ export default function HomeScreen() {
             </View>
           </View>
 
-       
-        
-
-          {/* Khóa học đã mua với thiết kế mới */}
+          {/* Purchased Courses */}
           <View style={homeStyles.sectionContainer}>
             <View style={homeStyles.sectionHeader}>
-              <Text style={homeStyles.sectionTitle}>Khóa học của bạn</Text>
+              <Text style={homeStyles.sectionTitle}>Your Courses</Text>
               <Pressable onPress={() => navigation.navigate("CoursesScreen")}>
-                <Text style={homeStyles.viewAllText}>Xem tất cả →</Text>
+                <Text style={homeStyles.viewAllText}>View All →</Text>
               </Pressable>
             </View>
 
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
               style={homeStyles.coursesContainer}
             >
               {purchasedCourses.map((course) => (
                 <Pressable
                   key={course.id}
                   style={homeStyles.courseCard}
-                  onPress={() => navigation.navigate("LessonScreen", { courseId: course.id, lessonId: "l1" })}
+                  onPress={() =>
+                    navigation.navigate("LessonScreen", {
+                      courseId: course.id,
+                      lessonId: "l1",
+                    })
+                  }
                 >
-                  <Shadow distance={8} startColor="#00000015" finalColor="#00000005">
+                  <Shadow
+                    distance={8}
+                    startColor="#00000015"
+                    finalColor="#00000005"
+                  >
                     <View style={homeStyles.courseCardInner}>
-                      <Image source={course.image} style={homeStyles.courseImage} />
+                      <Image
+                        source={course.image}
+                        style={homeStyles.courseImage}
+                      />
                       <View style={homeStyles.courseOverlay}>
                         <View style={homeStyles.courseLevelBadge}>
-                          <Text style={homeStyles.courseLevelText}>{course.level}</Text>
+                          <Text style={homeStyles.courseLevelText}>
+                            {course.level}
+                          </Text>
                         </View>
-                        <Icon name="play-circle-outline" size={32} color="#FFFFFF" />
+                        <Icon
+                          name="play-circle-outline"
+                          size={32}
+                          color="#fff"
+                        />
                       </View>
                       <View style={homeStyles.courseInfo}>
                         <Text style={homeStyles.courseTitle} numberOfLines={2}>
@@ -357,22 +408,28 @@ export default function HomeScreen() {
                         </Text>
                         <View style={homeStyles.courseMetaContainer}>
                           <Icon name="person" size={14} color="#6B7280" />
-                          <Text style={homeStyles.courseInstructor}>{course.instructor}</Text>
+                          <Text style={homeStyles.courseInstructor}>
+                            {course.instructor}
+                          </Text>
                         </View>
                         <View style={homeStyles.courseDurationContainer}>
                           <Icon name="access-time" size={14} color="#6B7280" />
-                          <Text style={homeStyles.courseDuration}>{course.duration}</Text>
+                          <Text style={homeStyles.courseDuration}>
+                            {course.duration}
+                          </Text>
                         </View>
                         <View style={homeStyles.progressContainer}>
                           <View style={homeStyles.progressBar}>
-                            <View 
+                            <View
                               style={[
-                                homeStyles.progressFill, 
-                                { width: `${course.progress}%` }
-                              ]} 
+                                homeStyles.progressFill,
+                                { width: `${course.progress}%` },
+                              ]}
                             />
                           </View>
-                          <Text style={homeStyles.progressText}>{course.progress}%</Text>
+                          <Text style={homeStyles.progressText}>
+                            {course.progress}%
+                          </Text>
                         </View>
                       </View>
                     </View>
@@ -382,60 +439,66 @@ export default function HomeScreen() {
             </ScrollView>
           </View>
 
-         {/* Dự án gần đây  */} 
-<View style={homeStyles.sectionContainer}>
-  <View style={homeStyles.sectionHeader}>
-    <Text style={homeStyles.sectionTitle}>Dự án gần đây</Text>
-    <Pressable onPress={() => navigation.navigate("GalleryScreen")}>
-      <Text style={homeStyles.viewAllText}>Xem tất cả →</Text>
-    </Pressable>
-  </View>
-
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    style={homeStyles.coursesContainer} // tái sử dụng container
-  >
-    {recentProjects.map((project) => (
-      <Pressable
-        key={project.id}
-        style={homeStyles.projectCard} 
-        onPress={() =>
-          navigation.navigate("DrawingScreen", { projectId: project.id })
-        }
-      >
-        <Shadow distance={8} startColor="#00000015" finalColor="#00000005">
-          <View style={homeStyles.projectCardInner}>
-            <Image source={project.preview} style={homeStyles.projectPreview} />
-
-            <View style={homeStyles.courseOverlay}>
-              <View style={homeStyles.courseLevelBadge}>
-                <Text style={homeStyles.courseLevelText}>
-                  {project.category}
-                </Text>
-              </View>
-              <Icon name="more-vert" size={28} color="#FFFFFF" />
+          {/* Recent Projects */}
+          <View style={homeStyles.sectionContainer}>
+            <View style={homeStyles.sectionHeader}>
+              <Text style={homeStyles.sectionTitle}>Recent Projects</Text>
+              <Pressable onPress={() => navigation.navigate("GalleryScreen")}>
+                <Text style={homeStyles.viewAllText}>View All →</Text>
+              </Pressable>
             </View>
 
-            <View style={homeStyles.projectFooter}>
-              <Text style={homeStyles.projectTitle} numberOfLines={2}>
-                {project.title}
-              </Text>
-              <View style={homeStyles.projectTimeContainer}>
-                <Icon name="access-time" size={14} color="#6B7280" />
-                <Text style={homeStyles.projectDate}>{project.date}</Text>
-              </View>
-            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={homeStyles.coursesContainer}
+            >
+              {recentProjects.map((project) => (
+                <Pressable
+                  key={project.id}
+                  style={homeStyles.projectCard}
+                  onPress={() =>
+                    navigation.navigate("DrawingScreen", {
+                      projectId: project.id,
+                    })
+                  }
+                >
+                  <Shadow
+                    distance={8}
+                    startColor="#00000015"
+                    finalColor="#00000005"
+                  >
+                    <View style={homeStyles.projectCardInner}>
+                      <Image
+                        source={project.preview}
+                        style={homeStyles.projectPreview}
+                      />
+                      <View style={homeStyles.courseOverlay}>
+                        <View style={homeStyles.courseLevelBadge}>
+                          <Text style={homeStyles.courseLevelText}>
+                            {project.category}
+                          </Text>
+                        </View>
+                        <Icon name="more-vert" size={28} color="#fff" />
+                      </View>
+                      <View style={homeStyles.projectFooter}>
+                        <Text style={homeStyles.projectTitle} numberOfLines={2}>
+                          {project.title}
+                        </Text>
+                        <View style={homeStyles.projectTimeContainer}>
+                          <Icon name="access-time" size={14} color="#6B7280" />
+                          <Text style={homeStyles.projectDate}>
+                            {project.date}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </Shadow>
+                </Pressable>
+              ))}
+            </ScrollView>
           </View>
-        </Shadow>
-      </Pressable>
-    ))}
-  </ScrollView>
-</View>
 
-
-          
-          {/* Bottom spacing */}
           <View style={{ height: 40 }} />
         </ScrollView>
       </View>
