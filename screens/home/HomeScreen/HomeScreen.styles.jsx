@@ -1,21 +1,21 @@
 import { StyleSheet, Dimensions } from "react-native";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
 export const homeStyles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#F0FAFF", // gradient background handled in LinearGradient
   },
-  
-  // Main Content
+
   mainContent: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
   },
-  
-  // Header với thiết kế mới
+
+  // Header
   header: {
     paddingHorizontal: 20,
     paddingTop: 60,
@@ -33,19 +33,16 @@ export const homeStyles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "#FFFFFF",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 4,
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   headerActionButton: {
@@ -54,32 +51,29 @@ export const homeStyles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "#FFFFFF",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    position: 'relative',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 4,
+    position: "relative",
   },
   cartBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
+    position: "absolute",
+    top: 6,
+    right: 6,
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#EF4444',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#2563EB",
+    justifyContent: "center",
+    alignItems: "center",
   },
   cartBadgeText: {
     fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: "#FFFFFF",
+    fontWeight: "bold",
   },
   notificationButton: {
     width: 44,
@@ -87,53 +81,50 @@ export const homeStyles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
+    backgroundColor: "#FFFFFF",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    position: 'relative',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 4,
+    position: "relative",
   },
   notificationBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
+    position: "absolute",
+    top: 6,
+    right: 6,
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#EF4444',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#DC2626",
+    justifyContent: "center",
+    alignItems: "center",
   },
   notificationCount: {
     fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
+    color: "#FFFFFF",
+    fontWeight: "bold",
   },
   welcomeContainer: {
-    alignItems: 'flex-start',
+    alignItems: "flex-start",
   },
   greetingText: {
     fontSize: 16,
-    color: "#6B7280",
+    color: "#1E40AF",
     marginBottom: 4,
   },
   userName: {
     fontSize: 28,
-    fontWeight: "bold",
-    color: "#1F2937",
+    fontWeight: "700",
+    color: "#0F172A",
     marginBottom: 8,
   },
   motivationText: {
     fontSize: 16,
-    color: "#4B5563",
-    fontStyle: 'italic',
+    color: "#1E3A8A",
+    fontStyle: "italic",
   },
-  
+
   // Quick Actions
   quickActionsContainer: {
     flexDirection: "row",
@@ -157,50 +148,20 @@ export const homeStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   quickActionText: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#374151",
+    color: "#1E3A8A",
     flex: 1,
   },
-  
-  // Stats Cards
-  statsContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    marginBottom: 8,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1F2937",
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#6B7280",
-    textAlign: "center",
-  },
-  
-  // Section Containers
+
+  // Section
   sectionContainer: {
     marginTop: 32,
     paddingHorizontal: 20,
@@ -213,162 +174,140 @@ export const homeStyles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    color: "#1F2937",
+    fontWeight: "700",
+    color: "#0F172A",
   },
   viewAllText: {
     fontSize: 14,
-    color: "#4F46E5",
+    color: "#2563EB",
     fontWeight: "500",
   },
-  
-  // Courses với thiết kế mới
+
+  // Courses
   coursesContainer: {
     marginTop: 16,
   },
   courseCard: {
-     width: 300,      
-  marginRight: 16,
-  borderRadius: 16,
-  overflow: "hidden",
-  
+    width: 300,
+    marginRight: 16,
+    borderRadius: 16,
+    overflow: "hidden",
   },
   courseCardInner: {
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-    position: 'relative',
+    borderRadius: 16,
+    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+    position: "relative",
   },
   courseImage: {
-    width: '100%',
+    width: "100%",
     height: 160,
-    resizeMode: 'cover',
+    resizeMode: "cover",
   },
   courseOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 160,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.25)",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
     padding: 16,
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   courseLevelBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: "#FFFFFFCC",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   courseLevelText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#4F46E5',
+    fontWeight: "600",
+    color: "#2563EB",
   },
   courseInfo: {
     padding: 16,
   },
   courseTitle: {
-   fontSize: 14,
-  fontWeight: "600",
-  color: "#111",
-  marginBottom: 6,
-  flexShrink: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#0F172A",
+    marginBottom: 6,
+    flexShrink: 1,
   },
   courseMetaContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   courseInstructor: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#1E40AF",
     marginLeft: 6,
   },
   courseDurationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   courseDuration: {
     fontSize: 14,
-    color: '#6B7280',
+    color: "#1E40AF",
     marginLeft: 6,
   },
   progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 8,
   },
   progressBar: {
     flex: 1,
     height: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#E0F2FE",
     borderRadius: 4,
     marginRight: 12,
   },
   progressFill: {
-    height: '100%',
-    backgroundColor: '#4F46E5',
+    height: "100%",
+    backgroundColor: "#2563EB",
     borderRadius: 4,
   },
   progressText: {
     fontSize: 13,
-    color: '#4F46E5',
-    fontWeight: '600',
+    color: "#2563EB",
+    fontWeight: "600",
     minWidth: 35,
   },
-  
-  // Projects Grid với thiết kế mới
-  
+
+  // Projects
   projectCard: {
-  marginRight: 16,
-  
+    marginRight: 16,
   },
   projectCardInner: {
-    width: 200,    
-  borderRadius: 16,
-  overflow: "hidden",
-  backgroundColor: "#fff",
-  },
-  projectHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  categoryBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  categoryText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#374151",
+    width: 200,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
   },
   projectPreview: {
     width: "100%",
-    height: 80,
+    height: 160,
     borderRadius: 12,
-    marginBottom: 12,
     resizeMode: "cover",
-     height: 160, 
+    marginBottom: 0,
   },
   projectFooter: {
- flex: 1,
-  padding: 16,
-  justifyContent: 'space-between',
+    padding: 16,
+    justifyContent: "space-between",
   },
   projectTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: "#1F2937",
+    color: "#0F172A",
     marginBottom: 6,
-    flexShrink: 1, 
+    flexShrink: 1,
   },
   projectTimeContainer: {
     flexDirection: "row",
@@ -376,45 +315,7 @@ export const homeStyles = StyleSheet.create({
   },
   projectDate: {
     fontSize: 12,
-    color: "#6B7280",
+    color: "#1E40AF",
     marginLeft: 4,
-  },
-  
-  // Create Project Card với thiết kế cải tiến
-  createProjectCard: {
-    width: (width - 52) / 2,
-    marginBottom: 16,
-  },
-  createProjectCardInner: {
-    borderRadius: 20,
-    padding: 16,
-    height: 180,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  createProjectIconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#EEF2FF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  createProjectText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#4F46E5',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  createProjectSubtext: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
   },
 });

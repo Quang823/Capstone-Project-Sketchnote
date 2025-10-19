@@ -24,6 +24,8 @@ export default function ToolbarContainer({
   onExportPNG,
   onExportJSON,
   onImportJSON,
+  onSaveFile,
+  onLoadCloudFile,
 
   eraserMode,
   setEraserMode,
@@ -524,18 +526,30 @@ export default function ToolbarContainer({
           setTool={setTool}
         />
 
-        {/* ☁️ Import / Export */}
+        {/* ☁️ Save Project (tự động lưu JSON lên cloud) */}
         <ToolButton
           icon={
             <MaterialCommunityIcons
-              name="export-variant"
+              name="content-save-outline"
               size={ICON_SIZE}
               color={ICON_COLOR}
             />
           }
-          onPress={onExportPNG}
+          onPress={() => onSaveFile?.("json")} // 💾 Bấm phát là lưu luôn JSON
         />
+
         <ToolButton
+          icon={
+            <MaterialCommunityIcons
+              name="cloud-download-outline"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
+          }
+          onPress={onLoadCloudFile}
+        />
+
+        {/* <ToolButton
           icon={
             <MaterialCommunityIcons
               name="file-export-outline"
@@ -554,7 +568,7 @@ export default function ToolbarContainer({
             />
           }
           onPress={onImportJSON}
-        />
+        /> */}
 
         {/* 🧪 Extra Tools */}
         <ToolButton
