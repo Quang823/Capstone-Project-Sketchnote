@@ -50,8 +50,11 @@ export const blogStyles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: "white",
     overflow: "hidden",
+    
   },
-  blogImage: { width: "100%", height: 100, resizeMode: "cover" }, // 👈 giữ nguyên image
+  blogImage: { width: "100%",
+  aspectRatio: 16 / 9, 
+  resizeMode: "cover",}, 
   blogContent: { padding: 8 },
   blogTitle: {
     fontSize: 13,

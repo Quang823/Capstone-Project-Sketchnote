@@ -1,41 +1,54 @@
-// CreateBlogScreen.jsx
 import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-
- 
-
+import Toast from "react-native-toast-message";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import { styles } from "./CreateBlogScreen.styles";
 import { blogService } from "../../../../service/blogService";
+import ImageUploader from "../../../../common/ImageUploader";
+
+
 
 export default function CreateBlogScreen({ navigation }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [imageurl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const toast = useToast();
 
   const handleCreateBlog = async () => {
     if (!title || !content) {
-      toast.show("Vui lòng nhập đủ tiêu đề và nội dung!", { type: "warning" });
+      Toast.show({
+        type: "error",
+        text1: "Thiếu thông tin",
+        text2: "Vui lòng nhập đủ tiêu đề và nội dung!",
+      });
       return;
     }
 
     try {
       setLoading(true);
-      const userId = await authService.getUserId(); 
-      
+
       const blogData = {
         title: title.trim(),
         content: content.trim(),
-        authorId: userId,
+        imageurl: imageurl || "https://via.placeholder.com/400",
       };
 
-      const res = await blogService.createBlog(blogData);
-     
+      await blogService.createBlog(blogData);
+
+      Toast.show({
+        type: "success",
+        text1: "🎉 Đăng bài thành công!",
+      });
+
       navigation.goBack();
     } catch (err) {
       console.log("Error:", err.message);
-     
+      Toast.show({
+        type: "error",
+        text1: "Lỗi tạo bài viết",
+        text2: err.message,
+      });
     } finally {
       setLoading(false);
     }
@@ -43,6 +56,10 @@ export default function CreateBlogScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <Pressable onPress={() => navigation.goBack()}>
+        <Icon name="arrow-back" size={24} color="#1F2937" />
+      </Pressable>
+
       <Text style={styles.header}>Tạo bài viết mới</Text>
 
       <TextInput
@@ -59,6 +76,8 @@ export default function CreateBlogScreen({ navigation }) {
         onChangeText={setContent}
         multiline
       />
+
+      <ImageUploader onUploaded={(url) => setImageUrl(url)} />
 
       <Pressable onPress={handleCreateBlog} disabled={loading}>
         <LinearGradient

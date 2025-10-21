@@ -1,65 +1,107 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   Image,
   ScrollView,
   Pressable,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { blogDetailStyles } from "./BlogDetailScreen.styles";
-
-// Mock data cho demo
-const blogData = {
-  "1": {
-    id: "1",
-    title: "5 mẹo Sketchnote nhanh cho sinh viên",
-    author: "Nguyễn Văn A",
-    date: "20/09/2025",
-    views: 1240,
-    image: require("../../assets/logo1.webp"),
-    content: `
-      Sketchnote là một phương pháp ghi chú bằng hình ảnh 
-      đang ngày càng phổ biến trong giới sinh viên và người đi làm. 
-      Dưới đây là 5 mẹo giúp bạn sketchnote nhanh hơn:
-      
-      1. Chuẩn bị trước bộ icon thường dùng.
-      2. Luôn bắt đầu với layout đơn giản.
-      3. Kết hợp chữ in đậm cho ý chính.
-      4. Dùng màu sắc để phân nhóm ý tưởng.
-      5. Luyện tập mỗi ngày để tăng tốc độ.
-    `,
-  },
-  "2": {
-    id: "2",
-    title: "Tại sao Sketchnote giúp bạn nhớ lâu hơn?",
-    author: "Trần Thị B",
-    date: "15/09/2025",
-    views: 980,
-    image: require("../../assets/logo1.webp"),
-    content: `
-      Nhiều nghiên cứu cho thấy việc kết hợp chữ viết và hình ảnh 
-      giúp não bộ lưu trữ thông tin lâu hơn. 
-      Sketchnote kích hoạt cả bán cầu trái và phải của não,
-      tạo ra sự liên kết mạnh mẽ và giúp bạn nhớ kiến thức hiệu quả.
-    `,
-  },
-};
+import { blogService } from "../../service/blogService";
 
 export default function BlogDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { blogId } = route.params;
 
-  const blog = blogData[blogId];
+  const [blog, setBlog] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch chi tiết blog từ API
+  const fetchBlogDetail = async () => {
+    try {
+      // Nếu blogService có method getBlogById, sử dụng nó
+      // Nếu không, lấy tất cả blogs và filter
+      const allBlogs = await blogService.getAllBlogs();
+      const blogDetail = allBlogs.find((b) => b.id.toString() === blogId.toString());
+
+      if (blogDetail) {
+        // Transform data
+        setBlog({
+          id: blogDetail.id.toString(),
+          title: blogDetail.title,
+          author: blogDetail.authorDisplay,
+          authorId: blogDetail.authorId,
+          content: blogDetail.content,
+          image: {
+    uri: "https://res.cloudinary.com/dturncvxv/image/upload/v1759910431/b5e15cec-6489-46e7-bd9e-596a24bd5225_wbpdjm.jpg",
+  },
+          date: blogDetail.createdAt || "N/A",
+          views: Math.floor(Math.random() * 2000), // Random views nếu API không có
+        });
+      } else {
+        Alert.alert("Lỗi", "Không tìm thấy bài viết");
+        navigation.goBack();
+      }
+    } catch (error) {
+      console.error("Error fetching blog detail:", error);
+      Alert.alert("Lỗi", "Không thể tải chi tiết bài viết");
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBlogDetail();
+  }, [blogId]);
+
+  if (loading) {
+    return (
+      <LinearGradient
+        colors={["#E0F2FE", "#FEF3C7"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[blogDetailStyles.container, { justifyContent: "center", alignItems: "center" }]}
+      >
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text style={{ marginTop: 10, color: "#6B7280" }}>Đang tải bài viết...</Text>
+      </LinearGradient>
+    );
+  }
 
   if (!blog) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Không tìm thấy bài viết</Text>
-      </View>
+      <LinearGradient
+        colors={["#E0F2FE", "#FEF3C7"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[blogDetailStyles.container, { justifyContent: "center", alignItems: "center" }]}
+      >
+        <Icon name="error-outline" size={48} color="#EF4444" />
+        <Text style={{ marginTop: 10, color: "#6B7280", fontSize: 16 }}>
+          Không tìm thấy bài viết
+        </Text>
+        <Pressable
+          style={{
+            marginTop: 20,
+            backgroundColor: "#3B82F6",
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 8,
+          }}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={{ color: "#FFFFFF", fontSize: 14, fontWeight: "600" }}>
+            Quay lại
+          </Text>
+        </Pressable>
+      </LinearGradient>
     );
   }
 

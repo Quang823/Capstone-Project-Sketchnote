@@ -7,70 +7,73 @@ import {
   Image,
   Alert,
   Dimensions,
+  SafeAreaView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { cartStyles } from './CartScreen.styles';
 import Icon from "react-native-vector-icons/MaterialIcons";
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Mock data for cart items
 const mockCartItems = [
   {
     id: '1',
-    name: 'Brush Set Pro',
-    category: 'Brushes',
-    price: 50000,
-    image: 'https://via.placeholder.com/80x80/4A90E2/FFFFFF?text=Brush',
+    name: 'Màn Hình Máy Tính PC Xiaomi Monitor A24i',
+    shopName: 'Xiaomi Official Store Vietnam',
+    price: 1880000,
+    originalPrice: 2590000,
+    image: 'https://res.cloudinary.com/dturncvxv/image/upload/v1759586743/sketchnote_avatars/ioplgtgchgy2ndm75zwx.jpg',
     quantity: 1,
-    isPremium: true,
+    selected: true,
   },
   {
     id: '2',
-    name: 'Color Palette Modern',
-    category: 'Colors',
-    price: 25000,
-    image: 'https://via.placeholder.com/80x80/E74C3C/FFFFFF?text=Colors',
-    quantity: 2,
-    isPremium: false,
+    name: 'Màn hình Asus 23.8 inch VG249',
+    shopName: 'PHONG VU Digital Store',
+    price: 2459000,
+    originalPrice: 3090000,
+    image: 'https://res.cloudinary.com/dturncvxv/image/upload/v1759586743/sketchnote_avatars/ioplgtgchgy2ndm75zwx.jpg',
+    quantity: 1,
+    selected: true,
   },
   {
     id: '3',
-    name: 'Typography Kit',
-    category: 'Fonts',
-    price: 60000,
-    image: 'https://via.placeholder.com/80x80/9B59B6/FFFFFF?text=Fonts',
-    quantity: 1,
-    isPremium: true,
-  },
-];
-
-// Mock data for courses
-const mockCourseItems = [
-  {
-    id: 'c1',
-    name: 'Sketchnote Cơ Bản',
-    instructor: 'Nguyễn Văn A',
-    price: 299000,
-    image: 'https://via.placeholder.com/80x80/FF6B6B/FFFFFF?text=Course',
-    duration: '8 giờ',
-    lessons: 24,
-  },
-  {
-    id: 'c2',
-    name: 'Visual Thinking Nâng Cao',
-    instructor: 'Trần Thị B',
-    price: 499000,
-    image: 'https://via.placeholder.com/80x80/4ECDC4/FFFFFF?text=Course',
-    duration: '12 giờ',
-    lessons: 36,
+    name: 'Brush Set Pro Premium',
+    shopName: 'Art Supplies VN',
+    price: 350000,
+    originalPrice: 500000,
+    image: 'https://res.cloudinary.com/dturncvxv/image/upload/v1759586743/sketchnote_avatars/ioplgtgchgy2ndm75zwx.jpg',
+    quantity: 2,
+    selected: false,
   },
 ];
 
 export default function CartScreen() {
   const navigation = useNavigation();
   const [cartItems, setCartItems] = useState(mockCartItems);
-  const [courseItems, setCourseItems] = useState(mockCourseItems);
-  const [selectedTab, setSelectedTab] = useState('resources'); // 'resources' or 'courses'
+  const [selectAll, setSelectAll] = useState(false);
+
+  useEffect(() => {
+    const allSelected = cartItems.length > 0 && cartItems.every(item => item.selected);
+    setSelectAll(allSelected);
+  }, [cartItems]);
+
+  const toggleSelectAll = () => {
+    const newSelectAll = !selectAll;
+    setSelectAll(newSelectAll);
+    setCartItems(items =>
+      items.map(item => ({ ...item, selected: newSelectAll }))
+    );
+  };
+
+  const toggleSelectItem = (id) => {
+    setCartItems(items =>
+      items.map(item =>
+        item.id === id ? { ...item, selected: !item.selected } : item
+      )
+    );
+  };
 
   const updateQuantity = (id, newQuantity) => {
     if (newQuantity <= 0) {
@@ -86,8 +89,8 @@ export default function CartScreen() {
 
   const removeItem = (id) => {
     Alert.alert(
-      'Xác nhận',
-      'Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?',
+      'Xóa sản phẩm',
+      'Bạn có chắc muốn xóa sản phẩm này?',
       [
         { text: 'Hủy', style: 'cancel' },
         {
@@ -101,230 +104,187 @@ export default function CartScreen() {
     );
   };
 
-  const removeCourse = (id) => {
-    Alert.alert(
-      'Xác nhận',
-      'Bạn có chắc muốn xóa khóa học này khỏi giỏ hàng?',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        {
-          text: 'Xóa',
-          style: 'destructive',
-          onPress: () => {
-            setCourseItems(items => items.filter(item => item.id !== id));
-          },
-        },
-      ]
-    );
+  const calculateTotal = () => {
+    return cartItems
+      .filter(item => item.selected)
+      .reduce((sum, item) => sum + item.price * item.quantity, 0);
   };
 
-  const calculateTotal = () => {
-    const resourcesTotal = cartItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
-    const coursesTotal = courseItems.reduce(
-      (sum, item) => sum + item.price,
-      0
-    );
-    return resourcesTotal + coursesTotal;
+  const getSelectedCount = () => {
+    return cartItems.filter(item => item.selected).length;
+  };
+
+  const getTotalSavings = () => {
+    return cartItems
+      .filter(item => item.selected)
+      .reduce((sum, item) => sum + (item.originalPrice - item.price) * item.quantity, 0);
   };
 
   const handleCheckout = () => {
-    const total = calculateTotal();
-    if (total === 0) {
-      Alert.alert('Thông báo', 'Giỏ hàng trống');
+    const selectedItems = cartItems.filter(item => item.selected);
+    if (selectedItems.length === 0) {
+      Alert.alert('Thông báo', 'Vui lòng chọn sản phẩm để mua hàng');
       return;
     }
+    const total = calculateTotal();
     Alert.alert(
-      'Thanh toán',
-      `Tổng tiền: ${total.toLocaleString()} VNĐ\nBạn có muốn tiếp tục thanh toán?`,
+      'Mua hàng',
+      `Tổng thanh toán: ${total.toLocaleString()}đ\nBạn có muốn tiếp tục?`,
       [
         { text: 'Hủy', style: 'cancel' },
         {
-          text: 'Thanh toán',
+          text: 'Đồng ý',
           onPress: () => {
-            // Navigate to payment or show payment options
-            Alert.alert('Thành công', 'Đang chuyển đến trang thanh toán...');
+            Alert.alert('Thành công', 'Đang xử lý đơn hàng...');
           },
         },
       ]
     );
   };
 
-  const goToWallet = () => {
-    navigation.navigate('Wallet');
-  };
+  const renderCartItem = (item) => (
+    <View key={item.id} style={cartStyles.shopContainer}>
+      {/* Shop header */}
+      <View style={cartStyles.shopHeader}>
+        <Pressable 
+          style={cartStyles.checkbox}
+          onPress={() => toggleSelectItem(item.id)}
+        >
+          <View style={[cartStyles.checkboxBox, item.selected && cartStyles.checkboxBoxChecked]}>
+            {item.selected && <Icon name="check" size={16} color="#fff" />}
+          </View>
+        </Pressable>
+        <Icon name="store" size={18} color="#ee4d2d" />
+        <Text style={cartStyles.shopName}>{item.shopName}</Text>
+      </View>
 
-  const renderResourceItem = (item) => (
-    <View key={item.id} style={cartStyles.cartItem}>
-      <Image source={{ uri: item.image }} style={cartStyles.itemImage} />
-      <View style={cartStyles.itemInfo}>
-        <View style={cartStyles.itemHeader}>
-          <Text style={cartStyles.itemName}>{item.name}</Text>
-          {item.isPremium && (
-            <View style={cartStyles.premiumBadge}>
-              <Text style={cartStyles.premiumText}>PRO</Text>
+      {/* Product item */}
+      <View style={cartStyles.productItem}>
+        <Pressable 
+          style={cartStyles.checkbox}
+          onPress={() => toggleSelectItem(item.id)}
+        >
+          <View style={[cartStyles.checkboxBox, item.selected && cartStyles.checkboxBoxChecked]}>
+            {item.selected && <Icon name="check" size={16} color="#fff" />}
+          </View>
+        </Pressable>
+
+        <Image source={{ uri: item.image }} style={cartStyles.productImage} />
+
+        <View style={cartStyles.productInfo}>
+          <Text style={cartStyles.productName} numberOfLines={2}>{item.name}</Text>
+          
+          <View style={cartStyles.priceRow}>
+            <Text style={cartStyles.productPrice}>₫{item.price.toLocaleString()}</Text>
+            <Text style={cartStyles.originalPrice}>₫{item.originalPrice.toLocaleString()}</Text>
+          </View>
+
+          <View style={cartStyles.bottomRow}>
+            <View style={cartStyles.quantityControls}>
+              <Pressable
+                style={cartStyles.qtyButton}
+                onPress={() => updateQuantity(item.id, item.quantity - 1)}
+              >
+                <Icon name="remove" size={14} color="#888" />
+              </Pressable>
+              <Text style={cartStyles.qtyText}>{item.quantity}</Text>
+              <Pressable
+                style={cartStyles.qtyButton}
+                onPress={() => updateQuantity(item.id, item.quantity + 1)}
+              >
+                <Icon name="add" size={14} color="#888" />
+              </Pressable>
             </View>
-          )}
+
+            <Pressable onPress={() => removeItem(item.id)}>
+              <Text style={cartStyles.deleteText}>Xóa</Text>
+            </Pressable>
+          </View>
         </View>
-        <Text style={cartStyles.itemCategory}>{item.category}</Text>
-        <Text style={cartStyles.itemPrice}>
-          {item.price.toLocaleString()} VNĐ
-        </Text>
-        <View style={cartStyles.quantityContainer}>
-          <Pressable
-            style={cartStyles.quantityButton}
-            onPress={() => updateQuantity(item.id, item.quantity - 1)}
-          >
-            <Text style={cartStyles.quantityButtonText}>-</Text>
-          </Pressable>
-          <Text style={cartStyles.quantityText}>{item.quantity}</Text>
-          <Pressable
-            style={cartStyles.quantityButton}
-            onPress={() => updateQuantity(item.id, item.quantity + 1)}
-          >
-            <Text style={cartStyles.quantityButtonText}>+</Text>
-          </Pressable>
-        </View>
-      </View>
-      <View style={cartStyles.itemActions}>
-        <Text style={cartStyles.itemTotal}>
-          {(item.price * item.quantity).toLocaleString()} VNĐ
-        </Text>
-        <Pressable
-          style={cartStyles.removeButton}
-          onPress={() => removeItem(item.id)}
-        >
-          <Text style={cartStyles.removeButtonText}>🗑️</Text>
-        </Pressable>
       </View>
     </View>
   );
 
-  const renderCourseItem = (item) => (
-    <View key={item.id} style={cartStyles.cartItem}>
-      <Image source={{ uri: item.image }} style={cartStyles.itemImage} />
-      <View style={cartStyles.itemInfo}>
-        <Text style={cartStyles.itemName}>{item.name}</Text>
-        <Text style={cartStyles.itemCategory}>Khóa học • {item.instructor}</Text>
-        <Text style={cartStyles.courseMeta}>
-          {item.duration} • {item.lessons} bài học
-        </Text>
-        <Text style={cartStyles.itemPrice}>
-          {item.price.toLocaleString()} VNĐ
-        </Text>
-      </View>
-      <View style={cartStyles.itemActions}>
-        <Text style={cartStyles.itemTotal}>
-          {item.price.toLocaleString()} VNĐ
-        </Text>
-        <Pressable
-          style={cartStyles.removeButton}
-          onPress={() => removeCourse(item.id)}
-        >
-          <Text style={cartStyles.removeButtonText}>🗑️</Text>
-        </Pressable>
-      </View>
+  const renderEmptyCart = () => (
+    <View style={cartStyles.emptyContainer}>
+      <Icon name="shopping-cart" size={80} color="#ddd" />
+      <Text style={cartStyles.emptyText}>Giỏ hàng trống</Text>
+      <Pressable
+        style={cartStyles.shopNowButton}
+        onPress={() => navigation.navigate('ResourceStore')}
+      >
+        <Text style={cartStyles.shopNowText}>Mua sắm ngay</Text>
+      </Pressable>
     </View>
   );
-
-  const total = calculateTotal();
 
   return (
-    <View style={cartStyles.container}>
+    <SafeAreaView style={cartStyles.container}>
+      {/* Header */}
       <View style={cartStyles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
+        <Pressable onPress={() => navigation.goBack()} style={cartStyles.backButton}>
+          <Icon name="arrow-back" size={24} color="#000" />
         </Pressable>
-        <Text style={cartStyles.headerTitle}>Giỏ hàng</Text>
-        <Pressable style={cartStyles.walletButton} onPress={goToWallet}>
-          <Text style={cartStyles.walletIcon}>💰</Text>
-        </Pressable>
-      </View>
-
-      <View style={cartStyles.tabContainer}>
-        <Pressable
-          style={[
-            cartStyles.tabButton,
-            selectedTab === 'resources' && cartStyles.activeTabButton,
-          ]}
-          onPress={() => setSelectedTab('resources')}
-        >
-          <Text
-            style={[
-              cartStyles.tabText,
-              selectedTab === 'resources' && cartStyles.activeTabText,
-            ]}
-          >
-            Resources ({cartItems.length})
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[
-            cartStyles.tabButton,
-            selectedTab === 'courses' && cartStyles.activeTabButton,
-          ]}
-          onPress={() => setSelectedTab('courses')}
-        >
-          <Text
-            style={[
-              cartStyles.tabText,
-              selectedTab === 'courses' && cartStyles.activeTabText,
-            ]}
-          >
-            Khóa học ({courseItems.length})
-          </Text>
+        <Text style={cartStyles.headerTitle}>Giỏ hàng ({cartItems.length})</Text>
+        <Pressable style={cartStyles.moreButton}>
+          <Icon name="more-horiz" size={24} color="#000" />
         </Pressable>
       </View>
 
-      <ScrollView style={cartStyles.content}>
-        {selectedTab === 'resources' ? (
-          cartItems.length > 0 ? (
-            cartItems.map(renderResourceItem)
-          ) : (
-            <View style={cartStyles.emptyContainer}>
-              <Text style={cartStyles.emptyIcon}>🛒</Text>
-              <Text style={cartStyles.emptyText}>Giỏ hàng trống</Text>
-              <Pressable
-                style={cartStyles.browseButton}
-                onPress={() => navigation.navigate('ResourceStore')}
-              >
-                <Text style={cartStyles.browseButtonText}>Mua sắm ngay</Text>
-              </Pressable>
-            </View>
-          )
+      {/* Cart Content */}
+      <ScrollView 
+        style={cartStyles.scrollContent}
+        contentContainerStyle={cartStyles.scrollContentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {cartItems.length > 0 ? (
+          cartItems.map(renderCartItem)
         ) : (
-          courseItems.length > 0 ? (
-            courseItems.map(renderCourseItem)
-          ) : (
-            <View style={cartStyles.emptyContainer}>
-              <Text style={cartStyles.emptyIcon}>📚</Text>
-              <Text style={cartStyles.emptyText}>Chưa có khóa học nào</Text>
-              <Pressable
-                style={cartStyles.browseButton}
-                onPress={() => navigation.navigate('Courses')}
-              >
-                <Text style={cartStyles.browseButtonText}>Xem khóa học</Text>
-              </Pressable>
-            </View>
-          )
+          renderEmptyCart()
         )}
+        {/* Bottom padding to prevent content from being hidden behind fixed footer */}
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {total > 0 && (
-        <View style={cartStyles.footer}>
-          <View style={cartStyles.totalContainer}>
-            <Text style={cartStyles.totalLabel}>Tổng cộng:</Text>
-            <Text style={cartStyles.totalAmount}>
-              {total.toLocaleString()} VNĐ
-            </Text>
+      {/* Fixed Footer - Checkout Bar */}
+      {cartItems.length > 0 && (
+        <View style={cartStyles.checkoutBar}>
+          <View style={cartStyles.checkoutTop}>
+            <Pressable 
+              style={cartStyles.selectAllContainer}
+              onPress={toggleSelectAll}
+            >
+              <View style={[cartStyles.checkboxBox, selectAll && cartStyles.checkboxBoxChecked]}>
+                {selectAll && <Icon name="check" size={16} color="#fff" />}
+              </View>
+              <Text style={cartStyles.selectAllText}>Tất cả</Text>
+            </Pressable>
+
+            <View style={cartStyles.totalContainer}>
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={cartStyles.totalLabel}>Tổng thanh toán: </Text>
+                  <Text style={cartStyles.totalPrice}>₫{calculateTotal().toLocaleString()}</Text>
+                </View>
+                
+              </View>
+
+              <Pressable 
+                style={[
+                  cartStyles.checkoutButton,
+                  getSelectedCount() === 0 && cartStyles.checkoutButtonDisabled
+                ]}
+                onPress={handleCheckout}
+                disabled={getSelectedCount() === 0}
+              >
+                <Text style={cartStyles.checkoutButtonText}>
+                  Mua hàng ({getSelectedCount()})
+                </Text>
+              </Pressable>
+            </View>
           </View>
-          <Pressable style={cartStyles.checkoutButton} onPress={handleCheckout}>
-            <Text style={cartStyles.checkoutButtonText}>Thanh toán</Text>
-          </Pressable>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }

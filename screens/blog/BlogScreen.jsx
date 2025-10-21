@@ -8,12 +8,15 @@ import {
   TextInput,
   FlatList,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Shadow } from "react-native-shadow-2";
 import { blogStyles } from "./BlogScreen.styles";
+import { blogService } from "../../service/blogService";
 
 const { width } = Dimensions.get("window");
 
@@ -21,46 +24,6 @@ const NUM_COLUMNS = 4;
 const CARD_MARGIN = 8;
 const CARD_WIDTH =
   (width - (NUM_COLUMNS + 1) * CARD_MARGIN - 32) / NUM_COLUMNS;
-
-// Dữ liệu mẫu blog
-const allBlogs = [
-  {
-    id: "1",
-    title: "5 mẹo Sketchnote nhanh cho sinh viên",
-    author: "Nguyễn Văn A",
-    image: require("../../assets/logo1.webp"),
-    date: "20/09/2025",
-    views: 1240,
-    category: "tips",
-  },
-  {
-    id: "2",
-    title: "Tại sao Sketchnote giúp bạn nhớ lâu hơn?",
-    author: "Trần Thị B",
-    image: require("../../assets/logo1.webp"),
-    date: "15/09/2025",
-    views: 980,
-    category: "study",
-  },
-  {
-    id: "3",
-    title: "Ứng dụng Sketchnote trong kinh doanh",
-    author: "Lê Văn C",
-    image: require("../../assets/logo1.webp"),
-    date: "10/09/2025",
-    views: 720,
-    category: "business",
-  },
-   {
-    id: "4",
-    title: "Ứng dụng Sketchnote trong kinh doanh",
-    author: "Lê Văn C",
-    image: require("../../assets/logo1.webp"),
-    date: "10/09/2025",
-    views: 720,
-    category: "business",
-  },
-];
 
 // Danh mục blog
 const blogCategories = [
@@ -74,17 +37,54 @@ export default function BlogScreen() {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [filteredBlogs, setFilteredBlogs] = useState(allBlogs);
+  const [blogs, setBlogs] = useState([]);
+  const [filteredBlogs, setFilteredBlogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch blogs từ API
+  const fetchBlogs = async () => {
+    try {
+      const data = await blogService.getAllBlogs();
+      console.log("Fetched blogs:", data);
+      
+     const transformedBlogs = data.map((blog) => ({
+  id: blog.id.toString(),
+  title: blog.title,
+  author: blog.authorDisplay,
+  authorId: blog.authorId,
+  content: blog.content,
+  image: {
+    uri: "https://res.cloudinary.com/dturncvxv/image/upload/v1759910431/b5e15cec-6489-46e7-bd9e-596a24bd5225_wbpdjm.jpg",
+  }, 
+  date: blog.createdAt || "Chưa có ngày tạo",
+}));
+
+      
+      setBlogs(transformedBlogs);
+      setFilteredBlogs(transformedBlogs);
+    } catch (error) {
+      console.error("Error fetching blogs:", error);
+      Alert.alert("Lỗi", "Không thể tải danh sách bài viết");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBlogs();
+  }, []);
 
   useEffect(() => {
     filterBlogs();
-  }, [searchQuery, selectedCategory]);
+  }, [searchQuery, selectedCategory, blogs]);
 
   const filterBlogs = () => {
-    let filtered = allBlogs;
+    let filtered = blogs;
+    
     if (selectedCategory !== "all") {
       filtered = filtered.filter((b) => b.category === selectedCategory);
     }
+    
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -93,6 +93,7 @@ export default function BlogScreen() {
           b.author.toLowerCase().includes(query)
       );
     }
+    
     setFilteredBlogs(filtered);
   };
 
@@ -107,6 +108,20 @@ export default function BlogScreen() {
   const handleBackPress = () => {
     navigation.goBack();
   };
+
+  if (loading) {
+    return (
+      <LinearGradient
+        colors={["#E0F2FE", "#FEF3C7"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[blogStyles.container, { justifyContent: "center", alignItems: "center" }]}
+      >
+        <ActivityIndicator size="large" color="#3B82F6" />
+        <Text style={{ marginTop: 10, color: "#6B7280" }}>Đang tải bài viết...</Text>
+      </LinearGradient>
+    );
+  }
 
   return (
     <LinearGradient
@@ -175,43 +190,64 @@ export default function BlogScreen() {
       </View>
 
       {/* Blog List */}
-      <FlatList
-        data={filteredBlogs}
-        keyExtractor={(item) => item.id}
-        numColumns={NUM_COLUMNS}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
-        columnWrapperStyle={{
-          justifyContent: "space-between",
-          marginBottom: 12,
-        }}
-        renderItem={({ item }) => (
-          <Pressable
-            style={[blogStyles.blogCard, { width: CARD_WIDTH }]}
-            onPress={() => handleViewBlog(item.id)}
-          >
-            <Shadow distance={5} startColor="#00000010" finalColor="#00000005">
-              <View style={blogStyles.blogCardInner}>
-                <Image source={item.image} style={blogStyles.blogImage} />
-                <View style={blogStyles.blogContent}>
-                  <Text style={blogStyles.blogTitle} numberOfLines={2}>
-                    {item.title}
-                  </Text>
-                  <Text style={blogStyles.blogAuthor}>
-                    {item.author} • {item.date}
-                  </Text>
-                  <View style={blogStyles.blogMeta}>
-                    <Icon name="visibility" size={14} color="#6B7280" />
-                    <Text style={blogStyles.blogViews}>
-                      {item.views} lượt xem
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </Shadow>
-          </Pressable>
-        )}
-      />
+      {filteredBlogs.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <Icon name="search-off" size={48} color="#9CA3AF" />
+          <Text style={{ marginTop: 10, color: "#6B7280", fontSize: 16 }}>
+            Không tìm thấy bài viết nào
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+  data={filteredBlogs}
+  keyExtractor={(item) => item.id}
+  numColumns={NUM_COLUMNS}
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
+  columnWrapperStyle={{
+    justifyContent: "flex-start", // 👈 quan trọng nhất
+    marginBottom: CARD_MARGIN,
+  }}
+ renderItem={({ item, index }) => {
+  const isLastInRow = (index + 1) % NUM_COLUMNS === 0;
+
+  return (
+    <Pressable
+      style={[
+        blogStyles.blogCard,
+        {
+          width: CARD_WIDTH,
+          marginRight: isLastInRow ? 0 : CARD_MARGIN, // 🔥 đều khoảng cách
+        },
+      ]}
+      onPress={() => handleViewBlog(item.id)}
+    >
+      <Shadow distance={5} startColor="#00000010" finalColor="#00000005">
+        <View style={blogStyles.blogCardInner}>
+          <Image source={item.image} style={blogStyles.blogImage} resizeMode="cover" />
+          <View style={blogStyles.blogContent}>
+            <Text style={blogStyles.blogTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
+            <Text style={blogStyles.blogAuthor}>
+              {item.author} • {item.date}
+            </Text>
+            <View style={blogStyles.blogMeta}>
+              <Icon name="visibility" size={14} color="#6B7280" />
+              <Text style={blogStyles.blogViews}>
+                {item.views || 0} lượt xem
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Shadow>
+    </Pressable>
+  );
+}}
+
+/>
+
+      )}
     </LinearGradient>
   );
 }

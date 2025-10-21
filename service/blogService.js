@@ -1,3 +1,5 @@
+import { blogApiController } from "../api/blogApiController";
+
 export const blogService = {
     getAllBlogs : async () =>{
      try {
@@ -9,13 +11,13 @@ export const blogService = {
         throw new Error(message);
      }
     },
-    getBlogById : async (id) =>{
+    getBlogByUserId : async () =>{
       try {
-        const res = await blogApiController.getBlogById(id);
+        const res = await blogApiController.getBlogByUserId();
         return res.data;
       } catch (error) {
         const message =
-          error.response?.data?.message || error.message || "Get blog by id failed.";
+          error.response?.data?.message || error.message || "Get blog by user id failed.";
         throw new Error(message);
       }
     },
@@ -26,6 +28,26 @@ export const blogService = {
       } catch (error) {
         const message =
           error.response?.data?.message || error.message || "Create blog failed.";
+        throw new Error(message);
+      }
+    },
+    updateBlog : async (id,blogData) =>{
+      try {
+        const res = await blogApiController.updateBlog(id,blogData);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Update blog failed.";
+        throw new Error(message);
+      }
+    },
+    deleteBlog : async (id) =>{
+      try {
+        const res = await blogApiController.deleteBlog(id);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Delete blog failed.";
         throw new Error(message);
       }
     },

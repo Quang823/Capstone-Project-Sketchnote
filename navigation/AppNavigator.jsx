@@ -10,10 +10,15 @@ import LessonScreen from "../screens/courses/LessonScreen/LessonScreen";
 import BlogScreen from "../screens/blog/BlogScreen";
 import BlogDetailScreen from "../screens/blog/BlogDetailScreen";
 import ResourceStoreScreen from "../screens/store/ResourceStoreScreen/ResourceStoreScreen";
+import ResourceDetailScreen from "../screens/store/ResourceDetailScreen/ResourceDetailScreen";
 import CartScreen from "../screens/store/CartScreen/CartScreen";
 import WalletScreen from "../screens/store/WalletScreen/WalletScreen";
 import MyBlogScreen from "../screens/auth/myblog/MyBlogScreen";
 import CreateBlogScreen from "../screens/auth/myblog/create/CreateBlogScreen";
+import UpdateBlogScreen from "../screens/auth/myblog/create/UpdateBlogScreen";
+import PaymentWebViewScreen from "../screens/payment/PaymentWebViewScreen";
+import PaymentSuccessScreen from "../screens/payment/PaymentSuccessScreen";
+import PaymentFailedScreen from "../screens/payment/PaymentFailedScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -33,10 +38,15 @@ export default function AppNavigator() {
       <Stack.Screen name="BlogList" component={BlogScreen} />
       <Stack.Screen name="BlogDetail" component={BlogDetailScreen} />
       <Stack.Screen name="ResourceStore" component={ResourceStoreScreen} />
+      <Stack.Screen name="ResourceDetail" component={ResourceDetailScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="Wallet" component={WalletScreen} />
       <Stack.Screen name="MyBlog" component={MyBlogScreen} />
       <Stack.Screen name="CreateBlog" component={CreateBlogScreen} />
+      <Stack.Screen name="UpdateBlog" component={UpdateBlogScreen} />
+      <Stack.Screen name="PaymentWebView" component={PaymentWebViewScreen} />
+      <Stack.Screen name="PaymentSuccessScreen" component={PaymentSuccessScreen} />
+      <Stack.Screen name="PaymentFailedScreen" component={PaymentFailedScreen} />
     </Stack.Navigator>
   );
 }

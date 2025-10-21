@@ -21,6 +21,7 @@ import Reanimated, {
 
 import { homeStyles } from "./HomeScreen.styles";
 import NavigationDrawer from "../nav/NavigationDrawer";
+import { getUserFromToken } from "../../../utils/AuthUtils";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 const { width } = Dimensions.get("window");
@@ -124,7 +125,7 @@ const quickActions = [
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const [userName, setUserName] = useState("John Nguyen");
+  const [userName, setUserName] = useState("");
   const [activeNavItem, setActiveNavItem] = useState("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -146,7 +147,13 @@ export default function HomeScreen() {
       easing: Easing.out(Easing.ease),
     });
   }, []);
-
+  useEffect(() => {
+    const getUser = async () => {
+      const user = await getUserFromToken();
+      setUserName(user?.name || "");
+    };
+    getUser();
+  }, []);
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }],
