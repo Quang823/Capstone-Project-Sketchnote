@@ -1,4 +1,11 @@
-import React, { useRef, useState, useMemo, useEffect } from "react";
+import React, {
+  useRef,
+  useState,
+  useMemo,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 import {
   View,
   ScrollView,
@@ -8,31 +15,39 @@ import {
   Alert,
 } from "react-native";
 import CanvasContainer from "./CanvasContainer";
-
-export default function MultiPageCanvas({
-  tool,
-  color,
-  strokeWidth,
-  pencilWidth,
-  eraserSize,
-  brushWidth,
-  brushOpacity,
-  calligraphyWidth,
-  calligraphyOpacity,
-  paperStyle,
-  shapeType,
-  onRequestTextInput,
-  registerPageRef,
-  onActivePageChange,
-  toolConfigs,
-  pressure,
-  thickness,
-  stabilization,
-  eraserMode,
-}) {
+import { projectService } from "../../../service/projectService";
+const MultiPageCanvas = forwardRef(function MultiPageCanvas(
+  {
+    tool,
+    color,
+    strokeWidth,
+    pencilWidth,
+    eraserSize,
+    brushWidth,
+    brushOpacity,
+    calligraphyWidth,
+    calligraphyOpacity,
+    paperStyle,
+    shapeType,
+    onRequestTextInput,
+    registerPageRef,
+    onActivePageChange,
+    toolConfigs,
+    pressure,
+    thickness,
+    stabilization,
+    eraserMode,
+    isPenMode,
+  },
+  ref
+) {
+  const drawingDataRef = useRef({
+    pages: {}, // key là pageId, value là mảng strokes
+  });
   const [pages, setPages] = useState([{ id: 1 }]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [pageLayouts, setPageLayouts] = useState({});
+  const [scrollY, setScrollY] = useState(0); // 🆕 lưu scroll hiện tại
   const scrollRef = useRef(null);
   const lastAddedRef = useRef(null);
 
@@ -40,40 +55,41 @@ export default function MultiPageCanvas({
   const PAGE_SPACING = 30;
   const fallbackHeight = Math.round(height * 0.9);
 
-  // ✅ Tính offset cho từng page để scrollTo hoạt động chính xác
+  const pageRefs = useRef({});
+
+  // Tính offset cho từng page
   const offsets = useMemo(() => {
-    const offs = [];
     let acc = 0;
-    for (let i = 0; i < pages.length; i++) {
-      const id = pages[i].id;
-      offs.push(acc);
-      const h = pageLayouts[id] ?? fallbackHeight;
+    return pages.map((p) => {
+      const off = acc;
+      const h = pageLayouts[p.id] ?? fallbackHeight;
       acc += h + PAGE_SPACING;
-    }
-    return offs;
+      return off;
+    });
   }, [pages, pageLayouts, fallbackHeight]);
 
-  // ✅ Thêm page mới
+  // Thêm page mới
   const addPage = () => {
     if (pages.length >= 10) {
-      Alert.alert("Giới hạn", "Bạn chỉ có thể tạo tối đa 10 trang.");
+      Alert.alert("Limit. You can only create up to 10 pages.");
       return;
     }
     const newId = Date.now();
     lastAddedRef.current = newId;
     setPages((prev) => [...prev, { id: newId }]);
+    onActivePageChange?.(newId);
   };
 
-  // ✅ Scroll đến page được chọn
+  // Scroll tới page
   const scrollToPage = (index) => {
+    if (index < 0 || index >= pages.length) return;
     const y = offsets[index] ?? 0;
     scrollRef.current?.scrollTo({ y, animated: true });
     setActiveIndex(index);
-    const id = pages[index]?.id;
-    if (id) onActivePageChange?.(id); // ✅ gọi callback cho DrawingScreen
+    onActivePageChange?.(pages[index]?.id);
   };
 
-  // ✅ Khi page mới thêm được đo layout, tự scroll tới đó
+  // Khi page mới thêm xong layout, scroll tới
   useEffect(() => {
     const id = lastAddedRef.current;
     if (!id) return;
@@ -85,16 +101,18 @@ export default function MultiPageCanvas({
         requestAnimationFrame(() => {
           scrollRef.current?.scrollTo({ y, animated: true });
           setActiveIndex(idx);
-          onActivePageChange?.(id); // ✅ cập nhật lại active page
+          onActivePageChange?.(id);
           lastAddedRef.current = null;
         });
       }
     }
   }, [pageLayouts, pages, offsets, onActivePageChange]);
 
-  // ✅ Theo dõi scroll để cập nhật trang hiện tại
+  // Theo dõi scroll
   const handleScroll = (e) => {
-    const offsetY = e.nativeEvent.contentOffset.y;
+    const offset = e.nativeEvent.contentOffset.y;
+    setScrollY(offset); // 🆕 cập nhật scroll hiện tại
+
     let current = pages.length - 1;
     for (let i = 0; i < offsets.length; i++) {
       const start = offsets[i];
@@ -103,19 +121,17 @@ export default function MultiPageCanvas({
           ? offsets[i + 1]
           : start + (pageLayouts[pages[i].id] ?? fallbackHeight) + PAGE_SPACING;
       const mid = start + (end - start) / 2;
-      if (offsetY < mid) {
+      if (offset < mid) {
         current = i;
         break;
       }
     }
     if (current !== activeIndex) {
       setActiveIndex(current);
-      const id = pages[current]?.id;
-      if (id) onActivePageChange?.(id);
+      onActivePageChange?.(pages[current]?.id);
     }
   };
 
-  // ✅ Cập nhật layout từng trang
   const onPageLayout = (pageId, layoutHeight) => {
     setPageLayouts((prev) => {
       if (prev[pageId] === layoutHeight) return prev;
@@ -123,9 +139,127 @@ export default function MultiPageCanvas({
     });
   };
 
+  // ======== API REF ========
+  useImperativeHandle(ref, () => ({
+    addImageStroke: (stroke) => {
+      const activePage = pages[activeIndex];
+      if (!activePage) return;
+      const pageRef = pageRefs.current[activePage.id];
+      const pageOffset = offsets[activeIndex] ?? 0;
+      pageRef?.addImageStroke?.({
+        ...stroke,
+        scrollOffsetY: scrollY - pageOffset,
+        scrollOffsetX: 0,
+      });
+    },
+
+    addStickerStroke: (stroke) => {
+      const activePage = pages[activeIndex];
+      if (!activePage) return;
+      const pageRef = pageRefs.current[activePage.id];
+      const pageOffset = offsets[activeIndex] ?? 0;
+      pageRef?.addStickerStroke?.({
+        ...stroke,
+        scrollOffsetY: scrollY - pageOffset,
+        scrollOffsetX: 0,
+      });
+    },
+
+    addTextStroke: (stroke) => {
+      const activePage = pages[activeIndex];
+      if (!activePage) return;
+      const pageRef = pageRefs.current[activePage.id];
+      const pageOffset = offsets[activeIndex] ?? 0;
+      pageRef?.addTextStroke?.({
+        ...stroke,
+        scrollOffsetY: scrollY - pageOffset,
+        scrollOffsetX: 0,
+      });
+    },
+
+    scrollToPage,
+    addPage,
+
+    // 🧾 Lấy toàn bộ data
+    getProjectData: () => {
+      const allPages = Object.keys(pageRefs.current).map((pageId) => {
+        const strokes =
+          pageRefs.current[pageId]?.getStrokes?.() ||
+          drawingDataRef.current.pages[pageId] ||
+          [];
+        return { id: pageId, strokes };
+      });
+      return {
+        createdAt: new Date().toISOString(),
+        totalPages: allPages.length,
+        pages: allPages,
+      };
+    },
+
+    // 🆕 Upload từng page một
+    uploadAllPages: async () => {
+      try {
+        const uploadResults = [];
+
+        for (const pageId of Object.keys(pageRefs.current)) {
+          const strokes =
+            pageRefs.current[pageId]?.getStrokes?.() ||
+            drawingDataRef.current.pages[pageId] ||
+            [];
+
+          if (!strokes.length) {
+            console.log(`⚪ Page ${pageId} rỗng, bỏ qua`);
+            continue;
+          }
+
+          const pageData = {
+            id: pageId,
+            createdAt: new Date().toISOString(),
+            strokes,
+          };
+
+          const fileName = `Test-${pageId}`;
+          console.log(`📤 Uploading ${fileName} ...`);
+          const url = await projectService.uploadProjectFile(
+            pageData,
+            fileName
+          );
+          uploadResults.push({ pageId, url });
+        }
+
+        console.log("✅ Upload xong tất cả:", uploadResults);
+        return uploadResults;
+      } catch (err) {
+        console.error("❌ Upload tất cả pages thất bại:", err);
+        throw err;
+      }
+    },
+
+    loadProjectData: (data) => {
+      if (!data) return;
+
+      // Nếu JSON có nhiều trang
+      if (Array.isArray(data.pages)) {
+        data.pages.forEach((p) => {
+          const ref = pageRefs.current[p.id];
+          if (ref && Array.isArray(p.strokes)) {
+            ref.loadStrokes(p.strokes); // gọi xuống từng CanvasContainer
+          }
+        });
+      }
+      // Nếu JSON chỉ có 1 trang (như "Test-1")
+      else if (data.strokes) {
+        const ref = pageRefs.current[data.id] || pageRefs.current[1];
+        if (ref) {
+          ref.loadStrokes(data.strokes);
+        }
+      }
+    },
+  }));
+
   return (
     <View style={{ flex: 1, flexDirection: "row" }}>
-      {/* Sidebar danh sách trang */}
+      {/* Sidebar */}
       <View
         style={{
           width: 60,
@@ -164,8 +298,6 @@ export default function MultiPageCanvas({
               </Text>
             </TouchableOpacity>
           ))}
-
-          {/* Nút thêm trang */}
           <TouchableOpacity
             onPress={addPage}
             style={{
@@ -183,7 +315,7 @@ export default function MultiPageCanvas({
         </ScrollView>
       </View>
 
-      {/* Scroll các trang */}
+      {/* Pages */}
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
@@ -200,17 +332,18 @@ export default function MultiPageCanvas({
               width: "100%",
               alignItems: "center",
             }}
-            onLayout={(e) => {
-              const h = e.nativeEvent.layout.height;
-              onPageLayout(p.id, h);
-            }}
+            onLayout={(e) => onPageLayout(p.id, e.nativeEvent.layout.height)}
           >
             <CanvasContainer
               ref={(ref) => {
-                registerPageRef?.(p.id, ref ?? null); // ✅ Đăng ký ref mỗi trang
+                if (ref) {
+                  registerPageRef?.(p.id, ref);
+                  pageRefs.current[p.id] = ref;
+                }
               }}
               tool={tool}
               color={color}
+              isPenMode={isPenMode}
               strokeWidth={strokeWidth}
               pencilWidth={pencilWidth}
               eraserSize={eraserSize}
@@ -227,10 +360,15 @@ export default function MultiPageCanvas({
               pressure={pressure}
               thickness={thickness}
               stabilization={stabilization}
+              onChangeStrokes={(strokes) => {
+                drawingDataRef.current.pages[p.id] = strokes;
+              }}
             />
           </View>
         ))}
       </ScrollView>
     </View>
   );
-}
+});
+
+export default MultiPageCanvas;

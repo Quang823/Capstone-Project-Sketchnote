@@ -5,7 +5,8 @@ import {
   TextInput,
   Pressable,
   ImageBackground,
-  Animated,useWindowDimensions ,
+  Animated,
+  useWindowDimensions,
 } from "react-native";
 import { useToast } from "../../../hooks/use-toast";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -30,7 +31,7 @@ export default function LoginScreen({ onBack }) {
   const [password, setPassword] = useState("");
   const { toast } = useToast();
   const navigation = useNavigation();
- const { width } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   // Animations: Fade-in và slide-up cho form
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
@@ -98,12 +99,12 @@ export default function LoginScreen({ onBack }) {
 
   return (
     <LinearGradient
-      colors={["#E0F2FE", "#FEF3C7"]} // Gradient bắt mắt: Xanh nhạt đến vàng nhạt
+      colors={["#E0F2FE", "#FEF3C7"]} // Eye-catching gradient: light blue to light yellow
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={loginStyles.container}
     >
-      {/* Background Hero Image với overlay gradient */}
+      {/* Background Hero Image with overlay gradient */}
       <ImageBackground source={heroImage} style={loginStyles.heroBackground}>
         <LinearGradient
           colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.3)"]}
@@ -115,32 +116,35 @@ export default function LoginScreen({ onBack }) {
       <ReanimatedView style={[loginStyles.contentWrapper, animatedStyle]}>
         {/* Left Side - Branding */}
         {width > 768 && (
-    <View style={loginStyles.brandingSection}>
-      <Shadow distance={8} startColor="#00000010" finalColor="#00000005">
-        <View style={loginStyles.brandContent}>
-          <View style={loginStyles.logoContainer}>
-            <Icon name="palette" size={32} color="#4F46E5" />
-            <Text style={loginStyles.logoText}>SketchNote</Text>
+          <View style={loginStyles.brandingSection}>
+            <Shadow distance={8} startColor="#00000010" finalColor="#00000005">
+              <View style={loginStyles.brandContent}>
+                <View style={loginStyles.logoContainer}>
+                  <Icon name="palette" size={32} color="#4F46E5" />
+                  <Text style={loginStyles.logoText}>SketchNote</Text>
+                </View>
+                <Text style={loginStyles.heroTitle}>
+                  Unlock{" "}
+                  <Text style={loginStyles.heroHighlight}>
+                    your creative potential
+                  </Text>
+                </Text>
+                <Text style={loginStyles.heroDescription}>
+                  Transform your ideas into beautiful sketches and notes.
+                </Text>
+              </View>
+            </Shadow>
           </View>
-          <Text style={loginStyles.heroTitle}>
-            Mở khóa <Text style={loginStyles.heroHighlight}>tiềm năng sáng tạo</Text> của bạn
-          </Text>
-          <Text style={loginStyles.heroDescription}>
-            Chuyển đổi ý tưởng thành những bản phác thảo và ghi chú tuyệt đẹp. 
-          </Text>
-        </View>
-      </Shadow>
-    </View>
-  )}
+        )}
 
         {/* Right Side - Login Form */}
         <View style={loginStyles.formSection}>
           <Shadow distance={12} startColor="#00000020" finalColor="#00000005">
             <ReanimatedView style={[loginStyles.loginCard, animatedStyle]}>
               <View style={loginStyles.cardHeader}>
-                <Text style={loginStyles.cardTitle}>Chào mừng trở lại!</Text>
+                <Text style={loginStyles.cardTitle}>Welcome back!</Text>
                 <Text style={loginStyles.cardDescription}>
-                  Đăng nhập để tiếp tục hành trình sáng tạo của bạn
+                  Log in to continue your creative journey
                 </Text>
               </View>
 
@@ -160,7 +164,7 @@ export default function LoginScreen({ onBack }) {
                   </View>
 
                   <View style={loginStyles.inputGroup}>
-                    <Text style={loginStyles.label}>Mật khẩu</Text>
+                    <Text style={loginStyles.label}>Password</Text>
                     <View style={loginStyles.passwordContainer}>
                       <TextInput
                         style={loginStyles.passwordInput}
@@ -185,7 +189,7 @@ export default function LoginScreen({ onBack }) {
                   <View style={loginStyles.formActions}>
                     <Pressable>
                       <Text style={loginStyles.forgotPassword}>
-                        Quên mật khẩu?
+                        Forgot password?
                       </Text>
                     </Pressable>
                   </View>
@@ -198,23 +202,19 @@ export default function LoginScreen({ onBack }) {
                       style={loginStyles.loginButton}
                     >
                       <LinearGradient
-                        colors={["#4F46E5", "#6366F1"]} // Gradient cho button
+                        colors={["#4F46E5", "#6366F1"]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={loginStyles.buttonGradient}
                       >
-                        <Text style={loginStyles.buttonText}>
-                          Đăng nhập
-                        </Text>
+                        <Text style={loginStyles.buttonText}>Log In</Text>
                       </LinearGradient>
                     </Pressable>
                   </Reanimated.View>
 
                   <View style={loginStyles.separatorContainer}>
                     <View style={loginStyles.separator} />
-                    <Text style={loginStyles.separatorText}>
-                      hoặc đăng nhập với
-                    </Text>
+                    <Text style={loginStyles.separatorText}>or login with</Text>
                     <View style={loginStyles.separator} />
                   </View>
 
@@ -242,18 +242,16 @@ export default function LoginScreen({ onBack }) {
                   </View>
 
                   <View style={loginStyles.signupPrompt}>
-                    <Text>Chưa có tài khoản? </Text>
+                    <Text>Don't have an account? </Text>
                     <Pressable onPress={() => navigation.navigate("Register")}>
-                      <Text style={loginStyles.signupLink}>
-                        Đăng ký ngay
-                      </Text>
+                      <Text style={loginStyles.signupLink}>Sign up now</Text>
                     </Pressable>
                   </View>
                 </View>
 
                 {onBack && (
                   <Pressable onPress={onBack} style={loginStyles.backButton}>
-                    <Text>← Quay lại trang chủ</Text>
+                    <Text>← Back to Home</Text>
                   </Pressable>
                 )}
               </View>

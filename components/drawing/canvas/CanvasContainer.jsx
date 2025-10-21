@@ -24,6 +24,8 @@ import Animated, {
   runOnJS,
   useDerivedValue,
 } from "react-native-reanimated";
+import * as FileSystem from "expo-file-system";
+import { Dimensions } from "react-native";
 
 const PAGE_MARGIN_H = 24;
 const PAGE_MARGIN_TOP = 20;
@@ -45,6 +47,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     onZoomChange,
     toolConfigs = {},
     eraserMode,
+    isPenMode,
   },
   ref
 ) {
@@ -54,8 +57,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   const [strokes, setStrokes] = useState([]);
   const [currentPoints, setCurrentPoints] = useState([]);
+  const [realtimeText, setRealtimeText] = useState(null);
 
-  // ✅ New: use 2 stacks for undo/redo
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
 
@@ -66,7 +69,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   const idCounter = useRef(1);
   const rendererRef = useRef(null);
 
-  // ====== Config cho tool hiện tại ======
   const activeConfig = toolConfigs?.[tool] || {
     pressure: 0.5,
     thickness: 1.5,
@@ -104,7 +106,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     .enabled(!zoomLocked)
     .onStart(() => {
       baseScale.value = scale.value;
-      runOnJS(setShowZoomOverlay)(true);
+      runOnJS(() => {
+        setShowZoomOverlay((prev) => (prev ? prev : true));
+      })();
     })
     .onUpdate((e) => {
       scale.value = baseScale.value * e.scale;
@@ -161,10 +165,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     return () => clearInterval(id);
   }, [derivedZoom]);
 
-  // ====== Helpers for History ======
+  // ====== Helpers ======
   const pushUndo = (action) => {
     setUndoStack((u) => [...u, action]);
-    setRedoStack([]); // reset redo
+    setRedoStack([]);
   };
 
   const addStrokeInternal = (stroke) => {
@@ -193,7 +197,138 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     });
   };
 
-  // ====== Expose API ======
+  // Thêm scrollOffsetX, scrollOffsetY làm tham số
+  const centerFor = (
+    w = 100,
+    h = 100,
+    scrollOffsetX = 0,
+    scrollOffsetY = 0
+  ) => {
+    "worklet";
+    const screenCenterX = width / 2;
+    const screenCenterY = height / 2;
+
+    const scaleVal = scale.value ?? 1;
+    const tx = translateX.value ?? 0;
+    const ty = translateY.value ?? 0;
+
+    // Tính trung tâm canvas dựa trên màn hình + pan/zoom + scroll offset
+    const canvasCenterX =
+      (screenCenterX - tx) / scaleVal - w / 2 + scrollOffsetX;
+    const canvasCenterY =
+      (screenCenterY - ty) / scaleVal - h / 2 + scrollOffsetY;
+
+    const finalX = Math.max(
+      page.x,
+      Math.min(canvasCenterX, page.x + page.w - w)
+    );
+    const finalY = Math.max(
+      page.y,
+      Math.min(canvasCenterY, page.y + page.h - h)
+    );
+
+    return { x: finalX, y: finalY };
+  };
+
+  const addImageStroke = async (uri, opts = {}) => {
+    if (!uri) return;
+
+    let safeUri = uri;
+    try {
+      if (uri.startsWith("content://")) {
+        const base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        safeUri = `data:image/png;base64,${base64}`;
+      } else if (!uri.startsWith("file://") && !uri.startsWith("data:image")) {
+        safeUri = `file://${uri}`;
+      }
+
+      const width = opts.width ?? 400; // default sensible size
+      const height = opts.height ?? 400;
+
+      const { x: cx, y: cy } = centerFor(
+        width,
+        height,
+        opts.scrollOffsetX ?? 0,
+        opts.scrollOffsetY ?? 0
+      );
+
+      const newStroke = {
+        id: nextId(),
+        tool: "image",
+        uri: safeUri,
+        x: opts.x ?? cx,
+        y: opts.y ?? cy,
+        width,
+        height,
+        rotation: opts.rotation ?? 0,
+      };
+
+      setStrokes((prev) => [...prev, newStroke]);
+      pushUndo({ type: "add", stroke: newStroke });
+    } catch (err) {
+      console.error("Failed to add image:", err);
+      Alert.alert("Lỗi ảnh", "Không thể đọc hoặc hiển thị ảnh này.");
+    }
+  };
+
+  const addStickerStroke = (strokeData = {}) => {
+    const { uri, x, y, width = 120, height = 120, rotation = 0 } = strokeData;
+
+    if (!uri || typeof uri !== "string") {
+      console.warn("[CanvasContainer] Invalid sticker URI:", uri);
+      return;
+    }
+
+    const { x: cx, y: cy } = centerFor(
+      strokeData.width ?? 120,
+      strokeData.height ?? 120,
+      strokeData.scrollOffsetX ?? 0,
+      strokeData.scrollOffsetY ?? 0
+    );
+
+    const newStroke = {
+      id: nextId(),
+      tool: "sticker",
+      uri,
+      x: x ?? cx,
+      y: y ?? cy,
+      width,
+      height,
+      rotation,
+      ...strokeData,
+    };
+
+    setStrokes((prev) => [...prev, newStroke]);
+    pushUndo({ type: "add", stroke: newStroke });
+  };
+
+  const addTextStroke = (strokeData = {}) => {
+    const widthEstimate = 0; // not needed here
+    const { x: cx, y: cy } = centerFor(
+      0,
+      0,
+      strokeData.scrollOffsetX ?? 0,
+      strokeData.scrollOffsetY ?? 0
+    );
+    const newStroke = {
+      id: nextId(),
+      tool: "text",
+      x: strokeData.x ?? cx,
+      y: strokeData.y ?? cy,
+      text: strokeData.text ?? "",
+      fontSize: strokeData.fontSize ?? 18,
+      fontFamily: strokeData.fontFamily ?? "Roboto-Regular",
+      color: strokeData.color ?? "#000",
+      padding: strokeData.padding ?? 6,
+      ...strokeData,
+    };
+    setStrokes((prev) => [...prev, newStroke]);
+    pushUndo({ type: "add", stroke: newStroke });
+  };
+
+  // ====== API EXPOSED ======
   useImperativeHandle(ref, () => ({
     undo: () => {
       setUndoStack((prevUndo) => {
@@ -263,11 +398,20 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       addStrokeInternal(s);
     },
 
-    // optional: expose modifyStrokeAt to fill
     modifyStrokeAt,
+
+    addImageStroke,
+    addStickerStroke,
+    addTextStroke,
+    loadStrokes: (strokesArray = []) => {
+      if (!Array.isArray(strokesArray)) return;
+      setStrokes(strokesArray);
+      setUndoStack([]);
+      setRedoStack([]);
+    },
   }));
 
-  // ====== Khi kết thúc stroke từ GestureHandler ======
+  // ====== Khi kết thúc stroke ======
   const handleAddStroke = useCallback(
     (strokeData) => {
       const strokeSnapshot = {
@@ -280,6 +424,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         stabilization: activeConfig.stabilization,
       };
       addStrokeInternal(strokeSnapshot);
+      if (["text", "sticky", "comment"].includes(strokeSnapshot.tool))
+        setRealtimeText(null);
     },
     [tool, color, activeConfig]
   );
@@ -287,12 +433,15 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   return (
     <View style={{ flex: 1 }}>
       <GestureDetector gesture={composedGesture}>
-        <Animated.View style={[animatedStyle, { alignSelf: "center" }]}>
+        <Animated.View
+          style={[animatedStyle, { width: page.w, height: page.h }]}
+        >
           <GestureHandler
             page={page}
             tool={tool}
             color={color}
             eraserMode={eraserMode}
+            isPenMode={isPenMode}
             onAddStroke={handleAddStroke}
             onModifyStroke={modifyStrokeAt}
             onDeleteStroke={deleteStrokeAt}
@@ -312,10 +461,22 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             thickness={activeConfig.thickness}
             stabilization={activeConfig.stabilization}
             configByTool={toolConfigs}
+            setRealtimeText={setRealtimeText}
+            zoomState={{
+              scale,
+              translateX,
+              translateY,
+            }}
           >
             <CanvasRenderer
               ref={rendererRef}
-              strokes={strokes}
+              strokes={
+                realtimeText?.id &&
+                ["text", "sticky", "comment"].includes(realtimeText.tool)
+                  ? strokes.filter((s) => s.id !== realtimeText.id)
+                  : strokes
+              }
+              realtimeText={realtimeText}
               currentPoints={currentPoints}
               tool={tool}
               color={color}
