@@ -19,7 +19,7 @@ import * as ExportUtils from "../../../utils/ExportUtils";
 import { projectService } from "../../../service/projectService";
 import styles from "./DrawingScreen.styles";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import LayerPanel from "../../../components/drawing/toolbar/LayerPanel";
 // Hàm helper để lấy kích thước hình ảnh
 const getImageSize = (uri) => {
   return new Promise((resolve, reject) => {
@@ -50,6 +50,15 @@ export default function DrawingScreen() {
 
   // HAND/PEN MODE
   const [isPenMode, setIsPenMode] = useState(false);
+
+  // LAYERS
+  const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [layers, setLayers] = useState([
+    { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+  ]);
+
+  const [activeLayerId, setActiveLayerId] = useState("layer1");
+  const [layerCounter, setLayerCounter] = useState(2);
 
   // TOOL VISIBILITY
   const [toolbarVisible, setToolbarVisible] = useState(true);
@@ -419,12 +428,47 @@ export default function DrawingScreen() {
         onBack={() => navigation.navigate("Home")}
         onToggleToolbar={() => setToolbarVisible((v) => !v)}
         onTogglePenType={() => setIsPenMode((prev) => !prev)}
-        onLayers={() => console.log("Open layers")}
+        onLayers={() => setShowLayerPanel((prev) => !prev)}
         onAddPage={() => console.log("Add page")}
         onPreview={() => console.log("Document preview")}
         onSettings={() => console.log("Open settings")}
         onMore={() => console.log("More options")}
       />
+      {showLayerPanel && (
+        <LayerPanel
+          layers={layers}
+          activeLayerId={activeLayerId}
+          onSelect={(id) => setActiveLayerId(id)}
+          onToggleVisibility={(id) =>
+            setLayers((prev) =>
+              prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
+            )
+          }
+          onAdd={() =>
+            setLayers((prev) => {
+              const newId = `layer_${Date.now()}`;
+              const newLayer = {
+                id: newId,
+                name: `Layer ${layerCounter}`,
+                visible: true,
+                locked: false,
+                strokes: [],
+              };
+              setLayerCounter((c) => c + 1); // ✅ tăng bộ đếm sau mỗi lần thêm
+              return [...prev, newLayer];
+            })
+          }
+          onDelete={(id) =>
+            setLayers((prev) => prev.filter((l) => l.id !== id))
+          }
+          onRename={(id, newName) =>
+            setLayers((prev) =>
+              prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
+            )
+          } // ✅ Thêm dòng này
+          onClose={() => setShowLayerPanel(false)} // ✅ đóng panel khi bấm X
+        />
+      )}
       {/* 🎨 Main Toolbar */}
       {toolbarVisible && (
         <ToolbarContainer
