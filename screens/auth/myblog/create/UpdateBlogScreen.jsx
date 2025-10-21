@@ -3,12 +3,12 @@ import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-nativ
 import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { styles } from "./CreateBlogScreen.styles"; // tái sử dụng style
+import { styles } from "./CreateBlogScreen.styles"; 
 import { blogService } from "../../../../service/blogService";
 import ImageUploader from "../../../../common/ImageUploader";
 
 export default function UpdateBlogScreen({ route, navigation }) {
-  const { blog } = route.params; // ✅ nhận blog được truyền từ MyBlogScreen
+  const { blog } = route.params; 
   const [title, setTitle] = useState(blog?.title || "");
   const [content, setContent] = useState(blog?.content || "");
   const [imageurl, setImageUrl] = useState(blog?.imageurl || "");
@@ -58,7 +58,7 @@ const handleUpdateBlog = async () => {
 
       <TextInput
         style={styles.input}
-        placeholder="Nhập tiêu đề..."
+        placeholder="Enter blog title..."
         value={title}
         onChangeText={setTitle}
       />

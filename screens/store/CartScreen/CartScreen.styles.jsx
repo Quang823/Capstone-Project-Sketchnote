@@ -5,10 +5,12 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export const cartStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f5f5f5',
   },
+  
+  // Header
   header: {
-    paddingTop: 60,
+    paddingTop: 44,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -16,216 +18,241 @@ export const cartStyles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#e5e5e5',
   },
   backButton: {
-    fontSize: 16,
-    color: '#007bff',
-    fontWeight: '500',
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#212529',
-  },
-  walletButton: {
-    padding: 8,
-  },
-  walletIcon: {
-    fontSize: 20,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  activeTabButton: {
-    borderBottomColor: '#007bff',
-  },
-  tabText: {
-    fontSize: 16,
-    color: '#6c757d',
     fontWeight: '500',
-  },
-  activeTabText: {
-    color: '#007bff',
-    fontWeight: 'bold',
-  },
-  content: {
+    color: '#000',
     flex: 1,
-    padding: 16,
+    marginLeft: 12,
   },
-  cartItem: {
-    flexDirection: 'row',
+  moreButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+  },
+
+  // Scroll Content
+  scrollContent: {
+    flex: 1,
+  },
+  scrollContentContainer: {
+    paddingBottom: 20,
+  },
+
+  // Shop Container
+  shopContainer: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginTop: 8,
+    paddingVertical: 12,
   },
-  itemImage: {
+  shopHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  shopName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000',
+    marginLeft: 8,
+  },
+
+  // Product Item
+  productItem: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  productImage: {
     width: 80,
     height: 80,
-    borderRadius: 8,
-    marginRight: 12,
-  },
-  itemInfo: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 4,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212529',
-    flex: 1,
-    marginRight: 8,
-  },
-  premiumBadge: {
-    backgroundColor: '#ffc107',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
     borderRadius: 4,
+    marginRight: 12,
+    backgroundColor: '#f0f0f0',
   },
-  premiumText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#212529',
-  },
-  itemCategory: {
-    fontSize: 14,
-    color: '#6c757d',
-    marginBottom: 4,
-  },
-  courseMeta: {
-    fontSize: 12,
-    color: '#6c757d',
-    marginBottom: 4,
-  },
-  itemPrice: {
-    fontSize: 14,
-    color: '#28a745',
-    fontWeight: '500',
-  },
-  quantityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  quantityButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f8f9fa',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  quantityButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#495057',
-  },
-  quantityText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginHorizontal: 16,
-    minWidth: 20,
-    textAlign: 'center',
-  },
-  itemActions: {
-    alignItems: 'flex-end',
+  productInfo: {
+    flex: 1,
     justifyContent: 'space-between',
   },
-  itemTotal: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#212529',
+  productName: {
+    fontSize: 14,
+    color: '#000',
+    lineHeight: 18,
     marginBottom: 8,
   },
-  removeButton: {
-    padding: 8,
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  removeButtonText: {
+  productPrice: {
     fontSize: 16,
+    fontWeight: '500',
+    color: '#ee4d2d',
+    marginRight: 8,
   },
+  originalPrice: {
+    fontSize: 13,
+    color: '#888',
+    textDecorationLine: 'line-through',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  // Quantity Controls
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 2,
+  },
+  qtyButton: {
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  qtyText: {
+    fontSize: 14,
+    color: '#000',
+    paddingHorizontal: 12,
+    minWidth: 40,
+    textAlign: 'center',
+  },
+  deleteText: {
+    fontSize: 14,
+    color: '#888',
+  },
+
+  // Checkbox
+  checkbox: {
+    marginRight: 12,
+    justifyContent: 'center',
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 2,
+    borderWidth: 2,
+    borderColor: '#d1d5db',
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxBoxChecked: {
+    backgroundColor: '#ee4d2d',
+    borderColor: '#ee4d2d',
+  },
+
+  // Empty Cart
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+    paddingVertical: 80,
   },
   emptyText: {
-    fontSize: 18,
-    color: '#6c757d',
+    fontSize: 16,
+    color: '#888',
+    marginTop: 16,
     marginBottom: 24,
   },
-  browseButton: {
-    backgroundColor: '#007bff',
-    paddingHorizontal: 24,
+  shopNowButton: {
+    backgroundColor: '#ee4d2d',
+    paddingHorizontal: 32,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 4,
   },
-  browseButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  shopNowText: {
+    fontSize: 15,
     fontWeight: '500',
+    color: '#fff',
   },
-  footer: {
+
+  // Fixed Checkout Bar
+  checkoutBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: '#fff',
-    padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    borderTopColor: '#e5e5e5',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  checkoutTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectAllContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectAllText: {
+    fontSize: 14,
+    color: '#000',
+    marginLeft: 8,
   },
   totalContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    flex: 1,
+    justifyContent: 'flex-end',
   },
   totalLabel: {
-    fontSize: 18,
-    fontWeight: '500',
-    color: '#212529',
+    fontSize: 13,
+    color: '#000',
   },
-  totalAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#28a745',
+  totalPrice: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ee4d2d',
+    marginRight: 16,
+  },
+  savingsText: {
+    fontSize: 11,
+    color: '#888',
+    textAlign: 'right',
+    marginTop: 2,
   },
   checkoutButton: {
-    backgroundColor: '#28a745',
-    paddingVertical: 16,
-    borderRadius: 8,
+    backgroundColor: '#ee4d2d',
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 4,
+    minWidth: 120,
     alignItems: 'center',
   },
+  checkoutButtonDisabled: {
+    backgroundColor: '#ffc1b3',
+  },
   checkoutButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
     color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });

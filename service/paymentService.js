@@ -11,9 +11,9 @@ export const paymentService = {
       throw new Error(message);
      }
     },
-    depositWallet: async (amount,walletId) => {
+    depositWallet: async (amount) => {
         try {
-            const res = await paymentApiController.depositWallet(amount,walletId);
+            const res = await paymentApiController.depositWallet(amount);
             return res.data;
         } catch (error) {
             const message =

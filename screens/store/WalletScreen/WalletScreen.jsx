@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,153 +8,88 @@ import {
   Alert,
   Dimensions,
   Modal,
-} from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { walletStyles } from './WalletScreen.styles';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { paymentService } from '../../../service/paymentService';
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import { LinearGradient } from "expo-linear-gradient";
+import { walletStyles } from "./WalletScreen.styles";
+import { paymentService } from "../../../service/paymentService";
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-const paymentMethods = [
-  { id: 'vnpay', name: 'VNPay', icon: '💳', fee: 0 },
-  { id: 'momo', name: 'MoMo', icon: '📱', fee: 0 },
-  { id: 'zalopay', name: 'ZaloPay', icon: '💙', fee: 0 },
-  { id: 'bank', name: 'Bank Transfer', icon: '🏦', fee: 0 },
-];
-
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
 export default function WalletScreen() {
   const navigation = useNavigation();
   const [walletData, setWalletData] = useState({ balance: 0, transactions: [] });
   const [showDepositModal, setShowDepositModal] = useState(false);
-  const [depositAmount, setDepositAmount] = useState('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('vnpay');
+  const [depositAmount, setDepositAmount] = useState("");
 
-  const formatCurrency = (amount) => {
-    if (!amount && amount !== 0) return '0 VND';
-    return amount.toLocaleString('vi-VN') + ' VND';
-  };
+  // 📦 Format helpers
+  const formatCurrency = (amount) =>
+    (amount ?? 0).toLocaleString("vi-VN") + " VND";
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB');
-  };
+  const formatDate = (dateString) =>
+    new Date(dateString).toLocaleDateString("en-GB");
 
-  const handleDeposit = () => {
+  // 💳 Handle deposit
+  const handleDeposit = async () => {
     const amount = parseInt(depositAmount);
-    if (!amount || amount < 10000) {
-      Alert.alert('Error', 'Minimum deposit amount is 10,000 VND');
+    if (!amount || amount < 5000) {
+      Alert.alert("Lỗi", "Số tiền nạp tối thiểu là 5,000 VND");
       return;
     }
 
-    Alert.alert(
-      'Confirm Deposit',
-      `You are about to deposit ${formatCurrency(amount)} via ${
-        paymentMethods.find((p) => p.id === selectedPaymentMethod)?.name
-      }.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: () => {
-            const newTransaction = {
-              id: Date.now().toString(),
-              type: 'deposit',
-              amount: amount,
-              description: `Deposit via ${
-                paymentMethods.find((p) => p.id === selectedPaymentMethod)?.name
-              }`,
-              date: new Date().toISOString().split('T')[0],
-              status: 'completed',
-            };
+    try {
+      const url = await paymentService.depositWallet(amount);
+      console.log("🔗 URL from backend:", url);
 
-            setWalletData((prev) => ({
-              ...prev,
-              balance: prev.balance + amount,
-              transactions: [newTransaction, ...prev.transactions],
-            }));
-
-            setShowDepositModal(false);
-            setDepositAmount('');
-            Alert.alert('Success', 'Deposit successful!');
-          },
-        },
-      ]
-    );
+    
+        setShowDepositModal(false);
+        navigation.navigate("PaymentWebView", { paymentUrl: url });
+      
+    } catch (error) {
+      console.error("Payment error:", error);
+      Alert.alert("Thất bại", "Không thể tạo liên kết thanh toán.");
+    }
   };
 
-  const handleQuickAmount = (amount) => {
-    setDepositAmount(amount.toString());
+  // ⚡ Fetch wallet info
+  const fetchWallet = async () => {
+    try {
+      const data = await paymentService.getWallet();
+      console.log("📦 Wallet data:", data);
+      setWalletData(data);
+    } catch (error) {
+      console.error("Error fetching wallet:", error.message);
+      Alert.alert("Lỗi", "Không thể tải thông tin ví.");
+    }
   };
-
-  const renderTransaction = (transaction) => (
-    <View key={transaction.id} style={walletStyles.transactionItem}>
-      <View style={walletStyles.transactionIcon}>
-        <Icon
-          name={transaction.type === 'deposit' ? 'account-balance-wallet' : 'shopping-cart'}
-          size={24}
-          color={transaction.type === 'deposit' ? '#10B981' : '#EF4444'}
-        />
-      </View>
-
-      <View style={walletStyles.transactionInfo}>
-        <Text style={walletStyles.transactionDescription}>
-          {transaction.description}
-        </Text>
-        <Text style={walletStyles.transactionDate}>
-          {formatDate(transaction.date)}
-        </Text>
-      </View>
-      <Text
-        style={[
-          walletStyles.transactionAmount,
-          transaction.type === 'deposit'
-            ? walletStyles.depositAmount
-            : walletStyles.purchaseAmount,
-        ]}
-      >
-        {transaction.type === 'deposit' ? '+' : '-'}
-        {formatCurrency(Math.abs(transaction.amount))}
-      </Text>
-    </View>
-  );
-
-  const getTransactionStats = () => {
-    const totalDeposit = walletData.transactions
-      .filter((t) => t.type === 'deposit')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalSpent = walletData.transactions
-      .filter((t) => t.type === 'purchase')
-      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
-
-    return { totalDeposit, totalSpent };
-  };
-
-  const stats = getTransactionStats();
 
   useEffect(() => {
-    const fetchWallet = async () => {
-      try {
-        const data = await paymentService.getWallet();
-        console.log('📦 API wallet data:', data);
-        setWalletData(data);
-      } catch (error) {
-        console.error('Error fetching wallet:', error.message);
-        Alert.alert('Error', 'Failed to fetch wallet information.');
-      }
-    };
-
     fetchWallet();
-  }, []);
+    const unsubscribe = navigation.addListener("focus", fetchWallet);
+    return unsubscribe;
+  }, [navigation]);
+
+  // 📊 Stats
+  const totalDeposit = walletData.transactions
+    .filter((t) => t.type === "deposit")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalSpent = walletData.transactions
+    .filter((t) => t.type === "purchase")
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+
+  // 🧾 Chỉ lấy 5 giao dịch gần nhất (mới nhất trước)
+  const recentTransactions = [...walletData.transactions]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 5);
 
   return (
     <View style={walletStyles.container}>
+      {/* Header */}
       <View style={walletStyles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.navigate("Home")}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={walletStyles.headerTitle}>E-Wallet</Text>
@@ -162,9 +97,9 @@ export default function WalletScreen() {
       </View>
 
       <ScrollView style={walletStyles.content} showsVerticalScrollIndicator={false}>
-        {/* Balance Card */}
+        {/* 💰 Balance Card */}
         <LinearGradient
-          colors={['#667EEA', '#764BA2']}
+          colors={["#667EEA", "#764BA2"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={walletStyles.balanceCard}
@@ -180,20 +115,16 @@ export default function WalletScreen() {
             {formatCurrency(walletData.balance)}
           </Text>
 
-          {/* Stats Row */}
+          {/* Stats */}
           <View style={walletStyles.statsRow}>
             <View style={walletStyles.statItem}>
               <Text style={walletStyles.statLabel}>Total Deposits</Text>
-              <Text style={walletStyles.statValue}>
-                {formatCurrency(stats.totalDeposit)}
-              </Text>
+              <Text style={walletStyles.statValue}>{formatCurrency(totalDeposit)}</Text>
             </View>
             <View style={walletStyles.statDivider} />
             <View style={walletStyles.statItem}>
               <Text style={walletStyles.statLabel}>Total Spent</Text>
-              <Text style={walletStyles.statValue}>
-                {formatCurrency(stats.totalSpent)}
-              </Text>
+              <Text style={walletStyles.statValue}>{formatCurrency(totalSpent)}</Text>
             </View>
           </View>
 
@@ -206,41 +137,63 @@ export default function WalletScreen() {
           </Pressable>
         </LinearGradient>
 
-        {/* Transaction History */}
+        {/* 🧾 Transaction History */}
         <View style={walletStyles.historySection}>
           <View style={walletStyles.historySectionHeader}>
-            <Text style={walletStyles.sectionTitle}>Transaction History</Text>
+            <Text style={walletStyles.sectionTitle}>Recent Transactions</Text>
             <Text style={walletStyles.transactionCount}>
-              {walletData.transactions?.length || 0} transactions
+              {recentTransactions.length} shown
             </Text>
           </View>
 
-          {walletData.transactions?.length > 0 ? (
-            walletData.transactions.map(renderTransaction)
+          {recentTransactions.length > 0 ? (
+            recentTransactions.map((t) => (
+              <View key={t.id} style={walletStyles.transactionItem}>
+                <View style={walletStyles.transactionIcon}>
+                  <Icon
+                    name={t.type === "deposit" ? "account-balance-wallet" : "shopping-cart"}
+                    size={24}
+                    color={t.type === "deposit" ? "#10B981" : "#EF4444"}
+                  />
+                </View>
+
+                <View style={walletStyles.transactionInfo}>
+                  <Text style={walletStyles.transactionDescription}>{t.description}</Text>
+                  <Text style={walletStyles.transactionDate}>{formatDate(t.date)}</Text>
+                </View>
+
+                <Text
+                  style={[
+                    walletStyles.transactionAmount,
+                    t.type === "deposit"
+                      ? walletStyles.depositAmount
+                      : walletStyles.purchaseAmount,
+                  ]}
+                >
+                  {t.type === "deposit" ? "+" : "-"}
+                  {formatCurrency(Math.abs(t.amount))}
+                </Text>
+              </View>
+            ))
           ) : (
             <View style={walletStyles.emptyState}>
               <Text style={walletStyles.emptyStateIcon}>📭</Text>
-              <Text style={walletStyles.emptyStateText}>
-                No transactions yet
-              </Text>
+              <Text style={walletStyles.emptyStateText}>No transactions yet</Text>
             </View>
           )}
         </View>
       </ScrollView>
 
-      {/* Deposit Modal */}
+      {/* 💵 Deposit Modal */}
       <Modal
         visible={showDepositModal}
         animationType="slide"
-        transparent={true}
+        transparent
         onRequestClose={() => setShowDepositModal(false)}
       >
         <View style={walletStyles.modalOverlay}>
-          <View style={[walletStyles.modalContent, { maxHeight: '85%' }]}>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 20 }}
-            >
+          <View style={[walletStyles.modalContent, { maxHeight: "85%" }]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
               <View style={walletStyles.modalHeader}>
                 <Text style={walletStyles.modalTitle}>Deposit Funds</Text>
                 <Pressable onPress={() => setShowDepositModal(false)}>
@@ -248,6 +201,7 @@ export default function WalletScreen() {
                 </Pressable>
               </View>
 
+              {/* Amount Input */}
               <View style={walletStyles.amountSection}>
                 <Text style={walletStyles.amountLabel}>Deposit Amount</Text>
                 <TextInput
@@ -257,59 +211,52 @@ export default function WalletScreen() {
                   placeholder="Enter amount"
                   keyboardType="numeric"
                 />
+
                 <View style={walletStyles.quickAmounts}>
-                  {quickAmounts.map((amount) => (
+                  {quickAmounts.map((amt) => (
                     <Pressable
-                      key={amount}
+                      key={amt}
                       style={[
                         walletStyles.quickAmountButton,
-                        depositAmount === amount.toString() &&
-                          walletStyles.quickAmountButtonActive,
+                        depositAmount === amt.toString() && walletStyles.quickAmountButtonActive,
                       ]}
-                      onPress={() => handleQuickAmount(amount)}
+                      onPress={() => setDepositAmount(amt.toString())}
                     >
                       <Text
                         style={[
                           walletStyles.quickAmountText,
-                          depositAmount === amount.toString() &&
+                          depositAmount === amt.toString() &&
                             walletStyles.quickAmountTextActive,
                         ]}
                       >
-                        {formatCurrency(amount)}
+                        {formatCurrency(amt)}
                       </Text>
                     </Pressable>
                   ))}
                 </View>
               </View>
 
+              {/* Payment Method */}
               <View style={walletStyles.paymentSection}>
                 <Text style={walletStyles.paymentLabel}>Payment Method</Text>
-                {paymentMethods.map((method) => (
-                  <Pressable
-                    key={method.id}
-                    style={[
-                      walletStyles.paymentMethod,
-                      selectedPaymentMethod === method.id &&
-                        walletStyles.selectedPaymentMethod,
-                    ]}
-                    onPress={() => setSelectedPaymentMethod(method.id)}
-                  >
-                    <View style={walletStyles.paymentMethodLeft}>
-                      <Text style={walletStyles.paymentIcon}>{method.icon}</Text>
-                      <View>
-                        <Text style={walletStyles.paymentName}>{method.name}</Text>
-                        <Text style={walletStyles.paymentFee}>
-                          {method.fee === 0 ? 'Free' : `Fee: ${method.fee}%`}
-                        </Text>
-                      </View>
+                <View
+                  style={[
+                    walletStyles.paymentMethod,
+                    walletStyles.selectedPaymentMethod,
+                  ]}
+                >
+                  <View style={walletStyles.paymentMethodLeft}>
+                    <Text style={walletStyles.paymentIcon}>💳</Text>
+                    <View>
+                      <Text style={walletStyles.paymentName}>PayOS</Text>
+                      <Text style={walletStyles.paymentFee}>Free</Text>
                     </View>
-                    {selectedPaymentMethod === method.id && (
-                      <Icon name="check-circle" size={24} color="#3B82F6" />
-                    )}
-                  </Pressable>
-                ))}
+                  </View>
+                  <Icon name="check-circle" size={24} color="#3B82F6" />
+                </View>
               </View>
 
+              {/* Buttons */}
               <View style={walletStyles.modalActions}>
                 <Pressable
                   style={walletStyles.cancelButton}
@@ -317,10 +264,7 @@ export default function WalletScreen() {
                 >
                   <Text style={walletStyles.cancelButtonText}>Cancel</Text>
                 </Pressable>
-                <Pressable
-                  style={walletStyles.confirmButton}
-                  onPress={handleDeposit}
-                >
+                <Pressable style={walletStyles.confirmButton} onPress={handleDeposit}>
                   <Text style={walletStyles.confirmButtonText}>Confirm Deposit</Text>
                 </Pressable>
               </View>

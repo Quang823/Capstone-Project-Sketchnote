@@ -21,6 +21,7 @@ import Reanimated, {
 
 import { homeStyles } from "./HomeScreen.styles";
 import NavigationDrawer from "../nav/NavigationDrawer";
+import { getUserFromToken } from "../../../utils/AuthUtils";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 const { width } = Dimensions.get("window");
@@ -100,7 +101,7 @@ const quickActions = [
 
 export default function HomeScreen() {
   const navigation = useNavigation();
-  const [userName, setUserName] = useState("Nguyễn Văn A");
+  const [userName, setUserName] = useState("");
   const [activeNavItem, setActiveNavItem] = useState("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
   
@@ -116,7 +117,13 @@ export default function HomeScreen() {
     opacity.value = withTiming(1, { duration: 800, easing: Easing.ease });
     translateY.value = withTiming(0, { duration: 800, easing: Easing.ease });
   }, []);
-
+  useEffect(() => {
+    const getUser = async () => {
+      const user = await getUserFromToken();
+      setUserName(user?.name || "");
+    };
+    getUser();
+  }, []);
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
     transform: [{ translateY: translateY.value }],
@@ -295,7 +302,7 @@ export default function HomeScreen() {
               <Text style={homeStyles.greetingText}>{getCurrentGreeting()}</Text>
               <Text style={homeStyles.userName}>{userName}!</Text>
               <Text style={homeStyles.motivationText}>
-                Hãy tạo ra những sketchnote tuyệt vời hôm nay 🎨
+                Create your own sketchnote! 🎨
               </Text>
             </View>
           </ReanimatedView>
