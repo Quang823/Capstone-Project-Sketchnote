@@ -51,8 +51,11 @@ export default function ImageTransformBox({
         onPanResponderGrant: (_, gestureState) => {
           const cx = w / 2;
           const cy = h / 2;
-          const localX = gestureState.x0 - left;
-          const localY = gestureState.y0 - top;
+          // convert screen coords -> local box coords (account pan/zoom)
+          const localX =
+            (gestureState.x0 - (left + (pan?.x || 0))) / (scale || 1);
+          const localY =
+            (gestureState.y0 - (top + (pan?.y || 0))) / (scale || 1);
           const dx = localX - cx;
           const dy = localY - cy;
           const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -62,8 +65,11 @@ export default function ImageTransformBox({
           const { angle: startAngle, initRot } = rotateStart.current;
           const cx = w / 2;
           const cy = h / 2;
-          const localX = gestureState.moveX - left;
-          const localY = gestureState.moveY - top;
+          // convert screen coords -> local box coords (account pan/zoom)
+          const localX =
+            (gestureState.moveX - (left + (pan?.x || 0))) / (scale || 1);
+          const localY =
+            (gestureState.moveY - (top + (pan?.y || 0))) / (scale || 1);
           const dx = localX - cx;
           const dy = localY - cy;
           const angle = Math.atan2(dy, dx) * (180 / Math.PI);

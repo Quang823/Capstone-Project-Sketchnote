@@ -20,6 +20,7 @@ import { projectService } from "../../../service/projectService";
 import styles from "./DrawingScreen.styles";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LayerPanel from "../../../components/drawing/toolbar/LayerPanel";
+import { manipulateAsync, FlipType, SaveFormat } from "expo-image-manipulator";
 // Hàm helper để lấy kích thước hình ảnh
 const getImageSize = (uri) => {
   return new Promise((resolve, reject) => {
@@ -234,50 +235,72 @@ export default function DrawingScreen() {
   }, []);
 
   // 🖼 ===== INSERT IMAGE FROM GALLERY =====
-  const handleInsertImage = useCallback(async () => {
+  const handleInsertImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 1,
+      exif: true, // ✅ Lấy EXIF data
+    });
+
+    if (result.canceled) return; // ✅ Sửa từ cancelled thành canceled (Expo update)
+
+    let uri = result.assets?.[0]?.uri || result.uri;
+    if (!uri) return;
+
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.9,
-      });
+      let size = await getImageSize(uri);
+      let orientation = result.assets?.[0]?.exif?.Orientation || 1;
 
-      if (!result.canceled) {
-        const uri = result.assets[0].uri;
-        let imgWidth, imgHeight;
-        try {
-          const size = await getImageSize(uri);
-          imgWidth = size.width;
-          imgHeight = size.height;
-        } catch (error) {
-          console.error("[DrawingScreen] getImageSize error:", error);
-          imgWidth = 100;
-          imgHeight = 100;
-        }
-
-        const maxWidth = 400;
-        const scale = Math.min(1, maxWidth / imgWidth);
-        const width = imgWidth * scale;
-        const height = imgHeight * scale;
-
-        const pageRef = pageRefs.current[activePageId] || canvasRef.current;
-        if (pageRef?.addImageStroke) {
-          pageRef.addImageStroke(uri, {
-            width,
-            height,
-            x: width / 2,
-            y: height / 2,
-          });
-        } else {
-          console.warn(
-            "[DrawingScreen] No handler to add image stroke for page",
-            activePageId
-          );
-        }
+      // ✅ Manipulate để apply orientation
+      let actions = [];
+      switch (orientation) {
+        case 2:
+          actions = [{ flip: FlipType.horizontal }];
+          break;
+        case 3:
+          actions = [{ rotate: 180 }];
+          break;
+        case 4:
+          actions = [{ flip: FlipType.vertical }];
+          break;
+        case 5:
+          actions = [{ rotate: 90 }, { flip: FlipType.horizontal }];
+          break;
+        case 6:
+          actions = [{ rotate: 90 }];
+          break;
+        case 7:
+          actions = [{ rotate: -90 }, { flip: FlipType.horizontal }];
+          break;
+        case 8:
+          actions = [{ rotate: -90 }];
+          break;
+        default:
+          break;
       }
-    } catch (e) {
-      Alert.alert("Image error", e.message || String(e));
+
+      if (actions.length > 0) {
+        const manipulated = await manipulateAsync(uri, actions, {
+          compress: 1,
+          format: SaveFormat.JPEG,
+        });
+        uri = manipulated.uri;
+        size = { width: manipulated.width, height: manipulated.height };
+      }
+
+      const scale = Math.min(1, 400 / size.width);
+      multiPageCanvasRef.current.addImageStroke({
+        uri,
+        x: 100,
+        y: 100,
+        width: size.width * scale,
+        height: size.height * scale,
+      });
+    } catch (err) {
+      Alert.alert("Error", "Failed to load image: " + err.message);
     }
-  }, [activePageId]);
+  };
 
   // 📸 ===== OPEN CAMERA =====
   const handleOpenCamera = useCallback(async () => {
@@ -311,11 +334,12 @@ export default function DrawingScreen() {
 
         const pageRef = pageRefs.current[activePageId] || canvasRef.current;
         if (pageRef?.addImageStroke) {
-          pageRef.addImageStroke(uri, {
+          pageRef.addImageStroke({
+            uri,
+            x: 100,
+            y: 100,
             width,
             height,
-            x: width / 2,
-            y: height / 2,
           });
         } else {
           console.warn(
@@ -531,6 +555,9 @@ export default function DrawingScreen() {
       <View style={{ flex: 1 }}>
         <MultiPageCanvas
           ref={multiPageCanvasRef}
+          layers={layers}
+          activeLayerId={activeLayerId}
+          setLayers={setLayers}
           tool={tool}
           color={color}
           isPenMode={isPenMode}
@@ -551,7 +578,9 @@ export default function DrawingScreen() {
           registerPageRef={registerPageRef}
           onActivePageChange={setActivePageId}
           onRequestTextInput={(x, y) => {
-            if (tool === "text") setEditingText({ x, y, text: "" });
+            if (tool === "text") {
+              setTimeout(() => setEditingText({ x, y, text: "" }), 0);
+            }
           }}
         />
         <StickerModal

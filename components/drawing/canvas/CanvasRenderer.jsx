@@ -13,6 +13,7 @@ import {
 import CanvasImage from "./CanvasImage";
 import PaperGuides from "./PaperGuides";
 import { applyPencilAlpha, makePathFromPoints } from "./utils";
+
 const DESK_BGCOLOR = "#e9ecef";
 const PAGE_BGCOLOR = "#ffffff";
 
@@ -208,7 +209,9 @@ const makeRGBA = (input, alpha = 1) => {
 
 const CanvasRenderer = forwardRef(function CanvasRenderer(
   {
-    strokes,
+    // strokes,
+    layers = [],
+    visualOffsets = {},
     currentPoints,
     tool,
     eraserMode,
@@ -259,21 +262,24 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   const dynamicPressure = lastPt?.pressure ?? pressure;
   const dynamicThickness = lastPt?.thickness ?? thickness;
   const dynamicStab = lastPt?.stabilization ?? stabilization;
-  const visibleStrokes = (strokes || []).filter(
-    (s) =>
-      s &&
-      s.id &&
-      !(
-        realtimeText?.id &&
-        s.id === realtimeText.id &&
-        ["sticky", "comment", "text"].includes(s.tool)
-      )
-  );
+  const visibleStrokes = layers
+    .filter((l) => l.visible)
+    .flatMap((l) => (Array.isArray(l.strokes) ? l.strokes : []))
+    .filter(
+      (s) =>
+        s &&
+        s.id &&
+        !(
+          realtimeText?.id &&
+          s.id === realtimeText.id &&
+          ["sticky", "comment", "text"].includes(s.tool)
+        )
+    );
 
-  // Hàm render stroke với key unique
   const renderStroke = (s, index) => {
     if (!s) return null;
 
+    // 🖼️ Ảnh và sticker
     if (
       (s.tool === "image" || s.tool === "sticker") &&
       (s.uri || s.imageUri || s.image)
@@ -288,6 +294,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       );
     }
 
+    // 📝 TEXT / STICKY / COMMENT / EMOJI
     if (["text", "sticky", "comment", "emoji"].includes(s.tool)) {
       const elements = [];
       const fontSize = s.fontSize || 18;
@@ -306,19 +313,17 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         approxTextWidth(s.text || "", fontSize) + (s.padding || 0) * 2;
       const textHeight = fontSize + (s.padding || 0) * 2;
 
+      // 🟨 Sticky note
       if (s.tool === "sticky" || s.tool === "comment") {
         const pad = s.padding || 6;
-        const fontSize = s.fontSize || (s.tool === "comment" ? 14 : 16);
+        const fs = s.fontSize || (s.tool === "comment" ? 14 : 16);
         const text = typeof s.text === "string" ? s.text : "";
-        const textWidth = Math.max(
-          40,
-          approxTextWidth(text, fontSize) + pad * 2
-        );
-        const textHeight = Math.max(28, fontSize + pad * 2);
-        const x = Number.isFinite(s.x) ? s.x : 0;
-        const y = Number.isFinite(s.y) ? s.y : 0;
+        const tw = Math.max(40, approxTextWidth(text, fs) + pad * 2);
+        const th = Math.max(28, fs + pad * 2);
+        const x = s.x ?? 0;
+        const y = s.y ?? 0;
         const left = x - pad;
-        const top = y - fontSize - pad;
+        const top = y - fs - pad;
 
         if (s.tool === "sticky") {
           const foldSize = 10;
@@ -328,17 +333,17 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               key={`${s.id}-sticky-bg`}
               x={left}
               y={top}
-              width={textWidth}
-              height={textHeight}
+              width={tw}
+              height={th}
               color={bgColor}
               rx={6}
               ry={6}
             />
           );
           const fold = Skia.Path.Make();
-          fold.moveTo(left + textWidth - foldSize, top);
-          fold.lineTo(left + textWidth, top);
-          fold.lineTo(left + textWidth, top + foldSize);
+          fold.moveTo(left + tw - foldSize, top);
+          fold.lineTo(left + tw, top);
+          fold.lineTo(left + tw, top + foldSize);
           fold.close();
           elements.push(
             <Path key={`${s.id}-sticky-fold`} path={fold} color="#FFED77" />
@@ -347,23 +352,13 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           const tailH = 8;
           const bubble = Skia.Path.Make();
           bubble.moveTo(left + 10, top);
-          bubble.lineTo(left + textWidth - 10, top);
-          bubble.quadTo(left + textWidth, top, left + textWidth, top + 10);
-          bubble.lineTo(left + textWidth, top + textHeight - 10);
-          bubble.quadTo(
-            left + textWidth,
-            top + textHeight,
-            left + textWidth - 10,
-            top + textHeight
-          );
-          bubble.lineTo(left + 18, top + textHeight);
-          bubble.quadTo(
-            left + 10,
-            top + textHeight + tailH,
-            left + 8,
-            top + textHeight
-          );
-          bubble.quadTo(left, top + textHeight, left, top + textHeight - 10);
+          bubble.lineTo(left + tw - 10, top);
+          bubble.quadTo(left + tw, top, left + tw, top + 10);
+          bubble.lineTo(left + tw, top + th - 10);
+          bubble.quadTo(left + tw, top + th, left + tw - 10, top + th);
+          bubble.lineTo(left + 18, top + th);
+          bubble.quadTo(left + 10, top + th + tailH, left + 8, top + th);
+          bubble.quadTo(left, top + th, left, top + th - 10);
           bubble.lineTo(left, top + 10);
           bubble.quadTo(left, top, left + 10, top);
           bubble.close();
@@ -382,6 +377,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         }
       }
 
+      // 😀 Emoji
       if (s.tool === "emoji") {
         const emojiFont = getNearestFont(
           loadedFonts,
@@ -405,6 +401,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         return <Group key={`${s.id}-emoji-group`}>{elements}</Group>;
       }
 
+      // 🔤 Text chính
       if (hasFont && safeFont) {
         elements.push(
           <SkiaText
@@ -413,12 +410,13 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             y={(s.y || 0) / scaleFactor}
             text={typeof s.text === "string" ? s.text : ""}
             font={safeFont}
-            color={s.color || "#000000"}
+            color={s.color || "#000"}
             transform={[{ scale: scaleFactor }]}
           />
         );
       }
 
+      // Gạch chân
       if (s.underline) {
         elements.push(
           <Rect
@@ -427,11 +425,12 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             y={(s.y || 0) + fontSize * 0.15}
             width={textWidth * 0.95}
             height={1.5}
-            color={s.color || "#000000"}
+            color={s.color || "#000"}
           />
         );
       }
 
+      // Viền chọn (dashed)
       if (selectedId === s.id) {
         elements.push(
           <Rect
@@ -691,85 +690,129 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       )}
 
       {/* Fill layer */}
-      {strokes &&
-        strokes.map((s, index) => {
-          if (!s) return null;
-          if (
-            s.shape &&
-            s.fill &&
-            !["line", "arrow"].includes(s.tool) &&
-            [
-              "square",
-              "rect",
-              "circle",
-              "triangle",
-              "oval",
-              "polygon",
-              "star",
-            ].includes(s.tool)
-          ) {
-            const path = Skia.Path.Make();
-            if (s.tool === "circle") {
-              const { cx = 0, cy = 0, r = 0 } = s.shape;
-              path.addCircle(cx, cy, r);
-            } else if (s.tool === "rect" || s.tool === "square") {
-              const { x = 0, y = 0, w = 0, h = 0 } = s.shape;
-              path.addRect({ x, y, width: w, height: h });
-            } else if (s.tool === "triangle") {
-              const {
-                x1 = 0,
-                y1 = 0,
-                x2 = 0,
-                y2 = 0,
-                x3 = 0,
-                y3 = 0,
-              } = s.shape;
-              path.moveTo(x1, y1);
-              path.lineTo(x2, y2);
-              path.lineTo(x3, y3);
-              path.close();
-            } else if (s.tool === "oval") {
-              const { cx = 0, cy = 0, rx = 0, ry = 0 } = s.shape;
-              path.addOval({ cx, cy, rx, ry });
-            } else if (s.tool === "polygon" || s.tool === "star") {
-              const pts = s.shape.points || [];
-              if (pts.length > 0) {
-                path.moveTo(pts[0]?.x ?? 0, pts[0]?.y ?? 0);
-                for (let i = 1; i < pts.length; i++)
-                  path.lineTo(pts[i]?.x ?? 0, pts[i]?.y ?? 0);
+      {layers.map(
+        (layer) =>
+          layer.visible &&
+          layer.strokes?.map((s) => {
+            if (!s) return null;
+            if (
+              s.shape &&
+              s.fill &&
+              !["line", "arrow"].includes(s.tool) &&
+              [
+                "square",
+                "rect",
+                "circle",
+                "triangle",
+                "oval",
+                "polygon",
+                "star",
+              ].includes(s.tool)
+            ) {
+              const path = Skia.Path.Make();
+              if (s.tool === "circle") {
+                const { cx = 0, cy = 0, r = 0 } = s.shape;
+                path.addCircle(cx, cy, r);
+              } else if (s.tool === "rect" || s.tool === "square") {
+                const { x = 0, y = 0, w = 0, h = 0 } = s.shape;
+                path.addRect({ x, y, width: w, height: h });
+              } else if (s.tool === "triangle") {
+                const {
+                  x1 = 0,
+                  y1 = 0,
+                  x2 = 0,
+                  y2 = 0,
+                  x3 = 0,
+                  y3 = 0,
+                } = s.shape;
+                path.moveTo(x1, y1);
+                path.lineTo(x2, y2);
+                path.lineTo(x3, y3);
                 path.close();
+              } else if (s.tool === "oval") {
+                const { cx = 0, cy = 0, rx = 0, ry = 0 } = s.shape;
+                path.addOval({ cx, cy, rx, ry });
+              } else if (s.tool === "polygon" || s.tool === "star") {
+                const pts = s.shape.points || [];
+                if (pts.length > 0) {
+                  path.moveTo(pts[0]?.x ?? 0, pts[0]?.y ?? 0);
+                  for (let i = 1; i < pts.length; i++)
+                    path.lineTo(pts[i]?.x ?? 0, pts[i]?.y ?? 0);
+                  path.close();
+                }
               }
+              const fillNode = (
+                <Path
+                  key={`${s.id}-fill`}
+                  path={path}
+                  color={makeRGBA(s.fillColor || "#ffffff", 1)}
+                  style="fill"
+                />
+              );
+              const vo = visualOffsets?.[s.id];
+              const dx = (vo?.dx ?? s?.tempOffset?.dx) || 0;
+              const dy = (vo?.dy ?? s?.tempOffset?.dy) || 0;
+              return dx || dy ? (
+                <Group
+                  key={`${s.id}-fill-wrap`}
+                  transform={[{ translateX: dx }, { translateY: dy }]}
+                >
+                  {fillNode}
+                </Group>
+              ) : (
+                fillNode
+              );
             }
-            return (
-              <Path
-                key={`${s.id}-fill`}
-                path={path}
-                color={makeRGBA(s.fillColor || "#ffffff", 1)}
-                style="fill"
-              />
-            );
-          }
-          if (s.fill && s.points?.length > 0) {
-            const path = makePathFromPoints(s.points);
-            try {
-              path.close();
-            } catch {}
-            return (
-              <Path
-                key={`${s.id}-fill`}
-                path={path}
-                color={makeRGBA(s.fillColor || "#ffffff", 1)}
-                style="fill"
-              />
-            );
-          }
-          return null;
-        })}
+            if (s.fill && s.points?.length > 0) {
+              const path = makePathFromPoints(s.points);
+              try {
+                path.close();
+              } catch {}
+              const fillNode = (
+                <Path
+                  key={`${layer.id}-${s.id}-fill`}
+                  path={path}
+                  color={makeRGBA(s.fillColor || "#ffffff", 1)}
+                  style="fill"
+                />
+              );
+              const dx = s?.tempOffset?.dx || 0;
+              const dy = s?.tempOffset?.dy || 0;
+              return dx || dy ? (
+                <Group
+                  key={`${layer.id}-${s.id}-fill-wrap`}
+                  transform={[{ translateX: dx }, { translateY: dy }]}
+                >
+                  {fillNode}
+                </Group>
+              ) : (
+                fillNode
+              );
+            }
+            return null;
+          })
+      )}
 
       {/* Stroke + Text + Effect layer */}
       <Group layer>
         {visibleStrokes &&
-          visibleStrokes.map((s, index) => renderStroke(s, index))}
+          visibleStrokes.map((s, index) => {
+            const node = renderStroke(s, index);
+            if (!node) return null;
+            const vo = visualOffsets?.[s.id];
+            const dx = (vo?.dx ?? s?.tempOffset?.dx) || 0;
+            const dy = (vo?.dy ?? s?.tempOffset?.dy) || 0;
+            return dx || dy ? (
+              <Group
+                key={`${s.id}-wrap`}
+                transform={[{ translateX: dx }, { translateY: dy }]}
+              >
+                {node}
+              </Group>
+            ) : (
+              node
+            );
+          })}
 
         {/* Realtime text preview */}
         {realtimeText &&
@@ -902,6 +945,72 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             }
 
             return <Group key="rt-text-preview">{elements}</Group>;
+          })()}
+
+        {tool === "lasso" &&
+          Array.isArray(currentPoints) &&
+          currentPoints.length > 1 &&
+          (() => {
+            const pts = currentPoints;
+            const dashLength = 6;
+            const gapLength = 4;
+            const paths = [];
+
+            for (let i = 0; i < pts.length - 1; i++) {
+              const p1 = pts[i];
+              const p2 = pts[i + 1];
+              const dx = p2.x - p1.x;
+              const dy = p2.y - p1.y;
+              const segLen = Math.sqrt(dx * dx + dy * dy);
+              let offset = 0;
+              while (offset < segLen) {
+                const start = offset;
+                const end = Math.min(offset + dashLength, segLen);
+                const t1 = start / segLen;
+                const t2 = end / segLen;
+                const x1 = p1.x + dx * t1;
+                const y1 = p1.y + dy * t1;
+                const x2 = p1.x + dx * t2;
+                const y2 = p1.y + dy * t2;
+
+                const path = Skia.Path.Make();
+                path.moveTo(x1, y1);
+                path.lineTo(x2, y2);
+                paths.push(
+                  <Path
+                    key={`lasso-${i}-${offset}`}
+                    path={path}
+                    color="#00BCD4"
+                    strokeWidth={1.4}
+                    style="stroke"
+                    strokeCap="round"
+                  />
+                );
+
+                offset += dashLength + gapLength;
+              }
+            }
+
+            // Fill polygon translucent
+            const polyPath = Skia.Path.Make();
+            if (pts.length > 0) {
+              polyPath.moveTo(pts[0].x, pts[0].y);
+              for (let i = 1; i < pts.length; i++)
+                polyPath.lineTo(pts[i].x, pts[i].y);
+              try {
+                polyPath.close();
+              } catch {}
+            }
+            paths.push(
+              <Path
+                key="lasso-fill"
+                path={polyPath}
+                color="rgba(0,188,212,0.08)"
+                style="fill"
+              />
+            );
+
+            return paths;
           })()}
 
         {/* Preview hiện tại */}
