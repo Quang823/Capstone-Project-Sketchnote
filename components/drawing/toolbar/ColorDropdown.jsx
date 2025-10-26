@@ -13,7 +13,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import Slider from "@react-native-community/slider";
 import Popover from "react-native-popover-view";
 import { COLOR_SETS } from "./constants";
-import throttle from "lodash/throttle";
 
 // Hàm chuyển HSV → HEX
 function hsvToHex(h, s, v) {
@@ -99,15 +98,15 @@ export default function ColorDropdownCompact({
   const [value, setValue] = useState(100);
   const [opacity, setOpacity] = useState(100);
   const [boxSize, setBoxSize] = useState({ width: 250, height: 140 });
-  const cursorAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
-  // ⚡ Throttle state update để giảm lag
-  const throttledSetSV = useRef(
-    throttle((s, v) => {
-      setSaturation(s);
-      setValue(v);
-    }, 30)
-  ).current;
+  const cursorAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const lastSVRef = useRef({ s: 100, v: 100 });
+  const framePendingRef = useRef(false);
+
+  // ref để đo vị trí tuyệt đối của gradient box
+  const boxRef = useRef(null);
+  // lưu vị trí tuyệt đối và kích thước
+  const boxLayoutRef = useRef({ x: 0, y: 0, width: 250, height: 140 });
 
   useEffect(() => {
     if (visible && selectedColor) {
@@ -130,31 +129,81 @@ export default function ColorDropdownCompact({
       setSaturation(s);
       setValue(v);
       setOpacity(initOpacity);
+      // set cursor position based on boxSize (center)
       cursorAnim.setValue({
         x: (s / 100) * boxSize.width,
         y: (1 - v / 100) * boxSize.height,
       });
+      lastSVRef.current = { s, v };
     }
   }, [visible, selectedColor]);
 
+  // update cursor + state (throttle bằng requestAnimationFrame)
   const updateCursor = (x, y) => {
-    x = Math.max(0, Math.min(x, boxSize.width));
-    y = Math.max(0, Math.min(y, boxSize.height));
-    cursorAnim.setValue({ x, y }); // cursor luôn mượt nhờ Animated
+    // clamp x,y
+    const w = boxLayoutRef.current.width || boxSize.width;
+    const h = boxLayoutRef.current.height || boxSize.height;
+    const cx = Math.max(0, Math.min(x, w));
+    const cy = Math.max(0, Math.min(y, h));
 
-    const s = Math.round((x / boxSize.width) * 100);
-    const v = Math.round(100 - (y / boxSize.height) * 100);
+    // move animated cursor ngay lập tức (mượt)
+    cursorAnim.setValue({ x: cx, y: cy });
 
-    throttledSetSV(s, v); // state update được throttle
+    const s = Math.round((cx / w) * 100);
+    const v = Math.round(100 - (cy / h) * 100);
+
+    // ignore tiny fluctuations (<2) để tránh nhảy do rounding/frequency
+    const { s: ls, v: lv } = lastSVRef.current;
+    if (Math.abs(s - ls) < 2 && Math.abs(v - lv) < 2) return;
+    lastSVRef.current = { s, v };
+
+    if (!framePendingRef.current) {
+      framePendingRef.current = true;
+      requestAnimationFrame(() => {
+        framePendingRef.current = false;
+        const { s: ns, v: nv } = lastSVRef.current;
+        setSaturation(ns);
+        setValue(nv);
+      });
+    }
   };
 
+  // PanResponder: sử dụng pageX/pageY nếu có, fallback về locationX
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: (e) =>
-      updateCursor(e.nativeEvent.locationX, e.nativeEvent.locationY),
-    onPanResponderMove: (e) =>
-      updateCursor(e.nativeEvent.locationX, e.nativeEvent.locationY),
+    onPanResponderGrant: (e) => {
+      // đo lại vị trí view trên màn hình để bám chắc tọa độ tuyệt đối
+      if (boxRef.current && boxRef.current.measureInWindow) {
+        boxRef.current.measureInWindow((px, py, w, h) => {
+          boxLayoutRef.current = { x: px, y: py, width: w, height: h };
+          // compute relative coordinates
+          const pageX = e.nativeEvent.pageX ?? e.nativeEvent.locationX + px;
+          const pageY = e.nativeEvent.pageY ?? e.nativeEvent.locationY + py;
+          const relX = pageX - px;
+          const relY = pageY - py;
+          updateCursor(relX, relY);
+        });
+      } else {
+        // fallback
+        const locX = e.nativeEvent.locationX ?? 0;
+        const locY = e.nativeEvent.locationY ?? 0;
+        updateCursor(locX, locY);
+      }
+    },
+    onPanResponderMove: (e) => {
+      // prefer pageX/pageY for stability
+      const px = boxLayoutRef.current.x;
+      const py = boxLayoutRef.current.y;
+      const pageX = e.nativeEvent.pageX ?? e.nativeEvent.locationX + px;
+      const pageY = e.nativeEvent.pageY ?? e.nativeEvent.locationY + py;
+      const relX = pageX - px;
+      const relY = pageY - py;
+      updateCursor(relX, relY);
+    },
+    onPanResponderRelease: () => {
+      // nothing special
+    },
   });
 
   const handleApply = () => {
@@ -201,6 +250,15 @@ export default function ColorDropdownCompact({
                         setHue(h);
                         setSaturation(s);
                         setValue(v);
+                        // update cursor position when user edits hex
+                        const w = boxLayoutRef.current.width || boxSize.width;
+                        const hgt =
+                          boxLayoutRef.current.height || boxSize.height;
+                        cursorAnim.setValue({
+                          x: (s / 100) * w,
+                          y: (1 - v / 100) * hgt,
+                        });
+                        lastSVRef.current = { s, v };
                       }
                     }}
                   />
@@ -216,9 +274,34 @@ export default function ColorDropdownCompact({
 
             {/* gradient box */}
             <View
+              ref={boxRef}
               style={s.gradientBox}
               {...panResponder.panHandlers}
-              onLayout={(e) => setBoxSize(e.nativeEvent.layout)}
+              onLayout={(e) => {
+                const layout = e.nativeEvent.layout;
+                setBoxSize({ width: layout.width, height: layout.height });
+                // measure absolute pos to be robust against nesting/scroll
+                if (boxRef.current && boxRef.current.measureInWindow) {
+                  // small timeout ensures layout stabilized on some devices
+                  setTimeout(() => {
+                    boxRef.current.measureInWindow((px, py, w, h) => {
+                      boxLayoutRef.current = {
+                        x: px,
+                        y: py,
+                        width: w,
+                        height: h,
+                      };
+                    });
+                  }, 0);
+                } else {
+                  boxLayoutRef.current = {
+                    x: layout.x,
+                    y: layout.y,
+                    width: layout.width,
+                    height: layout.height,
+                  };
+                }
+              }}
             >
               <LinearGradient
                 colors={["#fff", `hsl(${hue},100%,50%)`]}
@@ -240,6 +323,7 @@ export default function ColorDropdownCompact({
                     backgroundColor: previewHex,
                   },
                 ]}
+                pointerEvents="none"
               />
             </View>
 

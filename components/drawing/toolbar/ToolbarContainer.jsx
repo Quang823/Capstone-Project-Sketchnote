@@ -17,6 +17,7 @@ export default function ToolbarContainer({
   setColor,
   strokeWidth,
   setStrokeWidth,
+  onSelectBaseWidth,
 
   onUndo,
   onRedo,
@@ -38,6 +39,22 @@ export default function ToolbarContainer({
   // 🎨 ===== COLOR STATE =====
   const [colors, setColors] = useState(DEFAULT_COLORS);
   const [selectedColor, setSelectedColor] = useState(color ?? colors[0]);
+
+  // 🖊️ Remember last selected pen sub-tool
+  const PEN_TOOLS = [
+    "pen",
+    "pencil",
+    "brush",
+    "calligraphy",
+    "highlighter",
+    "marker",
+    "airbrush",
+    "crayon",
+  ];
+  const [lastPenTool, setLastPenTool] = useState("pen");
+  useEffect(() => {
+    if (PEN_TOOLS.includes(tool)) setLastPenTool(tool);
+  }, [tool]);
 
   // Đồng bộ nếu prop color thay đổi từ bên ngoài
   useEffect(() => {
@@ -104,6 +121,7 @@ export default function ToolbarContainer({
               color={ICON_COLOR}
             />
           }
+          lastSelected={lastPenTool}
           options={[
             {
               name: "pen",
@@ -155,6 +173,39 @@ export default function ToolbarContainer({
               icon: (
                 <MaterialCommunityIcons
                   name="marker"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
+              ),
+            },
+            {
+              name: "marker",
+              label: "Marker",
+              icon: (
+                <MaterialCommunityIcons
+                  name="marker-check"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
+              ),
+            },
+            {
+              name: "airbrush",
+              label: "Airbrush",
+              icon: (
+                <MaterialCommunityIcons
+                  name="spray"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
+              ),
+            },
+            {
+              name: "crayon",
+              label: "Crayon",
+              icon: (
+                <MaterialCommunityIcons
+                  name="pencil"
                   size={ICON_SIZE}
                   color={ICON_COLOR}
                 />
@@ -614,6 +665,9 @@ export default function ToolbarContainer({
           "brush",
           "calligraphy",
           "highlighter",
+          "marker",
+          "airbrush",
+          "crayon",
           "fill",
         ].includes(tool) && (
           <ColorPalette
@@ -671,7 +725,9 @@ export default function ToolbarContainer({
                     />
                   }
                   active={strokeWidth === size}
-                  onPress={() => setStrokeWidth(size)}
+                  onPress={() =>
+                    (onSelectBaseWidth ? onSelectBaseWidth(size) : setStrokeWidth(size))
+                  }
                 />
               ))}
         </View>
