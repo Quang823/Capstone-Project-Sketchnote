@@ -231,6 +231,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     stabilization = 0,
     realtimeText,
     onSelectImage,
+    imageRefs,
   },
   ref
 ) {
@@ -287,6 +288,12 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       return (
         <CanvasImage
           key={s.id}
+          ref={(ref) => {
+            if (imageRefs && typeof imageRefs === "object") {
+              if (ref) imageRefs.current.set(s.id, ref);
+              else imageRefs.current.delete(s.id);
+            }
+          }}
           stroke={s}
           selectedId={selectedId}
           onSelectImage={onSelectImage}
@@ -554,7 +561,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         baseOpacity = 0.9;
         blendMode = "srcOver";
       } else if (s.tool === "highlighter") {
-        baseOpacity = 0.4;
+        baseOpacity = 0.3;
         blendMode = "multiply";
       } else if (s.tool === "eraser") {
         blendMode = "dstOut";
@@ -582,22 +589,32 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             <Path
               key={`${s.id}-outer`}
               path={path}
-              color={makeRGBA(strokeColor, 0.9)}
-              strokeWidth={effWidth * 1.4}
-              style="stroke"
-              strokeCap="round"
-              strokeJoin="round"
-              blendMode="overlay"
-            />
-            <Path
-              key={`${s.id}-inner`}
-              path={path}
-              color={makeRGBA(strokeColor, 0.4)}
-              strokeWidth={effWidth * 0.8}
+              color={makeRGBA(strokeColor, 0.5)}
+              strokeWidth={effWidth * 1.5}
               style="stroke"
               strokeCap="round"
               strokeJoin="round"
               blendMode="srcOver"
+            />
+            <Path
+              key={`${s.id}-inner`}
+              path={path}
+              color={makeRGBA(strokeColor, 0.9)}
+              strokeWidth={effWidth * 0.85}
+              style="stroke"
+              strokeCap="round"
+              strokeJoin="round"
+              blendMode="srcOver"
+            />
+            <Path
+              key={`${s.id}-glaze`}
+              path={path}
+              color={makeRGBA(strokeColor, 0.15)}
+              strokeWidth={effWidth * 2.1}
+              style="stroke"
+              strokeCap="round"
+              strokeJoin="round"
+              blendMode="overlay"
             />
           </Group>
         );
@@ -630,15 +647,18 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         );
       }
 
+      // Default stroke rendering (pen, pencil, highlighter, eraser, etc.)
+      const cap = s.tool === "highlighter" ? "butt" : "round";
+      const join = s.tool === "highlighter" ? "miter" : "round";
       return (
         <Path
           key={s.id}
           path={path}
-          color={strokeColor}
+          color={makeRGBA(strokeColor, baseOpacity)}
           strokeWidth={effWidth}
           style="stroke"
-          strokeCap="round"
-          strokeJoin="round"
+          strokeCap={cap}
+          strokeJoin={join}
           blendMode={blendMode}
         />
       );
@@ -1055,22 +1075,32 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   <Path
                     key="brush-outer"
                     path={basePath}
-                    color={makeRGBA(color, 0.9)}
-                    strokeWidth={effWidth * 1.4}
-                    style="stroke"
-                    strokeCap="round"
-                    strokeJoin="round"
-                    blendMode="overlay"
-                  />
-                  <Path
-                    key="brush-inner"
-                    path={basePath}
-                    color={makeRGBA(color, 0.4)}
-                    strokeWidth={effWidth * 0.8}
+                    color={makeRGBA(color, 0.5)}
+                    strokeWidth={effWidth * 1.5}
                     style="stroke"
                     strokeCap="round"
                     strokeJoin="round"
                     blendMode="srcOver"
+                  />
+                  <Path
+                    key="brush-inner"
+                    path={basePath}
+                    color={makeRGBA(color, 0.9)}
+                    strokeWidth={effWidth * 0.85}
+                    style="stroke"
+                    strokeCap="round"
+                    strokeJoin="round"
+                    blendMode="srcOver"
+                  />
+                  <Path
+                    key="brush-glaze"
+                    path={basePath}
+                    color={makeRGBA(color, 0.15)}
+                    strokeWidth={effWidth * 2.1}
+                    style="stroke"
+                    strokeCap="round"
+                    strokeJoin="round"
+                    blendMode="overlay"
                   />
                 </Group>
               );
@@ -1103,6 +1133,9 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               );
             }
 
+            // Generic preview (pen/pencil/highlighter...)
+            const capPrev = tool === "highlighter" ? "butt" : "round";
+            const joinPrev = tool === "highlighter" ? "miter" : "round";
             return (
               <Path
                 key="current"
@@ -1110,23 +1143,22 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 color={makeRGBA(previewColor, previewOpacity)}
                 strokeWidth={effWidth}
                 style="stroke"
-                strokeCap="round"
-                strokeJoin="round"
+                strokeCap={capPrev}
+                strokeJoin={joinPrev}
                 blendMode={previewBlend}
               />
             );
           })()}
 
-        {currentPoints?.length > 0 &&
-          (tool === "brush" || tool === "calligraphy") && (
+        {currentPoints?.length > 0 && tool === "calligraphy" && (
             <Path
               key="current-soft"
               path={makePathFromPoints(
                 smoothPoints(currentPoints, stabilization)
               )}
-              color={makeRGBA(color, tool === "brush" ? 0.6 : 0.9)}
+              color={makeRGBA(color, 0.9)}
               strokeWidth={computeEffectiveWidth(
-                tool === "brush" ? brushWidth || 1 : calligraphyWidth || 1,
+                calligraphyWidth || 1,
                 thickness,
                 pressure
               )}

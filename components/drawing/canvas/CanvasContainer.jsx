@@ -23,6 +23,7 @@ import Animated, {
   withTiming,
   runOnJS,
   useDerivedValue,
+  useAnimatedReaction,
 } from "react-native-reanimated";
 import * as FileSystem from "expo-file-system";
 import { Dimensions } from "react-native";
@@ -54,6 +55,13 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   },
   ref
 ) {
+  const imageRefs = useRef(new Map());
+  const liveUpdateStroke = (strokeId, partial) => {
+    const ref = imageRefs.current.get(strokeId);
+    if (ref && typeof ref.setLiveTransform === "function") {
+      ref.setLiveTransform(partial);
+    }
+  };
   const { width, height } = useWindowDimensions();
   const PAGE_WIDTH = width - PAGE_MARGIN_H * 2;
   const PAGE_HEIGHT = Math.round(PAGE_WIDTH * Math.SQRT2);
@@ -217,10 +225,13 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   }));
 
   const derivedZoom = useDerivedValue(() => Math.round(scale.value * 100));
-  useEffect(() => {
-    const id = setInterval(() => setZoomPercent(derivedZoom.value), 80);
-    return () => clearInterval(id);
-  }, [derivedZoom]);
+  // Update zoomPercent react state from UI thread without reading .value in JS
+  useAnimatedReaction(
+    () => derivedZoom.value,
+    (val, prev) => {
+      if (val !== prev) runOnJS(setZoomPercent)(val);
+    }
+  );
 
   // ====== Helpers ======
   const pushUndo = (action) => {
@@ -591,6 +602,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             activeLayerId={activeLayerId}
             onAddStroke={addStrokeInternal}
             onModifyStroke={modifyStrokeAt}
+            onLiveUpdateStroke={liveUpdateStroke}
             onModifyStrokesBulk={modifyStrokesBulk}
             onDeleteStroke={deleteStrokeAt}
             onSelectStroke={(id) => setSelectedId(id)}
@@ -622,6 +634,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               // ✅ Render tất cả layer visible thay vì 1 mảng strokes
               layers={visibleLayers}
               selectedId={selectedId}
+              imageRefs={imageRefs}
               realtimeText={realtimeText}
               currentPoints={currentPoints}
               tool={tool}

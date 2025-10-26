@@ -10,7 +10,7 @@ export default function PaymentFailedScreen() {
   const { code, id, cancel, status, orderCode } = route.params || {};
 
   useEffect(() => {
-    console.log("Payment Failed Screen - Params:", route.params);
+    
   }, [route.params]);
 
   return (

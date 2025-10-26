@@ -1,4 +1,11 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
+import { useAnimatedReaction, runOnJS } from "react-native-reanimated";
 import {
   Alert,
   Modal,
@@ -25,7 +32,6 @@ import LassoSelectionBox from "../lasso/LassoSelectionBox";
 import useLassoTransform from "../../../hooks/useLassoTransform";
 
 import debounce from "lodash/debounce";
-import { useMemo } from "react";
 
 export default function GestureHandler({
   page,
@@ -54,6 +60,7 @@ export default function GestureHandler({
   zoomState,
   onSelectStroke,
   activeLayerId,
+  onLiveUpdateStroke,
 }) {
   const liveRef = useRef([]);
   const rafScheduled = useRef(false);
@@ -87,6 +94,19 @@ export default function GestureHandler({
   const [lassoBaseBox, setLassoBaseBox] = useState(null);
   const [lassoVisualOffset, setLassoVisualOffset] = useState({ dx: 0, dy: 0 });
   const [visualOffsets, setVisualOffsets] = useState({});
+
+  // Mirror zoom shared values into React state to avoid reading .value in render
+  const [zoomMirror, setZoomMirror] = useState({ scale: 1, x: 0, y: 0 });
+  useAnimatedReaction(
+    () => ({
+      s: zoomState?.scale?.value ?? 1,
+      x: zoomState?.translateX?.value ?? 0,
+      y: zoomState?.translateY?.value ?? 0,
+    }),
+    (vals) => {
+      runOnJS(setZoomMirror)({ scale: vals.s, x: vals.x, y: vals.y });
+    }
+  );
 
   useEffect(() => {
     if (
@@ -125,7 +145,39 @@ export default function GestureHandler({
       rotation: selectedStroke.rotation ?? 0,
     });
   }, [selectedStroke]);
+  const liveTransformRef = useRef({
+    dx: 0,
+    dy: 0,
+    dw: 0,
+    dh: 0,
+    drot: 0,
+    origin: null,
+  });
 
+  // Nếu bạn có prop onLiveUpdateStroke (từ CanvasContainer), nó sẽ được gọi nhiều lần để update live (Skia).
+  // Nếu không có, chúng ta vẫn dùng liveTransformRef để accumulate và commit on end.
+  // Khi selectedStroke thay đổi (chọn 1 image mới) -> reset origin
+  useEffect(() => {
+    if (
+      selectedStroke &&
+      (selectedStroke.tool === "image" || selectedStroke.tool === "sticker")
+    ) {
+      liveTransformRef.current.origin = {
+        x: selectedStroke.x ?? 0,
+        y: selectedStroke.y ?? 0,
+        width: selectedStroke.width ?? 0,
+        height: selectedStroke.height ?? 0,
+        rotation: selectedStroke.rotation ?? 0,
+      };
+      liveTransformRef.current.dx = 0;
+      liveTransformRef.current.dy = 0;
+      liveTransformRef.current.dw = 0;
+      liveTransformRef.current.dh = 0;
+      liveTransformRef.current.drot = 0;
+    } else {
+      liveTransformRef.current.origin = null;
+    }
+  }, [selectedStroke?.id]);
   const handleTextChange = useCallback(
     (data) => {
       if (!selectedId || !Array.isArray(strokes)) return;
@@ -1387,53 +1439,179 @@ export default function GestureHandler({
           <>
             <ImageTransformBox
               {...selectedBox}
-              x={selectedStroke.x}
-              y={selectedStroke.y}
-              width={selectedStroke.width}
-              height={selectedStroke.height}
-              rotation={selectedStroke?.rotation ?? 0}
+              scale={zoomMirror.scale}
+              pan={{
+                x: zoomMirror.x,
+                y: zoomMirror.y,
+              }}
+              onMoveStart={() => {
+                const s = strokes.find((it) => it.id === selectedId);
+                if (s) {
+                  liveTransformRef.current.origin = {
+                    x: s.x ?? 0,
+                    y: s.y ?? 0,
+                    rotation: s.rotation ?? 0,
+                  };
+                } else if (selectedBox) {
+                  liveTransformRef.current.origin = {
+                    x: selectedBox.x ?? 0,
+                    y: selectedBox.y ?? 0,
+                    rotation: selectedBox.rotation ?? 0,
+                  };
+                }
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+                liveTransformRef.current.drot = 0;
+              }}
               onMove={(dx, dy) => {
-                const index = strokes.findIndex((s) => s.id === selectedId);
-                if (index !== -1)
-                  modifyStroke(index, {
-                    x: (strokes[index].x ?? 0) + dx,
-                    y: (strokes[index].y ?? 0) + dy,
-                  });
+                if (!selectedId) return;
 
-                setSelectedBox((b) => ({ ...b, x: b.x + dx, y: b.y + dy }));
+                // update selection box UI
+                setSelectedBox((b) =>
+                  b ? { ...b, x: b.x + dx, y: b.y + dy } : b
+                );
+
+                // accumulate delta into ref
+                liveTransformRef.current.dx =
+                  (liveTransformRef.current.dx || 0) + dx;
+                liveTransformRef.current.dy =
+                  (liveTransformRef.current.dy || 0) + dy;
+
+                // propagate live update (if parent supports it)
+                if (
+                  typeof onLiveUpdateStroke === "function" &&
+                  liveTransformRef.current.origin
+                ) {
+                  const origin = liveTransformRef.current.origin;
+                  onLiveUpdateStroke(selectedId, {
+                    x: (origin.x ?? 0) + (liveTransformRef.current.dx || 0),
+                    y: (origin.y ?? 0) + (liveTransformRef.current.dy || 0),
+                  });
+                }
+              }}
+              // on release / end - commit once
+              onMoveEnd={() => {
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1) {
+                  const s = strokes[index];
+                  const final = {
+                    ...s,
+                    x: (s.x ?? 0) + (liveTransformRef.current.dx || 0),
+                    y: (s.y ?? 0) + (liveTransformRef.current.dy || 0),
+                    width: (s.width ?? 0) + (liveTransformRef.current.dw || 0),
+                    height:
+                      (s.height ?? 0) + (liveTransformRef.current.dh || 0),
+                    rotation:
+                      (s.rotation ?? 0) + (liveTransformRef.current.drot || 0),
+                  };
+                  if (typeof onModifyStroke === "function")
+                    onModifyStroke(index, final);
+                }
+                // reset accumulators
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+                liveTransformRef.current.drot = 0;
+              }}
+              onResizeStart={(corner) => {
+                const s = strokes.find((it) => it.id === selectedId);
+                const base = s || selectedBox || {};
+                // fallback width/height để tránh 0 hoặc undefined
+                const baseWidth =
+                  base.width && base.width > 0
+                    ? base.width
+                    : s?.naturalWidth || selectedBox?.width || 100;
+                const baseHeight =
+                  base.height && base.height > 0
+                    ? base.height
+                    : s?.naturalHeight || selectedBox?.height || 100;
+
+                liveTransformRef.current.origin = {
+                  x: Number.isFinite(base.x) ? base.x : 0,
+                  y: Number.isFinite(base.y) ? base.y : 0,
+                  width: baseWidth,
+                  height: baseHeight,
+                  rotation: base.rotation ?? 0,
+                };
+                liveTransformRef.current.corner = corner;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
               }}
               onResize={(corner, dx, dy) => {
-                const s = strokes.find((s) => s.id === selectedId);
-                if (!s) return;
-                const ratio = s.width / s.height;
-                let newWidth = s.width;
-                let newHeight = s.height;
-                let newX = s.x;
-                let newY = s.y;
+                const o = liveTransformRef.current.origin;
+                if (!o) return;
 
+                // Nếu ImageTransformBox truyền deltas đã scale -> dùng trực tiếp.
+                // Nếu không chắc, bạn có thể thử chia cho scale: dx/scale (nếu cần).
+                // Mình giả định ImageTransformBox đã trả về deltas ở cùng hệ với origin.
+
+                const ratio = (o.width || 1) / (o.height || 1);
+                let newWidth = o.width;
+                let newHeight = o.height;
+                let newX = o.x;
+                let newY = o.y;
+
+                // NOTE: convention: dx positive = pointer moved right; dy positive = pointer moved down.
                 switch (corner) {
                   case "br":
-                    newWidth = Math.max(20, s.width + dx);
-                    newHeight = newWidth / ratio;
+                    newWidth = Math.max(20, o.width + dx);
+                    newHeight = Math.max(20, newWidth / ratio);
                     break;
                   case "tr":
-                    newWidth = Math.max(20, s.width + dx);
-                    newHeight = newWidth / ratio;
-                    newY -= newHeight - s.height;
+                    newWidth = Math.max(20, o.width + dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    newY = o.y - (newHeight - o.height);
                     break;
                   case "bl":
-                    newWidth = Math.max(20, s.width - dx);
-                    newHeight = newWidth / ratio;
-                    newX += dx;
+                    // left corners: dragging left (dx negative) should increase width
+                    newWidth = Math.max(20, o.width - dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    newX = o.x + dx;
                     break;
                   case "tl":
-                    newWidth = Math.max(20, s.width - dx);
-                    newHeight = newWidth / ratio;
-                    newX += dx;
-                    newY -= newHeight - s.height;
+                    newWidth = Math.max(20, o.width - dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    newX = o.x + dx;
+                    newY = o.y - (newHeight - o.height);
                     break;
                 }
 
+                liveTransformRef.current.dw = newWidth - o.width;
+                liveTransformRef.current.dh = newHeight - o.height;
+                liveTransformRef.current.dx = newX - o.x;
+                liveTransformRef.current.dy = newY - o.y;
+
+                // Update selection box UI immediately
+                setSelectedBox((box) =>
+                  box
+                    ? {
+                        ...box,
+                        x: newX,
+                        y: newY,
+                        width: newWidth,
+                        height: newHeight,
+                      }
+                    : box
+                );
+
+                // If parent supports fast live update (Skia), call it
+                if (typeof onLiveUpdateStroke === "function" && selectedId) {
+                  onLiveUpdateStroke(selectedId, {
+                    x: newX,
+                    y: newY,
+                    width: newWidth,
+                    height: newHeight,
+                  });
+                  // do NOT call onModifyStroke here (we rely on Skia live)
+                  return;
+                }
+
+                // Fallback: emit a transient onModifyStroke so image updates visually during resize
                 const index = strokes.findIndex((s) => s.id === selectedId);
                 if (index !== -1 && typeof onModifyStroke === "function") {
                   onModifyStroke(index, {
@@ -1441,24 +1619,67 @@ export default function GestureHandler({
                     y: newY,
                     width: newWidth,
                     height: newHeight,
+                    __transient: true, // parent can treat transient updates lightweight
                   });
                 }
-
-                setSelectedBox({
-                  ...selectedBox,
-                  x: newX,
-                  y: newY,
-                  width: newWidth,
-                  height: newHeight,
-                });
+              }}
+              onResizeEnd={() => {
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1) {
+                  const s = strokes[index];
+                  const o = liveTransformRef.current.origin || s;
+                  const final = {
+                    ...s,
+                    x: (o.x ?? 0) + (liveTransformRef.current.dx || 0),
+                    y: (o.y ?? 0) + (liveTransformRef.current.dy || 0),
+                    width: (o.width ?? 0) + (liveTransformRef.current.dw || 0),
+                    height:
+                      (o.height ?? 0) + (liveTransformRef.current.dh || 0),
+                  };
+                  if (typeof onModifyStroke === "function")
+                    onModifyStroke(index, final); // final commit (no __transient)
+                }
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+              }}
+              onRotateStart={() => {
+                const s = strokes.find((it) => it.id === selectedId);
+                const base = s || selectedBox;
+                liveTransformRef.current.origin = {
+                  ...(liveTransformRef.current.origin || {}),
+                  rotation: base?.rotation ?? 0,
+                };
+                liveTransformRef.current.drot = 0;
               }}
               onRotate={(rot) => {
+                const originRot =
+                  liveTransformRef.current.origin?.rotation || 0;
+                liveTransformRef.current.drot = rot - originRot;
+                setSelectedBox((b) => (b ? { ...b, rotation: rot } : b));
+                // live update rotation for the image
+                if (typeof onLiveUpdateStroke === "function" && selectedId) {
+                  onLiveUpdateStroke(selectedId, { rotation: rot });
+                }
+              }}
+              onRotateEnd={() => {
                 const index = strokes.findIndex((s) => s.id === selectedId);
-                if (index !== -1 && typeof onModifyStroke === "function")
-                  onModifyStroke(index, { rotation: rot });
-                setSelectedBox((b) => ({ ...b, rotation: rot }));
+                if (index !== -1) {
+                  const s = strokes[index];
+                  const originRot =
+                    liveTransformRef.current.origin?.rotation ||
+                    s.rotation ||
+                    0;
+                  const finalRot =
+                    originRot + (liveTransformRef.current.drot || 0);
+                  if (typeof onModifyStroke === "function")
+                    onModifyStroke(index, { rotation: finalRot });
+                }
+                liveTransformRef.current.drot = 0;
               }}
             />
+
             <ImageSelectionBox
               {...selectedBox}
               onCopy={() => {

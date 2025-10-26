@@ -182,7 +182,6 @@ export default function DrawingScreen() {
       }
 
       const results = JSON.parse(savedResults);
-      console.log("📂 File đã upload:", results);
 
       // 🔹 Lấy trang đầu tiên (hoặc bạn có thể load tất cả vòng lặp)
       const firstFile = results[0];
@@ -227,7 +226,6 @@ export default function DrawingScreen() {
       );
 
       Alert.alert("✅ Export success", `File saved: ${uri}`);
-      console.log("📄 Exported file:", uri, type);
     } catch (err) {
       console.error("❌ [DrawingScreen] Export error:", err);
       Alert.alert("Export Error", err.message || "Export failed");
@@ -237,7 +235,7 @@ export default function DrawingScreen() {
   // 🖼 ===== INSERT IMAGE FROM GALLERY =====
   const handleInsertImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: "images",
       allowsEditing: false,
       quality: 1,
       exif: true, // ✅ Lấy EXIF data
@@ -453,10 +451,10 @@ export default function DrawingScreen() {
         onToggleToolbar={() => setToolbarVisible((v) => !v)}
         onTogglePenType={() => setIsPenMode((prev) => !prev)}
         onLayers={() => setShowLayerPanel((prev) => !prev)}
-        onAddPage={() => console.log("Add page")}
-        onPreview={() => console.log("Document preview")}
-        onSettings={() => console.log("Open settings")}
-        onMore={() => console.log("More options")}
+        onAddPage={() => {}}
+        onPreview={() => {}}
+        onSettings={() => {}}
+        onMore={() => {}}
       />
       {showLayerPanel && (
         <LayerPanel
