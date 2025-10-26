@@ -27,7 +27,6 @@ export const projectService = {
 
       const { uploadUrl, strokeUrl } = presignRes.data.result;
 
-      console.log("📦 Presigned URL nhận được:", uploadUrl);
 
       // 🟢 B2: Upload dữ liệu JSON lên S3 bằng fetch PUT
       const putRes = await fetch(uploadUrl, {
@@ -41,7 +40,7 @@ export const projectService = {
         throw new Error(`Upload failed: ${putRes.status} - ${errText}`);
       }
 
-      console.log(`✅ Upload ${fileName} thành công → ${strokeUrl}`);
+      
       return strokeUrl;
     } catch (err) {
       console.error(`❌ Upload ${fileName} thất bại:`, err);
@@ -51,7 +50,6 @@ export const projectService = {
 
   getProjectFile: async (url) => {
     try {
-      console.log("📥 Fetching JSON from:", url);
       const res = await fetch(url, {
         method: "GET",
         headers: {
@@ -65,9 +63,7 @@ export const projectService = {
       }
 
       const text = await res.text(); // đọc raw text để kiểm tra CORS
-      console.log("📄 Raw JSON text:", text.slice(0, 200));
       const data = JSON.parse(text);
-      console.log("📘 Parsed JSON:", data);
       return data;
     } catch (err) {
       console.error("❌ Lỗi tải JSON:", err);

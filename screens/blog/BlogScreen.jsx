@@ -45,8 +45,7 @@ export default function BlogScreen() {
   const fetchBlogs = async () => {
     try {
       const data = await blogService.getAllBlogs();
-      console.log("Fetched blogs:", data);
-      
+
      const transformedBlogs = data.map((blog) => ({
   id: blog.id.toString(),
   title: blog.title,

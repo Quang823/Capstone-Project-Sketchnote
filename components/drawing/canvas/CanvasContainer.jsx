@@ -23,6 +23,7 @@ import Animated, {
   withTiming,
   runOnJS,
   useDerivedValue,
+  useAnimatedReaction,
 } from "react-native-reanimated";
 import * as FileSystem from "expo-file-system";
 import { Dimensions } from "react-native";
@@ -34,6 +35,9 @@ const PAGE_BOTTOM_SPACER = 64;
 const CanvasContainer = forwardRef(function CanvasContainer(
   {
     tool,
+    layers,
+    activeLayerId,
+    setLayers,
     color,
     strokeWidth,
     pencilWidth,
@@ -51,6 +55,13 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   },
   ref
 ) {
+  const imageRefs = useRef(new Map());
+  const liveUpdateStroke = (strokeId, partial) => {
+    const ref = imageRefs.current.get(strokeId);
+    if (ref && typeof ref.setLiveTransform === "function") {
+      ref.setLiveTransform(partial);
+    }
+  };
   const { width, height } = useWindowDimensions();
   const PAGE_WIDTH = width - PAGE_MARGIN_H * 2;
   const PAGE_HEIGHT = Math.round(PAGE_WIDTH * Math.SQRT2);
@@ -75,6 +86,28 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     stabilization: 0.2,
   };
 
+  const modifyStrokesBulk = (updates = [], options = {}) => {
+    const isTransient = !!options.transient;
+    updateActiveLayer((strokes = []) => {
+      if (!Array.isArray(strokes) || strokes.length === 0) return strokes;
+      if (!Array.isArray(updates) || updates.length === 0) return strokes;
+      const next = [...strokes];
+      updates.forEach((u) => {
+        const idx = u?.index;
+        const changes = u?.changes || {};
+        if (typeof idx !== "number" || idx < 0 || idx >= next.length) return;
+        const old = next[idx];
+        const { __transient, ...clean } = changes;
+        next[idx] = { ...old, ...clean };
+      });
+      // For transient bulk updates, skip undo push
+      if (!isTransient) {
+        // Optional: push a single combined action; omitted to keep undo simple per-item via modifyStrokeAt
+      }
+      return next;
+    });
+  };
+
   const page = {
     x: PAGE_MARGIN_H,
     y: PAGE_MARGIN_TOP,
@@ -83,6 +116,38 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   };
   const canvasHeight = page.y + page.h + PAGE_BOTTOM_SPACER;
   const nextId = () => `s_${idCounter.current++}`;
+
+  //LAYERS MANAGEMENT
+  const [selectedId, setSelectedId] = useState(null);
+  useEffect(() => {
+    if (activeLayerId) {
+      console.log(`🟢 Active Layer: ${activeLayerId}`);
+    } else {
+      console.log("⚪ Chưa chọn layer nào!");
+    }
+  }, [activeLayerId]);
+
+  const getActiveLayer = () =>
+    layers.find((layer) => layer.id === activeLayerId);
+
+  const updateActiveLayer = (updateFn) => {
+    setLayers((prev) =>
+      prev.map((layer) => {
+        if (layer.id !== activeLayerId) return layer;
+        const safeStrokes = Array.isArray(layer.strokes) ? layer.strokes : [];
+        return { ...layer, strokes: updateFn(safeStrokes) };
+      })
+    );
+  };
+
+  const updateLayerById = (layerId, updateFn) => {
+    setLayers((prev) =>
+      prev.map((l) =>
+        l.id === layerId ? { ...l, strokes: updateFn(l.strokes) } : l
+      )
+    );
+  };
+  const visibleLayers = layers.filter((l) => l.visible);
 
   // ====== ZOOM / PAN ======
   const scale = useSharedValue(1);
@@ -160,39 +225,61 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   }));
 
   const derivedZoom = useDerivedValue(() => Math.round(scale.value * 100));
-  useEffect(() => {
-    const id = setInterval(() => setZoomPercent(derivedZoom.value), 80);
-    return () => clearInterval(id);
-  }, [derivedZoom]);
+  // Update zoomPercent react state from UI thread without reading .value in JS
+  useAnimatedReaction(
+    () => derivedZoom.value,
+    (val, prev) => {
+      if (val !== prev) runOnJS(setZoomPercent)(val);
+    }
+  );
 
   // ====== Helpers ======
   const pushUndo = (action) => {
-    setUndoStack((u) => [...u, action]);
+    setUndoStack((u) => [
+      ...u,
+      { ...action, layerId: action.layerId || activeLayerId },
+    ]);
     setRedoStack([]);
   };
 
   const addStrokeInternal = (stroke) => {
-    setStrokes((prev) => [...prev, stroke]);
-    pushUndo({ type: "add", stroke });
+    updateActiveLayer((strokes) => [...strokes, stroke]);
+    pushUndo({ type: "add", stroke, layerId: activeLayerId });
   };
 
   const deleteStrokeAt = (index) => {
-    setStrokes((prev) => {
-      if (index < 0 || index >= prev.length) return prev;
-      const removed = prev[index];
-      const next = [...prev.slice(0, index), ...prev.slice(index + 1)];
-      pushUndo({ type: "delete", index, stroke: removed });
-      return next;
+    updateActiveLayer((strokes) => {
+      if (index < 0 || index >= strokes.length) return strokes;
+      const removed = strokes[index];
+      pushUndo({
+        type: "delete",
+        index,
+        stroke: removed,
+        layerId: activeLayerId,
+      });
+      return [...strokes.slice(0, index), ...strokes.slice(index + 1)];
     });
   };
 
   const modifyStrokeAt = (index, newProps) => {
-    setStrokes((prev) => {
-      if (index < 0 || index >= prev.length) return prev;
-      const old = prev[index];
-      const updated = { ...old, ...newProps };
-      const next = [...prev.slice(0, index), updated, ...prev.slice(index + 1)];
-      pushUndo({ type: "modify", index, before: old, after: updated });
+    updateActiveLayer((strokes) => {
+      if (index < 0 || index >= strokes.length) return strokes;
+      const old = strokes[index];
+      const { __transient, ...cleanProps } = newProps || {};
+      const updated = { ...old, ...cleanProps };
+      if (!__transient) {
+        pushUndo({
+          type: "modify",
+          index,
+          before: old,
+          after: updated,
+          layerId: activeLayerId,
+        });
+      }
+      // avoid creating new array if not changing
+      if (updated === old) return strokes;
+      const next = [...strokes];
+      next[index] = updated;
       return next;
     });
   };
@@ -230,7 +317,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     return { x: finalX, y: finalY };
   };
 
-  const addImageStroke = async (uri, opts = {}) => {
+  const addImageStrokeInternal = async (uri, opts = {}) => {
     if (!uri) return;
 
     let safeUri = uri;
@@ -244,7 +331,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         safeUri = `file://${uri}`;
       }
 
-      const width = opts.width ?? 400; // default sensible size
+      const width = opts.width ?? 400;
       const height = opts.height ?? 400;
 
       const { x: cx, y: cy } = centerFor(
@@ -263,10 +350,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         width,
         height,
         rotation: opts.rotation ?? 0,
+        layerId: opts.layerId ?? activeLayerId ?? "default", // ✅ fix chính
       };
 
-      setStrokes((prev) => [...prev, newStroke]);
-      pushUndo({ type: "add", stroke: newStroke });
+      addStrokeInternal(newStroke);
+      console.log("🖼️ Image added:", newStroke);
     } catch (err) {
       console.error("Failed to add image:", err);
       Alert.alert("Lỗi ảnh", "Không thể đọc hoặc hiển thị ảnh này.");
@@ -300,8 +388,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       ...strokeData,
     };
 
-    setStrokes((prev) => [...prev, newStroke]);
-    pushUndo({ type: "add", stroke: newStroke });
+    // setStrokes((prev) => [...prev, newStroke]);
+    // onAddStroke?.(newStroke);
+    addStrokeInternal(newStroke);
+
+    // pushUndo({ type: "add", stroke: newStroke });
   };
 
   const addTextStroke = (strokeData = {}) => {
@@ -324,88 +415,151 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       padding: strokeData.padding ?? 6,
       ...strokeData,
     };
-    setStrokes((prev) => [...prev, newStroke]);
-    pushUndo({ type: "add", stroke: newStroke });
+    // setStrokes((prev) => [...prev, newStroke]);
+    // onAddStroke?.(newStroke);
+    addStrokeInternal(newStroke);
+
+    // pushUndo({ type: "add", stroke: newStroke });
   };
 
   // ====== API EXPOSED ======
   useImperativeHandle(ref, () => ({
+    // 🔙 Hoàn tác
     undo: () => {
       setUndoStack((prevUndo) => {
         if (prevUndo.length === 0) return prevUndo;
         const last = prevUndo[prevUndo.length - 1];
+        const { type, stroke, index, before, after, layerId } = last;
+
         setRedoStack((r) => [...r, last]);
-        setStrokes((s) => {
-          if (!s) return s;
-          if (last.type === "add") {
-            const id = last.stroke?.id;
-            if (id) {
-              const idx = s.findIndex((x) => x.id === id);
-              if (idx !== -1) return [...s.slice(0, idx), ...s.slice(idx + 1)];
+
+        updateLayerById(layerId || activeLayerId, (strokes = []) => {
+          if (!Array.isArray(strokes)) return [];
+          switch (type) {
+            case "add": {
+              const idx = strokes.findIndex((x) => x.id === stroke?.id);
+              return idx !== -1
+                ? [...strokes.slice(0, idx), ...strokes.slice(idx + 1)]
+                : strokes.slice(0, -1);
             }
-            return s.slice(0, -1);
-          } else if (last.type === "delete") {
-            const idx = Math.min(Math.max(0, last.index), s.length);
-            const next = [...s];
-            next.splice(idx, 0, last.stroke);
-            return next;
-          } else if (last.type === "modify") {
-            const next = [...s];
-            next[last.index] = last.before;
-            return next;
+            case "delete": {
+              const idx = Math.min(Math.max(0, index), strokes.length);
+              const next = [...strokes];
+              next.splice(idx, 0, stroke);
+              return next;
+            }
+            case "modify": {
+              const next = [...strokes];
+              if (index >= 0 && index < next.length) next[index] = before;
+              return next;
+            }
+            default:
+              return strokes;
           }
-          return s;
         });
+
         return prevUndo.slice(0, -1);
       });
     },
 
+    // 🔁 Làm lại
     redo: () => {
       setRedoStack((prevRedo) => {
         if (prevRedo.length === 0) return prevRedo;
         const last = prevRedo[prevRedo.length - 1];
+        const { type, stroke, index, before, after, layerId } = last;
+
         setUndoStack((u) => [...u, last]);
-        setStrokes((s) => {
-          if (!s) return s;
-          if (last.type === "add") {
-            return [...s, last.stroke];
-          } else if (last.type === "delete") {
-            const idx = last.index;
-            if (idx < 0 || idx >= s.length) return s;
-            return [...s.slice(0, idx), ...s.slice(idx + 1)];
-          } else if (last.type === "modify") {
-            const next = [...s];
-            next[last.index] = last.after;
-            return next;
+
+        updateLayerById(layerId || activeLayerId, (strokes = []) => {
+          if (!Array.isArray(strokes)) return [];
+          switch (type) {
+            case "add":
+              return [...strokes, stroke];
+            case "delete": {
+              if (index < 0 || index >= strokes.length) return strokes;
+              return [...strokes.slice(0, index), ...strokes.slice(index + 1)];
+            }
+            case "modify": {
+              const next = [...strokes];
+              if (index >= 0 && index < next.length) next[index] = after;
+              return next;
+            }
+            default:
+              return strokes;
           }
-          return s;
         });
+
         return prevRedo.slice(0, -1);
       });
     },
 
+    // 🧹 Xóa layer hiện tại
     clear: () => {
-      setStrokes([]);
+      if (!activeLayerId) return;
+      updateLayerById(activeLayerId, () => []);
       setUndoStack([]);
       setRedoStack([]);
       setCurrentPoints([]);
     },
 
-    getStrokes: () => strokes,
+    // 🧾 Lấy strokes của layer đang active
+    getStrokes: () => {
+      const activeLayer = layers.find((l) => l.id === activeLayerId);
+      return activeLayer?.strokes || [];
+    },
 
+    // ➕ Thêm stroke trực tiếp vào layer đang active
     addStrokeDirect: (stroke) => {
+      if (!activeLayerId) return;
       const s = { ...stroke, id: stroke.id ?? nextId() };
       addStrokeInternal(s);
     },
 
     modifyStrokeAt,
 
-    addImageStroke,
-    addStickerStroke,
-    addTextStroke,
+    // 🖼️ Thêm ảnh / sticker / text (giữ logic layer)
+    // CanvasContainer.jsx (thêm vào ref exposes)
+    addImageStroke: (stroke) => {
+      const adjustedY = (stroke.y ?? 100) + (stroke.scrollOffsetY ?? 0); // ✅ Adjust y để visible
+      const s = {
+        ...stroke,
+        y: adjustedY,
+        id: stroke.id ?? nextId(),
+        tool: "image",
+        layerId: stroke.layerId ?? activeLayerId,
+      };
+      addStrokeInternal(s);
+    },
+
+    addStickerStroke: (stroke) => {
+      const adjustedY = (stroke.y ?? 100) + (stroke.scrollOffsetY ?? 0); // ✅ Tương tự
+      const s = {
+        ...stroke,
+        y: adjustedY,
+        id: stroke.id ?? nextId(),
+        tool: "sticker",
+        layerId: stroke.layerId ?? activeLayerId,
+      };
+      addStrokeInternal(s);
+    },
+
+    addTextStroke: (stroke) => {
+      const adjustedY = (stroke.y ?? 100) + (stroke.scrollOffsetY ?? 0); // ✅ Tương tự
+      const s = {
+        ...stroke,
+        y: adjustedY,
+        id: stroke.id ?? nextId(),
+        tool: "text",
+        layerId: stroke.layerId ?? activeLayerId,
+      };
+      addStrokeInternal(s);
+    },
+
+    // 📦 Load lại toàn bộ strokes cho layer hiện tại
     loadStrokes: (strokesArray = []) => {
-      if (!Array.isArray(strokesArray)) return;
-      setStrokes(strokesArray);
+      if (!Array.isArray(strokesArray) || !activeLayerId) return;
+      updateLayerById(activeLayerId, () => strokesArray);
       setUndoStack([]);
       setRedoStack([]);
     },
@@ -434,19 +588,26 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     <View style={{ flex: 1 }}>
       <GestureDetector gesture={composedGesture}>
         <Animated.View
+          key={activeLayerId}
           style={[animatedStyle, { width: page.w, height: page.h }]}
         >
           <GestureHandler
+            key={activeLayerId}
             page={page}
             tool={tool}
             color={color}
             eraserMode={eraserMode}
             isPenMode={isPenMode}
-            onAddStroke={handleAddStroke}
+            // ⬇️ giữ nguyên các callback xử lý stroke nhưng không truyền setStrokes trực tiếp
+            activeLayerId={activeLayerId}
+            onAddStroke={addStrokeInternal}
             onModifyStroke={modifyStrokeAt}
+            onLiveUpdateStroke={liveUpdateStroke}
+            onModifyStrokesBulk={modifyStrokesBulk}
             onDeleteStroke={deleteStrokeAt}
-            strokes={strokes}
-            setStrokes={setStrokes}
+            onSelectStroke={(id) => setSelectedId(id)}
+            // ⬇️ chỉ truyền strokes của layer đang active
+            strokes={getActiveLayer()?.strokes || []}
             setRedoStack={setRedoStack}
             currentPoints={currentPoints}
             setCurrentPoints={setCurrentPoints}
@@ -470,12 +631,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           >
             <CanvasRenderer
               ref={rendererRef}
-              strokes={
-                realtimeText?.id &&
-                ["text", "sticky", "comment"].includes(realtimeText.tool)
-                  ? strokes.filter((s) => s.id !== realtimeText.id)
-                  : strokes
-              }
+              // ✅ Render tất cả layer visible thay vì 1 mảng strokes
+              layers={visibleLayers}
+              selectedId={selectedId}
+              imageRefs={imageRefs}
               realtimeText={realtimeText}
               currentPoints={currentPoints}
               tool={tool}
