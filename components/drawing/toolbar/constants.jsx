@@ -36,5 +36,8 @@ export const DRAWING_TOOLS = [
   "brush",
   "calligraphy",
   "highlighter",
+  "marker",
+  "airbrush",
+  "crayon",
   "fill",
 ];

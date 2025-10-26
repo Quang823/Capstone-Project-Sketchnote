@@ -1,8 +1,15 @@
 import React, { useState, useRef } from "react";
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { View, TouchableOpacity, Text, StyleSheet, ScrollView } from "react-native";
 import Popover from "react-native-popover-view";
 
-export default function ToolGroup({ label, mainIcon, options, tool, setTool }) {
+export default function ToolGroup({
+  label,
+  mainIcon,
+  options,
+  tool,
+  setTool,
+  lastSelected,
+}) {
   const [showPopover, setShowPopover] = useState(false);
   const buttonRef = useRef(null);
 
@@ -20,7 +27,16 @@ export default function ToolGroup({ label, mainIcon, options, tool, setTool }) {
           styles.button,
           options.some((o) => o.name === tool) && styles.activeButton,
         ]}
-        onPress={() => setShowPopover(true)}
+        onPress={() => {
+          const isInGroup = options.some((o) => o.name === tool);
+          if (isInGroup) {
+            setShowPopover(true);
+          } else {
+            const fallback = lastSelected || options[0]?.name;
+            if (fallback) setTool(fallback);
+          }
+        }}
+        onLongPress={() => setShowPopover(true)}
         activeOpacity={0.7}
       >
         {mainIcon}
@@ -35,26 +51,28 @@ export default function ToolGroup({ label, mainIcon, options, tool, setTool }) {
         arrowStyle={{ backgroundColor: "#3b82f6" }}
       >
         <View style={styles.menu}>
-          {options.map((o) => (
-            <TouchableOpacity
-              key={o.name}
-              style={[
-                styles.menuItem,
-                tool === o.name && styles.activeMenuItem,
-              ]}
-              onPress={() => handleSelect(o.name)}
-            >
-              {o.icon}
-              <Text
+          <ScrollView style={{ maxHeight: 260 }}>
+            {options.map((o) => (
+              <TouchableOpacity
+                key={o.name}
                 style={[
-                  styles.menuText,
-                  tool === o.name && styles.activeMenuTest,
+                  styles.menuItem,
+                  tool === o.name && styles.activeMenuItem,
                 ]}
+                onPress={() => handleSelect(o.name)}
               >
-                {o.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                {o.icon}
+                <Text
+                  style={[
+                    styles.menuText,
+                    tool === o.name && styles.activeMenuTest,
+                  ]}
+                >
+                  {o.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       </Popover>
     </View>

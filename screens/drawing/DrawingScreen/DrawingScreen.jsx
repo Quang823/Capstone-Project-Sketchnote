@@ -76,6 +76,18 @@ export default function DrawingScreen() {
   const [calligraphyWidth] = useState(3);
   const [calligraphyOpacity] = useState(0.8);
 
+  // 📏 Per-pen base widths (persist while switching tools)
+  const [penBaseWidths, setPenBaseWidths] = useState({
+    pen: 2,
+    pencil: 2,
+    brush: 4,
+    calligraphy: 3,
+    highlighter: 4,
+    marker: 4,
+    airbrush: 4,
+    crayon: 2,
+  });
+
   // 🧾 ===== PAGE & STYLE =====
   const [paperStyle] = useState("plain");
   const [shapeType] = useState("auto");
@@ -86,9 +98,28 @@ export default function DrawingScreen() {
   const [toolConfigs, setToolConfigs] = useState({
     pen: { pressure: 0.5, thickness: 1.5, stabilization: 0.2 },
     pencil: { pressure: 0.4, thickness: 1.0, stabilization: 0.15 },
-    brush: { pressure: 0.6, thickness: 3.0, stabilization: 0.25 },
-    calligraphy: { pressure: 0.7, thickness: 2.5, stabilization: 0.3 },
+    brush: {
+      pressure: 0.6,
+      thickness: 3.0,
+      stabilization: 0.25,
+      brushSoftness: 0.28,
+    },
+    calligraphy: {
+      pressure: 0.7,
+      thickness: 2.5,
+      stabilization: 0.3,
+      calligraphyAngle: 0.6,
+    },
     highlighter: { pressure: 0.5, thickness: 4.0, stabilization: 0.1 },
+    marker: { pressure: 0.6, thickness: 3.0, stabilization: 0.1 },
+    airbrush: {
+      pressure: 0.5,
+      thickness: 4.0,
+      stabilization: 0.3,
+      airbrushSpread: 1.6,
+      airbrushDensity: 0.55,
+    },
+    crayon: { pressure: 0.55, thickness: 2.5, stabilization: 0.2 },
   });
 
   const activeConfig = useMemo(
@@ -111,6 +142,46 @@ export default function DrawingScreen() {
       },
     }));
   }, []);
+
+  // 🎨 Per-tool color memory
+  const penTools = useMemo(
+    () => [
+      "pen",
+      "pencil",
+      "brush",
+      "calligraphy",
+      "highlighter",
+      "marker",
+      "airbrush",
+      "crayon",
+    ],
+    []
+  );
+  const [penColors, setPenColors] = useState({
+    pen: "#111827",
+    pencil: "#111827",
+    brush: "#111827",
+    calligraphy: "#111827",
+    highlighter: "#fef08a",
+    marker: "#111827",
+    airbrush: "#111827",
+    crayon: "#111827",
+  });
+
+  // Restore color when switching to a pen tool
+  useEffect(() => {
+    if (penTools.includes(tool)) {
+      const saved = penColors[tool];
+      if (typeof saved === "string") setColor(saved);
+    }
+  }, [tool, penTools, penColors]);
+
+  // Store color per-tool when it changes on an active pen tool
+  useEffect(() => {
+    if (penTools.includes(tool) && typeof color === "string") {
+      setPenColors((prev) => (prev[tool] === color ? prev : { ...prev, [tool]: color }));
+    }
+  }, [tool, color, penTools]);
 
   // 📱 ===== ORIENTATION =====
   const orientation = useOrientation();
@@ -141,6 +212,33 @@ export default function DrawingScreen() {
       setEraserMode(null);
     }
   }, [tool]);
+
+  // When switching back to a pen tool, restore its last base width
+  useEffect(() => {
+    const penTools = [
+      "pen",
+      "pencil",
+      "brush",
+      "calligraphy",
+      "highlighter",
+      "marker",
+      "airbrush",
+      "crayon",
+    ];
+    if (penTools.includes(tool)) {
+      const saved = penBaseWidths[tool];
+      if (typeof saved === "number") setStrokeWidth(saved);
+    }
+  }, [tool, penBaseWidths]);
+
+  const handleSelectBaseWidth = useCallback(
+    (size) => {
+      setStrokeWidth(size);
+      setPenBaseWidths((prev) => ({ ...prev, [tool]: size }));
+    },
+    [tool]
+  );
+
   const multiPageCanvasRef = useRef();
   // 💾 SAVE (Cloud → JSON only)
   const handleSaveFile = async () => {
@@ -505,6 +603,7 @@ export default function DrawingScreen() {
           setColor={setColor}
           strokeWidth={strokeWidth}
           setStrokeWidth={setStrokeWidth}
+          onSelectBaseWidth={handleSelectBaseWidth}
           onUndo={() => handleUndo(activePageId)}
           onRedo={() => handleRedo(activePageId)}
           onClear={() => handleClear(activePageId)}
@@ -537,9 +636,16 @@ export default function DrawingScreen() {
       )}
 
       {/* 🖋 Pen Settings */}
-      {["pen", "pencil", "brush", "calligraphy", "highlighter"].includes(
-        tool
-      ) && (
+      {[
+        "pen",
+        "pencil",
+        "brush",
+        "calligraphy",
+        "highlighter",
+        "marker",
+        "airbrush",
+        "crayon",
+      ].includes(tool) && (
         <PenSettingsPanel
           tool={tool}
           setTool={setTool}
