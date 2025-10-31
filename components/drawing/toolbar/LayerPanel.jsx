@@ -25,6 +25,14 @@ export default function LayerPanel({
   const [renameVisible, setRenameVisible] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameTargetId, setRenameTargetId] = useState(null);
+  // Use immutable id 'layer1' when present; fallback to first layer id
+  const baseLayerId = (() => {
+    if (Array.isArray(layers) && layers.length > 0) {
+      const found = layers.find((l) => l.id === "layer1");
+      return found ? found.id : layers[0].id;
+    }
+    return null;
+  })();
 
   const handleDropdownSelect = (layerId, action) => {
     setDropdownVisible(null);
@@ -35,8 +43,12 @@ export default function LayerPanel({
       setRenameValue(currentName);
       setRenameVisible(true);
     }
-    if (action === "clear") console.log("Clear layer", layerId);
-    if (action === "delete") onDelete(layerId);
+    if (action === "clear") { /* Clear layer action */ }
+    if (action === "delete") {
+      // Block deletion for base layer (Layer 1)
+      if (layerId === baseLayerId) return;
+      onDelete(layerId);
+    }
   };
 
   const handleRenameConfirm = () => {
@@ -154,13 +166,15 @@ export default function LayerPanel({
               <Text style={styles.dropdownText}>Clear</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={() => handleDropdownSelect(dropdownVisible, "delete")}
-            >
-              <Ionicons name="trash" size={16} color="#fff" />
-              <Text style={styles.dropdownText}>Delete</Text>
-            </TouchableOpacity>
+            {dropdownVisible !== baseLayerId && (
+              <TouchableOpacity
+                style={styles.dropdownItem}
+                onPress={() => handleDropdownSelect(dropdownVisible, "delete")}
+              >
+                <Ionicons name="trash" size={16} color="#fff" />
+                <Text style={styles.dropdownText}>Delete</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       )}

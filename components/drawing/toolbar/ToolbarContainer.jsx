@@ -5,6 +5,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import ToolGroup from "./ToolGroup";
 import ToolButton from "./ToolButton";
 import ColorPalette from "./ColorPalette";
+import EyeDropperTool from "./EyeDropperTool";
+import TableDropdown from "../table/TableDropdown";
 import { DEFAULT_COLORS } from "./constants";
 
 const ICON_SIZE = 18;
@@ -35,10 +37,19 @@ export default function ToolbarContainer({
   eraserDropdownVisible,
   setEraserDropdownVisible,
   eraserButtonRef,
+
+  pickedColors = [], // 👈 Nhận từ parent
+  onColorPicked, // 👈 Nhận từ parent
+  onInsertTable, // 👈 Callback khi insert table
 }) {
   // 🎨 ===== COLOR STATE =====
   const [colors, setColors] = useState(DEFAULT_COLORS);
   const [selectedColor, setSelectedColor] = useState(color ?? colors[0]);
+  const [colorHistory, setColorHistory] = useState([]); // 👈 Color history cho ColorPalette
+
+  // 📊 ===== TABLE STATE =====
+  const [tableDropdownVisible, setTableDropdownVisible] = useState(false);
+  const tableButtonRef = useRef(null);
 
   // 🖊️ Remember last selected pen sub-tool
   const PEN_TOOLS = [
@@ -56,26 +67,71 @@ export default function ToolbarContainer({
     if (PEN_TOOLS.includes(tool)) setLastPenTool(tool);
   }, [tool]);
 
-  // Đồng bộ nếu prop color thay đổi từ bên ngoài
+  // ▭ Remember last selected shape sub-tool
+  const SHAPE_TOOLS = [
+    "line",
+    "arrow",
+    "rect",
+    "circle",
+    "triangle",
+    "star",
+    "polygon",
+  ];
+  const [lastShapeTool, setLastShapeTool] = useState("line");
   useEffect(() => {
-    if (color) setSelectedColor(color);
+    if (SHAPE_TOOLS.includes(tool)) setLastShapeTool(tool);
+  }, [tool]);
+
+  // Đồng bộ nếu prop color thay đổi từ bên ngoài (tránh setState lặp)
+  // Chỉ sync khi color thay đổi từ bên ngoài (không phải từ handleSelectColor)
+  useEffect(() => {
+    if (typeof color === "string" && color !== selectedColor) {
+      // Kiểm tra xem color có trong colors array không
+      // Nếu có thì đã được set bởi handleSelectColor, không cần sync
+      const isInColors = colors.includes(color);
+      if (!isInColors) {
+        setSelectedColor(color);
+      }
+    }
   }, [color]);
 
-  const handleSelectColor = (colorHex, index) => {
-    setSelectedColor(colorHex);
+  const handleSelectColor = (colorHex, index, forceSet = false) => {
+    // Update colors array trước
     setColors((prev) => {
       const updated = [...prev];
       const idx = typeof index === "number" ? index : 0;
       updated[idx] = colorHex;
       return updated;
     });
-    if (typeof setColor === "function") setColor(colorHex);
+
+    // Force set color nếu được yêu cầu, hoặc nếu khác màu hiện tại
+    if (typeof setColor === "function" && (forceSet || colorHex !== color)) {
+      setColor(colorHex);
+    }
+
+    // Force set selectedColor SAU CÙNG để đảm bảo không bị ghi đè
+    setSelectedColor(colorHex);
+
+    // 👇 Thêm vào color history (chỉ khi chọn màu thủ công)
+    if (colorHex && colorHex !== "#000000" && colorHex !== "#111827") {
+      setColorHistory((prev) => {
+        const filtered = prev.filter((c) => c !== colorHex);
+        return [colorHex, ...filtered].slice(0, 10);
+      });
+    }
   };
 
   const handleSelectColorSet = (newColors) => {
     setColors(newColors);
-    setSelectedColor(newColors[0]);
-    if (typeof setColor === "function") setColor(newColors[0]);
+    const first = newColors?.[0];
+    if (typeof first === "string" && first !== selectedColor)
+      setSelectedColor(first);
+    if (
+      typeof setColor === "function" &&
+      typeof first === "string" &&
+      first !== color
+    )
+      setColor(first);
   };
 
   // 🧱 ===== RENDER =====
@@ -263,6 +319,7 @@ export default function ToolbarContainer({
               color={ICON_COLOR}
             />
           }
+          lastSelected={lastShapeTool}
           options={[
             {
               name: "line",
@@ -622,18 +679,7 @@ export default function ToolbarContainer({
         /> */}
 
         {/* 🧪 Extra Tools */}
-        <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="eyedropper"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          onPress={() => setTool("eyedropper")}
-          active={tool === "eyedropper"}
-        />
-        <ToolButton
+        {/* <ToolButton
           icon={
             <MaterialCommunityIcons
               name="grid"
@@ -641,25 +687,58 @@ export default function ToolbarContainer({
               color={ICON_COLOR}
             />
           }
-          onPress={() => setTool("grid-toggle")}
-          active={tool === "grid-toggle"}
-        />
+          onPress={() => setTool("grid")}
+          active={tool === "grid"}
+        /> */}
+
+        {/* 📊 Table Tool */}
+        <View ref={tableButtonRef}>
+          <ToolButton
+            icon={
+              <MaterialCommunityIcons
+                name="table"
+                size={ICON_SIZE}
+                color={ICON_COLOR}
+              />
+            }
+            onPress={() => {
+              // Wrap trong setTimeout để tránh setState trong render
+              setTimeout(() => {
+                setTool("table");
+                setTableDropdownVisible(true);
+              }, 0);
+            }}
+            active={tool === "table"}
+          />
+        </View>
+
         <ToolButton
           icon={
             <MaterialCommunityIcons
-              name="shape-plus"
+              name="ruler"
               size={ICON_SIZE}
               color={ICON_COLOR}
             />
           }
-          onPress={() => setTool("toggle-fill")}
-          active={tool === "toggle-fill"}
+          onPress={() => setTool("ruler")}
+          active={tool === "ruler"}
+        />
+
+        {/* 🔍 Eyedropper Tool */}
+        <EyeDropperTool
+          tool={tool}
+          setTool={setTool}
+          selectedColor={selectedColor}
+          pickedColors={pickedColors}
+          onColorSelected={handleSelectColor}
+          onColorPicked={onColorPicked}
         />
 
         <View style={styles.divider} />
 
         {/* 🎨 Color Palette */}
         {[
+          // pens
           "pen",
           "pencil",
           "brush",
@@ -668,11 +747,21 @@ export default function ToolbarContainer({
           "marker",
           "airbrush",
           "crayon",
+          // shapes
+          "line",
+          "arrow",
+          "rect",
+          "circle",
+          "triangle",
+          "star",
+          "polygon",
+          // others
           "fill",
         ].includes(tool) && (
           <ColorPalette
             colors={colors}
             selectedColor={selectedColor}
+            colorHistory={colorHistory}
             onSelectColor={handleSelectColor}
             onSelectColorSet={handleSelectColorSet}
           />
@@ -726,12 +815,25 @@ export default function ToolbarContainer({
                   }
                   active={strokeWidth === size}
                   onPress={() =>
-                    (onSelectBaseWidth ? onSelectBaseWidth(size) : setStrokeWidth(size))
+                    onSelectBaseWidth
+                      ? onSelectBaseWidth(size)
+                      : setStrokeWidth(size)
                   }
                 />
               ))}
         </View>
       </ScrollView>
+
+      {/* 📊 Table Dropdown */}
+      <TableDropdown
+        visible={tableDropdownVisible}
+        from={tableButtonRef}
+        onClose={() => setTableDropdownVisible(false)}
+        onInsertTable={(rows, cols) => {
+          onInsertTable?.(rows, cols);
+          setTableDropdownVisible(false);
+        }}
+      />
     </View>
   );
 }

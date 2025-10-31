@@ -31,7 +31,8 @@ export default function ImageTransformBox({
   const h = Math.max(1, Number(height) || 0);
   const left = Number(x) || 0;
   const top = Number(y) || 0;
-  const alignOffsetY = 1 / (scale || 1);
+  // Removed alignOffsetY (previously added small offset based on scale) because it caused
+  // occasional vertical drift of the transform box under zoom/pan.
 
   const rotateStart = useRef({ angle: 0, initRot: 0 });
   const rotateFrame = useRef(null);
@@ -152,7 +153,7 @@ export default function ImageTransformBox({
         styles.box,
         {
           left,
-          top: top + alignOffsetY,
+          top,
           width: w,
           height: h,
           transform: [

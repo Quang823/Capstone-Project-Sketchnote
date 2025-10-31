@@ -14,76 +14,203 @@ export default function TextSelectionBox({
   y,
   width,
   height,
-  onMove, // (dx, dy)
+  onMove, // (dx, dy) incremental deltas
   onResize, // (corner, dx, dy)
+  onResizeStart, // (corner)
+  onResizeEnd, // ()
   onDelete,
   onCut,
   onCopy,
-  onEdit, // New prop to open editor on tap
+  onEdit, // open editor on tap
 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const pos = useRef(new Animated.ValueXY({ x, y })).current; // 🟢 Vị trí động để move mượt
+  const pos = useRef(new Animated.ValueXY({ x, y })).current;
+
+  // Refs to avoid stale closures inside PanResponder
+  const boxRef = useRef({ x, y }); // latest props
+  const startPos = useRef({ x: 0, y: 0 }); // touch start (global)
+  const startBoxRef = useRef({ x: 0, y: 0 }); // box origin at gesture start
+
+  // lastReportedRef = last absolute position we observed (used to compute diffs)
+  const lastReportedRef = useRef({ x, y });
+
+  // Throttling helpers
+  const framePendingRef = useRef(false);
+  const rafIdRef = useRef(null);
+  const pendingDeltaRef = useRef({ x: 0, y: 0 });
 
   const dotSize = 10;
   const half = dotSize / 2;
-  const startPos = useRef({ x: 0, y: 0 });
-  const lastMove = useRef({ dx: 0, dy: 0 });
   const startTime = useRef(0);
 
-  // 🟢 Hiệu ứng fade-in khi xuất hiện box
+  // fade in
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 120,
       useNativeDriver: true,
     }).start();
+  }, [fadeAnim]);
+
+  // keep boxRef and Animated.Value in sync when parent moves the box
+  useEffect(() => {
+    // update ref first
+    boxRef.current = { x, y };
+    // push value to Animated.ValueXY immediately (no animation)
+    pos.setValue({ x, y });
+    // also update lastReported so next incremental delta is relative to current
+    lastReportedRef.current = { x, y };
+    // reset pending just in case
+    pendingDeltaRef.current = { x: 0, y: 0 };
+    framePendingRef.current = false;
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+  }, [x, y, pos]);
+
+  useEffect(() => {
+    return () => {
+      // cleanup RAF on unmount
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+      framePendingRef.current = false;
+    };
   }, []);
 
-  // 🟦 Đồng bộ khi state x/y thay đổi từ bên ngoài
-  useEffect(() => {
-    pos.setValue({ x, y });
-  }, [x, y]);
+  // schedule flush of accumulated pendingDelta to parent (one RAF per frame)
+  const scheduleFlush = () => {
+    if (framePendingRef.current) return;
+    framePendingRef.current = true;
+    rafIdRef.current = requestAnimationFrame(() => {
+      framePendingRef.current = false;
+      rafIdRef.current = null;
+      const pd = pendingDeltaRef.current;
+      // send only meaningful movement
+      if (Math.abs(pd.x) >= 0.5 || Math.abs(pd.y) >= 0.5) {
+        try {
+          onMove?.(pd.x, pd.y);
+        } catch (e) {
+          // defensive: ensure parent errors don't break RAF loop
+          console.warn("onMove error:", e);
+        }
+      }
+      // reset pending
+      pendingDeltaRef.current = { x: 0, y: 0 };
+    });
+  };
 
-  // 🟢 PanResponder: move mượt bằng Animated
+  // PanResponder for moving the whole box: uses refs (no stale props)
   const movePan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: (_, g) => {
         startPos.current = { x: g.x0, y: g.y0 };
-        lastMove.current = { dx: 0, dy: 0 };
+        // store the box origin at the moment gesture starts
+        startBoxRef.current = { ...boxRef.current };
+        // lastReportedRef is the last absolute position we used for diff calculations
+        lastReportedRef.current = { ...startBoxRef.current };
+        // reset pending
+        pendingDeltaRef.current = { x: 0, y: 0 };
+        framePendingRef.current = false;
+        if (rafIdRef.current) {
+          cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
+        }
         startTime.current = Date.now();
       },
       onPanResponderMove: (_, g) => {
         const dx = g.moveX - startPos.current.x;
         const dy = g.moveY - startPos.current.y;
 
-        // Cập nhật Animated.ValueXY (UI thread)
-        pos.setValue({ x: x + dx, y: y + dy });
+        // compute new absolute position based on box origin at gesture start
+        const newX = startBoxRef.current.x + dx;
+        const newY = startBoxRef.current.y + dy;
 
-        // Gửi delta về callback để cập nhật logic (React thread)
-        const diffX = dx - lastMove.current.dx;
-        const diffY = dy - lastMove.current.dy;
-        onMove?.(diffX, diffY);
-        lastMove.current = { dx, dy };
+        // update Animated value for smooth UI (native)
+        pos.setValue({ x: newX, y: newY });
+
+        // compute incremental delta since lastReportedRef, accumulate to pending
+        const diffX = newX - lastReportedRef.current.x;
+        const diffY = newY - lastReportedRef.current.y;
+        // accumulate
+        pendingDeltaRef.current.x += diffX;
+        pendingDeltaRef.current.y += diffY;
+        // move lastReportedRef forward so next diff is relative to this move
+        lastReportedRef.current = { x: newX, y: newY };
+
+        // schedule one RAF to flush per frame
+        scheduleFlush();
       },
       onPanResponderRelease: () => {
         const endTime = Date.now();
         const duration = endTime - startTime.current;
-        const distance = Math.hypot(lastMove.current.dx, lastMove.current.dy);
-        if (duration < 200 && distance < 3) {
+        const dist = Math.hypot(
+          lastReportedRef.current.x - startBoxRef.current.x,
+          lastReportedRef.current.y - startBoxRef.current.y
+        );
+
+        // flush remaining pending synchronously (avoid losing small delta)
+        const pd = pendingDeltaRef.current;
+        if (Math.abs(pd.x) >= 0.5 || Math.abs(pd.y) >= 0.5) {
+          try {
+            // cancel pending RAF if any to avoid double-send
+            if (rafIdRef.current) {
+              cancelAnimationFrame(rafIdRef.current);
+              rafIdRef.current = null;
+              framePendingRef.current = false;
+            }
+            onMove?.(pd.x, pd.y);
+          } catch (e) {
+            console.warn("onMove error:", e);
+          }
+        }
+        pendingDeltaRef.current = { x: 0, y: 0 };
+
+        // if it was a quick tap (tiny movement) interpret as edit/tap
+        if (duration < 200 && dist < 3) {
           requestAnimationFrame(() => onEdit?.());
         }
-        lastMove.current = { dx: 0, dy: 0 };
+
+        // ensure final sync with parent values (parent normally updates via onMove)
+        lastReportedRef.current = { ...boxRef.current };
+      },
+      onPanResponderTerminationRequest: () => true,
+      onPanResponderTerminate: () => {
+        // gesture cancelled: flush & reset
+        const pd2 = pendingDeltaRef.current;
+        if (Math.abs(pd2.x) >= 0.5 || Math.abs(pd2.y) >= 0.5) {
+          try {
+            if (rafIdRef.current) {
+              cancelAnimationFrame(rafIdRef.current);
+              rafIdRef.current = null;
+              framePendingRef.current = false;
+            }
+            onMove?.(pd2.x, pd2.y);
+          } catch (e) {}
+        }
+        pendingDeltaRef.current = { x: 0, y: 0 };
+        lastReportedRef.current = { ...boxRef.current };
       },
     })
   ).current;
 
-  // 🟩 Resize 4 góc
+  // Resize handles (closure ok because they immediately call onResize)
   const makeResizePan = (corner) =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        onResizeStart?.(corner);
+      },
       onPanResponderMove: (_, g) => {
         onResize?.(corner, g.dx, g.dy);
+      },
+      onPanResponderRelease: () => {
+        onResizeEnd?.();
+      },
+      onPanResponderTerminationRequest: () => true,
+      onPanResponderTerminate: () => {
+        onResizeEnd?.();
       },
     });
 
@@ -106,7 +233,7 @@ export default function TextSelectionBox({
         },
       ]}
     >
-      {/* 🧰 Toolbar */}
+      {/* toolbar */}
       <View style={styles.toolbar}>
         <TouchableOpacity style={styles.toolBtn} onPress={onCopy}>
           <Text style={styles.toolText}>Copy</Text>
@@ -125,14 +252,14 @@ export default function TextSelectionBox({
         </TouchableOpacity>
       </View>
 
-      {/* 🔵 Vùng di chuyển */}
+      {/* move area (captures pan) */}
       <View
         style={StyleSheet.absoluteFill}
         {...movePan.panHandlers}
         pointerEvents="box-only"
       />
 
-      {/* 🔹 4 chấm resize */}
+      {/* 4 resize dots */}
       <View
         {...cornerPans.tl.panHandlers}
         style={[styles.dot, { top: -half, left: -half }]}

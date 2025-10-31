@@ -8,7 +8,6 @@ import {
   StyleSheet,
   PanResponder,
 } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 export default function LassoSelectionBox({
   box,
@@ -17,24 +16,16 @@ export default function LassoSelectionBox({
   onDelete,
   onMove,
   onMoveEnd,
-  onResize,
-  onRotate,
   onClear, // 🟦 tap rỗng -> clear lasso selection
 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // --- internal refs
+  // --- internal refs for move
   const lastMove = useRef({ x: 0, y: 0 });
-  const lastResize = useRef({ dx: 0, dy: 0 });
-  const rotateStart = useRef({ startX: 0, startY: 0 });
-
-  // --- buffers to accumulate deltas per RAF
   const moveBuffer = useRef({ dx: 0, dy: 0 });
-  const resizeBuffer = useRef({ corner: null, dx: 0, dy: 0 });
-  const rotateBuffer = useRef({ angle: 0 });
   const rafScheduled = useRef(false);
 
-  // 🌀 Flush batched transforms per frame
+  // 🌀 Flush batched move transforms per frame
   const scheduleFlush = () => {
     if (rafScheduled.current) return;
     rafScheduled.current = true;
@@ -46,20 +37,6 @@ export default function LassoSelectionBox({
         const { dx, dy } = moveBuffer.current;
         moveBuffer.current = { dx: 0, dy: 0 };
         onMove?.(dx, dy);
-      }
-
-      // RESIZE
-      if (resizeBuffer.current.corner) {
-        const { corner, dx, dy } = resizeBuffer.current;
-        resizeBuffer.current = { corner: null, dx: 0, dy: 0 };
-        onResize?.(corner, dx, dy);
-      }
-
-      // ROTATE
-      if (rotateBuffer.current.angle) {
-        const a = rotateBuffer.current.angle;
-        rotateBuffer.current.angle = 0;
-        onRotate?.(a);
       }
     });
   };
@@ -96,45 +73,6 @@ export default function LassoSelectionBox({
     [onMove]
   );
 
-  // --- RESIZE (4 corners)
-  const makeResizeResponder = (corner) =>
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        lastResize.current = { dx: 0, dy: 0 };
-      },
-      onPanResponderMove: (_, g) => {
-        const deltaX = g.dx - lastResize.current.dx;
-        const deltaY = g.dy - lastResize.current.dy;
-        lastResize.current = { dx: g.dx, dy: g.dy };
-        resizeBuffer.current.corner = corner;
-        resizeBuffer.current.dx += deltaX;
-        resizeBuffer.current.dy += deltaY;
-        scheduleFlush();
-      },
-      onPanResponderRelease: () => scheduleFlush(),
-    });
-
-  // --- ROTATE
-  const rotateResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onPanResponderGrant: (_, g) => {
-          rotateStart.current = { startX: g.x0, startY: g.y0 };
-        },
-        onPanResponderMove: (_, g) => {
-          const dx = g.moveX - rotateStart.current.startX;
-          const dy = g.moveY - rotateStart.current.startY;
-          rotateStart.current = { startX: g.moveX, startY: g.moveY };
-          rotateBuffer.current.angle += (dx + dy) * 0.5;
-          scheduleFlush();
-        },
-        onPanResponderRelease: () => scheduleFlush(),
-      }),
-    [onRotate]
-  );
-
   if (!box) return null;
   const { x, y, width, height } = box;
   const menuWidth = Math.max(180, width);
@@ -163,32 +101,6 @@ export default function LassoSelectionBox({
         ]}
       >
         <View style={styles.border} />
-
-        {/* --- Resize handles --- */}
-        <View
-          style={[styles.handle, { left: -8, top: -8 }]}
-          {...makeResizeResponder("tl").panHandlers}
-        />
-        <View
-          style={[styles.handle, { right: -8, top: -8 }]}
-          {...makeResizeResponder("tr").panHandlers}
-        />
-        <View
-          style={[styles.handle, { left: -8, bottom: -8 }]}
-          {...makeResizeResponder("bl").panHandlers}
-        />
-        <View
-          style={[styles.handle, { right: -8, bottom: -8 }]}
-          {...makeResizeResponder("br").panHandlers}
-        />
-
-        {/* --- Rotate handle --- */}
-        <View
-          style={[styles.rotateHandle, { left: width / 2 - 14, top: -40 }]}
-          {...rotateResponder.panHandlers}
-        >
-          <MaterialCommunityIcons name="rotate-3d" size={26} color="#10B981" />
-        </View>
       </Animated.View>
 
       {/* --- Toolbar (copy / cut / delete) --- */}
@@ -226,26 +138,10 @@ const styles = StyleSheet.create({
   },
   border: {
     ...StyleSheet.absoluteFillObject,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: "#2563EB",
     borderStyle: "dashed",
     borderRadius: 4,
-  },
-  handle: {
-    position: "absolute",
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#2563EB",
-  },
-  rotateHandle: {
-    position: "absolute",
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#10B981",
-    justifyContent: "center",
-    alignItems: "center",
   },
   toolbar: {
     position: "absolute",

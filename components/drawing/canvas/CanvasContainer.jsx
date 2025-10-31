@@ -39,6 +39,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     activeLayerId,
     setLayers,
     color,
+    setColor,
+    setTool,
     strokeWidth,
     pencilWidth,
     eraserSize,
@@ -52,6 +54,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     toolConfigs = {},
     eraserMode,
     isPenMode,
+    rulerPosition,
+    scrollOffsetY = 0,
+    onColorPicked, // 👈 Thêm prop
   },
   ref
 ) {
@@ -248,17 +253,21 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   };
 
   const deleteStrokeAt = (index) => {
+    let removed = null;
     updateActiveLayer((strokes) => {
       if (index < 0 || index >= strokes.length) return strokes;
-      const removed = strokes[index];
+      removed = strokes[index];
+      return [...strokes.slice(0, index), ...strokes.slice(index + 1)];
+    });
+    // Push undo AFTER update để tránh setState cascade
+    if (removed) {
       pushUndo({
         type: "delete",
         index,
         stroke: removed,
         layerId: activeLayerId,
       });
-      return [...strokes.slice(0, index), ...strokes.slice(index + 1)];
-    });
+    }
   };
 
   const modifyStrokeAt = (index, newProps) => {
@@ -317,6 +326,32 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     return { x: finalX, y: finalY };
   };
 
+  // Non-worklet version for JS thread
+  const getCenterPosition = (w = 100, h = 100) => {
+    const screenCenterX = width / 2;
+    const screenCenterY = height / 2;
+
+    const scaleVal = scale.value ?? 1;
+    const tx = translateX.value ?? 0;
+    const ty = translateY.value ?? 0;
+
+    // Tính vị trí center trong canvas coordinates
+    const canvasCenterX = (screenCenterX - tx) / scaleVal - w / 2;
+    const canvasCenterY = (screenCenterY - ty) / scaleVal - h / 2;
+
+    // Clamp trong page bounds
+    const finalX = Math.max(
+      page.x,
+      Math.min(canvasCenterX, page.x + page.w - w)
+    );
+    const finalY = Math.max(
+      page.y,
+      Math.min(canvasCenterY, page.y + page.h - h)
+    );
+
+    return { x: finalX, y: finalY };
+  };
+
   const addImageStrokeInternal = async (uri, opts = {}) => {
     if (!uri) return;
 
@@ -334,12 +369,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       const width = opts.width ?? 400;
       const height = opts.height ?? 400;
 
-      const { x: cx, y: cy } = centerFor(
-        width,
-        height,
-        opts.scrollOffsetX ?? 0,
-        opts.scrollOffsetY ?? 0
-      );
+      const { x: cx, y: cy } = getCenterPosition(width, height);
 
       const newStroke = {
         id: nextId(),
@@ -532,11 +562,39 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       addStrokeInternal(s);
     },
 
+    // Insert table
+    insertTable: (rows, cols) => {
+      const tableWidth = 300;
+      const tableHeight = 200;
+      const { x: cx, y: cy } = getCenterPosition(tableWidth, tableHeight);
+      
+      const tableStroke = {
+        id: nextId(),
+        tool: "table",
+        x: cx,
+        y: cy,
+        width: tableWidth,
+        height: tableHeight,
+        rows,
+        cols,
+        rotation: 0,
+        strokeColor: "#1e293b",
+        strokeWidth: 2,
+        layerId: activeLayerId,
+      };
+      addStrokeInternal(tableStroke);
+    },
+
     addStickerStroke: (stroke) => {
-      const adjustedY = (stroke.y ?? 100) + (stroke.scrollOffsetY ?? 0); // ✅ Tương tự
+      // Use getCenterPosition if x/y not provided
+      const stickerWidth = stroke.width ?? 120;
+      const stickerHeight = stroke.height ?? 120;
+      const { x: cx, y: cy } = getCenterPosition(stickerWidth, stickerHeight);
+      
       const s = {
         ...stroke,
-        y: adjustedY,
+        x: stroke.x ?? cx,
+        y: stroke.y ?? cy,
         id: stroke.id ?? nextId(),
         tool: "sticker",
         layerId: stroke.layerId ?? activeLayerId,
@@ -564,6 +622,17 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       setRedoStack([]);
     },
   }));
+
+  useEffect(() => {
+    if (__DEV__) {
+      console.log(
+        "[CanvasContainer] rulerPosition=",
+        rulerPosition,
+        "page=",
+        page
+      );
+    }
+  }, [rulerPosition, page.x, page.y, page.w, page.h]);
 
   // ====== Khi kết thúc stroke ======
   const handleAddStroke = useCallback(
@@ -596,6 +665,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             page={page}
             tool={tool}
             color={color}
+            setColor={setColor}
+            setTool={setTool}
             eraserMode={eraserMode}
             isPenMode={isPenMode}
             // ⬇️ giữ nguyên các callback xử lý stroke nhưng không truyền setStrokes trực tiếp
@@ -608,6 +679,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             onSelectStroke={(id) => setSelectedId(id)}
             // ⬇️ chỉ truyền strokes của layer đang active
             strokes={getActiveLayer()?.strokes || []}
+            // ⬇️ truyền tất cả strokes của các layer đang visible để eyedropper có thể lấy màu bất kể layer đang active
+            allVisibleStrokes={visibleLayers.flatMap((l) => l.strokes || [])}
             setRedoStack={setRedoStack}
             currentPoints={currentPoints}
             setCurrentPoints={setCurrentPoints}
@@ -623,16 +696,22 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             stabilization={activeConfig.stabilization}
             configByTool={toolConfigs}
             setRealtimeText={setRealtimeText}
+            rulerPosition={rulerPosition}
+            scrollOffsetY={scrollOffsetY}
+            onColorPicked={onColorPicked}
             zoomState={{
               scale,
               translateX,
               translateY,
             }}
+            // ⬇️ truyền ref renderer để có thể nâng cấp eyedropper lấy pixel snapshot sau này
+            canvasRef={rendererRef}
           >
             <CanvasRenderer
               ref={rendererRef}
               // ✅ Render tất cả layer visible thay vì 1 mảng strokes
               layers={visibleLayers}
+              activeLayerId={activeLayerId}
               selectedId={selectedId}
               imageRefs={imageRefs}
               realtimeText={realtimeText}
@@ -651,6 +730,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               page={page}
               canvasHeight={canvasHeight}
               shapeType={shapeType}
+              hasRuler={!!rulerPosition}
             />
           </GestureHandler>
         </Animated.View>

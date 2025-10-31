@@ -71,6 +71,11 @@ export default function InlineTextEditor({
       ? initialData.text
       : "";
 
+  // Sticky/Comment should not render extra white background while editing
+  const isStickyLike = ["sticky", "comment"].includes(
+    (initialData && initialData.tool) || ""
+  );
+
   const triggerChange = (override = {}) => {
     if (!onChange) return;
     onChange({
@@ -445,9 +450,11 @@ export default function InlineTextEditor({
               textAlign: align,
               fontSize,
               padding: padding,
-              backgroundColor: isEditingExisting
-                ? "transparent"
-                : "rgba(255,255,255,0.9)", // nền trắng nhẹ khi add text
+              // Use transparent background for sticky/comment and when editing existing text
+              backgroundColor:
+                isEditingExisting || isStickyLike
+                  ? "transparent"
+                  : "rgba(255,255,255,0.9)",
             },
           ]}
         />

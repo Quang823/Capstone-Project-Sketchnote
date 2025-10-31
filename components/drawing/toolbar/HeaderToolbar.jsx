@@ -59,9 +59,9 @@ export default function HeaderToolbar({
         {/* Left */}
         <View style={[styles.row, { gap: 12 }]}>
           {renderButton("arrow-back", onBack, Ionicons)}
-          {renderButton("camera-outline", () => console.log("Camera"))}
-          {renderButton("crop", () => console.log("Crop"), MaterialIcons)}
-          {renderButton("mic-outline", () => console.log("Mic"), Ionicons)}
+          {renderButton("camera-outline", () => {})}
+          {renderButton("crop", () => {}, MaterialIcons)}
+          {renderButton("mic-outline", () => {}, Ionicons)}
         </View>
 
         {/* Right */}

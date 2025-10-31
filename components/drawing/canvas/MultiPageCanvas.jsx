@@ -22,6 +22,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   {
     tool,
     color,
+    setColor,
+    setTool,
     strokeWidth,
     pencilWidth,
     eraserSize,
@@ -43,6 +45,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     layers,
     activeLayerId,
     setLayers,
+    rulerPosition,
+    onColorPicked, // 👈 Thêm prop
   },
   ref
 ) {
@@ -114,6 +118,20 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const handleScroll = (e) => {
     const offset = e.nativeEvent.contentOffset.y;
     setScrollY(offset);
+    if (__DEV__) {
+      // Sampled log to avoid spamming
+      if (Math.abs((handleScroll.__last || 0) - offset) > 200) {
+        // console.log("[MultiPageCanvas] scrollY=", offset);
+        handleScroll.__last = offset;
+      }
+    }
+
+    // Đảm bảo cập nhật scrollOffsetY cho tất cả các trang
+    Object.values(pageRefs.current).forEach((pageRef) => {
+      if (pageRef && pageRef.setScrollOffsetY) {
+        pageRef.setScrollOffsetY(offset - (offsets[activeIndex] ?? 0));
+      }
+    });
 
     let current = pages.length - 1;
     for (let i = 0; i < offsets.length; i++) {
@@ -210,6 +228,14 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       } catch (err) {
         console.error("❌ Upload thất bại:", err);
         throw err;
+      }
+    },
+
+    // 📊 Insert table vào active page
+    insertTable: (rows, cols) => {
+      const activePage = pages[activeIndex];
+      if (activePage && pageRefs.current[activePage.id]) {
+        pageRefs.current[activePage.id]?.insertTable?.(rows, cols);
       }
     },
 
@@ -315,6 +341,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               {...{
                 tool,
                 color,
+                setColor,
+                setTool,
                 strokeWidth,
                 pencilWidth,
                 eraserSize,
@@ -334,6 +362,9 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 activeLayerId,
                 setLayers,
                 isPenMode,
+                rulerPosition,
+                onColorPicked,
+                scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
               }}
               pageId={p.id}
               onChangeStrokes={(strokes) =>

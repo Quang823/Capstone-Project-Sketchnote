@@ -13,6 +13,7 @@ import PenSettingsPanel from "../../../components/drawing/toolbar/PenSettingsPan
 import MultiPageCanvas from "../../../components/drawing/canvas/MultiPageCanvas";
 import EraserDropdown from "../../../components/drawing/toolbar/EraserDropdown";
 import StickerModal from "../../../components/drawing/media/StickerModal";
+import RulerOverlay from "../../../components/drawing/ruler/RulerOverlay";
 import useOrientation from "../../../hooks/useOrientation";
 import { useNavigation } from "@react-navigation/native";
 import * as ExportUtils from "../../../utils/ExportUtils";
@@ -67,6 +68,31 @@ export default function DrawingScreen() {
   // 🎨 ===== TOOL & COLOR =====
   const [tool, setTool] = useState("pen");
   const [color, setColor] = useState("#111827");
+
+  // 🎨 ===== EYEDROPPER PICKED COLORS =====
+  const [pickedColors, setPickedColors] = useState([]);
+  const handleColorPicked = useCallback((colorHex) => {
+    if (colorHex && colorHex !== "#000000" && colorHex !== "#111827") {
+      setPickedColors((prev) => {
+        const filtered = prev.filter((c) => c !== colorHex);
+        return [colorHex, ...filtered].slice(0, 10);
+      });
+    }
+  }, []);
+
+  // 🆕 ===== NEW TOOLS STATE =====
+  // Grid
+  const [gridVisible, setGridVisible] = useState(false);
+  const [gridSettings, setGridSettings] = useState({
+    gridSize: 20,
+    gridColor: "#cbd5e1",
+    gridType: "square",
+  });
+  const [gridDropdownVisible, setGridDropdownVisible] = useState(false);
+
+  // 📏 RULER
+  const [rulerVisible, setRulerVisible] = useState(false);
+  const [rulerPosition, setRulerPosition] = useState(null);
 
   // ✏️ ===== WIDTH & OPACITY =====
   const [strokeWidth, setStrokeWidth] = useState(2);
@@ -157,6 +183,10 @@ export default function DrawingScreen() {
     ],
     []
   );
+  const shapeTools = useMemo(
+    () => ["line", "arrow", "rect", "circle", "triangle", "star", "polygon"],
+    []
+  );
   const [penColors, setPenColors] = useState({
     pen: "#111827",
     pencil: "#111827",
@@ -167,21 +197,40 @@ export default function DrawingScreen() {
     airbrush: "#111827",
     crayon: "#111827",
   });
+  const [shapeColors, setShapeColors] = useState({
+    line: "#111827",
+    arrow: "#111827",
+    rect: "#111827",
+    circle: "#111827",
+    triangle: "#111827",
+    star: "#111827",
+    polygon: "#111827",
+  });
 
-  // Restore color when switching to a pen tool
+  // Restore color only when switching tools
   useEffect(() => {
     if (penTools.includes(tool)) {
       const saved = penColors[tool];
       if (typeof saved === "string") setColor(saved);
+    } else if (shapeTools.includes(tool)) {
+      const saved = shapeColors[tool];
+      if (typeof saved === "string") setColor(saved);
     }
-  }, [tool, penTools, penColors]);
+  }, [tool]);
 
-  // Store color per-tool when it changes on an active pen tool
+  // Store color per-tool when it changes on an active pen/shape tool
   useEffect(() => {
-    if (penTools.includes(tool) && typeof color === "string") {
-      setPenColors((prev) => (prev[tool] === color ? prev : { ...prev, [tool]: color }));
+    if (typeof color !== "string") return;
+    if (penTools.includes(tool)) {
+      setPenColors((prev) =>
+        prev[tool] === color ? prev : { ...prev, [tool]: color }
+      );
+    } else if (shapeTools.includes(tool)) {
+      setShapeColors((prev) =>
+        prev[tool] === color ? prev : { ...prev, [tool]: color }
+      );
     }
-  }, [tool, color, penTools]);
+  }, [tool, color]);
 
   // 📱 ===== ORIENTATION =====
   const orientation = useOrientation();
@@ -208,10 +257,10 @@ export default function DrawingScreen() {
 
   const activeStrokeWidth = tool.includes("eraser") ? eraserSize : strokeWidth;
   useEffect(() => {
-    if (tool !== "eraser") {
+    if (tool !== "eraser" && eraserMode !== null) {
       setEraserMode(null);
     }
-  }, [tool]);
+  }, [tool, eraserMode]);
 
   // When switching back to a pen tool, restore its last base width
   useEffect(() => {
@@ -227,9 +276,10 @@ export default function DrawingScreen() {
     ];
     if (penTools.includes(tool)) {
       const saved = penBaseWidths[tool];
-      if (typeof saved === "number") setStrokeWidth(saved);
+      if (typeof saved === "number" && saved !== strokeWidth)
+        setStrokeWidth(saved);
     }
-  }, [tool, penBaseWidths]);
+  }, [tool, penBaseWidths, strokeWidth]);
 
   const handleSelectBaseWidth = useCallback(
     (size) => {
@@ -594,10 +644,36 @@ export default function DrawingScreen() {
         <ToolbarContainer
           tool={tool}
           setTool={(name) => {
+            if (name === "ruler") {
+              // Toggle ruler overlay without changing current drawing tool
+              setRulerVisible((prev) => {
+                const next = !prev;
+                // if (__DEV__) console.log("[DrawingScreen] toggle ruler:", next);
+                return next;
+              });
+              if (!rulerPosition) {
+                setRulerPosition({
+                  x: 0,
+                  y: 120,
+                  width: undefined,
+                  height: 60,
+                  rotation: 0,
+                  scale: 1,
+                });
+              } else {
+                if (__DEV__)
+                  console.log("[DrawingScreen] rulerPosition:", rulerPosition);
+              }
+              return;
+            }
             setTool(name);
             if (name === "image") handleInsertImage();
             else if (name === "camera") handleOpenCamera();
             else if (name === "sticker") setStickerModalVisible(true);
+            else if (name === "grid") setGridDropdownVisible(true);
+            else if (name === "eyedropper") {
+              // handled in GestureHandler
+            }
           }}
           color={color}
           setColor={setColor}
@@ -617,6 +693,12 @@ export default function DrawingScreen() {
           eraserDropdownVisible={eraserDropdownVisible}
           setEraserDropdownVisible={setEraserDropdownVisible}
           eraserButtonRef={eraserButtonRef}
+          pickedColors={pickedColors}
+          onColorPicked={handleColorPicked}
+          onInsertTable={(rows, cols) => {
+            // Insert table vào canvas
+            multiPageCanvasRef.current?.insertTable?.(rows, cols);
+          }}
         />
       )}
       {/* 🧽 Eraser Dropdown */}
@@ -663,7 +745,9 @@ export default function DrawingScreen() {
           activeLayerId={activeLayerId}
           setLayers={setLayers}
           tool={tool}
+          setTool={setTool}
           color={color}
+          setColor={setColor}
           isPenMode={isPenMode}
           strokeWidth={activeStrokeWidth}
           pencilWidth={pencilWidth}
@@ -679,14 +763,23 @@ export default function DrawingScreen() {
           thickness={activeConfig.thickness}
           stabilization={activeConfig.stabilization}
           toolConfigs={toolConfigs}
+          rulerPosition={rulerPosition}
           registerPageRef={registerPageRef}
           onActivePageChange={setActivePageId}
+          onColorPicked={handleColorPicked}
           onRequestTextInput={(x, y) => {
             if (tool === "text") {
               setTimeout(() => setEditingText({ x, y, text: "" }), 0);
             }
           }}
         />
+
+        <RulerOverlay
+          visible={rulerVisible}
+          position={rulerPosition}
+          onChange={(pos) => setRulerPosition(pos)}
+        />
+
         <StickerModal
           visible={stickerModalVisible}
           onClose={() => setStickerModalVisible(false)}

@@ -7,6 +7,7 @@ export default function ColorPalette({
   selectedColor,
   onSelectColor,
   onSelectColorSet, // 👈 thêm prop mới
+  colorHistory, // 👈 Thêm colorHistory
 }) {
   return (
     <View style={{ paddingVertical: 8 }}>
@@ -24,6 +25,7 @@ export default function ColorPalette({
             color={c}
             isSelected={selectedColor === c}
             selectedColor={selectedColor}
+            colorHistory={colorHistory} // 👈 Truyền colorHistory
             onPress={() => onSelectColor(c, index)}
             onSelectColor={(newColor) => onSelectColor(newColor, index)}
             onSelectColorSet={onSelectColorSet} // 👈 thêm
