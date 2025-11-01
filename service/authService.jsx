@@ -22,7 +22,7 @@ export const authService = {
     } catch (err) {
       const message =
         err.response?.data?.message || err.message || "Login failed.";
-      console.log("Login error:", err.response?.data || err.message);
+      
       throw new Error(message);
     }
   },
@@ -49,7 +49,7 @@ export const authService = {
 
       return null;
     } catch (err) {
-      console.log("Refresh token failed:", err.response?.data);
+      
       return null;
     }
   },

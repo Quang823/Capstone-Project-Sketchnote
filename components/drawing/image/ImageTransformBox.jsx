@@ -1,8 +1,14 @@
-import React, { useMemo, useRef } from "react";
+import React, { useMemo, useRef, useEffect } from "react";
 import { View, StyleSheet, PanResponder } from "react-native";
-import debounce from "lodash/debounce";
-import { MaterialCommunityIcons } from "@expo/vector-icons"; // ✅ icon xoay
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+/**
+ * ImageTransformBox — box bo quanh ảnh để Move / Resize / Rotate mượt realtime
+ * Tối ưu:
+ *  ✅ Không xung đột giữa PanResponder
+ *  ✅ Rotate realtime theo requestAnimationFrame
+ *  ✅ Resize và Move phản hồi nhanh hơn (không debounce)
+ */
 export default function ImageTransformBox({
   x,
   y,
@@ -10,8 +16,14 @@ export default function ImageTransformBox({
   height,
   rotation = 0,
   onMove,
+  onMoveStart,
+  onMoveEnd,
   onResize,
+  onResizeStart,
+  onResizeEnd,
   onRotate,
+  onRotateStart,
+  onRotateEnd,
   scale = 1,
   pan = { x: 0, y: 0 },
 }) {
@@ -19,64 +31,58 @@ export default function ImageTransformBox({
   const h = Math.max(1, Number(height) || 0);
   const left = Number(x) || 0;
   const top = Number(y) || 0;
+  const alignOffsetY = 1 / (scale || 1);
 
-  const boxRef = useRef(null);
   const rotateStart = useRef({ angle: 0, initRot: 0 });
+  const rotateFrame = useRef(null);
 
-  const debouncedRotate = useMemo(() => debounce(onRotate, 8), [onRotate]);
+  // Keep stable refs for callbacks to prevent responder re-creation during drag
+  const onResizeRef = useRef(onResize);
+  const onResizeStartRef = useRef(onResizeStart);
+  const onResizeEndRef = useRef(onResizeEnd);
+  useEffect(() => {
+    onResizeRef.current = onResize;
+  }, [onResize]);
+  useEffect(() => {
+    onResizeStartRef.current = onResizeStart;
+  }, [onResizeStart]);
+  useEffect(() => {
+    onResizeEndRef.current = onResizeEnd;
+  }, [onResizeEnd]);
 
-  // Move
+  // ------------------ MOVE ------------------
   const moveResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
-        onPanResponderMove: (_, g) => onMove?.(g.dx / scale, g.dy / scale),
+        onPanResponderGrant: () => onMoveStart?.(),
+        onPanResponderMove: (_, g) => {
+          onMove?.(g.dx / scale, g.dy / scale);
+        },
+        onPanResponderRelease: () => onMoveEnd?.(),
       }),
-    [onMove, scale]
+    [onMove, onMoveStart, onMoveEnd, scale]
   );
 
-  // Resize
+  // ------------------ RESIZE ------------------
   const makeCornerResponder = (corner) =>
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, g) =>
-        onResize?.(corner, g.dx / scale, g.dy / scale),
+      onPanResponderGrant: () => onResizeStartRef.current?.(corner),
+      onPanResponderMove: (_, g) => {
+        // Convert screen-space deltas to local box-space deltas by removing rotation
+        const dx = g.dx / (scale || 1);
+        const dy = g.dy / (scale || 1);
+        const rad = (rotation || 0) * (Math.PI / 180);
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        // rotate by -rad: x' = x*cos + y*sin; y' = -x*sin + y*cos
+        const localDx = dx * cos + dy * sin;
+        const localDy = -dx * sin + dy * cos;
+        onResizeRef.current?.(corner, localDx, localDy);
+      },
+      onPanResponderRelease: () => onResizeEndRef.current?.(corner),
     });
-
-  // ✅ Rotate — xoay quanh đúng tâm box
-  const rotateResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onPanResponderGrant: (_, gestureState) => {
-          const cx = w / 2;
-          const cy = h / 2;
-          const localX = gestureState.x0 - left;
-          const localY = gestureState.y0 - top;
-          const dx = localX - cx;
-          const dy = localY - cy;
-          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-          rotateStart.current = { angle, initRot: rotation };
-        },
-        onPanResponderMove: (_, gestureState) => {
-          const { angle: startAngle, initRot } = rotateStart.current;
-          const cx = w / 2;
-          const cy = h / 2;
-          const localX = gestureState.moveX - left;
-          const localY = gestureState.moveY - top;
-          const dx = localX - cx;
-          const dy = localY - cy;
-          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-          const delta = angle - startAngle;
-          const newRot = initRot + delta;
-          debouncedRotate?.(newRot);
-        },
-        onPanResponderRelease: () => {
-          debouncedRotate.flush();
-        },
-      }),
-    [rotation, debouncedRotate, left, top, w, h]
-  );
 
   const responders = useMemo(
     () => ({
@@ -85,57 +91,104 @@ export default function ImageTransformBox({
       bl: makeCornerResponder("bl"),
       br: makeCornerResponder("br"),
     }),
-    [onResize, scale]
+    [scale, rotation]
   );
 
+  // ------------------ ROTATE ------------------
+  const rotateResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderGrant: (_, g) => {
+          onRotateStart?.();
+          const cx = w / 2;
+          const cy = h / 2;
+          const localX = (g.x0 - (left + (pan?.x || 0))) / (scale || 1);
+          const localY = (g.y0 - (top + (pan?.y || 0))) / (scale || 1);
+          const dx = localX - cx;
+          const dy = localY - cy;
+          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+          rotateStart.current = { angle, initRot: rotation };
+        },
+        onPanResponderMove: (_, g) => {
+          cancelAnimationFrame(rotateFrame.current);
+          rotateFrame.current = requestAnimationFrame(() => {
+            const { angle: startAngle, initRot } = rotateStart.current;
+            const cx = w / 2;
+            const cy = h / 2;
+            const localX = (g.moveX - (left + (pan?.x || 0))) / (scale || 1);
+            const localY = (g.moveY - (top + (pan?.y || 0))) / (scale || 1);
+            const dx = localX - cx;
+            const dy = localY - cy;
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            const delta = angle - startAngle;
+            const newRot = initRot + delta;
+            onRotate?.(newRot);
+          });
+        },
+        onPanResponderRelease: () => {
+          cancelAnimationFrame(rotateFrame.current);
+          onRotateEnd?.();
+        },
+      }),
+    [
+      rotation,
+      onRotate,
+      onRotateStart,
+      onRotateEnd,
+      w,
+      h,
+      left,
+      top,
+      scale,
+      pan,
+    ]
+  );
+
+  // ------------------ RENDER ------------------
   return (
     <View
-      ref={boxRef}
       style={[
         styles.box,
         {
           left,
-          top,
+          top: top + alignOffsetY,
           width: w,
           height: h,
           transform: [
             { translateX: pan.x },
             { translateY: pan.y },
             { scale },
-            { rotate: `${rotation}deg` }, // ✅ xoay toàn box (border + handle)
+            { rotate: `${rotation}deg` },
           ],
         },
       ]}
       {...moveResponder.panHandlers}
       pointerEvents="box-none"
     >
-      {/* viền */}
       <View style={styles.border} />
 
-      {/* handle resize + rotate */}
+      {/* 4 góc resize */}
       <View style={StyleSheet.absoluteFill}>
-        {/* 4 góc resize */}
-        <View
-          style={[styles.handle, { left: -8, top: -8 }]}
-          {...responders.tl.panHandlers}
-        />
-        <View
-          style={[styles.handle, { left: w - 8, top: -8 }]}
-          {...responders.tr.panHandlers}
-        />
-        <View
-          style={[styles.handle, { left: -8, top: h - 8 }]}
-          {...responders.bl.panHandlers}
-        />
-        <View
-          style={[styles.handle, { left: w - 8, top: h - 8 }]}
-          {...responders.br.panHandlers}
-        />
+        {[
+          { name: "tl", left: -8, top: -8 },
+          { name: "tr", left: w - 8, top: -8 },
+          { name: "bl", left: -8, top: h - 8 },
+          { name: "br", left: w - 8, top: h - 8 },
+        ].map((pos) => (
+          <View
+            key={pos.name}
+            style={[styles.handle, { left: pos.left, top: pos.top }]}
+            {...responders[pos.name].panHandlers}
+            pointerEvents="box-only"
+          />
+        ))}
 
-        {/* ✅ icon xoay — bên phải giữa */}
+        {/* Nút xoay */}
         <View
-          style={[styles.rotateHandle, { left: w + 20, top: h / 2 - 16 }]}
+          style={[styles.rotateHandle, { left: w + 26, top: h / 2 - 16 }]}
           {...rotateResponder.panHandlers}
+          pointerEvents="box-only"
         >
           <MaterialCommunityIcons
             name="rotate-right"
@@ -149,7 +202,7 @@ export default function ImageTransformBox({
 }
 
 const styles = StyleSheet.create({
-  box: { position: "absolute", zIndex: 20 },
+  box: { position: "absolute", zIndex: 30 },
   border: {
     ...StyleSheet.absoluteFillObject,
     borderWidth: 1.5,
@@ -158,9 +211,9 @@ const styles = StyleSheet.create({
   },
   handle: {
     position: "absolute",
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: "#2563EB",
   },
   rotateHandle: {

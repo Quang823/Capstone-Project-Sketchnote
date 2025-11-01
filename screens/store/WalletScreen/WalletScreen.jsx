@@ -49,7 +49,6 @@ export default function WalletScreen() {
 
     try {
       const url = await paymentService.depositWallet(amount);
-      console.log("🔗 URL from backend:", url);
 
       setShowDepositModal(false);
       navigation.navigate("PaymentWebView", { paymentUrl: url });
@@ -63,7 +62,6 @@ export default function WalletScreen() {
   const fetchWallet = async () => {
     try {
       const data = await paymentService.getWallet();
-      console.log("📦 Wallet data:", data);
       setWalletData(data);
     } catch (error) {
       console.error("Error fetching wallet:", error.message);

@@ -57,8 +57,14 @@ export default function AppNavigator() {
       <Stack.Screen name="CreateBlog" component={CreateBlogScreen} />
       <Stack.Screen name="UpdateBlog" component={UpdateBlogScreen} />
       <Stack.Screen name="PaymentWebView" component={PaymentWebViewScreen} />
-      <Stack.Screen name="PaymentSuccessScreen" component={PaymentSuccessScreen} />
-      <Stack.Screen name="PaymentFailedScreen" component={PaymentFailedScreen} />
+      <Stack.Screen
+        name="PaymentSuccessScreen"
+        component={PaymentSuccessScreen}
+      />
+      <Stack.Screen
+        name="PaymentFailedScreen"
+        component={PaymentFailedScreen}
+      />
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
 <Stack.Screen 
   name="OrderSuccess" 

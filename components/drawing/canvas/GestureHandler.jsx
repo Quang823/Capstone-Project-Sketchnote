@@ -1,4 +1,11 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
+import { useAnimatedReaction, runOnJS } from "react-native-reanimated";
 import {
   Alert,
   Modal,
@@ -21,17 +28,18 @@ import InlineTextEditor from "../text/InlineTextEditor";
 import TextSelectionBox from "../text/TextSelectionBox";
 import ImageTransformBox from "../image/ImageTransformBox";
 import ImageSelectionBox from "../image/ImageSelectionBox";
+import LassoSelectionBox from "../lasso/LassoSelectionBox";
+import useLassoTransform from "../../../hooks/useLassoTransform";
+
 import debounce from "lodash/debounce";
-import { useMemo } from "react";
+
 export default function GestureHandler({
   page,
   tool,
   eraserMode,
   strokes,
-  setStrokes,
   currentPoints,
   setCurrentPoints,
-  setRedoStack,
   color,
   strokeWidth,
   pencilWidth,
@@ -43,17 +51,20 @@ export default function GestureHandler({
   configByTool = {},
   onAddStroke,
   onModifyStroke,
+  onModifyStrokesBulk,
   onDeleteStroke,
   children,
   isPenMode,
   canvasRef,
   setRealtimeText,
   zoomState,
+  onSelectStroke,
+  activeLayerId,
+  onLiveUpdateStroke,
 }) {
   const liveRef = useRef([]);
   const rafScheduled = useRef(false);
   const lastEraserPointRef = useRef(null);
-  const dragOffsetRef = useRef({ dx: 0, dy: 0 });
   const [selectedBox, setSelectedBox] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [editorVisible, setEditorVisible] = useState(false);
@@ -63,10 +74,40 @@ export default function GestureHandler({
     tool: "text",
     data: {},
   });
+
   const [draggingText, setDraggingText] = useState(null);
-  const tapTimeout = useRef(null);
-  const lastTapTime = useRef(0);
-  const [rotateStart, setRotateStart] = useState({ angle: 0, rotation: 0 });
+  const [tempStrokeId, setTempStrokeId] = useState(null);
+  const getActiveStrokes = useCallback(() => {
+    return strokes.filter(
+      (s) =>
+        (!activeLayerId || s.layerId === activeLayerId) && (s.visible ?? true)
+    );
+  }, [strokes, activeLayerId]);
+
+  const [lassoPoints, setLassoPoints] = useState([]);
+  const [lassoSelection, setLassoSelection] = useState([]);
+  const [isMovingLasso, setIsMovingLasso] = useState(false);
+  const [lassoOrigin, setLassoOrigin] = useState(null);
+  const [lassoMoveStart, setLassoMoveStart] = useState(null);
+  const lassoMoveRAF = useRef(false);
+  const lassoPendingDelta = useRef({ dx: 0, dy: 0 });
+  const [lassoBaseBox, setLassoBaseBox] = useState(null);
+  const [lassoVisualOffset, setLassoVisualOffset] = useState({ dx: 0, dy: 0 });
+  const [visualOffsets, setVisualOffsets] = useState({});
+
+  // Mirror zoom shared values into React state to avoid reading .value in render
+  const [zoomMirror, setZoomMirror] = useState({ scale: 1, x: 0, y: 0 });
+  useAnimatedReaction(
+    () => ({
+      s: zoomState?.scale?.value ?? 1,
+      x: zoomState?.translateX?.value ?? 0,
+      y: zoomState?.translateY?.value ?? 0,
+    }),
+    (vals) => {
+      runOnJS(setZoomMirror)({ scale: vals.s, x: vals.x, y: vals.y });
+    }
+  );
+
   useEffect(() => {
     if (
       !editorVisible &&
@@ -77,207 +118,169 @@ export default function GestureHandler({
     }
   }, [editorVisible, selectedId]);
 
-  // Trong GestureHandler function
   const selectedStroke = useMemo(
     () => strokes.find((s) => s.id === selectedId),
     [strokes, selectedId]
   );
 
-  const isUpdatingRef = useRef(false);
+  const { handleMove, handleMoveCommit, handleResize, handleRotate } =
+    useLassoTransform({
+      strokes,
+      lassoSelection,
+      setLassoOrigin,
+      onModifyStroke,
+      onModifyStrokesBulk,
+      getBoundingBoxForStroke,
+    });
 
   useEffect(() => {
-    if (isUpdatingRef.current) return; // ⛔ Bỏ qua nếu đang cập nhật từ thao tác người dùng
+    if (!selectedStroke) return;
+    if (!["image", "sticker"].includes(selectedStroke.tool)) return;
 
-    if (!selectedStroke || !["image", "sticker"].includes(selectedStroke.tool))
-      return;
-
-    const next = {
-      x: selectedStroke.x,
-      y: selectedStroke.y,
-      width: selectedStroke.width,
-      height: selectedStroke.height,
+    setSelectedBox({
+      x: selectedStroke.x ?? 0,
+      y: selectedStroke.y ?? 0,
+      width: selectedStroke.width ?? 100,
+      height: selectedStroke.height ?? 100,
       rotation: selectedStroke.rotation ?? 0,
-    };
-
-    setSelectedBox((prev) => {
-      if (
-        prev &&
-        prev.x === next.x &&
-        prev.y === next.y &&
-        prev.width === next.width &&
-        prev.height === next.height &&
-        prev.rotation === next.rotation
-      ) {
-        return prev;
-      }
-      return next;
     });
-  }, [
-    selectedStroke?.x,
-    selectedStroke?.y,
-    selectedStroke?.width,
-    selectedStroke?.height,
-    selectedStroke?.rotation,
-    selectedStroke?.tool,
-  ]);
+  }, [selectedStroke]);
+  const liveTransformRef = useRef({
+    dx: 0,
+    dy: 0,
+    dw: 0,
+    dh: 0,
+    drot: 0,
+    origin: null,
+  });
 
+  // Nếu bạn có prop onLiveUpdateStroke (từ CanvasContainer), nó sẽ được gọi nhiều lần để update live (Skia).
+  // Nếu không có, chúng ta vẫn dùng liveTransformRef để accumulate và commit on end.
+  // Khi selectedStroke thay đổi (chọn 1 image mới) -> reset origin
+  useEffect(() => {
+    if (
+      selectedStroke &&
+      (selectedStroke.tool === "image" || selectedStroke.tool === "sticker")
+    ) {
+      liveTransformRef.current.origin = {
+        x: selectedStroke.x ?? 0,
+        y: selectedStroke.y ?? 0,
+        width: selectedStroke.width ?? 0,
+        height: selectedStroke.height ?? 0,
+        rotation: selectedStroke.rotation ?? 0,
+      };
+      liveTransformRef.current.dx = 0;
+      liveTransformRef.current.dy = 0;
+      liveTransformRef.current.dw = 0;
+      liveTransformRef.current.dh = 0;
+      liveTransformRef.current.drot = 0;
+    } else {
+      liveTransformRef.current.origin = null;
+    }
+  }, [selectedStroke?.id]);
   const handleTextChange = useCallback(
     (data) => {
-      if (selectedId) {
-        setStrokes((prev) => {
-          const currentStroke = prev.find((s) => s.id === selectedId);
-          if (
-            currentStroke &&
-            (currentStroke.text !== data.text ||
-              currentStroke.bold !== data.bold ||
-              currentStroke.italic !== data.italic ||
-              currentStroke.underline !== data.underline ||
-              currentStroke.align !== data.align ||
-              currentStroke.color !== data.color ||
-              currentStroke.fontSize !== data.fontSize ||
-              currentStroke.fontFamily !== data.fontFamily)
-          ) {
-            return prev.map((s) =>
-              s.id === selectedId
-                ? {
-                    ...s,
-                    text: data.text,
-                    bold: data.bold,
-                    italic: data.italic,
-                    underline: data.underline,
-                    align: data.align,
-                    color: data.color,
-                    fontSize: data.fontSize,
-                    fontFamily: data.fontFamily,
-                  }
-                : s
-            );
-          }
-          return prev; // Không cập nhật nếu không có thay đổi
+      if (!selectedId || !Array.isArray(strokes)) return;
+
+      const index = strokes.findIndex((s) => s.id === selectedId);
+      if (index === -1) return;
+
+      const currentStroke = strokes[index];
+      if (!currentStroke) return;
+
+      const hasChanged =
+        currentStroke.text !== data.text ||
+        currentStroke.bold !== data.bold ||
+        currentStroke.italic !== data.italic ||
+        currentStroke.underline !== data.underline ||
+        currentStroke.align !== data.align ||
+        currentStroke.color !== data.color ||
+        currentStroke.fontSize !== data.fontSize ||
+        currentStroke.fontFamily !== data.fontFamily;
+
+      if (hasChanged && typeof onModifyStroke === "function") {
+        onModifyStroke(index, {
+          text: data.text,
+          bold: data.bold,
+          italic: data.italic,
+          underline: data.underline,
+          align: data.align,
+          color: data.color,
+          fontSize: data.fontSize,
+          fontFamily: data.fontFamily,
         });
-        // 🔑 Sau phần setStrokes(...), thêm đoạn này:
-        if (typeof setRealtimeText === "function") {
-          if (data && typeof data.text === "string") {
-            setRealtimeText({
-              id: selectedId,
-              ...data,
-              x: Number.isFinite(editorProps.x) ? editorProps.x : 0,
-              y: Number.isFinite(editorProps.y) ? editorProps.y : 0,
-            });
-          }
-        }
+      }
 
-        // 🔑 Chỉ cập nhật selectedBox nếu cần
-        const currentStroke = strokes.find((s) => s.id === selectedId);
-        const avgCharWidth = (data.fontSize || 18) * 0.55;
-        const textWidth = (data.text?.length || 1) * avgCharWidth;
-        const padding = currentStroke?.padding || 0;
-
-        // setSelectedBox((prev) => {
-        //   const newBox = {
-        //     x: editorProps.x - padding - 1,
-        //     y: editorProps.y - (data.fontSize || 18) - padding - 1,
-        //     width: textWidth + padding * 2 + 2,
-        //     height: (data.fontSize || 18) + padding * 2 + 2,
-        //   };
-        //   // Chỉ cập nhật nếu box thay đổi
-        //   if (
-        //     !prev ||
-        //     prev.x !== newBox.x ||
-        //     prev.y !== newBox.y ||
-        //     prev.width !== newBox.width ||
-        //     prev.height !== newBox.height
-        //   ) {
-        //     return newBox;
-        //   }
-        //   return prev;
-        // });
+      if (
+        typeof setRealtimeText === "function" &&
+        typeof data.text === "string"
+      ) {
+        setRealtimeText({
+          id: selectedId,
+          ...data,
+          x: Number.isFinite(editorProps.x) ? editorProps.x : 0,
+          y: Number.isFinite(editorProps.y) ? editorProps.y : 0,
+        });
       }
     },
     [
       selectedId,
+      strokes,
+      onModifyStroke,
+      setRealtimeText,
       editorProps.x,
       editorProps.y,
-      strokes,
-      setStrokes,
-      setSelectedBox,
     ]
   );
 
-  // ========= TEXT HANDLING =========
-  const addTextStroke = (x, y, toolType, text) => {
-    const basePadding = ["sticky", "comment"].includes(tool) ? 8 : 0;
-    const baseBg =
-      tool === "sticky"
-        ? "#FFEB3B"
-        : tool === "comment"
-        ? "#E3F2FD"
-        : "transparent";
-    const tempId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const newTextStroke = {
-      id: tempId,
-      tool,
-      x: x,
-      y: y,
-      text: "",
-      color: color || "#000",
-      fontSize: tool === "sticky" ? 16 : tool === "comment" ? 14 : 18,
-      fontFamily: "Roboto-Regular",
-      bold: false,
-      italic: false,
-      underline: false,
-      align: "left",
-      backgroundColor: baseBg,
-      padding: basePadding,
-    };
+  const hitTestText = (x, y, strokesOrLayers) => {
+    let strokes = [];
 
-    setStrokes((prev) => [...prev, newTextStroke]);
-    setRedoStack([]);
-  };
+    if (Array.isArray(strokesOrLayers)) {
+      if (strokesOrLayers.length && strokesOrLayers[0]?.strokes) {
+        strokes = strokesOrLayers
+          .filter((l) => l.visible !== false)
+          .flatMap((l) => l.strokes || []);
+      } else {
+        strokes = strokesOrLayers;
+      }
+    }
 
-  const showTextInputDialog = (x, y, toolType) => {
-    setEditorProps({ x, y, tool: toolType, data: {} });
-    setEditorVisible(true);
-  };
-
-  // ========= HIT TEST =========
-  const hitTestText = (x, y, strokes) => {
     for (let i = strokes.length - 1; i >= 0; i--) {
       const s = strokes[i];
+      if (!s) continue;
+
       if (["text", "sticky", "comment", "emoji"].includes(s.tool)) {
         const fontSize = s.fontSize || 18;
-        const padding = s.padding || 0;
+        const padding = s.padding || 4;
+        const margin = 2;
         const w = (s.text?.length || 1) * fontSize * 0.6 + padding * 2;
         const h = fontSize + padding * 2;
 
-        // 🟡 Với emoji, vùng chọn nằm giữa (tâm emoji)
+        let left = s.x - padding - margin;
+        let right = s.x - padding + w + margin;
         let top, bottom;
+
         if (s.tool === "emoji") {
-          top = s.y - h / 2;
-          bottom = s.y + h / 2;
+          top = s.y - h / 2 - margin;
+          bottom = s.y + h / 2 + margin;
         } else {
-          top = s.y - h;
-          bottom = s.y;
+          top = s.y - h - margin;
+          bottom = s.y + margin;
         }
 
-        if (
-          x >= s.x - padding &&
-          x <= s.x - padding + w &&
-          y >= top &&
-          y <= bottom
-        ) {
+        if (x >= left && x <= right && y >= top && y <= bottom) {
           return s;
         }
       }
     }
+
     return null;
   };
 
-  // ========= HIT TEST IMAGE =========
-  // helper rotate point around center by angle degrees
   const rotatePoint = (px, py, cx, cy, angleDeg) => {
     const a = (angleDeg * Math.PI) / 180;
-    const s = Math.sin(-a); // note: -a to rotate point back
+    const s = Math.sin(-a);
     const c = Math.cos(-a);
     const dx = px - cx;
     const dy = py - cy;
@@ -286,9 +289,25 @@ export default function GestureHandler({
     return { x: rx + cx, y: ry + cy };
   };
 
-  const hitTestImage = (x, y, strokes) => {
+  const hitTestImage = (x, y, strokesOrLayers) => {
+    let strokes = [];
+
+    if (Array.isArray(strokesOrLayers)) {
+      if (strokesOrLayers.length && strokesOrLayers[0]?.strokes) {
+        strokes = strokesOrLayers
+          .filter((l) => l.visible !== false)
+          .flatMap((l) => l.strokes || []);
+      } else {
+        strokes = strokesOrLayers;
+      }
+    }
+
+    const margin = 5;
+
     for (let i = strokes.length - 1; i >= 0; i--) {
       const s = strokes[i];
+      if (!s) continue;
+
       if (["image", "sticker"].includes(s.tool)) {
         const sx = s.x ?? 0;
         const sy = s.y ?? 0;
@@ -296,39 +315,54 @@ export default function GestureHandler({
         const h = s.height ?? 0;
         const rot = s.rotation ?? 0;
 
-        if (!rot || rot === 0) {
-          if (x >= sx && x <= sx + w && y >= sy && y <= sy + h) return s;
+        if (!rot || Math.abs(rot) < 0.01) {
+          if (
+            x >= sx - margin &&
+            x <= sx + w + margin &&
+            y >= sy - margin &&
+            y <= sy + h + margin
+          ) {
+            return s;
+          }
         } else {
-          // rotate the test point back by -rot around center, then check AABB
           const cx = sx + w / 2;
           const cy = sy + h / 2;
-          // rotate point (x,y) by -rot
           const rel = rotatePoint(x, y, cx, cy, -rot);
-          if (rel.x >= sx && rel.x <= sx + w && rel.y >= sy && rel.y <= sy + h)
+          if (
+            rel.x >= sx - margin &&
+            rel.x <= sx + w + margin &&
+            rel.y >= sy - margin &&
+            rel.y <= sy + h + margin
+          ) {
             return s;
+          }
         }
       }
     }
+
     return null;
   };
 
   const getPointerType = (e) => e?.nativeEvent?.pointerType || "touch";
   const isPenEvent = (e) => ["pen", "stylus"].includes(getPointerType(e));
   const isTouchEvent = (e) => getPointerType(e) === "touch";
+  const modifyStroke = (index, changes) => {
+    if (typeof onModifyStroke === "function") onModifyStroke(index, changes);
+  };
 
-  // 🟢 Double-tap gesture
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
     .maxDuration(300)
     .maxDistance(15)
-    .runOnJS(true)
     .onStart((e) => {
-      const hit = hitTestText(e.x, e.y, strokes);
+      const validStrokes = getActiveStrokes?.() || [];
+      const hit = hitTestText(e.x, e.y, validStrokes);
       if (!hit) return;
 
       if (hit.tool === "emoji") {
-        // Emoji: chỉ chọn, không mở editor
         setSelectedId(hit.id);
+        onSelectStroke?.(hit.id);
+
         setSelectedBox({
           x: hit.x - (hit.padding || 0) - 1,
           y: hit.y - (hit.fontSize || 18) / 2 - (hit.padding || 0) - 1,
@@ -340,12 +374,15 @@ export default function GestureHandler({
         });
         return;
       }
-      if (hit) {
+
+      if (hit.tool === "text") {
         setSelectedId(hit.id);
+        onSelectStroke?.(hit.id);
         setSelectedBox(null);
-        // ✨ thêm dòng này:
-        if (typeof setRealtimeText === "function")
+
+        if (typeof setRealtimeText === "function") {
           setRealtimeText({ id: hit.id, ...hit });
+        }
 
         setEditorProps({
           x: hit.x,
@@ -357,11 +394,16 @@ export default function GestureHandler({
       }
     });
 
-  // ====== TAP GESTURE ======
   const tap = Gesture.Tap()
     .runOnJS(true)
     .onStart((e) => {
-      // 🔹 Ưu tiên kiểm tra hình ảnh / sticker trước
+      // 🧩 Nếu tap ra ngoài và đang có lasso selection → hủy chọn
+      if (lassoSelection.length > 0) {
+        setLassoSelection([]);
+        setLassoPoints([]);
+        return;
+      }
+
       const hitImage = hitTestImage(e.x, e.y, strokes);
       if (hitImage) {
         setSelectedId(hitImage.id);
@@ -376,12 +418,36 @@ export default function GestureHandler({
         return;
       }
 
-      // 🔹 Sau đó mới xử lý text / emoji
       const hit = hitTestText(e.x, e.y, strokes);
       if (!hit) {
-        // Tap trống => bỏ chọn
+        if (selectedId && selectedBox) {
+          const stroke = strokes.find((s) => s.id === selectedId);
+          if (
+            stroke &&
+            ["text", "sticky", "comment", "emoji"].includes(stroke.tool)
+          ) {
+            const padding = stroke.padding || 0;
+            const fontSize = stroke.fontSize || 18;
+            const origBoxX = stroke.x - padding - 1;
+            const origBoxY =
+              stroke.tool === "emoji"
+                ? stroke.y - fontSize / 2 - padding - 1
+                : stroke.y - fontSize - padding - 1;
+            const dx = selectedBox.x - origBoxX;
+            const dy = selectedBox.y - origBoxY;
+
+            const index = strokes.findIndex((s) => s.id === selectedId);
+            if (index !== -1 && typeof onModifyStroke === "function") {
+              onModifyStroke(index, {
+                x: (stroke.x ?? 0) + dx,
+                y: (stroke.y ?? 0) + dy,
+              });
+            }
+          }
+        }
         setSelectedId(null);
         setSelectedBox(null);
+        setRealtimeText(null);
         return;
       }
 
@@ -411,7 +477,6 @@ export default function GestureHandler({
           const h = (hit.fontSize || 18) + (hit.padding || 0) * 2;
 
           if (selectedId && hit.id === selectedId) {
-            // Đang chọn lại cùng text => mở editor
             setSelectedId(hit.id);
             setSelectedBox(null);
             setEditorProps({
@@ -422,7 +487,6 @@ export default function GestureHandler({
             });
             setEditorVisible(true);
           } else {
-            // Chọn mới
             setSelectedId(hit.id);
             setSelectedBox({
               x: hit.x - (hit.padding || 0) - 1,
@@ -435,21 +499,60 @@ export default function GestureHandler({
         return;
       }
 
-      // Nếu tool khác, bỏ chọn
       setSelectedId(null);
       setSelectedBox(null);
     });
 
-  // ========= GESTURE =========
   const pan = Gesture.Pan()
     .minDistance(1)
     .runOnJS(true)
     .onStart((e) => {
-      /** 🟨 TEXT ADD / EDIT **/
-      if (["image", "sticker", "camera"].includes(tool)) {
+      if (["image", "sticker", "camera"].includes(tool)) return;
+
+      if (tool === "lasso" && lassoSelection.length > 0) {
+        // Bấm vào trong selection để bắt đầu move
+        const hit = lassoOrigin?.some((stInfo) => {
+          const s = strokes.find((st) => st.id === stInfo.id);
+          if (!s) return false;
+          const bbox = getBoundingBoxForStroke(s);
+          if (!bbox) return false;
+          return (
+            e.x >= bbox.minX - 10 &&
+            e.x <= bbox.maxX + 10 &&
+            e.y >= bbox.minY - 10 &&
+            e.y <= bbox.maxY + 10
+          );
+        });
+
+        if (hit) {
+          setIsMovingLasso(true);
+          setLassoMoveStart({ x: e.x, y: e.y });
+          return;
+        } else {
+          // Nếu click ra ngoài, reset để vẽ vùng chọn mới
+          setLassoSelection([]);
+          setLassoPoints([{ x: e.x, y: e.y }]);
+          setIsMovingLasso(false);
+          return;
+        }
+      }
+
+      // --- Nếu chưa có vùng chọn nào, bắt đầu vẽ vùng lasso mới ---
+      if (tool === "lasso") {
+        setLassoPoints([{ x: e.x, y: e.y }]);
+        setLassoSelection([]);
+        setIsMovingLasso(false);
         return;
       }
-      const hit = hitTestText(e.x, e.y, strokes);
+
+      // Các logic cũ cho text/eraser/pen...
+      const validStrokes = strokes.filter(
+        (s) => s.layerId === activeLayerId && (s.visible ?? true)
+      );
+      if (!activeLayerId) return;
+
+      const hit = hitTestText(e.x, e.y, validStrokes);
+
       if (["text", "sticky", "comment"].includes(tool)) {
         if (hit) {
           const w =
@@ -470,7 +573,6 @@ export default function GestureHandler({
           });
           return;
         } else {
-          // 🟢 Tap trống => thêm text mới với stroke tạm để realtime render
           const tempId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
           const newTextStroke = {
             id: tempId,
@@ -492,16 +594,18 @@ export default function GestureHandler({
                 ? "#E3F2FD"
                 : "transparent",
             padding: tool === "sticky" || tool === "comment" ? 8 : 0,
+            layerId: activeLayerId,
           };
-
-          // 🟢 Add stroke tạm để CanvasRenderer vẽ realtime
-          // setStrokes((prev) => [...prev, newTextStroke]);
-          // setRedoStack([]);
+          if (typeof onAddStroke === "function") {
+            try {
+              onAddStroke(newTextStroke);
+            } catch (err) {
+              console.error("⚠️ onAddStroke error:", err);
+            }
+          }
 
           setSelectedId(tempId);
           if (!Number.isFinite(e.x) || !Number.isFinite(e.y)) return;
-
-          // 🟢 Đặt realtimeText để hiện chữ realtime
           if (typeof setRealtimeText === "function") {
             setRealtimeText({
               ...newTextStroke,
@@ -511,22 +615,12 @@ export default function GestureHandler({
               backgroundColor: newTextStroke.backgroundColor ?? "transparent",
             });
           }
-
-          // 🟢 Mở editor
           setEditorProps({ x: e.x, y: e.y, tool, data: newTextStroke });
           setEditorVisible(true);
           return;
         }
       }
 
-      // ✅ Nếu người dùng đang chọn text mà bấm ra vùng trống => ẩn khung
-      if (selectedId && !hitTestText(e.x, e.y, strokes)) {
-        setSelectedId(null);
-        setSelectedBox(null);
-        return;
-      }
-
-      /** 🧽 ERASER SETUP **/
       if (
         tool === "eraser" &&
         ["pixel", "stroke", "object"].includes(eraserMode)
@@ -534,10 +628,9 @@ export default function GestureHandler({
         lastEraserPointRef.current = { x: e.x, y: e.y };
       }
 
-      /** 🧾 OBJECT ERASER TAP **/
       if (eraserMode === "object") {
-        for (let i = strokes.length - 1; i >= 0; i--) {
-          const s = strokes[i];
+        for (let i = validStrokes.length - 1; i >= 0; i--) {
+          const s = validStrokes[i];
           if (["text", "sticky", "comment"].includes(s.tool)) continue;
           const bbox = getBoundingBoxForStroke(s);
           if (
@@ -547,16 +640,19 @@ export default function GestureHandler({
             e.y >= bbox.minY &&
             e.y <= bbox.maxY
           ) {
-            onDeleteStroke?.(i);
+            const globalIndex = strokes.findIndex(
+              (s) => s.id === validStrokes[i].id
+            );
+            if (globalIndex !== -1) onDeleteStroke(globalIndex);
+
             return;
           }
         }
       }
 
-      /** 🩶 STROKE ERASER **/
       if (eraserMode === "stroke") {
-        for (let i = strokes.length - 1; i >= 0; i--) {
-          const s = strokes[i];
+        for (let i = validStrokes.length - 1; i >= 0; i--) {
+          const s = validStrokes[i];
           if (!s.points) continue;
           const near = s.points.some((p) => {
             const dx = p.x - e.x;
@@ -564,48 +660,48 @@ export default function GestureHandler({
             return Math.sqrt(dx * dx + dy * dy) <= (s.width || 6) + 4;
           });
           if (near) {
-            onDeleteStroke?.(i);
+            const globalIndex = strokes.findIndex(
+              (s) => s.id === validStrokes[i].id
+            );
+            if (globalIndex !== -1) onDeleteStroke(globalIndex);
+
             return;
           }
         }
       }
 
-      // 🖼️ IMAGE / STICKER TOOL: thêm media mới
-      if (["image", "sticker"].includes(tool)) {
-        const tempId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-        const newMedia = {
-          id: tempId,
+      if (tool === "sticky" || tool === "comment") {
+        const newId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        setTempStrokeId(newId);
+
+        // Tạo temporary stroke
+        const tempStroke = {
+          id: newId,
           tool,
           x: e.x,
           y: e.y,
-          width: 200,
-          height: 200,
-          rotation: 0,
-          uri: "", // sẽ cập nhật khi chọn xong ảnh hoặc sticker
+          text: "",
+          layerId: activeLayerId,
         };
 
-        setSelectedId(tempId);
-        setSelectedBox({
+        onAddStroke?.(tempStroke);
+
+        // Mở editor ngay
+        setEditorProps({
           x: e.x,
           y: e.y,
-          width: newMedia.width,
-          height: newMedia.height,
-          rotation: 0,
+          tool,
+          data: tempStroke,
         });
-
-        setStrokes((prev) => [...prev, newMedia]);
-        setRedoStack([]);
-
+        setEditorVisible(true);
         return;
       }
 
-      // Otherwise start drawing
       const toolConfig = configByTool[tool] || {
         pressure: 0.5,
         thickness: 1,
         stabilization: 0.2,
       };
-
       liveRef.current = [
         {
           x: e.x,
@@ -615,7 +711,6 @@ export default function GestureHandler({
           stabilization: toolConfig.stabilization,
         },
       ];
-
       setCurrentPoints(liveRef.current);
       const livePath = canvasRef?.current?.livePath;
       if (livePath) {
@@ -627,15 +722,43 @@ export default function GestureHandler({
     .onUpdate((e) => {
       if (["image", "sticker", "camera"].includes(tool)) return;
       if (!isInsidePage(e.x, e.y, page)) return;
+
+      if (tool === "lasso" && isMovingLasso && lassoOrigin) {
+        // accumulate delta since gesture start
+        const dx = e.x - lassoMoveStart.x;
+        const dy = e.y - lassoMoveStart.y;
+        // update visual offset immediately so box and strokes follow finger, no state mutation on strokes
+        setLassoVisualOffset({ dx, dy });
+        setVisualOffsets(() => {
+          const next = {};
+          lassoSelection.forEach((id) => {
+            next[id] = { dx, dy };
+          });
+          return next;
+        });
+
+        return;
+      }
+
+      // --- Nếu đang vẽ vùng lasso mới ---
+      if (tool === "lasso" && !isMovingLasso) {
+        setLassoPoints((prev) => [...prev, { x: e.x, y: e.y }]);
+        setCurrentPoints((prev) => [...(prev ?? []), { x: e.x, y: e.y }]);
+        return;
+      }
+
+      // Các xử lý khác giữ nguyên (text dragging, eraser, normal drawing...)
+      const validStrokes = strokes.filter(
+        (s) => s.layerId === activeLayerId && (s.visible ?? true)
+      );
+
       if (selectedId && draggingText) {
         const newX = e.x - draggingText.offsetX;
         const newY = e.y - draggingText.offsetY;
+        const globalIndex = strokes.findIndex((s) => s.id === selectedId);
 
-        setStrokes((prev) =>
-          prev.map((s) =>
-            s.id === selectedId ? { ...s, x: newX, y: newY } : s
-          )
-        );
+        if (globalIndex !== -1 && typeof onModifyStroke === "function")
+          modifyStroke(globalIndex, { x: newX, y: newY });
 
         setSelectedBox((box) =>
           box
@@ -643,12 +766,15 @@ export default function GestureHandler({
                 ...box,
                 x:
                   newX -
-                  (strokes.find((s) => s.id === selectedId)?.padding || 0) -
+                  (validStrokes.find((s) => s.id === selectedId)?.padding ||
+                    0) -
                   1,
                 y:
                   newY -
-                  (strokes.find((s) => s.id === selectedId)?.fontSize || 18) -
-                  (strokes.find((s) => s.id === selectedId)?.padding || 0) -
+                  (validStrokes.find((s) => s.id === selectedId)?.fontSize ||
+                    18) -
+                  (validStrokes.find((s) => s.id === selectedId)?.padding ||
+                    0) -
                   1,
               }
             : box
@@ -656,13 +782,12 @@ export default function GestureHandler({
 
         setEditorProps((prev) => ({ ...prev, x: newX, y: newY }));
 
-        // 🔥 FIX: cập nhật realtimeText để CanvasRenderer render đúng vị trí mới
         if (typeof setRealtimeText === "function") {
-          const s = strokes.find((st) => st.id === selectedId);
+          const s = validStrokes.find((st) => st.id === selectedId);
           if (s) {
             setRealtimeText({
               id: s.id,
-              tool: s.tool, // 🟡 cần để CanvasRenderer biết là sticky/comment
+              tool: s.tool,
               text: s.text || "",
               color: s.color || "#000",
               x: newX,
@@ -671,10 +796,11 @@ export default function GestureHandler({
               fontFamily: s.fontFamily || "Roboto-Regular",
               padding: s.padding ?? 6,
               backgroundColor: s.backgroundColor ?? "transparent",
+              rotation: s.rotation ?? 0,
+              layerId: s.layerId,
             });
           }
         }
-
         return;
       }
 
@@ -684,21 +810,21 @@ export default function GestureHandler({
             rafScheduled.current = true;
             requestAnimationFrame(() => {
               rafScheduled.current = false;
-              setStrokes((prev) =>
-                prev.filter((s, i) => {
-                  if (!s.points) return true;
-                  const hit = s.points.some((p) => {
-                    const dx = p.x - e.x;
-                    const dy = p.y - e.y;
-                    return Math.sqrt(dx * dx + dy * dy) <= (s.width || 6) + 4;
-                  });
-                  if (hit) {
-                    setRedoStack((redo) => [...redo, { stroke: s, index: i }]);
-                    return false;
-                  }
-                  return true;
-                })
-              );
+              validStrokes.forEach((s, i) => {
+                if (!s.points) return;
+                const hit = s.points.some((p) => {
+                  const dx = p.x - e.x;
+                  const dy = p.y - e.y;
+                  return Math.sqrt(dx * dx + dy * dy) <= (s.width || 6) + 4;
+                });
+
+                if (hit && typeof onDeleteStroke === "function") {
+                  const globalIndex = strokes.findIndex(
+                    (s) => s.id === validStrokes[i].id
+                  );
+                  if (globalIndex !== -1) onDeleteStroke(globalIndex);
+                }
+              });
             });
           }
           return;
@@ -709,7 +835,6 @@ export default function GestureHandler({
           const dx = e.x - (last?.x ?? e.x);
           const dy = e.y - (last?.y ?? e.y);
           if (dx * dx + dy * dy < 9) return;
-
           liveRef.current.push({ x: e.x, y: e.y });
           setCurrentPoints([...liveRef.current]);
           return;
@@ -738,6 +863,7 @@ export default function GestureHandler({
       const dx = e.x - last.x;
       const dy = e.y - last.y;
       if (dx * dx + dy * dy < 9) return;
+
       const toolConfig = configByTool[tool] || {
         pressure: 0.5,
         thickness: 1,
@@ -751,6 +877,7 @@ export default function GestureHandler({
         thickness: toolConfig.thickness,
         stabilization: toolConfig.stabilization,
       });
+
       if (!rafScheduled.current) {
         rafScheduled.current = true;
         requestAnimationFrame(() => {
@@ -760,32 +887,120 @@ export default function GestureHandler({
       }
     })
 
-    .onEnd(() => {
+    .onEnd((e) => {
       if (["image", "sticker", "camera"].includes(tool)) return;
+      if (tool === "lasso" && !isMovingLasso && lassoPoints.length > 3) {
+        const poly = lassoPoints;
+        const insideIds = strokes
+          .filter(
+            (s) =>
+              (!activeLayerId || s.layerId === activeLayerId) &&
+              (s.points || s.x)
+          )
+          .filter((s) => {
+            const bbox = getBoundingBoxForStroke(s);
+            if (!bbox) return false;
+            const cx = (bbox.minX + bbox.maxX) / 2;
+            const cy = (bbox.minY + bbox.maxY) / 2;
+            return pointInPolygon(poly, cx, cy);
+          })
+          .map((s) => s.id);
+
+        if (insideIds.length > 0) {
+          setLassoOrigin(
+            insideIds.map((id) => {
+              const s = strokes.find((st) => st.id === id);
+              return { id, x: s?.x ?? 0, y: s?.y ?? 0 };
+            })
+          );
+          setLassoSelection(insideIds);
+          // set base box once when selection is created
+          (() => {
+            let minX = Infinity,
+              minY = Infinity,
+              maxX = -Infinity,
+              maxY = -Infinity;
+            strokes
+              .filter((s) => insideIds.includes(s.id))
+              .forEach((s) => {
+                const bbox = getBoundingBoxForStroke(s);
+                if (bbox) {
+                  minX = Math.min(minX, bbox.minX);
+                  minY = Math.min(minY, bbox.minY);
+                  maxX = Math.max(maxX, bbox.maxX);
+                  maxY = Math.max(maxY, bbox.maxY);
+                }
+              });
+            if (minX < Infinity && minY < Infinity) {
+              setLassoBaseBox({
+                x: minX,
+                y: minY,
+                width: maxX - minX,
+                height: maxY - minY,
+              });
+              setLassoVisualOffset({ dx: 0, dy: 0 });
+            }
+          })();
+        }
+
+        setLassoPoints([]);
+        setCurrentPoints([]);
+        return;
+      }
+
+      // --- Khi thả tay sau khi move vùng chọn ---
+      if (tool === "lasso" && isMovingLasso && lassoOrigin) {
+        const dx = e.x - lassoMoveStart.x;
+        const dy = e.y - lassoMoveStart.y;
+
+        // final commit using tempOffset accumulated
+        handleMoveCommit?.();
+
+        lassoPendingDelta.current = { dx: 0, dy: 0 };
+        lassoMoveRAF.current = false;
+        // update base box position to new location
+        setLassoBaseBox((box) =>
+          box ? { ...box, x: box.x + dx, y: box.y + dy } : box
+        );
+        setLassoVisualOffset({ dx: 0, dy: 0 });
+        // Dừng move
+        setIsMovingLasso(false);
+        setLassoMoveStart(null);
+        return;
+      }
+
+      // Các xử lý cũ cuối cùng (vẽ stroke hoàn tất, eraser pixel / object ... ) - giữ nguyên
       const livePath = canvasRef?.current?.livePath;
       if (livePath) livePath.reset();
+
       const finalPoints = liveRef.current;
       liveRef.current = [];
       setCurrentPoints([]);
 
+      const validStrokes = strokes.filter(
+        (s) => s.layerId === activeLayerId && (s.visible ?? true)
+      );
+      if (!activeLayerId) return;
+
       if (eraserMode === "object" && finalPoints.length > 2) {
         const poly = finalPoints;
-        setStrokes((prev) => {
-          const next = [];
-          for (let i = 0; i < prev.length; i++) {
-            const s = prev[i];
-            const bbox = getBoundingBoxForStroke(s);
-            if (!bbox) continue;
-            const cx = (bbox.minX + bbox.maxX) / 2;
-            const cy = (bbox.minY + bbox.maxY) / 2;
-            if (pointInPolygon(poly, cx, cy)) {
-              setRedoStack((redo) => [...redo, { stroke: s, index: i }]);
-              continue;
+        for (let i = validStrokes.length - 1; i >= 0; i--) {
+          const s = validStrokes[i];
+          const bbox = getBoundingBoxForStroke(s);
+          if (!bbox) continue;
+          const cx = (bbox.minX + bbox.maxX) / 2;
+          const cy = (bbox.minY + bbox.maxY) / 2;
+          if (pointInPolygon(poly, cx, cy)) {
+            try {
+              const globalIndex = strokes.findIndex(
+                (s) => s.id === validStrokes[i].id
+              );
+              if (globalIndex !== -1) onDeleteStroke(globalIndex);
+            } catch (err) {
+              console.error("⚠️ Error deleting stroke:", err);
             }
-            next.push(s);
           }
-          return next;
-        });
+        }
         return;
       }
 
@@ -796,74 +1011,76 @@ export default function GestureHandler({
       ) {
         const erasePoints = finalPoints;
 
-        setStrokes((prev) => {
-          const next = [];
+        for (let i = 0; i < validStrokes.length; i++) {
+          const s = validStrokes[i];
+          if (
+            !s.points ||
+            ["eraser", "text", "sticky", "comment"].includes(s.tool)
+          )
+            continue;
 
-          for (let s of prev) {
-            if (
-              !s.points ||
-              ["eraser", "text", "sticky", "comment"].includes(s.tool)
-            ) {
-              next.push(s);
-              continue;
-            }
+          const margin = 0.5 * (eraserSize || 6);
+          const hitIndexes = s.points
+            .map((p, idx) => ({
+              idx,
+              hit: erasePoints.some(
+                (ep) => Math.hypot(p.x - ep.x, p.y - ep.y) <= margin
+              ),
+            }))
+            .filter((r) => r.hit)
+            .map((r) => r.idx);
 
-            const margin = 0.5 * (eraserSize || 6);
-            const hitIndexes = s.points
-              .map((p, i) => ({
-                i,
-                hit: erasePoints.some(
-                  (ep) => Math.hypot(p.x - ep.x, p.y - ep.y) <= margin
-                ),
-              }))
-              .filter((r) => r.hit)
-              .map((r) => r.i);
+          if (hitIndexes.length === 0) continue;
 
-            if (hitIndexes.length === 0) {
-              next.push(s);
-              continue;
-            }
+          const segments = [];
+          let segment = [];
 
-            const segments = [];
-            let segment = [];
-
-            for (let i = 0; i < s.points.length; i++) {
-              const isHit = hitIndexes.includes(i);
-              if (isHit) {
-                if (segment.length > 1) {
-                  segments.push(segment);
-                }
-                segment = [];
-              } else {
-                segment.push(s.points[i]);
-              }
-            }
-            if (segment.length > 1) segments.push(segment);
-
-            for (let idx = 0; idx < segments.length; idx++) {
-              const pts = segments[idx];
-              if (pts.length < 2) continue;
-              next.push({
-                ...s,
-                id: `${s.id}_part${idx + 1}_${Date.now()}`,
-                points: pts,
-              });
+          for (let j = 0; j < s.points.length; j++) {
+            const isHit = hitIndexes.includes(j);
+            if (isHit) {
+              if (segment.length > 1) segments.push(segment);
+              segment = [];
+            } else {
+              segment.push(s.points[j]);
             }
           }
 
-          return next;
-        });
+          if (segment.length > 1) segments.push(segment);
 
-        setRedoStack([]);
-        setCurrentPoints([]);
+          try {
+            const globalIndex = strokes.findIndex(
+              (s) => s.id === validStrokes[i].id
+            );
+            if (globalIndex !== -1) onDeleteStroke(globalIndex);
+          } catch (err) {
+            console.error("⚠️ Error deleting stroke (pixel):", err);
+          }
+
+          if (segments.length > 0 && typeof onAddStroke === "function") {
+            try {
+              segments.forEach((pts, segIdx) => {
+                if (!pts || pts.length < 2) return;
+                const newStroke = {
+                  ...s,
+                  id: `${s.id}_part${segIdx + 1}_${Date.now()}`,
+                  points: pts,
+                  layerId: s.layerId ?? activeLayerId,
+                };
+                onAddStroke(newStroke);
+              });
+            } catch (err) {
+              console.error("⚠️ Error adding stroke segment:", err);
+            }
+          }
+        }
         return;
       }
 
       if (tool === "fill") {
         const tapX = finalPoints[0]?.x;
         const tapY = finalPoints[0]?.y;
-        for (let i = 0; i < strokes.length; i++) {
-          const s = strokes[i];
+        for (let i = 0; i < validStrokes.length; i++) {
+          const s = validStrokes[i];
           const bbox = getBoundingBoxForStroke(s);
           if (
             bbox &&
@@ -872,7 +1089,11 @@ export default function GestureHandler({
             tapY >= bbox.minY &&
             tapY <= bbox.maxY
           ) {
-            onModifyStroke?.(i, { fill: true, fillColor: color });
+            try {
+              onModifyStroke?.(i, { fill: true, fillColor: color });
+            } catch (err) {
+              console.error("⚠️ Error modifying fill:", err);
+            }
             break;
           }
         }
@@ -908,6 +1129,8 @@ export default function GestureHandler({
             ? calligraphyOpacity
             : 1,
         ...toolConfig,
+        layerId: activeLayerId,
+        rotation: 0,
       };
 
       if (
@@ -930,18 +1153,53 @@ export default function GestureHandler({
         if (shape) Object.assign(newStroke, shape);
       }
 
-      if (tool !== "eraser") {
-        if (typeof onAddStroke === "function") onAddStroke(newStroke);
-        else {
-          setStrokes((prev) => [...prev, newStroke]);
-          setRedoStack([]);
+      if (tool !== "eraser" && typeof onAddStroke === "function") {
+        try {
+          onAddStroke(newStroke);
+        } catch (err) {
+          console.error("⚠️ Error adding stroke:", err);
         }
       }
     });
 
-  const debouncedUpdate = debounce((updateFn) => updateFn(), 16);
+  const lassoBox = useMemo(() => {
+    // While moving (either via canvas or box), render box as base + visual offset
+    if (
+      lassoBaseBox &&
+      ((lassoVisualOffset?.dx || 0) !== 0 ||
+        (lassoVisualOffset?.dy || 0) !== 0 ||
+        isMovingLasso)
+    ) {
+      return {
+        x: lassoBaseBox.x + (lassoVisualOffset.dx || 0),
+        y: lassoBaseBox.y + (lassoVisualOffset.dy || 0),
+        width: lassoBaseBox.width,
+        height: lassoBaseBox.height,
+      };
+    }
+    const sel = strokes.filter((s) => lassoSelection.includes(s.id));
+    if (!sel.length) return null;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    sel.forEach((s) => {
+      const bbox = getBoundingBoxForStroke(s);
+      if (bbox) {
+        minX = Math.min(minX, bbox.minX);
+        minY = Math.min(minY, bbox.minY);
+        maxX = Math.max(maxX, bbox.maxX);
+        maxY = Math.max(maxY, bbox.maxY);
+      }
+    });
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    };
+  }, [isMovingLasso, lassoBaseBox, lassoVisualOffset, lassoSelection, strokes]);
 
-  // ========= RENDER =========
   return (
     <>
       <GestureDetector
@@ -949,8 +1207,77 @@ export default function GestureHandler({
       >
         {React.cloneElement(children, {
           strokes: children.props.strokes ?? strokes,
+          lassoPoints,
+          lassoSelection,
+          visualOffsets,
         })}
       </GestureDetector>
+      {lassoSelection.length > 0 && lassoBox && (
+        <LassoSelectionBox
+          box={lassoBox}
+          onMove={(dx, dy) => {
+            // accumulate visual offset for box and strokes
+            setLassoVisualOffset((prev) => {
+              const ndx = (prev?.dx || 0) + dx;
+              const ndy = (prev?.dy || 0) + dy;
+              // update offsets for all selected ids
+              setVisualOffsets((prevMap) => {
+                const next = { ...prevMap };
+                lassoSelection.forEach((id) => {
+                  next[id] = { dx: ndx, dy: ndy };
+                });
+                return next;
+              });
+              return { dx: ndx, dy: ndy };
+            });
+          }}
+          onMoveEnd={() => {
+            const { dx, dy } = lassoVisualOffset || { dx: 0, dy: 0 };
+            handleMoveCommit?.(dx, dy);
+            setLassoBaseBox((box) =>
+              box ? { ...box, x: box.x + dx, y: box.y + dy } : box
+            );
+            setLassoVisualOffset({ dx: 0, dy: 0 });
+            setVisualOffsets({});
+          }}
+          onResize={handleResize}
+          onRotate={handleRotate}
+          onCopy={() => {
+            const selStrokes = strokes.filter((s) =>
+              lassoSelection.includes(s.id)
+            );
+            selStrokes.forEach((s) => {
+              const clone = {
+                ...s,
+                id: `${s.id}_copy_${Date.now()}`,
+                x: s.x + 20,
+                y: s.y + 20,
+              };
+              onAddStroke?.(clone);
+            });
+            setLassoSelection([]);
+          }}
+          onCut={() => {
+            const indices = strokes
+              .map((s, i) => (lassoSelection.includes(s.id) ? i : -1))
+              .filter((i) => i !== -1);
+            indices.forEach((i) => onDeleteStroke?.(i));
+            setLassoSelection([]);
+          }}
+          onDelete={() => {
+            const indices = strokes
+              .map((s, i) => (lassoSelection.includes(s.id) ? i : -1))
+              .filter((i) => i !== -1);
+            indices.forEach((i) => onDeleteStroke?.(i));
+            setLassoSelection([]);
+          }}
+          onClear={() => {
+            setLassoSelection([]);
+            setLassoPoints([]);
+          }}
+        />
+      )}
+
       {selectedBox &&
         selectedId &&
         !editorVisible &&
@@ -967,106 +1294,84 @@ export default function GestureHandler({
                 box ? { ...box, x: box.x + dx, y: box.y + dy } : box
               );
 
-              setStrokes((prev) =>
-                prev.map((s) =>
-                  s.id === selectedId ? { ...s, x: s.x + dx, y: s.y + dy } : s
-                )
-              );
-
-              setEditorProps((prev) => ({
-                ...prev,
-                x: prev.x + dx,
-                y: prev.y + dy,
-              }));
-
               if (typeof setRealtimeText === "function") {
-                setRealtimeText((prev) =>
-                  prev && prev.id === selectedId
-                    ? { ...prev, x: prev.x + dx, y: prev.y + dy }
-                    : prev
-                );
+                requestAnimationFrame(() => {
+                  setRealtimeText((prev) =>
+                    prev && prev.id === selectedId
+                      ? { ...prev, x: prev.x + dx, y: prev.y + dy }
+                      : prev
+                  );
+                });
               }
             }}
             onResize={(corner, dx, dy) => {
-              let newX = selectedBox.x;
-              let newY = selectedBox.y;
-              let newWidth = Math.max(20, selectedBox.width + dx);
-              let newHeight = Math.max(20, selectedBox.height + dy);
+              const s = strokes.find((s) => s.id === selectedId);
+              if (!s) return;
 
-              // Adjust position dựa trên corner để giữ corner cố định
-              if (corner.includes("l")) {
-                // Left corners: tl, bl
-                newX += dx < 0 ? dx : 0; // Nếu dx âm (co trái), shift x
-                newWidth = Math.abs(newWidth); // Đảm bảo positive
-              }
-              if (corner.includes("t")) {
-                // Top corners: tl, tr
-                newY += dy < 0 ? dy : 0;
-                newHeight = Math.abs(newHeight);
-              }
-              // Tương tự cho right/bottom nếu cần, nhưng dx/dy dương cho right/bottom
+              const newW = Math.max(20, s.width + dx);
+              const newH = Math.max(20, s.height + dy);
+              const newX = s.x + (corner.includes("l") ? dx : 0);
+              const newY = s.y + (corner.includes("t") ? dy : 0);
 
-              setSelectedBox((b) => ({
-                ...b,
+              const index = strokes.findIndex((s) => s.id === selectedId);
+              if (index !== -1 && typeof onModifyStroke === "function") {
+                onModifyStroke(index, {
+                  x: newX,
+                  y: newY,
+                  width: newW,
+                  height: newH,
+                });
+              }
+
+              setSelectedBox({
+                ...selectedBox,
                 x: newX,
                 y: newY,
-                width: newWidth,
-                height: newHeight,
-              }));
-              setStrokes((prev) =>
-                prev.map((s) =>
-                  s.id === selectedId
-                    ? {
-                        ...s,
-                        x: newX,
-                        y: newY,
-                        width: newWidth,
-                        height: newHeight,
-                      }
-                    : s
-                )
-              );
+                width: newW,
+                height: newH,
+              });
             }}
             onCopy={() => {
               const target = strokes.find((s) => s.id === selectedId);
-              if (target) {
-                setStrokes((prev) => [
-                  ...prev,
-                  {
-                    ...target,
-                    id: Date.now().toString(),
-                    x: target.x + 20,
-                    y: target.y + 20,
-                  },
-                ]);
-                setSelectedId(null);
-                setSelectedBox(null);
-              }
+              if (!target) return;
+              const newStroke = {
+                ...target,
+                id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                x: target.x + 20,
+                y: target.y + 20,
+              };
+              if (typeof onAddStroke === "function") onAddStroke(newStroke);
+              setSelectedId(null);
+              setSelectedBox(null);
             }}
             onCut={() => {
-              setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
+              const index = strokes.findIndex((s) => s.id === selectedId);
+              if (index !== -1 && typeof onDeleteStroke === "function")
+                onDeleteStroke(index);
               setSelectedId(null);
               setSelectedBox(null);
             }}
             onDelete={() => {
-              setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
+              const index = strokes.findIndex((s) => s.id === selectedId);
+              if (index !== -1 && typeof onDeleteStroke === "function")
+                onDeleteStroke(index);
               setSelectedId(null);
               setSelectedBox(null);
             }}
             onEdit={() => {
               const hit = strokes.find((s) => s.id === selectedId);
-              if (hit) {
-                if (typeof setRealtimeText === "function")
-                  setRealtimeText({ id: hit.id, ...hit });
+              if (!hit) return;
 
-                setEditorProps({
-                  x: hit.x,
-                  y: hit.y,
-                  tool: hit.tool,
-                  data: hit,
-                });
-                setEditorVisible(true);
-              }
+              if (typeof setRealtimeText === "function")
+                setRealtimeText({ id: hit.id, ...hit });
+
+              setEditorProps({
+                x: hit.x,
+                y: hit.y,
+                tool: hit.tool,
+                data: hit,
+              });
+              setEditorVisible(true);
             }}
           />
         )}
@@ -1075,223 +1380,332 @@ export default function GestureHandler({
         visible={editorVisible}
         x={editorProps.x}
         y={editorProps.y}
-        initialText={editorProps.data.text || ""}
+        initialText={editorProps.data?.text || ""}
         initialData={editorProps.data}
         isEditingExisting={!!selectedId}
         onCancel={() => {
           setEditorVisible(false);
           setSelectedId(null);
           setSelectedBox(null);
-          if (setRealtimeText) setRealtimeText(null);
+          setRealtimeText?.(null);
         }}
         onSubmit={(data) => {
-          if (selectedId) {
-            // Edit existing
-            setStrokes((prev) =>
-              prev.map((s) =>
-                s.id === selectedId
-                  ? {
-                      ...s,
-                      ...data,
-                      x: editorProps.x,
-                      y: editorProps.y,
-                      padding: s.padding ?? 0,
-                      backgroundColor: s.backgroundColor ?? "transparent",
-                    }
-                  : s
-              )
-            );
+          if (tempStrokeId) {
+            // Update temporary stroke thay vì tạo mới
+            const index = strokes.findIndex((s) => s.id === tempStrokeId);
+            if (index !== -1 && typeof onModifyStroke === "function") {
+              onModifyStroke(index, {
+                ...data,
+                x: editorProps.x,
+                y: editorProps.y,
+              });
+            }
+            setTempStrokeId(null);
+          } else if (selectedId) {
+            // Update existing stroke
+            const index = strokes.findIndex((s) => s.id === selectedId);
+            if (index !== -1 && typeof onModifyStroke === "function") {
+              onModifyStroke(index, {
+                ...data,
+                x: editorProps.x,
+                y: editorProps.y,
+              });
+            }
           } else {
-            // Add new
-            const basePadding =
-              editorProps.tool === "sticky" || editorProps.tool === "comment"
-                ? 8
-                : 0;
-            const baseBg =
-              editorProps.tool === "sticky"
-                ? "#FFEB3B"
-                : editorProps.tool === "comment"
-                ? "#E3F2FD"
-                : "transparent";
-
-            const newStroke = {
-              id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-              tool: editorProps.tool,
-              x: editorProps.x,
-              y: editorProps.y,
-              text: data.text || "",
-              bold: !!data.bold,
-              italic: !!data.italic,
-              underline: !!data.underline,
-              align: data.align || "left",
-              color: data.color || color,
-              fontSize: data.fontSize || 18,
-              fontFamily: data.fontFamily || "Roboto-Regular",
-              padding: basePadding,
-              backgroundColor: baseBg,
-            };
-
-            setStrokes((prev) => [...prev, newStroke]);
-            setRedoStack([]);
+            // Add new stroke
+            if (typeof onAddStroke === "function") {
+              const newStroke = {
+                id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                tool: editorProps.tool,
+                x: editorProps.x,
+                y: editorProps.y,
+                ...data,
+                layerId: activeLayerId,
+              };
+              onAddStroke(newStroke);
+            }
           }
 
-          if (typeof setRealtimeText === "function") {
-            setRealtimeText(null);
-            setStrokes((prev) =>
-              prev.filter((s) => s.text && s.text.trim() !== "")
-            );
-          }
-
+          setRealtimeText?.(null);
           setEditorVisible(false);
           setSelectedId(null);
           setSelectedBox(null);
         }}
         onChange={handleTextChange}
       />
-
       {selectedId &&
         selectedBox &&
         ["image", "sticker"].includes(selectedStroke?.tool) && (
           <>
             <ImageTransformBox
               {...selectedBox}
-              x={selectedStroke.x}
-              y={selectedStroke.y}
-              width={selectedStroke.width}
-              height={selectedStroke.height}
-              rotation={selectedStroke?.rotation ?? 0}
+              scale={zoomMirror.scale}
+              pan={{
+                x: zoomMirror.x,
+                y: zoomMirror.y,
+              }}
+              onMoveStart={() => {
+                const s = strokes.find((it) => it.id === selectedId);
+                if (s) {
+                  liveTransformRef.current.origin = {
+                    x: s.x ?? 0,
+                    y: s.y ?? 0,
+                    rotation: s.rotation ?? 0,
+                  };
+                } else if (selectedBox) {
+                  liveTransformRef.current.origin = {
+                    x: selectedBox.x ?? 0,
+                    y: selectedBox.y ?? 0,
+                    rotation: selectedBox.rotation ?? 0,
+                  };
+                }
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+                liveTransformRef.current.drot = 0;
+              }}
               onMove={(dx, dy) => {
-                isUpdatingRef.current = true;
-                setSelectedBox((b) => ({ ...b, x: b.x + dx, y: b.y + dy }));
-                setStrokes((prev) =>
-                  prev.map((s) =>
-                    s.id === selectedId ? { ...s, x: s.x + dx, y: s.y + dy } : s
-                  )
+                if (!selectedId) return;
+
+                // update selection box UI
+                setSelectedBox((b) =>
+                  b ? { ...b, x: b.x + dx, y: b.y + dy } : b
                 );
+
+                // accumulate delta into ref
+                liveTransformRef.current.dx =
+                  (liveTransformRef.current.dx || 0) + dx;
+                liveTransformRef.current.dy =
+                  (liveTransformRef.current.dy || 0) + dy;
+
+                // propagate live update (if parent supports it)
+                if (
+                  typeof onLiveUpdateStroke === "function" &&
+                  liveTransformRef.current.origin
+                ) {
+                  const origin = liveTransformRef.current.origin;
+                  onLiveUpdateStroke(selectedId, {
+                    x: (origin.x ?? 0) + (liveTransformRef.current.dx || 0),
+                    y: (origin.y ?? 0) + (liveTransformRef.current.dy || 0),
+                  });
+                }
+              }}
+              // on release / end - commit once
+              onMoveEnd={() => {
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1) {
+                  const s = strokes[index];
+                  const final = {
+                    ...s,
+                    x: (s.x ?? 0) + (liveTransformRef.current.dx || 0),
+                    y: (s.y ?? 0) + (liveTransformRef.current.dy || 0),
+                    width: (s.width ?? 0) + (liveTransformRef.current.dw || 0),
+                    height:
+                      (s.height ?? 0) + (liveTransformRef.current.dh || 0),
+                    rotation:
+                      (s.rotation ?? 0) + (liveTransformRef.current.drot || 0),
+                  };
+                  if (typeof onModifyStroke === "function")
+                    onModifyStroke(index, final);
+                }
+                // reset accumulators
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+                liveTransformRef.current.drot = 0;
+              }}
+              onResizeStart={(corner) => {
+                const s = strokes.find((it) => it.id === selectedId);
+                const base = s || selectedBox || {};
+                // fallback width/height để tránh 0 hoặc undefined
+                const baseWidth =
+                  base.width && base.width > 0
+                    ? base.width
+                    : s?.naturalWidth || selectedBox?.width || 100;
+                const baseHeight =
+                  base.height && base.height > 0
+                    ? base.height
+                    : s?.naturalHeight || selectedBox?.height || 100;
+
+                liveTransformRef.current.origin = {
+                  x: Number.isFinite(base.x) ? base.x : 0,
+                  y: Number.isFinite(base.y) ? base.y : 0,
+                  width: baseWidth,
+                  height: baseHeight,
+                  rotation: base.rotation ?? 0,
+                };
+                liveTransformRef.current.corner = corner;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
               }}
               onResize={(corner, dx, dy) => {
-                isUpdatingRef.current = true;
-                setSelectedBox((b) => {
-                  const ratio = b.width / b.height;
-                  let newWidth = b.width;
-                  let newHeight = b.height;
-                  let newX = b.x;
-                  let newY = b.y;
+                const o = liveTransformRef.current.origin;
+                if (!o) return;
 
-                  switch (corner) {
-                    case "br":
-                      newWidth = Math.max(20, b.width + dx);
-                      newHeight = newWidth / ratio;
-                      break;
-                    case "tr":
-                      newWidth = Math.max(20, b.width + dx);
-                      newHeight = newWidth / ratio;
-                      newY = b.y - (newHeight - b.height);
-                      break;
-                    case "bl":
-                      newWidth = Math.max(20, b.width - dx);
-                      newHeight = newWidth / ratio;
-                      newX = b.x + dx;
-                      break;
-                    case "tl":
-                      newWidth = Math.max(20, b.width - dx);
-                      newHeight = newWidth / ratio;
-                      newX = b.x + dx;
-                      newY = b.y - (newHeight - b.height);
-                      break;
-                  }
+                // Nếu ImageTransformBox truyền deltas đã scale -> dùng trực tiếp.
+                // Nếu không chắc, bạn có thể thử chia cho scale: dx/scale (nếu cần).
+                // Mình giả định ImageTransformBox đã trả về deltas ở cùng hệ với origin.
 
-                  return {
-                    ...b,
+                const ratio = (o.width || 1) / (o.height || 1);
+                let newWidth = o.width;
+                let newHeight = o.height;
+                let newX = o.x;
+                let newY = o.y;
+
+                // NOTE: convention: dx positive = pointer moved right; dy positive = pointer moved down.
+                switch (corner) {
+                  case "br":
+                    newWidth = Math.max(20, o.width + dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    break;
+                  case "tr":
+                    newWidth = Math.max(20, o.width + dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    newY = o.y - (newHeight - o.height);
+                    break;
+                  case "bl":
+                    // left corners: dragging left (dx negative) should increase width
+                    newWidth = Math.max(20, o.width - dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    newX = o.x + dx;
+                    break;
+                  case "tl":
+                    newWidth = Math.max(20, o.width - dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    newX = o.x + dx;
+                    newY = o.y - (newHeight - o.height);
+                    break;
+                }
+
+                liveTransformRef.current.dw = newWidth - o.width;
+                liveTransformRef.current.dh = newHeight - o.height;
+                liveTransformRef.current.dx = newX - o.x;
+                liveTransformRef.current.dy = newY - o.y;
+
+                // Update selection box UI immediately
+                setSelectedBox((box) =>
+                  box
+                    ? {
+                        ...box,
+                        x: newX,
+                        y: newY,
+                        width: newWidth,
+                        height: newHeight,
+                      }
+                    : box
+                );
+
+                // If parent supports fast live update (Skia), call it
+                if (typeof onLiveUpdateStroke === "function" && selectedId) {
+                  onLiveUpdateStroke(selectedId, {
                     x: newX,
                     y: newY,
                     width: newWidth,
                     height: newHeight,
-                  };
-                });
+                  });
+                  // do NOT call onModifyStroke here (we rely on Skia live)
+                  return;
+                }
 
-                setStrokes((prev) =>
-                  prev.map((s) =>
-                    s.id === selectedId
-                      ? {
-                          ...s,
-                          ...(() => {
-                            const ratio = s.width / s.height;
-                            let newWidth = s.width;
-                            let newHeight = s.height;
-                            let newX = s.x;
-                            let newY = s.y;
-
-                            switch (corner) {
-                              case "br":
-                                newWidth = Math.max(20, s.width + dx);
-                                newHeight = newWidth / ratio;
-                                break;
-                              case "tr":
-                                newWidth = Math.max(20, s.width + dx);
-                                newHeight = newWidth / ratio;
-                                newY = s.y - (newHeight - s.height);
-                                break;
-                              case "bl":
-                                newWidth = Math.max(20, s.width - dx);
-                                newHeight = newWidth / ratio;
-                                newX = s.x + dx;
-                                break;
-                              case "tl":
-                                newWidth = Math.max(20, s.width - dx);
-                                newHeight = newWidth / ratio;
-                                newX = s.x + dx;
-                                newY = s.y - (newHeight - s.height);
-                                break;
-                            }
-
-                            return {
-                              x: newX,
-                              y: newY,
-                              width: newWidth,
-                              height: newHeight,
-                            };
-                          })(),
-                        }
-                      : s
-                  )
-                );
+                // Fallback: emit a transient onModifyStroke so image updates visually during resize
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1 && typeof onModifyStroke === "function") {
+                  onModifyStroke(index, {
+                    x: newX,
+                    y: newY,
+                    width: newWidth,
+                    height: newHeight,
+                    __transient: true, // parent can treat transient updates lightweight
+                  });
+                }
               }}
-              onRotate={(newRotation) => {
-                isUpdatingRef.current = true;
-                setSelectedBox((b) => ({ ...b, rotation: newRotation }));
-                setStrokes((prev) =>
-                  prev.map((s) =>
-                    s.id === selectedId ? { ...s, rotation: newRotation } : s
-                  )
-                );
+              onResizeEnd={() => {
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1) {
+                  const s = strokes[index];
+                  const o = liveTransformRef.current.origin || s;
+                  const final = {
+                    ...s,
+                    x: (o.x ?? 0) + (liveTransformRef.current.dx || 0),
+                    y: (o.y ?? 0) + (liveTransformRef.current.dy || 0),
+                    width: (o.width ?? 0) + (liveTransformRef.current.dw || 0),
+                    height:
+                      (o.height ?? 0) + (liveTransformRef.current.dh || 0),
+                  };
+                  if (typeof onModifyStroke === "function")
+                    onModifyStroke(index, final); // final commit (no __transient)
+                }
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+              }}
+              onRotateStart={() => {
+                const s = strokes.find((it) => it.id === selectedId);
+                const base = s || selectedBox;
+                liveTransformRef.current.origin = {
+                  ...(liveTransformRef.current.origin || {}),
+                  rotation: base?.rotation ?? 0,
+                };
+                liveTransformRef.current.drot = 0;
+              }}
+              onRotate={(rot) => {
+                const originRot =
+                  liveTransformRef.current.origin?.rotation || 0;
+                liveTransformRef.current.drot = rot - originRot;
+                setSelectedBox((b) => (b ? { ...b, rotation: rot } : b));
+                // live update rotation for the image
+                if (typeof onLiveUpdateStroke === "function" && selectedId) {
+                  onLiveUpdateStroke(selectedId, { rotation: rot });
+                }
+              }}
+              onRotateEnd={() => {
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1) {
+                  const s = strokes[index];
+                  const originRot =
+                    liveTransformRef.current.origin?.rotation ||
+                    s.rotation ||
+                    0;
+                  const finalRot =
+                    originRot + (liveTransformRef.current.drot || 0);
+                  if (typeof onModifyStroke === "function")
+                    onModifyStroke(index, { rotation: finalRot });
+                }
+                liveTransformRef.current.drot = 0;
               }}
             />
-            <ImageSelectionBox // Thêm menu
+
+            <ImageSelectionBox
               {...selectedBox}
               onCopy={() => {
                 const target = strokes.find((s) => s.id === selectedId);
-                if (target) {
-                  setStrokes((prev) => [
-                    ...prev,
-                    {
-                      ...target,
-                      id: Date.now().toString(),
-                      x: target.x + 20,
-                      y: target.y + 20,
-                    },
-                  ]);
-                  setSelectedId(null);
-                  setSelectedBox(null);
-                }
+                if (!target) return;
+                const newStroke = {
+                  ...target,
+                  id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                  x: target.x + 20,
+                  y: target.y + 20,
+                };
+                onAddStroke?.(newStroke);
+                setSelectedId(null);
+                setSelectedBox(null);
               }}
               onCut={() => {
-                setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1 && typeof onDeleteStroke === "function")
+                  onDeleteStroke(index);
                 setSelectedId(null);
                 setSelectedBox(null);
               }}
               onDelete={() => {
-                setStrokes((prev) => prev.filter((s) => s.id !== selectedId));
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1 && typeof onDeleteStroke === "function")
+                  onDeleteStroke(index);
                 setSelectedId(null);
                 setSelectedBox(null);
               }}

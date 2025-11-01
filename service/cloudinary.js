@@ -2,11 +2,6 @@ export const uploadToCloudinary = async (fileUri) => {
   const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
   
-  console.log("Starting upload to Cloudinary...");
-  console.log("CLOUD_NAME:", CLOUD_NAME);
-  console.log("UPLOAD_PRESET:", UPLOAD_PRESET);
-  console.log("File URI:", fileUri);
-
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
     throw new Error("Thiếu cấu hình Cloudinary. Vui lòng kiểm tra file .env");
   }
@@ -30,7 +25,6 @@ export const uploadToCloudinary = async (fileUri) => {
   formData.append("folder", "sketchnote_avatars");
 
   try {
-    console.log("Sending request to Cloudinary...");
     
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
@@ -42,14 +36,12 @@ export const uploadToCloudinary = async (fileUri) => {
     );
 
     const data = await response.json();
-    console.log("Cloudinary response:", data);
 
     if (!response.ok) {
       throw new Error(data.error?.message || `Upload failed: ${response.status}`);
     }
 
     if (data.secure_url) {
-      console.log("Upload successful:", data.secure_url);
       return data;
     } else {
       throw new Error("Không nhận được URL từ Cloudinary");
