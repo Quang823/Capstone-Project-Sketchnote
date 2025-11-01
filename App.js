@@ -7,6 +7,7 @@ import { FontProvider } from "./context/FontContext";
 import AppNavigator from "./navigation/AppNavigator";
 import useLoadFonts from "./hooks/useLoadFonts";
 import AppLoading from "expo-app-loading";
+import { CartProvider } from "./context/CartContext";
 
 export default function App() {
   const fontsLoaded = useLoadFonts();
@@ -15,6 +16,7 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+     <CartProvider>
       <FontProvider fontsLoaded={fontsLoaded}>
         <ToastProvider>
           <NavigationContainer>
@@ -22,6 +24,7 @@ export default function App() {
           </NavigationContainer>
         </ToastProvider>
       </FontProvider>
+      </CartProvider>
     </GestureHandlerRootView>
   );
 }

@@ -32,7 +32,7 @@ export default function LoginScreen({ onBack }) {
   const { toast } = useToast();
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
-  // Animations: Fade-in và slide-up cho form
+ 
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
 
@@ -46,7 +46,7 @@ export default function LoginScreen({ onBack }) {
     transform: [{ translateY: translateY.value }],
   }));
 
-  // Hiệu ứng scale cho buttons khi press
+
   const buttonScale = useSharedValue(1);
   const animatedButtonStyle = useAnimatedStyle(() => ({
     transform: [{ scale: buttonScale.value }],
@@ -74,13 +74,14 @@ export default function LoginScreen({ onBack }) {
       title: "Login successful",
       variant: "success",
     });
-        if (roles.includes("CUSTOMER")) {
-      navigation.navigate("Home");
-    } else if (roles.includes("DESIGNER")) {
-      navigation.navigate("DesignerDashboard");
-    } else if (roles.includes("ADMIN")) {
-      navigation.navigate("AdminDashboard");
-    }
+     if (roles.includes("ADMIN")) {
+  navigation.navigate("AdminDashboard");
+} else if (roles.includes("DESIGNER")) {
+  navigation.navigate("DesignerDashboard");
+} else if (roles.includes("CUSTOMER")) {
+  navigation.navigate("Home");
+}
+
   } catch (error) {
     toast({
       title: "Login failed",

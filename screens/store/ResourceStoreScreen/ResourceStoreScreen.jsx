@@ -15,6 +15,8 @@ import { useNavigation } from "@react-navigation/native";
 import { resourceStoreStyles } from "./ResourceStoreScreen.styles";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { resourceService } from "../../../service/resourceService";
+import { useCart } from "../../../context/CartContext";
+import Toast from "react-native-toast-message";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -27,35 +29,57 @@ export default function ResourceStoreScreen() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState([]);
+  const { cart, addToCart } = useCart();
 
-  // ✅ Fetch tất cả các loại resource
+  // ✅ Fetch data riêng biệt - nếu 1 API lỗi thì các API khác vẫn chạy
   const fetchAllData = async () => {
     try {
       setLoading(true);
 
-      // Promise.all để gọi song song 3 API
-      const [resAll, resPopular, resLatest] = await Promise.all([
-        resourceService.getAllResource(0, 10),
-        resourceService.getAllResourcePopular(10),
-        resourceService.getAllResourceLatest(10),
-      ]);
+      // Fetch All Resources
+      try {
+        const resAll = await resourceService.getAllResource(0, 10);
+        const allData = resAll?.content || [];
+        console.log("✅ All Resources:", allData);
+        setAllResources(allData);
 
-      // Gán dữ liệu
-      const allData = resAll?.content || [];
-      const popularData = resPopular || [];
-const latestData = resLatest || [];
+        // 🔹 Sinh danh sách category từ type
+        const types = [...new Set(allData.map((r) => r.type))];
+        setCategories(["All", ...types]);
+      } catch (error) {
+        console.error("❌ Fetch All Resources Failed:", error);
+        setAllResources([]);
+      }
 
-      setAllResources(allData);
-      setPopularResources(popularData);
-      setLatestResources(latestData);
+      // Fetch Popular Resources
+      try {
+        const resPopular = await resourceService.getAllResourcePopular(10);
+        const popularData = resPopular || [];
+        console.log("✅ Popular Resources:", popularData);
+        setPopularResources(popularData);
+      } catch (error) {
+        console.error("❌ Fetch Popular Resources Failed:", error);
+        setPopularResources([]);
+      }
 
-      // 🔹 Sinh danh sách category từ type
-      const types = [...new Set(allData.map((r) => r.type))];
-      setCategories(["All", ...types]);
+      // Fetch Latest Resources
+      try {
+        const resLatest = await resourceService.getAllResourceLatest(10);
+        const latestData = resLatest || [];
+        console.log("✅ Latest Resources:", latestData);
+        setLatestResources(latestData);
+      } catch (error) {
+        console.error("❌ Fetch Latest Resources Failed:", error);
+        setLatestResources([]);
+      }
+
     } catch (error) {
       console.error("❌ Fetch Resource Failed:", error);
-      Alert.alert("Lỗi", "Không thể tải dữ liệu Resource.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to load Resource data.",
+      });
     } finally {
       setLoading(false);
     }
@@ -66,41 +90,74 @@ const latestData = resLatest || [];
   }, []);
 
   // ✅ Add to Cart
-  const addToCart = (resource) => {
-    const existingItem = cart.find((item) => item.id === resource.resourceTemplateId);
-    if (existingItem) {
-      Alert.alert("Thông báo", "Sản phẩm đã có trong giỏ hàng");
-      return;
-    }
-    setCart([...cart, { ...resource, id: resource.resourceTemplateId, quantity: 1 }]);
-    Alert.alert("Thành công", "Đã thêm vào giỏ hàng");
+  const handleAddToCart = (resource, navigateToCart = false) => {
+    const designerName = resource.designerInfo
+    ? `${resource.designerInfo.firstName || ""} ${resource.designerInfo.lastName || ""}`.trim()
+    : "Updating...";
+
+    const item = {
+      id: resource.resourceTemplateId,
+      name: resource.name,
+      description: resource.description,
+      price: resource.price,
+      image: resource.images?.[0]?.imageUrl || resource.images?.[0]?.url,
+         designer: {
+      name: designerName,
+      email: resource.designerInfo?.email || "",
+      avatarUrl: resource.designerInfo?.avatarUrl || null,
+    },
+    releaseDate: resource.releaseDate,
+       isActive: resource.isActive,
+    };
+
+    addToCart(item);
+
+    if (navigateToCart) navigation.navigate("Cart");
+    else Toast.show({
+      type: "success",
+      text1: "Success",
+      text2: "Added to Cart",
+    });
   };
 
-  // ✅ Render resource card
-  const renderResourceItem = (item) => (
-    <Shadow
-      distance={8}
-      startColor="#00000015"
-      finalColor="#00000005"
-      key={item.resourceTemplateId}
-    >
-      <Pressable
-        onPress={() =>
-          navigation.navigate("ResourceDetail", {
-            resourceId: item.resourceTemplateId,
-          })
-        }
-      >
-        <View style={resourceStoreStyles.resourceCardInner}>
-          <Image
-            source={{
-              uri:
-                item.images?.[0]?.url ||
-                "https://via.placeholder.com/150x150?text=Resource",
-            }}
-            style={resourceStoreStyles.resourceImage}
-          />
+  // ✅ Render resource card - Giao diện đẹp hơn
+  const renderResourceItem = (item) => {
+    const imageUrl = item.images?.[0]?.imageUrl || 
+                     item.images?.[0]?.url || 
+                     "https://via.placeholder.com/280x160?text=No+Image";
 
+    return (
+      <Shadow
+        distance={8}
+        startColor="#00000015"
+        finalColor="#00000005"
+        key={item.resourceTemplateId}
+        style={{ marginRight: 16, borderRadius: 16 }}
+      >
+        <Pressable
+          onPress={() =>
+            navigation.navigate("ResourceDetail", {
+              resourceId: item.resourceTemplateId,
+            })
+          }
+          style={resourceStoreStyles.resourceCard}
+        >
+          {/* Image Container */}
+          <View style={resourceStoreStyles.imageContainer}>
+            <Image
+              source={{ uri: imageUrl }}
+              style={resourceStoreStyles.resourceImage}
+              resizeMode="cover"
+            />
+            {/* Type Badge */}
+            <View style={resourceStoreStyles.typeBadge}>
+              <Text style={resourceStoreStyles.typeBadgeText}>
+                {item.type || "OTHER"}
+              </Text>
+            </View>
+          </View>
+
+          {/* Info Container */}
           <View style={resourceStoreStyles.resourceInfo}>
             <Text style={resourceStoreStyles.resourceName} numberOfLines={2}>
               {item.name}
@@ -111,44 +168,63 @@ const latestData = resLatest || [];
             </Text>
 
             <Text style={resourceStoreStyles.price}>
-              {item.price.toLocaleString()} VNĐ
+              {item.price?.toLocaleString() || "0"} VNĐ
             </Text>
 
+            {/* Action Buttons */}
             <View style={resourceStoreStyles.actionButtons}>
               <Pressable
-                style={[resourceStoreStyles.actionButton, { backgroundColor: "#3B82F6" }]}
+                style={[resourceStoreStyles.actionButton, resourceStoreStyles.addToCartButton]}
                 onPress={(e) => {
                   e.stopPropagation();
-                  addToCart(item);
+                  handleAddToCart(item, false);
                 }}
               >
-                <Text style={resourceStoreStyles.actionButtonText}>Thêm vào giỏ</Text>
+                <Icon name="shopping-cart" size={16} color="#fff" />
+                <Text style={resourceStoreStyles.actionButtonText}>Add to Cart</Text>
               </Pressable>
 
               <Pressable
-                style={[resourceStoreStyles.actionButton, { backgroundColor: "#10B981" }]}
+                style={[resourceStoreStyles.actionButton, resourceStoreStyles.buyNowButton]}
                 onPress={(e) => {
                   e.stopPropagation();
-                  Alert.alert(
-                    "Thanh toán",
-                    `Mua ${item.name} với giá ${item.price.toLocaleString()} VNĐ`
-                  );
+                  handleAddToCart(item, true);
                 }}
               >
-                <Text style={resourceStoreStyles.actionButtonText}>Mua ngay</Text>
+                <Icon name="flash-on" size={16} color="#fff" />
+                <Text style={resourceStoreStyles.actionButtonText}>Buy Now</Text>
               </Pressable>
             </View>
           </View>
-        </View>
-      </Pressable>
-    </Shadow>
-  );
+        </Pressable>
+      </Shadow>
+    );
+  };
+
+  // ✅ Filter resources by category and search
+  const getFilteredResources = (resources) => {
+    let filtered = resources;
+
+    // Filter by category
+    if (selectedCategory !== "All") {
+      filtered = filtered.filter((r) => r.type === selectedCategory);
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      filtered = filtered.filter((r) =>
+        r.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    return filtered;
+  };
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color="#3B82F6" />
-        <Text>Đang tải dữ liệu...</Text>
+      <View style={resourceStoreStyles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={resourceStoreStyles.loadingText}>Đang tải dữ liệu...</Text>
       </View>
     );
   }
@@ -161,27 +237,29 @@ const latestData = resLatest || [];
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={resourceStoreStyles.headerTitle}>Cửa hàng Resource</Text>
-        <View style={resourceStoreStyles.headerActions}>
-          <Pressable style={resourceStoreStyles.cartButton}>
-            <Icon name="shopping-cart" size={24} color="#6B7280" />
-            {cart.length > 0 && (
-              <View style={resourceStoreStyles.cartBadge}>
-                <Text style={resourceStoreStyles.cartBadgeText}>{cart.length}</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
+        <Pressable
+          style={resourceStoreStyles.cartButton}
+          onPress={() => navigation.navigate("Cart")}
+        >
+          <Icon name="shopping-cart" size={24} color="#1F2937" />
+          {cart.length > 0 && (
+            <View style={resourceStoreStyles.cartBadge}>
+              <Text style={resourceStoreStyles.cartBadgeText}>{cart.length}</Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
-      {/* Body */}
-      <ScrollView style={resourceStoreStyles.scrollContainer}>
+      <ScrollView style={resourceStoreStyles.scrollContainer} showsVerticalScrollIndicator={false}>
         {/* Search */}
         <View style={resourceStoreStyles.searchContainer}>
+          <Icon name="search" size={20} color="#9CA3AF" style={resourceStoreStyles.searchIcon} />
           <TextInput
             style={resourceStoreStyles.searchInput}
             placeholder="Tìm kiếm resource..."
             value={searchQuery}
             onChangeText={setSearchQuery}
+            placeholderTextColor="#9CA3AF"
           />
         </View>
 
@@ -190,6 +268,7 @@ const latestData = resLatest || [];
           horizontal
           showsHorizontalScrollIndicator={false}
           style={resourceStoreStyles.categoryContainer}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
         >
           {categories.map((category) => (
             <Pressable
@@ -212,41 +291,64 @@ const latestData = resLatest || [];
           ))}
         </ScrollView>
 
-        {/* 🔹 Section 1: Resource mới nhất */}
-        <View style={resourceStoreStyles.sectionContainer}>
-          <Text style={resourceStoreStyles.sectionTitle}>Mới nhất</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={resourceStoreStyles.resourcesList}
-          >
-            {latestResources.map(renderResourceItem)}
-          </ScrollView>
-        </View>
+        {/* Latest Resources */}
+        {latestResources.length > 0 && (
+          <View style={resourceStoreStyles.sectionContainer}>
+            <View style={resourceStoreStyles.sectionHeader}>
+              <Icon name="new-releases" size={24} color="#4F46E5" />
+              <Text style={resourceStoreStyles.sectionTitle}>Mới nhất</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {getFilteredResources(latestResources).map(renderResourceItem)}
+            </ScrollView>
+          </View>
+        )}
 
-        {/* 🔹 Section 2: Phổ biến */}
-        <View style={resourceStoreStyles.sectionContainer}>
-          <Text style={resourceStoreStyles.sectionTitle}>Phổ biến</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={resourceStoreStyles.resourcesList}
-          >
-            {popularResources.map(renderResourceItem)}
-          </ScrollView>
-        </View>
+        {/* Popular Resources */}
+        {popularResources.length > 0 && (
+          <View style={resourceStoreStyles.sectionContainer}>
+            <View style={resourceStoreStyles.sectionHeader}>
+              <Icon name="trending-up" size={24} color="#F59E0B" />
+              <Text style={resourceStoreStyles.sectionTitle}>Phổ biến</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {getFilteredResources(popularResources).map(renderResourceItem)}
+            </ScrollView>
+          </View>
+        )}
 
-        {/* 🔹 Section 3: Tất cả Resource */}
-        <View style={resourceStoreStyles.sectionContainer}>
-          <Text style={resourceStoreStyles.sectionTitle}>Tất cả Resource</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={resourceStoreStyles.resourcesList}
-          >
-            {allResources.map(renderResourceItem)}
-          </ScrollView>
-        </View>
+        {/* All Resources */}
+        {allResources.length > 0 && (
+          <View style={resourceStoreStyles.sectionContainer}>
+            <View style={resourceStoreStyles.sectionHeader}>
+              <Icon name="apps" size={24} color="#10B981" />
+              <Text style={resourceStoreStyles.sectionTitle}>Tất cả Resource</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {getFilteredResources(allResources).map(renderResourceItem)}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Empty State */}
+        {allResources.length === 0 && popularResources.length === 0 && latestResources.length === 0 && (
+          <View style={resourceStoreStyles.emptyState}>
+            <Icon name="inbox" size={80} color="#D1D5DB" />
+            <Text style={resourceStoreStyles.emptyStateText}>Không có resource nào</Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );

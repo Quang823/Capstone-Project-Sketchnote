@@ -1,244 +1,248 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2; // 2 columns with padding
 
 export const resourceStoreStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-   
+    backgroundColor: '#F9FAFB',
   },
   scrollContainer: {
     flex: 1,
   },
+  
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
+    borderBottomColor: '#E5E7EB',
     paddingTop: 60,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    justifyContent: "center",
-    alignItems: "center",
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#212529',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    fontWeight: '700',
+    color: '#111827',
   },
   cartButton: {
     position: 'relative',
     padding: 8,
   },
-  cartIcon: {
-    fontSize: 20,
-  },
   cartBadge: {
     position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: '#dc3545',
+    top: 4,
+    right: 4,
+    backgroundColor: '#EF4444',
     borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    minWidth: 18,
+    height: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cartBadgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
-  walletButton: {
-    padding: 8,
-  },
-  walletIcon: {
-    fontSize: 20,
-  },
+
+  // Search
   searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 4,
+  },
+  searchIcon: {
+    position: 'absolute',
+    left: 28,
+    zIndex: 1,
   },
   searchInput: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
     paddingHorizontal: 16,
+    paddingLeft: 44,
     paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    fontSize: 15,
+    color: '#111827',
   },
+
+  // Category
   categoryContainer: {
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
   },
   categoryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginRight: 10,
     borderRadius: 20,
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
   },
   selectedCategoryButton: {
-    backgroundColor: '#007bff',
-    borderColor: '#007bff',
+    backgroundColor: '#4F46E5',
+    borderColor: '#4F46E5',
   },
   categoryText: {
     fontSize: 14,
-    color: '#6c757d',
-    fontWeight: '500',
+    color: '#6B7280',
+    fontWeight: '600',
   },
   selectedCategoryText: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
+
+  // Section
   sectionContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#212529',
-    marginBottom: 12,
-    paddingHorizontal: 16,
+    fontWeight: '700',
+    color: '#111827',
   },
-  resourcesList: {
-    paddingHorizontal: 16,
-  },
+
+  // Resource Card
   resourceCard: {
     width: 280,
-    marginRight: 16,
-  },
-  resourceCardInner: {
-    borderRadius: 20,
     backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     overflow: 'hidden',
+  },
+  imageContainer: {
     position: 'relative',
+    width: '100%',
+    height: 160,
+    backgroundColor: '#F3F4F6',
   },
   resourceImage: {
     width: '100%',
-    height: 160,
-    resizeMode: 'cover',
+    height: '100%',
   },
-  resourceOverlay: {
+  typeBadge: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 160,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    padding: 16,
-    flexDirection: 'row',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(79, 70, 229, 0.95)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  premiumBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  premiumText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4F46E5',
-  },
-  playIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playIcon: {
-    fontSize: 20,
+  typeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   resourceInfo: {
     padding: 16,
   },
   resourceName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
     marginBottom: 6,
-    flexShrink: 1,
-  },
-  resourceMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  rating: {
-    fontSize: 12,
-    color: '#ffc107',
-    fontWeight: '500',
-    marginRight: 8,
-  },
-  downloads: {
-    fontSize: 12,
-    color: '#6B7280',
+    lineHeight: 22,
   },
   resourceDescription: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#6B7280',
-    marginBottom: 8,
-    lineHeight: 16,
-  },
-  resourceFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    marginBottom: 12,
+    lineHeight: 18,
   },
   price: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#28a745',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#10B981',
+    marginBottom: 12,
   },
-    actionButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-    gap: 8,
+
+  // Action Buttons
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
   },
   actionButton: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowRadius: 3,
     elevation: 3,
   },
-  actionButtonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+  addToCartButton: {
+    backgroundColor: '#3B82F6',
+  },
+  buyNowButton: {
+    backgroundColor: '#10B981',
   },
   actionButtonText: {
-    color: "#fff",
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '700',
   },
 
+  // Empty State
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80,
+  },
+  emptyStateText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
 });

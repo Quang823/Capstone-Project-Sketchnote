@@ -28,8 +28,16 @@ export default function WalletScreen() {
   const formatCurrency = (amount) =>
     (amount ?? 0).toLocaleString("vi-VN") + " VND";
 
-  const formatDate = (dateString) =>
-    new Date(dateString).toLocaleDateString("en-GB");
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   // 💳 Handle deposit
   const handleDeposit = async () => {
@@ -42,10 +50,8 @@ export default function WalletScreen() {
     try {
       const url = await paymentService.depositWallet(amount);
 
-    
-        setShowDepositModal(false);
-        navigation.navigate("PaymentWebView", { paymentUrl: url });
-      
+      setShowDepositModal(false);
+      navigation.navigate("PaymentWebView", { paymentUrl: url });
     } catch (error) {
       console.error("Payment error:", error);
       Alert.alert("Thất bại", "Không thể tạo liên kết thanh toán.");
@@ -71,23 +77,42 @@ export default function WalletScreen() {
 
   // 📊 Stats
   const totalDeposit = walletData.transactions
-    .filter((t) => t.type === "deposit")
+    .filter((t) => t.type === "DEPOSIT" && t.status === "SUCCESS")
     .reduce((sum, t) => sum + t.amount, 0);
 
   const totalSpent = walletData.transactions
-    .filter((t) => t.type === "purchase")
+    .filter((t) => t.type === "PURCHASE")
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
-  // 🧾 Chỉ lấy 5 giao dịch gần nhất (mới nhất trước)
+  // 🧾 Lấy 5 giao dịch gần nhất (mới nhất trước)
   const recentTransactions = [...walletData.transactions]
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5);
+
+  // Get transaction icon and color
+  const getTransactionStyle = (transaction) => {
+    if (transaction.type === "DEPOSIT") {
+      return {
+        icon: "account-balance-wallet",
+        color: transaction.status === "SUCCESS" ? "#10B981" : "#F59E0B",
+        sign: "+",
+        label: transaction.status === "SUCCESS" ? "Deposit" : "Pending Deposit",
+      };
+    } else {
+      return {
+        icon: "shopping-cart",
+        color: "#EF4444",
+        sign: "-",
+        label: "Purchase",
+      };
+    }
+  };
 
   return (
     <View style={walletStyles.container}>
       {/* Header */}
       <View style={walletStyles.header}>
-        <Pressable onPress={() => navigation.navigate("Home")}>
+        <Pressable onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={walletStyles.headerTitle}>E-Wallet</Text>
@@ -140,43 +165,96 @@ export default function WalletScreen() {
           <View style={walletStyles.historySectionHeader}>
             <Text style={walletStyles.sectionTitle}>Recent Transactions</Text>
             <Text style={walletStyles.transactionCount}>
-              {recentTransactions.length} shown
+              {recentTransactions.length} of {walletData.transactions.length}
             </Text>
           </View>
 
           {recentTransactions.length > 0 ? (
-            recentTransactions.map((t) => (
-              <View key={t.id} style={walletStyles.transactionItem}>
-                <View style={walletStyles.transactionIcon}>
-                  <Icon
-                    name={t.type === "deposit" ? "account-balance-wallet" : "shopping-cart"}
-                    size={24}
-                    color={t.type === "deposit" ? "#10B981" : "#EF4444"}
-                  />
-                </View>
+            <>
+              {recentTransactions.map((transaction) => {
+                const style = getTransactionStyle(transaction);
+                return (
+                  <View key={transaction.transactionId} style={styles.transactionItem}>
+                    <View style={[styles.transactionIcon, { backgroundColor: `${style.color}15` }]}>
+                      <Icon name={style.icon} size={24} color={style.color} />
+                    </View>
 
-                <View style={walletStyles.transactionInfo}>
-                  <Text style={walletStyles.transactionDescription}>{t.description}</Text>
-                  <Text style={walletStyles.transactionDate}>{formatDate(t.date)}</Text>
-                </View>
+                    <View style={styles.transactionInfo}>
+                      <Text style={styles.transactionLabel}>{style.label}</Text>
+                      <Text style={styles.transactionDate}>
+                        {formatDate(transaction.createdAt)}
+                      </Text>
+                      {transaction.orderCode && (
+                        <Text style={styles.transactionCode}>
+                          Order: {transaction.orderCode}
+                        </Text>
+                      )}
+                    </View>
 
-                <Text
-                  style={[
-                    walletStyles.transactionAmount,
-                    t.type === "deposit"
-                      ? walletStyles.depositAmount
-                      : walletStyles.purchaseAmount,
-                  ]}
+                    <View style={styles.transactionRight}>
+                      <Text
+                        style={[
+                          styles.transactionAmount,
+                          { color: style.color },
+                        ]}
+                      >
+                        {style.sign}{formatCurrency(transaction.amount)}
+                      </Text>
+                      {transaction.status && (
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            {
+                              backgroundColor:
+                                transaction.status === "SUCCESS"
+                                  ? "#10B98115"
+                                  : transaction.status === "PENDING"
+                                  ? "#F59E0B15"
+                                  : "#EF444415",
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.statusText,
+                              {
+                                color:
+                                  transaction.status === "SUCCESS"
+                                    ? "#10B981"
+                                    : transaction.status === "PENDING"
+                                    ? "#F59E0B"
+                                    : "#EF4444",
+                              },
+                            ]}
+                          >
+                            {transaction.status}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+
+              {/* View All Button */}
+              {walletData.transactions.length > 5 && (
+                <Pressable
+                  style={styles.viewAllButton}
+                  onPress={() =>
+                    navigation.navigate("TransactionHistory", {
+                      transactions: walletData.transactions,
+                    })
+                  }
                 >
-                  {t.type === "deposit" ? "+" : "-"}
-                  {formatCurrency(Math.abs(t.amount))}
-                </Text>
-              </View>
-            ))
+                  <Text style={styles.viewAllText}>View All Transactions</Text>
+                  <Icon name="arrow-forward" size={18} color="#3B82F6" />
+                </Pressable>
+              )}
+            </>
           ) : (
-            <View style={walletStyles.emptyState}>
-              <Text style={walletStyles.emptyStateIcon}>📭</Text>
-              <Text style={walletStyles.emptyStateText}>No transactions yet</Text>
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateIcon}>📭</Text>
+              <Text style={styles.emptyStateText}>No transactions yet</Text>
             </View>
           )}
         </View>
@@ -273,3 +351,88 @@ export default function WalletScreen() {
     </View>
   );
 }
+
+const styles = {
+  transactionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    padding: 14,
+    marginBottom: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  transactionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  transactionInfo: {
+    flex: 1,
+  },
+  transactionLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 4,
+  },
+  transactionDate: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  transactionCode: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    marginTop: 2,
+  },
+  transactionRight: {
+    alignItems: "flex-end",
+  },
+  transactionAmount: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  viewAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 14,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
+  },
+  viewAllText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#3B82F6",
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: "#9CA3AF",
+  },
+};
