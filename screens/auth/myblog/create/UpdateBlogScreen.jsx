@@ -83,7 +83,7 @@ const handleUpdateBlog = async () => {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitText}>Cập nhật</Text>
+            <Text style={styles.submitText}>Update</Text>
           )}
         </LinearGradient>
       </Pressable>

@@ -2,13 +2,13 @@ import { StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
   container: {
-      paddingTop: 60,
+    paddingTop: 60,
     flex: 1,
     padding: 20,
     backgroundColor: "#F9FAFB",
   },
   header: {
-  
+    paddingTop: 30,
     fontSize: 22,
     fontWeight: "bold",
     color: "#1F2937",
@@ -23,10 +23,15 @@ export const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
   },
+  addImageContainer: {
+    marginBottom: 20,
+  },
   submitButton: {
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 5,
+    paddingVertical: 6,
     alignItems: "center",
+    width: 115, 
+    marginTop: 8,
   },
   submitText: {
     color: "#fff",

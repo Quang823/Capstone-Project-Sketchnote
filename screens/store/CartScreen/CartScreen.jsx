@@ -12,18 +12,20 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
 import { useCart } from "../../../context/CartContext";
 import { cartStyles } from "./CartScreen.styles";
+import Toast from "react-native-toast-message";
+import { orderService } from "../../../service/orderService";
 
 export default function CartScreen() {
   const navigation = useNavigation();
   const { cart, updateQuantity, removeFromCart } = useCart();
 
-  // 🧮 Totals (no tax, no shipping)
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const total = subtotal; // simplified total
+  const total = subtotal;
 
   const [coupon, setCoupon] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discount, setDiscount] = useState(0);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
   const applyCoupon = () => {
     if (coupon.trim().toLowerCase() === "sale10") {
@@ -35,7 +37,56 @@ export default function CartScreen() {
     } else {
       setDiscount(0);
       setAppliedCoupon(null);
-      alert("Invalid discount code");
+      Alert.alert("Invalid Code", "Invalid discount code");
+    }
+  };
+
+  const createOrder = async () => {
+    if (isCreatingOrder) return;
+
+    try {
+      setIsCreatingOrder(true);
+
+      // Chuẩn bị body theo format của BE
+      const orderData = {
+        subscriptionId: null,
+        items: cart.map((item) => ({
+          resourceTemplateId: item.id,
+          discount: 0, // Luôn gửi 0 theo yêu cầu
+        })),
+      };
+
+      console.log("📤 Creating order with data:", JSON.stringify(orderData, null, 2));
+
+      // Gọi API
+      const response = await orderService.createOrder(orderData);
+
+      console.log("✅ Order created successfully:", response);
+
+      // Clear cart sau khi tạo order thành công
+      cart.forEach(item => removeFromCart(item.id));
+
+      Toast.show({
+        type: "success",
+        text1: "Order Created",
+        text2: "Your order has been placed successfully.",
+      });
+
+      // Navigate to OrderSuccess
+      navigation.navigate("OrderSuccess", {
+        orderId: response.orderId,
+        invoiceNumber: response.invoiceNumber,
+        totalAmount: finalTotal,
+      });
+    } catch (error) {
+      console.error("❌ Create order error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Order Failed",
+        text2: error.message || "Failed to create order. Please try again.",
+      });
+    } finally {
+      setIsCreatingOrder(false);
     }
   };
 
@@ -111,23 +162,6 @@ export default function CartScreen() {
                       <Text style={cartStyles.typeBadgeText}>{item.type}</Text>
                     </View>
                   )}
-
-                  {/* 🔹 Designer Info */}
-                  {/* {item.designer && (
-                    <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4 }}>
-                      {item.designer.avatarUrl ? (
-                        <Image
-                          source={{ uri: item.designer.avatarUrl }}
-                          style={{ width: 26, height: 26, borderRadius: 13, marginRight: 6 }}
-                        />
-                      ) : (
-                        <Icon name="person" size={22} color="#6B7280" style={{ marginRight: 6 }} />
-                      )}
-                      <Text style={{ color: "#4B5563", fontSize: 13 }}>
-                        {item.designer.name}
-                      </Text>
-                    </View>
-                  )} */}
 
                   <View style={cartStyles.itemBottom}>
                     <View style={cartStyles.qtyRow}>
@@ -227,16 +261,17 @@ export default function CartScreen() {
 
           {/* Checkout Button */}
           <Pressable
-            style={cartStyles.checkoutBtn}
-            onPress={() =>
-              navigation.navigate("Checkout", {
-                cartItems: cart,
-                totalAmount: finalTotal,
-              })
-            }
+            style={[
+              cartStyles.checkoutBtn,
+              isCreatingOrder && { opacity: 0.6 },
+            ]}
+            onPress={createOrder}
+            disabled={isCreatingOrder}
           >
             <Icon name="lock" size={20} color="#FFFFFF" />
-            <Text style={cartStyles.checkoutText}>Checkout Now</Text>
+            <Text style={cartStyles.checkoutText}>
+              {isCreatingOrder ? "Creating Order..." : "Checkout Now"}
+            </Text>
             <Icon name="arrow-forward" size={20} color="#FFFFFF" />
           </Pressable>
 
@@ -245,6 +280,7 @@ export default function CartScreen() {
             <Text style={cartStyles.paymentTitle}>Payment Methods</Text>
             <View style={cartStyles.paymentIcons}>
               <Icon name="account-balance-wallet" size={24} color="#6B7280" />
+              <Icon name="credit-card" size={24} color="#6B7280" />
             </View>
           </View>
         </View>

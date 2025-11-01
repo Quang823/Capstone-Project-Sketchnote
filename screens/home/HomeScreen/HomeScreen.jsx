@@ -234,6 +234,9 @@ export default function HomeScreen() {
           case "settings":
             navigation.navigate("SettingsScreen");
             break;
+            case "orderHistory":
+  navigation.navigate("OrderHistory");
+  break;
           default:
             break;
         }

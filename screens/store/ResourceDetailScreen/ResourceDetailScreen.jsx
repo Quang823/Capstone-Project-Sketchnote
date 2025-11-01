@@ -360,7 +360,7 @@ export default function ResourceDetailScreen() {
 
   {/* 🧠 Reviews List */}
   <View style={styles.reviewsList}>
-    {reviews.map((review, index) => (
+    {/* {reviews.map((review, index) => (
       <View key={index} style={styles.reviewItem}>
         <View style={styles.reviewHeader}>
           <Image
@@ -391,7 +391,7 @@ export default function ResourceDetailScreen() {
           </Pressable>
         </View>
       </View>
-    ))}
+    ))} */}
 
     {/* Load More */}
     <Pressable style={styles.loadMoreButton}>
