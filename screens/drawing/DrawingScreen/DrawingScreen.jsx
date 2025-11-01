@@ -47,20 +47,36 @@ const getImageSize = (uri) => {
   });
 };
 
-export default function DrawingScreen() {
+export default function DrawingScreen({ route }) {
   const navigation = useNavigation();
+  const noteConfig = route?.params?.noteConfig;
 
   // HAND/PEN MODE
   const [isPenMode, setIsPenMode] = useState(false);
 
-  // LAYERS
+  // LAYERS - Per-page layer management
   const [showLayerPanel, setShowLayerPanel] = useState(false);
-  const [layers, setLayers] = useState([
-    { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
-  ]);
+  const [pageLayers, setPageLayers] = useState({
+    1: [{ id: "layer1", name: "Layer 1", visible: true, strokes: [] }],
+  });
 
   const [activeLayerId, setActiveLayerId] = useState("layer1");
   const [layerCounter, setLayerCounter] = useState(2);
+  
+  // Get layers for active page
+  const currentLayers = pageLayers[activePageId] || [
+    { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+  ];
+  
+  // Helper to update layers for active page
+  const updateCurrentPageLayers = useCallback((updater) => {
+    setPageLayers(prev => ({
+      ...prev,
+      [activePageId]: typeof updater === 'function' 
+        ? updater(prev[activePageId] || [{ id: "layer1", name: "Layer 1", visible: true, strokes: [] }])
+        : updater
+    }));
+  }, [activePageId]);
 
   // TOOL VISIBILITY
   const [toolbarVisible, setToolbarVisible] = useState(true);
@@ -606,16 +622,16 @@ export default function DrawingScreen() {
       />
       {showLayerPanel && (
         <LayerPanel
-          layers={layers}
+          layers={currentLayers}
           activeLayerId={activeLayerId}
           onSelect={(id) => setActiveLayerId(id)}
           onToggleVisibility={(id) =>
-            setLayers((prev) =>
+            updateCurrentPageLayers((prev) =>
               prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
             )
           }
           onAdd={() =>
-            setLayers((prev) => {
+            updateCurrentPageLayers((prev) => {
               const newId = `layer_${Date.now()}`;
               const newLayer = {
                 id: newId,
@@ -624,19 +640,19 @@ export default function DrawingScreen() {
                 locked: false,
                 strokes: [],
               };
-              setLayerCounter((c) => c + 1); // ✅ tăng bộ đếm sau mỗi lần thêm
+              setLayerCounter((c) => c + 1);
               return [...prev, newLayer];
             })
           }
           onDelete={(id) =>
-            setLayers((prev) => prev.filter((l) => l.id !== id))
+            updateCurrentPageLayers((prev) => prev.filter((l) => l.id !== id))
           }
           onRename={(id, newName) =>
-            setLayers((prev) =>
+            updateCurrentPageLayers((prev) =>
               prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
             )
-          } // ✅ Thêm dòng này
-          onClose={() => setShowLayerPanel(false)} // ✅ đóng panel khi bấm X
+          }
+          onClose={() => setShowLayerPanel(false)}
         />
       )}
       {/* 🎨 Main Toolbar */}
@@ -741,9 +757,9 @@ export default function DrawingScreen() {
       <View style={{ flex: 1 }}>
         <MultiPageCanvas
           ref={multiPageCanvasRef}
-          layers={layers}
+          pageLayers={pageLayers}
+          setPageLayers={setPageLayers}
           activeLayerId={activeLayerId}
-          setLayers={setLayers}
           tool={tool}
           setTool={setTool}
           color={color}
@@ -767,6 +783,7 @@ export default function DrawingScreen() {
           registerPageRef={registerPageRef}
           onActivePageChange={setActivePageId}
           onColorPicked={handleColorPicked}
+          noteConfig={noteConfig}
           onRequestTextInput={(x, y) => {
             if (tool === "text") {
               setTimeout(() => setEditingText({ x, y, text: "" }), 0);

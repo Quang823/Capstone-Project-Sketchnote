@@ -19,6 +19,7 @@ import UpdateBlogScreen from "../screens/auth/myblog/create/UpdateBlogScreen";
 import PaymentWebViewScreen from "../screens/payment/PaymentWebViewScreen";
 import PaymentSuccessScreen from "../screens/payment/PaymentSuccessScreen";
 import PaymentFailedScreen from "../screens/payment/PaymentFailedScreen";
+import NoteSetupScreen from "../screens/note/NoteSetupScreenFinal";
 
 const Stack = createNativeStackNavigator();
 
@@ -31,6 +32,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="NoteSetupScreen" component={NoteSetupScreen} />
       <Stack.Screen name="DrawingScreen" component={DrawingScreen} />
       <Stack.Screen name="CourseDetailScreen" component={CourseDetailScreen} />
       <Stack.Screen name="CoursesScreen" component={CoursesScreen} />

@@ -1125,6 +1125,8 @@ export default function GestureHandler(
 
   const pan = Gesture.Pan()
     .minDistance(1)
+    .minPointers(1)
+    .maxPointers(1) // Chỉ nhận khi có 1 ngón tay để tránh conflict với zoom
     .runOnJS(true)
     .onStart((e) => {
       // local copy of pointer coords — avoid mutating event directly

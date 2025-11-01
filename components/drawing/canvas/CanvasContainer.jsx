@@ -56,7 +56,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     isPenMode,
     rulerPosition,
     scrollOffsetY = 0,
-    onColorPicked, // 👈 Thêm prop
+    onColorPicked,
+    backgroundColor = "#FFFFFF", // 👈 Add backgroundColor prop
+    pageTemplate = "blank", // 👈 Add template prop
+    backgroundImageUrl = null, // 👈 Add backgroundImageUrl prop
+    pageWidth = null, // 👈 Page width from noteConfig
+    pageHeight = null, // 👈 Page height from noteConfig
   },
   ref
 ) {
@@ -68,8 +73,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     }
   };
   const { width, height } = useWindowDimensions();
-  const PAGE_WIDTH = width - PAGE_MARGIN_H * 2;
-  const PAGE_HEIGHT = Math.round(PAGE_WIDTH * Math.SQRT2);
+  // Use provided dimensions from noteConfig, or fallback to default
+  const PAGE_WIDTH = pageWidth ?? width - PAGE_MARGIN_H * 2;
+  const PAGE_HEIGHT = pageHeight ?? Math.round(PAGE_WIDTH * Math.SQRT2);
 
   const [strokes, setStrokes] = useState([]);
   const [currentPoints, setCurrentPoints] = useState([]);
@@ -171,39 +177,84 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   };
 
   const lastZoomState = useRef(false);
+  const isZooming = useSharedValue(false);
+  const isZoomingRef = useRef(false); // For JS thread access
 
   const pinch = Gesture.Pinch()
     .enabled(!zoomLocked)
-    .onStart(() => {
+    .onStart((e) => {
+      "worklet";
+      // ignore nếu <2 ngón (bảo vệ cho trường hợp library không hỗ trợ minPointers)
+      if (!e || !e.numberOfPointers || e.numberOfPointers < 2) return;
+      isZooming.value = true;
+      isZoomingRef.current = true;
       baseScale.value = scale.value;
       runOnJS(() => {
-        setShowZoomOverlay((prev) => (prev ? prev : true));
+        try {
+          setShowZoomOverlay((prev) => (prev ? prev : true));
+          // Notify parent to disable scroll when zoom starts
+          if (typeof onZoomChange === "function") {
+            onZoomChange(true); // true = zoom is active
+          }
+        } catch (err) {
+          console.error("[CanvasContainer] Error in zoom onStart:", err);
+        }
       })();
     })
     .onUpdate((e) => {
+      "worklet";
+      if (!e || !e.numberOfPointers || e.numberOfPointers < 2) return; // guard
+      if (typeof e.scale !== "number" || !isFinite(e.scale)) return; // safety check
       scale.value = baseScale.value * e.scale;
+      // Clamp scale to prevent extreme values
+      if (scale.value < 0.5) scale.value = 0.5;
+      if (scale.value > 5) scale.value = 5;
       const isZoomed = scale.value > 1.01;
       if (isZoomed !== lastZoomState.current) {
         lastZoomState.current = isZoomed;
-        if (typeof onZoomChange === "function") runOnJS(onZoomChange)(isZoomed);
       }
     })
     .onEnd(() => {
+      "worklet";
       if (scale.value < 1) scale.value = withTiming(1);
       if (scale.value > 3) scale.value = withTiming(3);
-      runOnJS(setShowZoomOverlay)(false);
-      if (scale.value <= 1.01 && lastZoomState.current) {
-        lastZoomState.current = false;
-        if (typeof onZoomChange === "function") runOnJS(onZoomChange)(false);
-      }
+      isZooming.value = false;
+      // Capture scale value before runOnJS
+      const finalScale = scale.value;
+      const wasZoomed = finalScale > 1.01;
+      runOnJS((stillZoomed) => {
+        isZoomingRef.current = false;
+        setShowZoomOverlay(false);
+        if (!stillZoomed && lastZoomState.current) {
+          lastZoomState.current = false;
+        }
+        // Notify parent: always false when pinch ends (re-enable scroll)
+        if (typeof onZoomChange === "function") {
+          onZoomChange(false); // Pinch ended, re-enable scroll
+        }
+      })(wasZoomed);
     });
 
   const pan = Gesture.Pan()
+    .minPointers(1)
+    //.maxPointers(1) // Chỉ nhận pan khi có 1 ngón tay (để tránh conflict với pinch)
     .onStart(() => {
+      "worklet";
+      // Chỉ cho phép pan nếu không đang zoom
+      if (isZooming.value) return;
       baseTranslateX.value = translateX.value;
       baseTranslateY.value = translateY.value;
     })
     .onUpdate((e) => {
+      "worklet";
+      // Chỉ pan nếu không đang zoom
+      if (isZooming.value) return;
+      if (
+        !e ||
+        typeof e.translationX !== "number" ||
+        typeof e.translationY !== "number"
+      )
+        return;
       translateX.value = baseTranslateX.value + e.translationX;
       translateY.value = baseTranslateY.value + e.translationY;
       clampPan();
@@ -211,15 +262,25 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
+    //.maxPointers(1) // Chỉ nhận khi 1 ngón tay
     .onEnd(() => {
+      "worklet";
       scale.value = withTiming(1);
       translateX.value = withTiming(0);
       translateY.value = withTiming(0);
-      lastZoomState.current = false;
-      if (typeof onZoomChange === "function") runOnJS(onZoomChange)(false);
+      runOnJS(() => {
+        lastZoomState.current = false;
+        if (typeof onZoomChange === "function") {
+          onZoomChange(false);
+        }
+      })();
     });
 
-  const composedGesture = Gesture.Simultaneous(pinch, pan, doubleTap);
+  // Compose gestures: pinch riêng, pan và doubleTap có thể cùng lúc
+  const composedGesture = Gesture.Race(
+    pinch,
+    Gesture.Simultaneous(pan, doubleTap)
+  );
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -567,7 +628,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       const tableWidth = 300;
       const tableHeight = 200;
       const { x: cx, y: cy } = getCenterPosition(tableWidth, tableHeight);
-      
+
       const tableStroke = {
         id: nextId(),
         tool: "table",
@@ -590,7 +651,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       const stickerWidth = stroke.width ?? 120;
       const stickerHeight = stroke.height ?? 120;
       const { x: cx, y: cy } = getCenterPosition(stickerWidth, stickerHeight);
-      
+
       const s = {
         ...stroke,
         x: stroke.x ?? cx,
@@ -623,16 +684,16 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     },
   }));
 
-  useEffect(() => {
-    if (__DEV__) {
-      console.log(
-        "[CanvasContainer] rulerPosition=",
-        rulerPosition,
-        "page=",
-        page
-      );
-    }
-  }, [rulerPosition, page.x, page.y, page.w, page.h]);
+  // useEffect(() => {
+  //   if (__DEV__) {
+  //     console.log(
+  //       "[CanvasContainer] rulerPosition=",
+  //       rulerPosition,
+  //       "page=",
+  //       page
+  //     );
+  //   }
+  // }, [rulerPosition, page.x, page.y, page.w, page.h]);
 
   // ====== Khi kết thúc stroke ======
   const handleAddStroke = useCallback(
@@ -731,6 +792,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               canvasHeight={canvasHeight}
               shapeType={shapeType}
               hasRuler={!!rulerPosition}
+              backgroundColor={backgroundColor}
+              pageTemplate={pageTemplate}
+              backgroundImageUrl={backgroundImageUrl}
+              pageWidth={PAGE_WIDTH}
+              pageHeight={PAGE_HEIGHT}
             />
           </GestureHandler>
         </Animated.View>

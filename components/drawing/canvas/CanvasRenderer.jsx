@@ -9,9 +9,11 @@ import {
   useCanvasRef,
   useFont,
   Circle,
+  Image as SkiaImage,
+  useImage,
 } from "@shopify/react-native-skia";
 import CanvasImage from "../image/CanvasImage";
-import PaperGuides from "./PaperGuides";
+import PaperGuides from "./PaperGuidesNew";
 import { applyPencilAlpha, makePathFromPoints } from "./utils";
 
 const DESK_BGCOLOR = "#e9ecef";
@@ -230,17 +232,24 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     onSelectImage,
     imageRefs,
     hasRuler = false,
+    backgroundColor = "#FFFFFF", // 👈 Add backgroundColor prop
+    pageTemplate = "blank", // 👈 Add template prop
+    backgroundImageUrl = null, // 👈 Add backgroundImageUrl prop
+    pageWidth = null, // 👈 Page width from noteConfig
+    pageHeight = null, // 👈 Page height from noteConfig
   },
   ref
 ) {
   const canvasRef = useCanvasRef();
   const loadedFonts = usePreloadedFonts();
+  const backgroundImage = useImage(backgroundImageUrl);
 
+  // Use provided dimensions or fallback to page dimensions
   const safePage = {
     x: page?.x ?? 0,
     y: page?.y ?? 0,
-    w: page?.w ?? 0,
-    h: page?.h ?? 0,
+    w: pageWidth ?? page?.w ?? 0,
+    h: pageHeight ?? page?.h ?? 0,
   };
 
   const safeCanvasHeight = canvasHeight ?? 0;
@@ -887,12 +896,30 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             color="#000000"
             opacity={0.1}
           />
+          {backgroundImage ? (
+            <SkiaImage
+              image={backgroundImage}
+              x={safePage.x}
+              y={safePage.y}
+              width={safePage.w}
+              height={safePage.h}
+              fit="cover" // Use "cover" to fill the page, or "contain" to show full image
+            />
+          ) : (
+            <Rect
+              x={safePage.x}
+              y={safePage.y}
+              width={safePage.w}
+              height={safePage.h}
+              color={backgroundColor}
+            />
+          )}
           <Rect
             x={safePage.x}
             y={safePage.y}
             width={safePage.w}
             height={safePage.h}
-            color={PAGE_BGCOLOR}
+            color="transparent"
             strokeWidth={1}
             strokeColor="#ced4da"
           />
@@ -901,7 +928,11 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
       {/* Paper guides */}
       {safePage.w > 0 && safePage.h > 0 && (
-        <PaperGuides paperStyle={paperStyle} page={safePage} />
+        <PaperGuides
+          paperStyle={paperStyle}
+          pageTemplate={pageTemplate}
+          page={safePage}
+        />
       )}
 
       {/* Per-layer compositing groups so eraser affects only that layer */}

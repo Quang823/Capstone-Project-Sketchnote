@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import CanvasContainer from "./CanvasContainer";
 import { projectService } from "../../../service/projectService";
+import { calculatePageDimensions } from "../../../utils/pageDimensions";
 
 const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   {
@@ -42,26 +43,85 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     stabilization,
     eraserMode,
     isPenMode,
-    layers,
+    pageLayers, // 👈 Changed from layers to pageLayers
     activeLayerId,
-    setLayers,
+    setPageLayers, // 👈 Changed from setLayers to setPageLayers
     rulerPosition,
-    onColorPicked, // 👈 Thêm prop
+    onColorPicked,
+    noteConfig,
   },
   ref
 ) {
   const drawingDataRef = useRef({ pages: {} });
-  const [pages, setPages] = useState([{ id: 1 }]);
+
+  // Initialize pages based on noteConfig
+  const initialPages = useMemo(() => {
+    if (!noteConfig) return [{ id: 1 }];
+
+    const pages = [];
+
+    // Add cover page if enabled
+    if (noteConfig.hasCover && noteConfig.cover) {
+      pages.push({
+        id: 1,
+        type: "cover",
+        backgroundColor: noteConfig.cover.color,
+        template: noteConfig.cover.template,
+        imageUrl: noteConfig.cover.imageUrl,
+      });
+    }
+
+    // Add first paper page
+    pages.push({
+      id: pages.length + 1,
+      type: "paper",
+      backgroundColor: noteConfig.paper?.color || "#FFFFFF",
+      template: noteConfig.paper?.template || "blank",
+    });
+
+    return pages;
+  }, [noteConfig]);
+
+  const [pages, setPages] = useState(initialPages);
+
+  // Initialize layers for initial pages
+  useEffect(() => {
+    if (initialPages.length > 0 && setPageLayers) {
+      const initialLayers = {};
+      initialPages.forEach((page) => {
+        initialLayers[page.id] = [
+          { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+        ];
+      });
+      setPageLayers((prev) => ({ ...prev, ...initialLayers }));
+    }
+  }, [initialPages, setPageLayers]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [pageLayouts, setPageLayouts] = useState({});
   const [scrollY, setScrollY] = useState(0);
+  const [isZooming, setIsZooming] = useState(false); // Track zoom state to disable scroll
   const scrollRef = useRef(null);
   const lastAddedRef = useRef(null);
   const pageRefs = useRef({});
 
-  const { height } = Dimensions.get("window");
+  const { height, width } = Dimensions.get("window");
   const PAGE_SPACING = 30;
   const fallbackHeight = Math.round(height * 0.9);
+
+  // Calculate page dimensions from noteConfig
+  const pageDimensions = useMemo(() => {
+    if (!noteConfig) {
+      return { width: null, height: null };
+    }
+    return calculatePageDimensions(
+      noteConfig.paperSize || "A4",
+      noteConfig.orientation || "portrait",
+      width,
+      height, // Pass screen height for better fitting
+      24, // marginH
+      20 // marginV
+    );
+  }, [noteConfig, width, height]);
 
   // 🧮 Tính offset cho từng page
   const offsets = useMemo(() => {
@@ -82,9 +142,29 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     }
     const newId = Date.now();
     lastAddedRef.current = newId;
-    setPages((prev) => [...prev, { id: newId }]);
+
+    // Copy template config from first paper page (not cover)
+    const firstPaperPage = pages.find((p) => p.type === "paper") || pages[0];
+    const newPage = {
+      id: newId,
+      type: "paper",
+      backgroundColor:
+        firstPaperPage?.backgroundColor ||
+        noteConfig?.paper?.color ||
+        "#FFFFFF",
+      template:
+        firstPaperPage?.template || noteConfig?.paper?.template || "blank",
+    };
+
+    // Initialize layers for new page
+    setPageLayers?.((prev) => ({
+      ...prev,
+      [newId]: [{ id: "layer1", name: "Layer 1", visible: true, strokes: [] }],
+    }));
+
+    setPages((prev) => [...prev, newPage]);
     onActivePageChange?.(newId);
-  }, [pages, onActivePageChange]);
+  }, [pages, onActivePageChange, noteConfig, setPageLayers]);
 
   // 🧭 Scroll tới page
   const scrollToPage = useCallback(
@@ -317,6 +397,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         onScroll={handleScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!isZooming} // Disable scroll when zooming
+        simultaneousHandlers={[]} // Prevent conflict with pinch gesture
       >
         {pages.map((p) => (
           <View
@@ -358,13 +440,42 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 pressure,
                 thickness,
                 stabilization,
-                layers,
+                layers: pageLayers?.[p.id] || [
+                  { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+                ], // 👈 Pass page-specific layers
                 activeLayerId,
-                setLayers,
+                setLayers: (updater) => {
+                  setPageLayers?.((prev) => ({
+                    ...prev,
+                    [p.id]:
+                      typeof updater === "function"
+                        ? updater(
+                            prev[p.id] || [
+                              {
+                                id: "layer1",
+                                name: "Layer 1",
+                                visible: true,
+                                strokes: [],
+                              },
+                            ]
+                          )
+                        : updater,
+                  }));
+                }, // 👈 Update page-specific layers
                 isPenMode,
                 rulerPosition,
                 onColorPicked,
                 scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
+                backgroundColor: p.backgroundColor,
+                pageTemplate: p.template,
+                backgroundImageUrl: p.imageUrl,
+                pageWidth: pageDimensions.width,
+                pageHeight: pageDimensions.height,
+                onZoomChange: (isZoomActive) => {
+                  // Update zoom state: true when pinch gesture starts, false when ends
+                  // Disable ScrollView scroll when pinch gesture is active to prevent crash
+                  setIsZooming(isZoomActive);
+                },
               }}
               pageId={p.id}
               onChangeStrokes={(strokes) =>

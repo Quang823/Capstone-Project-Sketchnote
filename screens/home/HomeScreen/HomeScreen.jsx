@@ -22,6 +22,7 @@ import Reanimated, {
 import { homeStyles } from "./HomeScreen.styles";
 import NavigationDrawer from "../nav/NavigationDrawer";
 import { getUserFromToken } from "../../../utils/AuthUtils";
+import CreateNoteModal from "../../../components/drawing/modals/CreateNoteModal";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 const { width } = Dimensions.get("window");
@@ -128,6 +129,8 @@ export default function HomeScreen() {
   const [userName, setUserName] = useState("");
   const [activeNavItem, setActiveNavItem] = useState("home");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const createButtonRef = useRef(null);
 
   // Drawer animation
   const drawerAnimation = useRef(new Animated.Value(-320)).current;
@@ -234,6 +237,9 @@ export default function HomeScreen() {
           case "settings":
             navigation.navigate("SettingsScreen");
             break;
+          case "orderHistory":
+            navigation.navigate("OrderHistory");
+            break;
           default:
             break;
         }
@@ -244,7 +250,7 @@ export default function HomeScreen() {
   const handleQuickAction = (action) => {
     switch (action) {
       case "create":
-        navigation.navigate("DrawingScreen");
+        setCreateModalVisible(true);
         break;
       case "template":
         navigation.navigate("TemplateScreen");
@@ -254,6 +260,31 @@ export default function HomeScreen() {
         break;
       case "collaborate":
         navigation.navigate("CollaborationScreen");
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleCreateOption = (optionId) => {
+    switch (optionId) {
+      case "create_note":
+        navigation.navigate("NoteSetupScreen");
+        break;
+      case "infinite_note":
+        navigation.navigate("DrawingScreen", { infinite: true });
+        break;
+      case "import_files":
+        // TODO: Implement file import
+        break;
+      case "import_image":
+        // TODO: Implement image import
+        break;
+      case "take_photo":
+        // TODO: Implement camera
+        break;
+      case "quick_note":
+        navigation.navigate("DrawingScreen", { quick: true });
         break;
       default:
         break;
@@ -342,6 +373,7 @@ export default function HomeScreen() {
               {quickActions.map((action) => (
                 <Pressable
                   key={action.id}
+                  ref={action.id === 1 ? createButtonRef : null}
                   style={[
                     homeStyles.quickActionButton,
                     { backgroundColor: action.color + "15" },
@@ -509,6 +541,14 @@ export default function HomeScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </View>
+
+      {/* Create Note Popover */}
+      <CreateNoteModal
+        visible={createModalVisible}
+        onClose={() => setCreateModalVisible(false)}
+        onSelectOption={handleCreateOption}
+        fromRef={createButtonRef}
+      />
     </LinearGradient>
   );
 }
