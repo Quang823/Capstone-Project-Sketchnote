@@ -1,4 +1,4 @@
-import { publicApi } from "./axiosInstance"
+import { privateApi, publicApi } from "./axiosInstance"
 
 export const resourceController = {
    getAllResource : async (page,size)=>{
@@ -15,5 +15,20 @@ export const resourceController = {
     return await publicApi.get(`/api/orders/template/latest?limit=${limit}`,{
         baseURL:"http://146.190.90.222:8083"
     })
-   }
+   },
+   getResourceById : async (id)=>{
+    return await publicApi.get(`/api/orders/template/${id}`,{
+        baseURL:"http://146.190.90.222:8083"
+    })
+   },
+   uploadResource : async (data)=>{
+    return await privateApi.post(`/api/orders/template`,data,{
+        baseURL:"http://146.190.90.222:8083"
+    })
+   },
+   getResourceByUserId : async (page,size)=>{
+    return await privateApi.get(`/api/orders/template/my-template?page=${page}&size=${size}`,{
+        baseURL:"http://146.190.90.222:8083"
+    })
+   },
 }

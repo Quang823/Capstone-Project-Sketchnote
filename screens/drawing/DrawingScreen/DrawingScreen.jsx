@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useMemo,
   useEffect,
+  useDeferredValue,
 } from "react";
 import { View, Alert, TextInput, Image, Button } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -56,27 +57,141 @@ export default function DrawingScreen({ route }) {
 
   // LAYERS - Per-page layer management
   const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [activePageId, setActivePageId] = useState(1);
   const [pageLayers, setPageLayers] = useState({
     1: [{ id: "layer1", name: "Layer 1", visible: true, strokes: [] }],
   });
 
   const [activeLayerId, setActiveLayerId] = useState("layer1");
   const [layerCounter, setLayerCounter] = useState(2);
-  
-  // Get layers for active page
-  const currentLayers = pageLayers[activePageId] || [
-    { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
-  ];
-  
-  // Helper to update layers for active page
-  const updateCurrentPageLayers = useCallback((updater) => {
-    setPageLayers(prev => ({
-      ...prev,
-      [activePageId]: typeof updater === 'function' 
-        ? updater(prev[activePageId] || [{ id: "layer1", name: "Layer 1", visible: true, strokes: [] }])
-        : updater
-    }));
+
+  // Ensure layers exist for active page and reset active layer when page changes
+  useEffect(() => {
+    setPageLayers((prev) => {
+      if (!prev[activePageId]) {
+        return {
+          ...prev,
+          [activePageId]: [
+            { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+          ],
+        };
+      }
+      return prev;
+    });
+    // Reset active layer to first layer when switching pages
+    setActiveLayerId("layer1");
   }, [activePageId]);
+
+  // Validate activeLayerId exists in current page layers
+  useEffect(() => {
+    const currentPageLayers = pageLayers[activePageId] || [];
+    const layerExists = currentPageLayers.some((l) => l.id === activeLayerId);
+    
+    // If active layer doesn't exist in current page, reset to first layer
+    if (!layerExists && currentPageLayers.length > 0) {
+      setActiveLayerId(currentPageLayers[0].id);
+    }
+  }, [activePageId, pageLayers, activeLayerId]);
+
+  // Get layers for active page - use useMemo to ensure it updates when pageLayers changes
+  const currentLayers = useMemo(() => {
+    return (
+      pageLayers[activePageId] || [
+        { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+      ]
+    );
+  }, [pageLayers, activePageId]);
+
+  // Defer layer updates to prevent flickering in LayerPanel
+  const deferredLayers = useDeferredValue(currentLayers);
+
+  // Helper to update layers for active page
+  const updateCurrentPageLayers = useCallback(
+    (updater) => {
+      setPageLayers((prev) => ({
+        ...prev,
+        [activePageId]:
+          typeof updater === "function"
+            ? updater(
+                prev[activePageId] || [
+                  { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+                ]
+              )
+            : updater,
+      }));
+    },
+    [activePageId]
+  );
+
+  // Handler for adding new layer
+  const handleAddLayer = useCallback(
+    (pageId) => {
+      const newId = `layer_${Date.now()}`;
+      const newLayer = {
+        id: newId,
+        name: `Layer ${layerCounter}`,
+        visible: true,
+        locked: false,
+        strokes: [],
+      };
+      setLayerCounter((c) => c + 1);
+
+      // Directly update pageLayers for the active page
+      setPageLayers((prev) => {
+        const currentPageLayers = prev[pageId] || [
+          { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+        ];
+        return {
+          ...prev,
+          [pageId]: [...currentPageLayers, newLayer],
+        };
+      });
+    },
+    [layerCounter]
+  );
+
+  // Layer panel callbacks - memoized to prevent re-renders
+  const handleLayerSelect = useCallback((id) => setActiveLayerId(id), []);
+
+  const handleToggleVisibility = useCallback(
+    (id) => {
+      updateCurrentPageLayers((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
+      );
+    },
+    [updateCurrentPageLayers]
+  );
+
+  const handleToggleLock = useCallback(
+    (id) => {
+      updateCurrentPageLayers((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l))
+      );
+    },
+    [updateCurrentPageLayers]
+  );
+
+  const handleLayerAdd = useCallback(() => {
+    handleAddLayer(activePageId);
+  }, [handleAddLayer, activePageId]);
+
+  const handleLayerDelete = useCallback(
+    (id) => {
+      updateCurrentPageLayers((prev) => prev.filter((l) => l.id !== id));
+    },
+    [updateCurrentPageLayers]
+  );
+
+  const handleLayerRename = useCallback(
+    (id, newName) => {
+      updateCurrentPageLayers((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
+      );
+    },
+    [updateCurrentPageLayers]
+  );
+
+  const handleCloseLayerPanel = useCallback(() => setShowLayerPanel(false), []);
 
   // TOOL VISIBILITY
   const [toolbarVisible, setToolbarVisible] = useState(true);
@@ -134,7 +249,6 @@ export default function DrawingScreen({ route }) {
   const [paperStyle] = useState("plain");
   const [shapeType] = useState("auto");
   const [editingText, setEditingText] = useState(null);
-  const [activePageId, setActivePageId] = useState(1);
 
   // ⚙️ ===== TOOL CONFIGS =====
   const [toolConfigs, setToolConfigs] = useState({
@@ -622,37 +736,15 @@ export default function DrawingScreen({ route }) {
       />
       {showLayerPanel && (
         <LayerPanel
-          layers={currentLayers}
+          layers={deferredLayers}
           activeLayerId={activeLayerId}
-          onSelect={(id) => setActiveLayerId(id)}
-          onToggleVisibility={(id) =>
-            updateCurrentPageLayers((prev) =>
-              prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
-            )
-          }
-          onAdd={() =>
-            updateCurrentPageLayers((prev) => {
-              const newId = `layer_${Date.now()}`;
-              const newLayer = {
-                id: newId,
-                name: `Layer ${layerCounter}`,
-                visible: true,
-                locked: false,
-                strokes: [],
-              };
-              setLayerCounter((c) => c + 1);
-              return [...prev, newLayer];
-            })
-          }
-          onDelete={(id) =>
-            updateCurrentPageLayers((prev) => prev.filter((l) => l.id !== id))
-          }
-          onRename={(id, newName) =>
-            updateCurrentPageLayers((prev) =>
-              prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
-            )
-          }
-          onClose={() => setShowLayerPanel(false)}
+          onSelect={handleLayerSelect}
+          onToggleVisibility={handleToggleVisibility}
+          onToggleLock={handleToggleLock}
+          onAdd={handleLayerAdd}
+          onDelete={handleLayerDelete}
+          onRename={handleLayerRename}
+          onClose={handleCloseLayerPanel}
         />
       )}
       {/* 🎨 Main Toolbar */}

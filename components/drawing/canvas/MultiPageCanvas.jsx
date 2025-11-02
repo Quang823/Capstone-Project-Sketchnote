@@ -6,6 +6,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  memo,
 } from "react";
 import {
   View,
@@ -489,4 +490,4 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   );
 });
 
-export default MultiPageCanvas;
+export default memo(MultiPageCanvas);

@@ -1,150 +1,46 @@
-// import React, { useState } from "react";
-// import { View, Button, Image, ActivityIndicator, Alert, Text } from "react-native";
-// import * as ImagePicker from "expo-image-picker";
-// import { uploadToCloudinary } from "../service/cloudinary";
-
-
-// export default function ImageUploader({ onUploaded }) {
-//   const [imageUri, setImageUri] = useState(null);
-//   const [uploading, setUploading] = useState(false);
-
-
-//   const pickImage = async () => {
-//     console.log("\n=== START pickImage ===");
-//     try {
-     
-//       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-      
-//       if (permissionResult.granted === false) {
-       
-//         Alert.alert("Cần quyền truy cập", "Vui lòng cấp quyền truy cập thư viện ảnh");
-//         return;
-//       }
-
-    
-//       const result = await ImagePicker.launchImageLibraryAsync({
-//         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-//         allowsEditing: true,
-//         aspect: [1, 1],
-//         quality: 0.8,
-//       });
-      
-   
-
-//       if (result.canceled) {
-        
-//         return;
-//       }
-
-//       if (!result.assets || result.assets.length === 0) {
-      
-//         return;
-//       }
-
-//       const selectedUri = result.assets[0].uri;
-      
-      
-//       await handleUpload(selectedUri);
-      
-//     } catch (error) {
-      
-//       Alert.alert("Lỗi", "Không thể chọn ảnh: " + error.message);
-//     }
-//   };
-
-//   const handleUpload = async (uri) => {
- 
-    
-//     try {
-//       setUploading(true);
-     
-      
-//       const uploaded = await uploadToCloudinary(uri);
-     
-      
-//       if (uploaded && uploaded.secure_url) {
-       
-//         setImageUri(uploaded.secure_url);
-        
-//         if (onUploaded && typeof onUploaded === 'function') {
-         
-//           onUploaded(uploaded.secure_url);
-//         } else {
-//           console.log("5. No onUploaded callback provided");
-//         }
-        
-//         Alert.alert("Thành công", "Upload ảnh thành công!");
-//       } else {
-//         throw new Error("Invalid upload response - no secure_url");
-//       }
-//     } catch (error) {
-      
-//       Alert.alert("Lỗi", error.message || "Không thể upload ảnh");
-//     } finally {
-//       setUploading(false);
-     
-//     }
-//   };
-
-//   return (
-//     <View style={{ alignItems: "center", marginTop: 20, marginBottom: 20 }}>
-   
-      
-//       <Button 
-//         title={imageUri ? "Upload image" : "Upload image"} 
-//         onPress={() => {
-         
-//           pickImage();
-//         }}
-//         disabled={uploading}
-//         color="#4F46E5"
-//       />
-      
-//       {uploading && (
-//         <View style={{ marginTop: 15, alignItems: "center" }}>
-//           <ActivityIndicator size="large" color="#4F46E5" />
-//           <Text style={{ marginTop: 10, color: "#666" }}>Đang upload...</Text>
-//         </View>
-//       )}
-      
-//       {imageUri && !uploading && (
-//         <Image
-//           source={{ uri: imageUri }}
-//           style={{ 
-//             width: 120, 
-//             height: 120, 
-//             borderRadius: 60, 
-//             marginTop: 15,
-//             borderWidth: 3,
-//             borderColor: "#4F46E5"
-//           }}
-//         />
-//       )}
-//     </View>
-//   );
-// }
-import React, { useState } from "react";
-import { View, Button, Image, ActivityIndicator, Alert, Text } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Image,
+  ActivityIndicator,
+  Alert,
+  Text,
+  Pressable,
+} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary } from "../service/cloudinary";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import Toast from "react-native-toast-message";
 
 export default function ImageUploader({ onUploaded, existingImage }) {
   const [imageUri, setImageUri] = useState(existingImage || null);
   const [uploading, setUploading] = useState(false);
 
+  // Update imageUri when existingImage changes
+  useEffect(() => {
+    if (existingImage) {
+      setImageUri(existingImage);
+    }
+  }, [existingImage]);
+
   const pickImage = async () => {
     try {
+      // Xin quyền truy cập
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert("Cần quyền truy cập", "Vui lòng cấp quyền truy cập thư viện ảnh");
+        Toast.show({
+          type: "error",
+          text1: "Need Permission",
+          text2: "Please allow access to photo library",
+        });
         return;
       }
 
+      // Mở thư viện ảnh
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [1, 1],
+        aspect: [4, 3],
         quality: 0.8,
       });
 
@@ -153,56 +49,155 @@ export default function ImageUploader({ onUploaded, existingImage }) {
       const selectedUri = result.assets[0].uri;
       await handleUpload(selectedUri);
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể chọn ảnh: " + error.message);
+      console.error("❌ Pick image error:", error);
+      Alert.alert("Error", "Cannot select image");
     }
   };
 
   const handleUpload = async (uri) => {
     try {
       setUploading(true);
+      
       const uploaded = await uploadToCloudinary(uri);
+      
       if (uploaded?.secure_url) {
+        // Cập nhật state local
         setImageUri(uploaded.secure_url);
-        onUploaded?.(uploaded.secure_url);
-        Alert.alert("Thành công", "Upload ảnh thành công!");
+        
+        // Gọi callback để parent component biết
+        if (onUploaded && typeof onUploaded === 'function') {
+          onUploaded(uploaded.secure_url);
+        }
+        
+        Toast.show({
+          type: "success",
+          text1: "Upload success",
+          text2: "Image uploaded successfully",
+        });
       } else {
         throw new Error("Invalid upload response");
       }
     } catch (error) {
-      Alert.alert("Lỗi", error.message || "Không thể upload ảnh");
+      console.error("❌ Upload error:", error);
+      Alert.alert("Error", error.message || "Cannot upload image");
     } finally {
       setUploading(false);
     }
   };
 
+  const removeImage = () => {
+    Alert.alert(
+      "Confirm",
+      "Do you want to remove this image?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            setImageUri(null);
+            if (onUploaded && typeof onUploaded === 'function') {
+              onUploaded(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
-    <View style={{ alignItems: "center", marginTop: 20, marginBottom: 20 }}>
-      <Button
-        title={imageUri ? "Đổi ảnh khác" : "Tải ảnh lên"}
+    <View>
+      {/* Nút Thêm/Đổi Ảnh - Nhỏ gọn giống MultipleImageUploader */}
+      <Pressable
         onPress={pickImage}
         disabled={uploading}
-        color="#4F46E5"
-      />
+        style={{
+          backgroundColor: "#4F46E5",
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderRadius: 6,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+          alignSelf: "flex-start",
+          opacity: uploading ? 0.6 : 1,
+        }}
+      >
+        <Icon name={imageUri ? "edit" : "add-photo-alternate"} size={16} color="#fff" />
+        <Text style={{ color: "#fff", marginLeft: 6, fontSize: 14, fontWeight: "500" }}>
+          {imageUri ? "Change image" : "Add image"}
+        </Text>
+      </Pressable>
 
+      {/* Loading Indicator */}
       {uploading && (
-        <View style={{ marginTop: 15, alignItems: "center" }}>
-          <ActivityIndicator size="large" color="#4F46E5" />
-          <Text style={{ marginTop: 10, color: "#666" }}>Đang upload...</Text>
+        <View style={{ marginTop: 12, alignItems: "center" }}>
+          <ActivityIndicator size="small" color="#4F46E5" />
+          <Text style={{ marginTop: 6, color: "#666", fontSize: 12 }}>Uploading...</Text>
         </View>
       )}
 
+      {/* Image Preview */}
       {imageUri && !uploading && (
-        <Image
-          source={{ uri: imageUri }}
-          style={{
-            width: 120,
-            height: 120,
-            borderRadius: 60,
-            marginTop: 15,
-            borderWidth: 3,
-            borderColor: "#4F46E5",
-          }}
-        />
+        <View style={{ marginTop: 12 }}>
+          <View
+            style={{
+              position: "relative",
+              alignSelf: "flex-start",
+            }}
+          >
+            <Image
+              source={{ uri: imageUri }}
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: 8,
+                borderWidth: 3,
+                borderColor: "#10B981",
+              }}
+            />
+            
+            {/* Thumbnail Badge */}
+            <View
+              style={{
+                position: "absolute",
+                bottom: 5,
+                left: 5,
+                backgroundColor: "#10B981",
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 4,
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 10, fontWeight: "bold" }}>
+                Thumbnail
+              </Text>
+            </View>
+
+            {/* Remove Button */}
+            <Pressable
+              onPress={removeImage}
+              style={{
+                position: "absolute",
+                top: -5,
+                right: -5,
+                backgroundColor: "#EF4444",
+                borderRadius: 12,
+                width: 24,
+                height: 24,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Icon name="close" size={16} color="#fff" />
+            </Pressable>
+          </View>
+
+          {/* Helper Text */}
+          <Text style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
+            This image will be the thumbnail
+          </Text>
+        </View>
       )}
     </View>
   );

@@ -209,31 +209,32 @@ export default function NavigationDrawer({
 
 
           <Pressable 
-            style={[
-              drawerStyles.drawerItem, 
-              activeNavItem === 'wallet' && drawerStyles.drawerItemActive
-            ]}
-            onPress={() => onNavPress('wallet')}
-          >
-            <View style={[
-              drawerStyles.iconContainer,
-              activeNavItem === 'wallet' && drawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="account-balance-wallet" 
-                size={20} 
-                color={activeNavItem === 'wallet' ? "#FFFFFF" : "#6B7280"} 
-              />
-            </View>
-            <Text 
-              style={[
-                drawerStyles.drawerText,
-                activeNavItem === 'wallet' && drawerStyles.drawerTextActive
-              ]}
-            >
-              Ví điện tử
-            </Text>
-          </Pressable>
+  style={[
+    drawerStyles.drawerItem, 
+    activeNavItem === 'orderHistory' && drawerStyles.drawerItemActive
+  ]}
+  onPress={() => onNavPress('orderHistory')}
+>
+  <View style={[
+    drawerStyles.iconContainer,
+    activeNavItem === 'orderHistory' && drawerStyles.iconContainerActive
+  ]}>
+    <Icon 
+      name="receipt-long" 
+      size={20} 
+      color={activeNavItem === 'orderHistory' ? "#FFFFFF" : "#6B7280"} 
+    />
+  </View>
+  <Text 
+    style={[
+      drawerStyles.drawerText,
+      activeNavItem === 'orderHistory' && drawerStyles.drawerTextActive
+    ]}
+  >
+    Lịch sử đơn hàng
+  </Text>
+</Pressable>
+
 
           {/* New: Blogs */}
           <Pressable 

@@ -7,6 +7,7 @@ import { ToastProvider } from "./context/ToastContext";
 import { FontProvider } from "./context/FontContext";
 import AppNavigator from "./navigation/AppNavigator";
 import useLoadFonts from "./hooks/useLoadFonts";
+import { CartProvider } from "./context/CartContext";
 import * as SplashScreen from "expo-splash-screen";
 
 // Ngăn splash tự ẩn sớm
@@ -26,17 +27,18 @@ export default function App() {
   if (!fontsLoaded) {
     return null;
   }
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-        <FontProvider fontsLoaded={fontsLoaded}>
-          <ToastProvider>
-            <NavigationContainer>
-              <AppNavigator />
-            </NavigationContainer>
-          </ToastProvider>
-        </FontProvider>
+        <CartProvider>
+          <FontProvider fontsLoaded={fontsLoaded}>
+            <ToastProvider>
+              <NavigationContainer>
+                <AppNavigator />
+              </NavigationContainer>
+            </ToastProvider>
+          </FontProvider>
+        </CartProvider>
       </View>
     </GestureHandlerRootView>
   );

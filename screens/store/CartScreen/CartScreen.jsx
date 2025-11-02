@@ -1,241 +1,130 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
+  SafeAreaView,
   View,
   Text,
   ScrollView,
-  Pressable,
   Image,
-  Alert,
-  Dimensions,
+  Pressable,
+  TextInput,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
-import { cartStyles } from "./CartScreen.styles";
 import Icon from "react-native-vector-icons/MaterialIcons";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
-// Mock data for cart items
-const mockCartItems = [
-  {
-    id: "1",
-    name: "Màn Hình Máy Tính PC Xiaomi Monitor A24i",
-    shopName: "Xiaomi Official Store Vietnam",
-    price: 1880000,
-    originalPrice: 2590000,
-    image:
-      "https://res.cloudinary.com/dturncvxv/image/upload/v1759586743/sketchnote_avatars/ioplgtgchgy2ndm75zwx.jpg",
-    quantity: 1,
-    selected: true,
-  },
-  {
-    id: "2",
-    name: "Màn hình Asus 23.8 inch VG249",
-    shopName: "PHONG VU Digital Store",
-    price: 2459000,
-    originalPrice: 3090000,
-    image:
-      "https://res.cloudinary.com/dturncvxv/image/upload/v1759586743/sketchnote_avatars/ioplgtgchgy2ndm75zwx.jpg",
-    quantity: 1,
-    selected: true,
-  },
-  {
-    id: "3",
-    name: "Brush Set Pro Premium",
-    shopName: "Art Supplies VN",
-    price: 350000,
-    originalPrice: 500000,
-    image:
-      "https://res.cloudinary.com/dturncvxv/image/upload/v1759586743/sketchnote_avatars/ioplgtgchgy2ndm75zwx.jpg",
-    quantity: 2,
-    selected: false,
-  },
-];
+import { useNavigation } from "@react-navigation/native";
+import { useCart } from "../../../context/CartContext";
+import { cartStyles } from "./CartScreen.styles";
+import Toast from "react-native-toast-message";
+import { orderService } from "../../../service/orderService";
 
 export default function CartScreen() {
   const navigation = useNavigation();
-  const [cartItems, setCartItems] = useState(mockCartItems);
-  const [selectAll, setSelectAll] = useState(false);
+  const { cart, updateQuantity, removeFromCart } = useCart();
 
-  useEffect(() => {
-    const allSelected =
-      cartItems.length > 0 && cartItems.every((item) => item.selected);
-    setSelectAll(allSelected);
-  }, [cartItems]);
+  const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const total = subtotal;
 
-  const toggleSelectAll = () => {
-    const newSelectAll = !selectAll;
-    setSelectAll(newSelectAll);
-    setCartItems((items) =>
-      items.map((item) => ({ ...item, selected: newSelectAll }))
-    );
-  };
+  const [coupon, setCoupon] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [discount, setDiscount] = useState(0);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
-  const toggleSelectItem = (id) => {
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, selected: !item.selected } : item
-      )
-    );
-  };
-
-  const updateQuantity = (id, newQuantity) => {
-    if (newQuantity <= 0) {
-      removeItem(id);
-      return;
+  const applyCoupon = () => {
+    if (coupon.trim().toLowerCase() === "sale10") {
+      setDiscount(subtotal * 0.1);
+      setAppliedCoupon("SALE10");
+    } else if (coupon.trim().toLowerCase() === "vip20") {
+      setDiscount(subtotal * 0.2);
+      setAppliedCoupon("VIP20");
+    } else {
+      setDiscount(0);
+      setAppliedCoupon(null);
+      Alert.alert("Invalid Code", "Invalid discount code");
     }
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
   };
 
-  const removeItem = (id) => {
-    Alert.alert("Xóa sản phẩm", "Bạn có chắc muốn xóa sản phẩm này?", [
-      { text: "Hủy", style: "cancel" },
-      {
-        text: "Xóa",
-        style: "destructive",
-        onPress: () => {
-          setCartItems((items) => items.filter((item) => item.id !== id));
-        },
-      },
-    ]);
-  };
+  const createOrder = async () => {
+    if (isCreatingOrder) return;
 
-  const calculateTotal = () => {
-    return cartItems
-      .filter((item) => item.selected)
-      .reduce((sum, item) => sum + item.price * item.quantity, 0);
-  };
+    try {
+      setIsCreatingOrder(true);
 
-  const getSelectedCount = () => {
-    return cartItems.filter((item) => item.selected).length;
-  };
+      // Chuẩn bị body theo format của BE
+      const orderData = {
+        subscriptionId: null,
+        items: cart.map((item) => ({
+          resourceTemplateId: item.id,
+          discount: 0, // Luôn gửi 0 theo yêu cầu
+        })),
+      };
 
-  const getTotalSavings = () => {
-    return cartItems
-      .filter((item) => item.selected)
-      .reduce(
-        (sum, item) => sum + (item.originalPrice - item.price) * item.quantity,
-        0
+      console.log(
+        "📤 Creating order with data:",
+        JSON.stringify(orderData, null, 2)
       );
-  };
 
-  const handleCheckout = () => {
-    const selectedItems = cartItems.filter((item) => item.selected);
-    if (selectedItems.length === 0) {
-      Alert.alert("Thông báo", "Vui lòng chọn sản phẩm để mua hàng");
-      return;
+      // Gọi API
+      const response = await orderService.createOrder(orderData);
+
+      console.log("✅ Order created successfully:", response);
+
+      // Clear cart sau khi tạo order thành công
+      cart.forEach((item) => removeFromCart(item.id));
+
+      Toast.show({
+        type: "success",
+        text1: "Order Created",
+        text2: "Your order has been placed successfully.",
+      });
+
+      // Navigate to OrderSuccess
+      navigation.navigate("OrderSuccess", {
+        orderId: response.orderId,
+        invoiceNumber: response.invoiceNumber,
+        totalAmount: finalTotal,
+      });
+    } catch (error) {
+      console.error("❌ Create order error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Order Failed",
+        text2: error.message || "Failed to create order. Please try again.",
+      });
+    } finally {
+      setIsCreatingOrder(false);
     }
-    const total = calculateTotal();
-    Alert.alert(
-      "Mua hàng",
-      `Tổng thanh toán: ${total.toLocaleString()}đ\nBạn có muốn tiếp tục?`,
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Đồng ý",
-          onPress: () => {
-            Alert.alert("Thành công", "Đang xử lý đơn hàng...");
-          },
-        },
-      ]
-    );
   };
 
-  const renderCartItem = (item) => (
-    <View key={item.id} style={cartStyles.shopContainer}>
-      {/* Shop header */}
-      <View style={cartStyles.shopHeader}>
-        <Pressable
-          style={cartStyles.checkbox}
-          onPress={() => toggleSelectItem(item.id)}
-        >
-          <View
-            style={[
-              cartStyles.checkboxBox,
-              item.selected && cartStyles.checkboxBoxChecked,
-            ]}
+  const finalTotal = total - discount;
+
+  if (cart.length === 0) {
+    return (
+      <SafeAreaView style={cartStyles.container}>
+        <View style={cartStyles.header}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={cartStyles.backBtn}
           >
-            {item.selected && <Icon name="check" size={16} color="#fff" />}
-          </View>
-        </Pressable>
-        <Icon name="store" size={18} color="#ee4d2d" />
-        <Text style={cartStyles.shopName}>{item.shopName}</Text>
-      </View>
-
-      {/* Product item */}
-      <View style={cartStyles.productItem}>
-        <Pressable
-          style={cartStyles.checkbox}
-          onPress={() => toggleSelectItem(item.id)}
-        >
-          <View
-            style={[
-              cartStyles.checkboxBox,
-              item.selected && cartStyles.checkboxBoxChecked,
-            ]}
-          >
-            {item.selected && <Icon name="check" size={16} color="#fff" />}
-          </View>
-        </Pressable>
-
-        <Image source={{ uri: item.image }} style={cartStyles.productImage} />
-
-        <View style={cartStyles.productInfo}>
-          <Text style={cartStyles.productName} numberOfLines={2}>
-            {item.name}
-          </Text>
-
-          <View style={cartStyles.priceRow}>
-            <Text style={cartStyles.productPrice}>
-              ₫{item.price.toLocaleString()}
-            </Text>
-            <Text style={cartStyles.originalPrice}>
-              ₫{item.originalPrice.toLocaleString()}
-            </Text>
-          </View>
-
-          <View style={cartStyles.bottomRow}>
-            <View style={cartStyles.quantityControls}>
-              <Pressable
-                style={cartStyles.qtyButton}
-                onPress={() => updateQuantity(item.id, item.quantity - 1)}
-              >
-                <Icon name="remove" size={14} color="#888" />
-              </Pressable>
-              <Text style={cartStyles.qtyText}>{item.quantity}</Text>
-              <Pressable
-                style={cartStyles.qtyButton}
-                onPress={() => updateQuantity(item.id, item.quantity + 1)}
-              >
-                <Icon name="add" size={14} color="#888" />
-              </Pressable>
-            </View>
-
-            <Pressable onPress={() => removeItem(item.id)}>
-              <Text style={cartStyles.deleteText}>Xóa</Text>
-            </Pressable>
-          </View>
+            <Icon name="arrow-back" size={24} color="#1F2937" />
+          </Pressable>
+          <Text style={cartStyles.headerTitle}>Your Cart</Text>
+          <View style={{ width: 40 }} />
         </View>
-      </View>
-    </View>
-  );
 
-  const renderEmptyCart = () => (
-    <View style={cartStyles.emptyContainer}>
-      <Icon name="shopping-cart" size={80} color="#ddd" />
-      <Text style={cartStyles.emptyText}>Giỏ hàng trống</Text>
-      <Pressable
-        style={cartStyles.shopNowButton}
-        onPress={() => navigation.navigate("ResourceStore")}
-      >
-        <Text style={cartStyles.shopNowText}>Mua sắm ngay</Text>
-      </Pressable>
-    </View>
-  );
+        <View style={cartStyles.emptyContainer}>
+          <Icon name="shopping-cart" size={100} color="#D1D5DB" />
+          <Text style={cartStyles.emptyTitle}>Your cart is empty</Text>
+          <Text style={cartStyles.emptyText}>
+            You haven't added any products yet
+          </Text>
+          <Pressable
+            style={cartStyles.shopNowBtn}
+            onPress={() => navigation.navigate("ResourceStore")}
+          >
+            <Text style={cartStyles.shopNowText}>Shop Now</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={cartStyles.container}>
@@ -243,76 +132,169 @@ export default function CartScreen() {
       <View style={cartStyles.header}>
         <Pressable
           onPress={() => navigation.goBack()}
-          style={cartStyles.backButton}
+          style={cartStyles.backBtn}
         >
-          <Icon name="arrow-back" size={24} color="#000" />
+          <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
-        <Text style={cartStyles.headerTitle}>
-          Giỏ hàng ({cartItems.length})
-        </Text>
-        <Pressable style={cartStyles.moreButton}>
-          <Icon name="more-horiz" size={24} color="#000" />
+        <Text style={cartStyles.headerTitle}>Cart ({cart.length})</Text>
+        <Pressable onPress={() => navigation.navigate("ResourceStore")}>
+          <Text style={cartStyles.continueText}>Continue Shopping</Text>
         </Pressable>
       </View>
 
-      {/* Cart Content */}
-      <ScrollView
-        style={cartStyles.scrollContent}
-        contentContainerStyle={cartStyles.scrollContentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        {cartItems.length > 0
-          ? cartItems.map(renderCartItem)
-          : renderEmptyCart()}
-        {/* Bottom padding to prevent content from being hidden behind fixed footer */}
-        <View style={{ height: 120 }} />
-      </ScrollView>
+      <View style={cartStyles.mainRow}>
+        {/* Left Column: Product List */}
+        <View style={cartStyles.leftColumn}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {cart.map((item) => (
+              <View key={item.id} style={cartStyles.itemCard}>
+                <Image
+                  source={{
+                    uri: item.image || "https://via.placeholder.com/150",
+                  }}
+                  style={cartStyles.itemImg}
+                />
 
-      {/* Fixed Footer - Checkout Bar */}
-      {cartItems.length > 0 && (
-        <View style={cartStyles.checkoutBar}>
-          <View style={cartStyles.checkoutTop}>
-            <Pressable
-              style={cartStyles.selectAllContainer}
-              onPress={toggleSelectAll}
-            >
-              <View
-                style={[
-                  cartStyles.checkboxBox,
-                  selectAll && cartStyles.checkboxBoxChecked,
-                ]}
-              >
-                {selectAll && <Icon name="check" size={16} color="#fff" />}
+                <View style={cartStyles.itemInfo}>
+                  <Text style={cartStyles.itemName} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+
+                  {item.description && (
+                    <Text style={cartStyles.itemDesc} numberOfLines={2}>
+                      {item.description}
+                    </Text>
+                  )}
+
+                  {item.type && (
+                    <View style={cartStyles.typeBadge}>
+                      <Text style={cartStyles.typeBadgeText}>{item.type}</Text>
+                    </View>
+                  )}
+
+                  <View style={cartStyles.itemBottom}>
+                    <View style={cartStyles.qtyRow}>
+                      <Pressable
+                        onPress={() => updateQuantity(item.id, -1)}
+                        style={cartStyles.qtyBtn}
+                      >
+                        <Icon name="remove" size={18} color="#6B7280" />
+                      </Pressable>
+
+                      <Text style={cartStyles.qtyText}>{item.quantity}</Text>
+
+                      <Pressable
+                        onPress={() => updateQuantity(item.id, 1)}
+                        style={cartStyles.qtyBtn}
+                      >
+                        <Icon name="add" size={18} color="#6B7280" />
+                      </Pressable>
+                    </View>
+
+                    <Text style={cartStyles.itemPrice}>
+                      {(item.price * item.quantity).toLocaleString()} đ
+                    </Text>
+                  </View>
+                </View>
+
+                <Pressable
+                  onPress={() => removeFromCart(item.id)}
+                  style={cartStyles.removeBtn}
+                >
+                  <Icon name="delete-outline" size={20} color="#EF4444" />
+                </Pressable>
               </View>
-              <Text style={cartStyles.selectAllText}>Tất cả</Text>
-            </Pressable>
+            ))}
+          </ScrollView>
+        </View>
 
-            <View style={cartStyles.totalContainer}>
-              <View>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Text style={cartStyles.totalLabel}>Tổng thanh toán: </Text>
-                  <Text style={cartStyles.totalPrice}>
-                    ₫{calculateTotal().toLocaleString()}
+        {/* Right Column: Order Summary */}
+        <View style={cartStyles.rightColumn}>
+          <Text style={cartStyles.summaryTitle}>Order Summary</Text>
+
+          <View style={cartStyles.summaryCard}>
+            <View style={cartStyles.summaryRow}>
+              <Text style={cartStyles.label}>
+                Subtotal ({cart.length} items)
+              </Text>
+              <Text style={cartStyles.value}>
+                {subtotal.toLocaleString()} đ
+              </Text>
+            </View>
+
+            {appliedCoupon && (
+              <View style={[cartStyles.summaryRow, cartStyles.discountRow]}>
+                <View style={cartStyles.discountLabelRow}>
+                  <Icon name="local-offer" size={16} color="#10B981" />
+                  <Text style={cartStyles.discountLabel}>
+                    Discount ({appliedCoupon})
                   </Text>
                 </View>
-              </View>
-
-              <Pressable
-                style={[
-                  cartStyles.checkoutButton,
-                  getSelectedCount() === 0 && cartStyles.checkoutButtonDisabled,
-                ]}
-                onPress={handleCheckout}
-                disabled={getSelectedCount() === 0}
-              >
-                <Text style={cartStyles.checkoutButtonText}>
-                  Mua hàng ({getSelectedCount()})
+                <Text style={cartStyles.discountValue}>
+                  -{discount.toLocaleString()} đ
                 </Text>
+              </View>
+            )}
+
+            <View style={cartStyles.divider} />
+
+            <View style={cartStyles.summaryRow}>
+              <Text style={cartStyles.totalLabel}>Total</Text>
+              <Text style={cartStyles.totalValue}>
+                {finalTotal.toLocaleString()} đ
+              </Text>
+            </View>
+          </View>
+
+          {/* Coupon Section */}
+          <View style={cartStyles.couponSection}>
+            <Text style={cartStyles.couponTitle}>
+              <Icon name="local-offer" size={16} color="#6B7280" /> Discount
+              Code
+            </Text>
+            <View style={cartStyles.couponRow}>
+              <TextInput
+                placeholder="Enter coupon code"
+                style={cartStyles.couponInput}
+                value={coupon}
+                onChangeText={setCoupon}
+                placeholderTextColor="#9CA3AF"
+              />
+              <Pressable style={cartStyles.applyBtn} onPress={applyCoupon}>
+                <Text style={cartStyles.applyText}>Apply</Text>
               </Pressable>
+            </View>
+            <Text style={cartStyles.couponHint}>
+              💡 Try: SALE10 (10% off) or VIP20 (20% off)
+            </Text>
+          </View>
+
+          {/* Checkout Button */}
+          <Pressable
+            style={[
+              cartStyles.checkoutBtn,
+              isCreatingOrder && { opacity: 0.6 },
+            ]}
+            onPress={createOrder}
+            disabled={isCreatingOrder}
+          >
+            <Icon name="lock" size={20} color="#FFFFFF" />
+            <Text style={cartStyles.checkoutText}>
+              {isCreatingOrder ? "Creating Order..." : "Checkout Now"}
+            </Text>
+            <Icon name="arrow-forward" size={20} color="#FFFFFF" />
+          </Pressable>
+
+          {/* Payment Methods */}
+          <View style={cartStyles.paymentMethods}>
+            <Text style={cartStyles.paymentTitle}>Payment Methods</Text>
+            <View style={cartStyles.paymentIcons}>
+              <Icon name="account-balance-wallet" size={24} color="#6B7280" />
+              <Icon name="credit-card" size={24} color="#6B7280" />
             </View>
           </View>
         </View>
-      )}
+      </View>
     </SafeAreaView>
   );
 }

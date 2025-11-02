@@ -7,8 +7,6 @@ import { styles } from "./CreateBlogScreen.styles";
 import { blogService } from "../../../../service/blogService";
 import ImageUploader from "../../../../common/ImageUploader";
 
-
-
 export default function CreateBlogScreen({ navigation }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -19,8 +17,8 @@ export default function CreateBlogScreen({ navigation }) {
     if (!title || !content) {
       Toast.show({
         type: "error",
-        text1: "Thiếu thông tin",
-        text2: "Vui lòng nhập đủ tiêu đề và nội dung!",
+        text1: "Missing Information",
+        text2: "Please fill in both title and content.",
       });
       return;
     }
@@ -38,14 +36,14 @@ export default function CreateBlogScreen({ navigation }) {
 
       Toast.show({
         type: "success",
-        text1: "🎉 Đăng bài thành công!",
+        text1: "🎉 Post created successfully!",
       });
 
       navigation.goBack();
     } catch (err) {
       Toast.show({
         type: "error",
-        text1: "Lỗi tạo bài viết",
+        text1: "Error creating post",
         text2: err.message,
       });
     } finally {
@@ -59,28 +57,32 @@ export default function CreateBlogScreen({ navigation }) {
         <Icon name="arrow-back" size={24} color="#1F2937" />
       </Pressable>
 
-      <Text style={styles.header}>Tạo bài viết mới</Text>
+      <Text style={styles.header}>Create New Post</Text>
 
       <TextInput
         style={styles.input}
-        placeholder="Nhập tiêu đề..."
+        placeholder="Enter title..."
         value={title}
         onChangeText={setTitle}
       />
 
       <TextInput
         style={[styles.input, { height: 160, textAlignVertical: "top" }]}
-        placeholder="Nội dung bài viết..."
+        placeholder="Enter your content..."
         value={content}
         onChangeText={setContent}
         multiline
       />
 
-      <ImageUploader onUploaded={(url) => setImageUrl(url)} />
+      {/* 🟣 Add Image Button */}
+      <View style={styles.addImageContainer}>
+        <ImageUploader onUploaded={(url) => setImageUrl(url)} />
+      </View>
 
+      {/* 🟢 Post Button */}
       <Pressable onPress={handleCreateBlog} disabled={loading}>
         <LinearGradient
-          colors={["#6366F1", "#8B5CF6"]}
+          colors={["#4F46E5", "#c39ae9ff"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.submitButton}
@@ -88,7 +90,7 @@ export default function CreateBlogScreen({ navigation }) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitText}>Đăng bài</Text>
+            <Text style={styles.submitText}>Post</Text>
           )}
         </LinearGradient>
       </Pressable>

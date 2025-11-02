@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, memo } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function LayerPanel({
+function LayerPanel({
   layers,
   activeLayerId,
   onSelect,
@@ -73,7 +73,9 @@ export default function LayerPanel({
       <View style={styles.divider} />
 
       {/* 🔹 Add Layer */}
-      <TouchableOpacity style={styles.addButton} onPress={onAdd}>
+      <TouchableOpacity style={styles.addButton} onPress={() => {
+        onAdd?.();
+      }}>
         <Ionicons name="add" size={18} color="#fff" />
         <Text style={styles.addButtonText}>Add layer</Text>
       </TouchableOpacity>
@@ -392,3 +394,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
+export default memo(LayerPanel);

@@ -84,6 +84,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
 
+  // Limit undo/redo stack size to prevent memory leak
+  const MAX_UNDO_STACK = 20;
+
   const [showZoomOverlay, setShowZoomOverlay] = useState(false);
   const [zoomLocked, setZoomLocked] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
@@ -130,26 +133,24 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   //LAYERS MANAGEMENT
   const [selectedId, setSelectedId] = useState(null);
-  useEffect(() => {
-    if (activeLayerId) {
-      console.log(`🟢 Active Layer: ${activeLayerId}`);
-    } else {
-      console.log("⚪ Chưa chọn layer nào!");
-    }
-  }, [activeLayerId]);
 
-  const getActiveLayer = () =>
-    layers.find((layer) => layer.id === activeLayerId);
+  const getActiveLayer = useCallback(
+    () => layers.find((layer) => layer.id === activeLayerId),
+    [layers, activeLayerId]
+  );
 
-  const updateActiveLayer = (updateFn) => {
-    setLayers((prev) =>
-      prev.map((layer) => {
-        if (layer.id !== activeLayerId) return layer;
-        const safeStrokes = Array.isArray(layer.strokes) ? layer.strokes : [];
-        return { ...layer, strokes: updateFn(safeStrokes) };
-      })
-    );
-  };
+  const updateActiveLayer = useCallback(
+    (updateFn) => {
+      setLayers((prev) =>
+        prev.map((layer) => {
+          if (layer.id !== activeLayerId) return layer;
+          const safeStrokes = Array.isArray(layer.strokes) ? layer.strokes : [];
+          return { ...layer, strokes: updateFn(safeStrokes) };
+        })
+      );
+    },
+    [activeLayerId]
+  );
 
   const updateLayerById = (layerId, updateFn) => {
     setLayers((prev) =>
@@ -301,10 +302,17 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   // ====== Helpers ======
   const pushUndo = (action) => {
-    setUndoStack((u) => [
-      ...u,
-      { ...action, layerId: action.layerId || activeLayerId },
-    ]);
+    setUndoStack((u) => {
+      const newStack = [
+        ...u,
+        { ...action, layerId: action.layerId || activeLayerId },
+      ];
+      // Keep only last MAX_UNDO_STACK items to prevent memory leak
+      if (newStack.length > MAX_UNDO_STACK) {
+        return newStack.slice(-MAX_UNDO_STACK);
+      }
+      return newStack;
+    });
     setRedoStack([]);
   };
 

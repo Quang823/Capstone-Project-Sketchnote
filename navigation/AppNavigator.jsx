@@ -12,6 +12,7 @@ import BlogDetailScreen from "../screens/blog/BlogDetailScreen";
 import ResourceStoreScreen from "../screens/store/ResourceStoreScreen/ResourceStoreScreen";
 import ResourceDetailScreen from "../screens/store/ResourceDetailScreen/ResourceDetailScreen";
 import CartScreen from "../screens/store/CartScreen/CartScreen";
+import CheckoutScreen from "../screens/store/CheckoutScreen/CheckoutScreen";
 import WalletScreen from "../screens/store/WalletScreen/WalletScreen";
 import MyBlogScreen from "../screens/auth/myblog/MyBlogScreen";
 import CreateBlogScreen from "../screens/auth/myblog/create/CreateBlogScreen";
@@ -20,6 +21,15 @@ import PaymentWebViewScreen from "../screens/payment/PaymentWebViewScreen";
 import PaymentSuccessScreen from "../screens/payment/PaymentSuccessScreen";
 import PaymentFailedScreen from "../screens/payment/PaymentFailedScreen";
 import NoteSetupScreen from "../screens/note/NoteSetupScreenFinal";
+
+// Designer Screens
+import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen";
+import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/DesignerProductsScreen";
+import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
+import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
+import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
+import OrderSuccessScreen from "../screens/store/Payment/OrderSuccessScreen";
+import TransactionHistoryScreen from "../screens/store/Transaction/TransactionHistoryScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -42,7 +52,9 @@ export default function AppNavigator() {
       <Stack.Screen name="ResourceStore" component={ResourceStoreScreen} />
       <Stack.Screen name="ResourceDetail" component={ResourceDetailScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="Wallet" component={WalletScreen} />
+      <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} />
       <Stack.Screen name="MyBlog" component={MyBlogScreen} />
       <Stack.Screen name="CreateBlog" component={CreateBlogScreen} />
       <Stack.Screen name="UpdateBlog" component={UpdateBlogScreen} />
@@ -55,6 +67,18 @@ export default function AppNavigator() {
         name="PaymentFailedScreen"
         component={PaymentFailedScreen}
       />
+      <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+<Stack.Screen 
+  name="OrderSuccess" 
+  component={OrderSuccessScreen}
+  options={{ headerShown: false }}
+/>
+
+      {/* Designer Screens */}
+      <Stack.Screen name="DesignerDashboard" component={DesignerHomeScreen} />
+      <Stack.Screen name="DesignerProducts" component={DesignerProductsScreen} />
+      <Stack.Screen name="DesignerAnalytics" component={DesignerAnalyticsScreen} />
+      <Stack.Screen name="DesignerQuickUpload" component={DesignerQuickUploadScreen} />
     </Stack.Navigator>
   );
 }
