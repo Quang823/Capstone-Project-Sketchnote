@@ -9,9 +9,11 @@ import {
   useCanvasRef,
   useFont,
   Circle,
+  Image as SkiaImage,
+  useImage,
 } from "@shopify/react-native-skia";
-import CanvasImage from "./CanvasImage";
-import PaperGuides from "./PaperGuides";
+import CanvasImage from "../image/CanvasImage";
+import PaperGuides from "./PaperGuidesNew";
 import { applyPencilAlpha, makePathFromPoints } from "./utils";
 
 const DESK_BGCOLOR = "#e9ecef";
@@ -207,6 +209,7 @@ const makeRGBA = (input, alpha = 1) => {
 const CanvasRenderer = forwardRef(function CanvasRenderer(
   {
     layers = [],
+    activeLayerId,
     visualOffsets = {},
     currentPoints,
     tool,
@@ -228,20 +231,34 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     realtimeText,
     onSelectImage,
     imageRefs,
+    hasRuler = false,
+    backgroundColor = "#FFFFFF", // 👈 Add backgroundColor prop
+    pageTemplate = "blank", // 👈 Add template prop
+    backgroundImageUrl = null, // 👈 Add backgroundImageUrl prop
+    pageWidth = null, // 👈 Page width from noteConfig
+    pageHeight = null, // 👈 Page height from noteConfig
   },
   ref
 ) {
   const canvasRef = useCanvasRef();
   const loadedFonts = usePreloadedFonts();
+  const backgroundImage = useImage(backgroundImageUrl);
 
+  // Use provided dimensions or fallback to page dimensions
   const safePage = {
     x: page?.x ?? 0,
     y: page?.y ?? 0,
-    w: page?.w ?? 0,
-    h: page?.h ?? 0,
+    w: pageWidth ?? page?.w ?? 0,
+    h: pageHeight ?? page?.h ?? 0,
   };
 
   const safeCanvasHeight = canvasHeight ?? 0;
+
+  // React.useEffect(() => {
+  //   if (__DEV__) {
+  //     console.log("[CanvasRenderer] hasRuler=", hasRuler, "tool=", tool);
+  //   }
+  // }, [hasRuler, tool]);
 
   useImperativeHandle(ref, () => ({
     getSnapshot: () => canvasRef.current?.makeImageSnapshot(),
@@ -258,19 +275,9 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   const dynamicPressure = lastPt?.pressure ?? pressure;
   const dynamicThickness = lastPt?.thickness ?? thickness;
   const dynamicStab = lastPt?.stabilization ?? stabilization;
-  const visibleStrokes = layers
-    .filter((l) => l.visible)
-    .flatMap((l) => (Array.isArray(l.strokes) ? l.strokes : []))
-    .filter(
-      (s) =>
-        s &&
-        s.id &&
-        !(
-          realtimeText?.id &&
-          s.id === realtimeText.id &&
-          ["sticky", "comment", "text"].includes(s.tool)
-        )
-    );
+  const visibleLayers = Array.isArray(layers)
+    ? layers.filter((l) => l.visible)
+    : [];
 
   // read tool config with sensible defaults
   const brushSoftness =
@@ -371,6 +378,24 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
   const renderStroke = (s, index) => {
     if (!s) return null;
+
+    // 📊 table
+    if (s.tool === "table") {
+      const CanvasTable = require("../table/CanvasTable").default;
+      return (
+        <CanvasTable
+          key={s.id}
+          ref={(ref) => {
+            if (imageRefs && typeof imageRefs === "object") {
+              if (ref) imageRefs.current.set(s.id, ref);
+              else imageRefs.current.delete(s.id);
+            }
+          }}
+          stroke={s}
+          selectedId={selectedId}
+        />
+      );
+    }
 
     // image / sticker
     if (
@@ -635,8 +660,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
     // strokes (pen-like)
     if (s.points && s.points.length > 0) {
-      const smoothed = smoothPoints(s.points, s.stabilization ?? stabilization);
-      const path = makePathFromPoints(smoothed);
+      // Do NOT smooth stored strokes; smoothing can bridge small gaps from pixel eraser splits
+      const path = makePathFromPoints(s.points);
       let strokeColor = s.color || "#000000";
       let blendMode = "srcOver";
       let baseOpacity = 1;
@@ -761,7 +786,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
         // build limited dots for finalized stroke (lower density than preview)
         const dots = makeSprayDots(
-          smoothed,
+          s.points,
           Math.max(0.1, (airbrushDensity ?? 0.55) * 0.6),
           airbrushSpread,
           Math.max(3, effWidth * 0.8)
@@ -871,12 +896,30 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             color="#000000"
             opacity={0.1}
           />
+          {backgroundImage ? (
+            <SkiaImage
+              image={backgroundImage}
+              x={safePage.x}
+              y={safePage.y}
+              width={safePage.w}
+              height={safePage.h}
+              fit="cover" // Use "cover" to fill the page, or "contain" to show full image
+            />
+          ) : (
+            <Rect
+              x={safePage.x}
+              y={safePage.y}
+              width={safePage.w}
+              height={safePage.h}
+              color={backgroundColor}
+            />
+          )}
           <Rect
             x={safePage.x}
             y={safePage.y}
             width={safePage.w}
             height={safePage.h}
-            color={PAGE_BGCOLOR}
+            color="transparent"
             strokeWidth={1}
             strokeColor="#ced4da"
           />
@@ -885,14 +928,18 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
       {/* Paper guides */}
       {safePage.w > 0 && safePage.h > 0 && (
-        <PaperGuides paperStyle={paperStyle} page={safePage} />
+        <PaperGuides
+          paperStyle={paperStyle}
+          pageTemplate={pageTemplate}
+          page={safePage}
+        />
       )}
 
-      {/* Fill layer */}
-      {layers.map(
-        (layer) =>
-          layer.visible &&
-          layer.strokes?.map((s) => {
+      {/* Per-layer compositing groups so eraser affects only that layer */}
+      {visibleLayers.map((layer) => (
+        <Group key={`layer-${layer.id}`} layer>
+          {/* Fills within this layer */}
+          {layer.strokes?.map((s) => {
             if (!s) return null;
             if (
               s.shape &&
@@ -989,13 +1036,17 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               );
             }
             return null;
-          })
-      )}
+          })}
 
-      {/* Stroke + Text + Effect layer */}
-      <Group layer>
-        {visibleStrokes &&
-          visibleStrokes.map((s, index) => {
+          {/* Strokes for this layer */}
+          {layer.strokes?.map((s, index) => {
+            if (
+              !s ||
+              (realtimeText?.id &&
+                s.id === realtimeText.id &&
+                ["sticky", "comment", "text"].includes(s.tool))
+            )
+              return null;
             const node = renderStroke(s, index);
             if (!node) return null;
             const vo = visualOffsets?.[s.id];
@@ -1013,407 +1064,428 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             );
           })}
 
-        {/* Realtime text preview (reuse original logic) */}
-        {realtimeText &&
-          typeof realtimeText === "object" &&
-          (() => {
-            const {
-              x = 0,
-              y = 0,
-              text = "",
-              fontFamily,
-              bold,
-              italic,
-              underline,
-              color = "#000",
-              fontSize = 18,
-              tool = "text",
-              padding = 6,
-            } = realtimeText;
-            const { font, nearest } = getNearestFont(
-              loadedFonts,
-              fontFamily,
-              bold,
-              italic,
-              fontSize
-            );
-            const safeFont =
-              font ||
-              getNearestFont(loadedFonts, "Roboto", false, false, 18).font;
-            const scaleFactor = nearest ? fontSize / nearest : 1;
-            const textWidth = Math.max(
-              40,
-              (text.length || 1) * (fontSize * 0.6) + padding * 2
-            );
-            const textHeight = Math.max(28, fontSize + padding * 2);
-            const left = x - padding;
-            const top = y - fontSize - padding;
-            const elements = [];
+          {/* Realtime pixel eraser preview ONLY for active layer */}
+          {tool === "eraser" &&
+            eraserMode === "pixel" &&
+            activeLayerId === layer.id &&
+            Array.isArray(currentPoints) &&
+            currentPoints.length > 1 &&
+            (() => {
+              // chuyển currentPoints (global) -> layer-local nếu layer có offset
+              const vo = (visualOffsets && visualOffsets[layer.id]) || {};
+              const dx = (vo?.dx ?? layer?.tempOffset?.dx) || 0;
+              const dy = (vo?.dy ?? layer?.tempOffset?.dy) || 0;
 
-            if (tool === "sticky") {
-              const foldSize = 10;
-              const bgColor = "#FFF8B3";
-              elements.push(
-                <Rect
-                  key="rt-sticky-bg"
-                  x={left}
-                  y={top}
-                  width={textWidth}
-                  height={textHeight}
-                  color={bgColor}
-                  rx={6}
-                  ry={6}
-                />
-              );
-              const fold = Skia.Path.Make();
-              fold.moveTo(left + textWidth - foldSize, top);
-              fold.lineTo(left + textWidth, top);
-              fold.lineTo(left + textWidth, top + foldSize);
-              fold.close();
-              elements.push(<Path key="rt-fold" path={fold} color="#FFED77" />);
-            }
+              // tạo bản localPoints chỉ dùng x/y cho path (giữ pressure nếu cần)
+              const localPoints = currentPoints.map((p) => ({
+                x: (p.x ?? 0) - dx,
+                y: (p.y ?? 0) - dy,
+                pressure: p.pressure,
+                thickness: p.thickness,
+              }));
 
-            if (tool === "comment") {
-              const tailH = 8;
-              const bubble = Skia.Path.Make();
-              bubble.moveTo(left + 10, top);
-              bubble.lineTo(left + textWidth - 10, top);
-              bubble.quadTo(left + textWidth, top, left + textWidth, top + 10);
-              bubble.lineTo(left + textWidth, top + textHeight - 10);
-              bubble.quadTo(
-                left + textWidth,
-                top + textHeight,
-                left + textWidth - 10,
-                top + textHeight
-              );
-              bubble.lineTo(left + 18, top + textHeight);
-              bubble.quadTo(
-                left + 10,
-                top + textHeight + tailH,
-                left + 8,
-                top + textHeight
-              );
-              bubble.quadTo(
-                left,
-                top + textHeight,
-                left,
-                top + textHeight - 10
-              );
-              bubble.lineTo(left, top + 10);
-              bubble.quadTo(left, top, left + 10, top);
-              bubble.close();
-              elements.push(
-                <Path key="rt-comment-bg" path={bubble} color="#E3F2FD" />
-              );
-              elements.push(
+              // path từ localPoints (không smoothing để preview chính xác)
+              const previewPath = makePathFromPoints(localPoints, false);
+
+              return (
                 <Path
-                  key="rt-comment-border"
-                  path={bubble}
-                  color="rgba(0,0,0,0.15)"
+                  key={`eraser-preview-${layer.id}`}
+                  path={previewPath}
+                  color={PAGE_BGCOLOR} // color ignored by dstOut, still set for readability
+                  strokeWidth={Math.max(1, eraserSize || 8)}
                   style="stroke"
-                  strokeWidth={1.2}
+                  strokeCap="round"
+                  strokeJoin="round"
+                  blendMode="dstOut"
                 />
               );
-            }
+            })()}
+          {/* Optionally, per-layer extras could go here */}
+        </Group>
+      ))}
 
-            if (safeFont) {
-              elements.push(
-                <SkiaText
-                  key="rt-text"
-                  x={x / scaleFactor}
-                  y={y / scaleFactor}
-                  text={typeof text === "string" ? text : ""}
-                  font={safeFont}
-                  color={makeRGBA(color, 1)}
-                  transform={[{ scale: scaleFactor }]}
-                />
-              );
-            }
+      {/* Realtime text preview (reuse original logic) */}
+      {realtimeText &&
+        typeof realtimeText === "object" &&
+        (() => {
+          const {
+            x = 0,
+            y = 0,
+            text = "",
+            fontFamily,
+            bold,
+            italic,
+            underline,
+            color = "#000",
+            fontSize = 18,
+            tool = "text",
+            padding = 6,
+          } = realtimeText;
+          const { font, nearest } = getNearestFont(
+            loadedFonts,
+            fontFamily,
+            bold,
+            italic,
+            fontSize
+          );
+          const safeFont =
+            font ||
+            getNearestFont(loadedFonts, "Roboto", false, false, 18).font;
+          const scaleFactor = nearest ? fontSize / nearest : 1;
+          const textWidth = Math.max(
+            40,
+            (text.length || 1) * (fontSize * 0.6) + padding * 2
+          );
+          const textHeight = Math.max(28, fontSize + padding * 2);
+          const left = x - padding;
+          const top = y - fontSize - padding;
+          const elements = [];
 
-            if (underline) {
-              elements.push(
-                <Rect
-                  key="rt-underline"
-                  x={x}
-                  y={y + fontSize * 0.15}
-                  width={textWidth * 0.95}
-                  height={1.5}
-                  color={makeRGBA(color, 1)}
-                />
-              );
-            }
-
-            return <Group key="rt-text-preview">{elements}</Group>;
-          })()}
-
-        {/* lasso, previews, eraser previews etc. reuse original logic (kept) */}
-        {tool === "lasso" &&
-          Array.isArray(currentPoints) &&
-          currentPoints.length > 1 &&
-          (() => {
-            const pts = currentPoints;
-            const dashLength = 6;
-            const gapLength = 4;
-            const paths = [];
-
-            for (let i = 0; i < pts.length - 1; i++) {
-              const p1 = pts[i];
-              const p2 = pts[i + 1];
-              const dx = p2.x - p1.x;
-              const dy = p2.y - p1.y;
-              const segLen = Math.sqrt(dx * dx + dy * dy);
-              let offset = 0;
-              while (offset < segLen) {
-                const start = offset;
-                const end = Math.min(offset + dashLength, segLen);
-                const t1 = start / segLen;
-                const t2 = end / segLen;
-                const x1 = p1.x + dx * t1;
-                const y1 = p1.y + dy * t1;
-                const x2 = p1.x + dx * t2;
-                const y2 = p1.y + dy * t2;
-
-                const path = Skia.Path.Make();
-                path.moveTo(x1, y1);
-                path.lineTo(x2, y2);
-                paths.push(
-                  <Path
-                    key={`lasso-${i}-${offset}`}
-                    path={path}
-                    color="#00BCD4"
-                    strokeWidth={1.4}
-                    style="stroke"
-                    strokeCap="round"
-                  />
-                );
-
-                offset += dashLength + gapLength;
-              }
-            }
-
-            const polyPath = Skia.Path.Make();
-            if (pts.length > 0) {
-              polyPath.moveTo(pts[0].x, pts[0].y);
-              for (let i = 1; i < pts.length; i++)
-                polyPath.lineTo(pts[i].x, pts[i].y);
-              try {
-                polyPath.close();
-              } catch {}
-            }
-            paths.push(
-              <Path
-                key="lasso-fill"
-                path={polyPath}
-                color="rgba(0,188,212,0.08)"
-                style="fill"
+          if (tool === "sticky") {
+            const foldSize = 10;
+            const bgColor = "#FFF8B3";
+            elements.push(
+              <Rect
+                key="rt-sticky-bg"
+                x={left}
+                y={top}
+                width={textWidth}
+                height={textHeight}
+                color={bgColor}
+                rx={6}
+                ry={6}
               />
             );
+            const fold = Skia.Path.Make();
+            fold.moveTo(left + textWidth - foldSize, top);
+            fold.lineTo(left + textWidth, top);
+            fold.lineTo(left + textWidth, top + foldSize);
+            fold.close();
+            elements.push(<Path key="rt-fold" path={fold} color="#FFED77" />);
+          }
 
-            return paths;
-          })()}
-
-        {/* Preview drawing logic (kept but adapted for new tools) */}
-        {currentPoints?.length > 0 &&
-          tool !== "eraser" &&
-          eraserMode !== "object" &&
-          (() => {
-            let previewColor = color;
-            let previewBlend = "srcOver";
-            let previewOpacity = 1;
-            let toolWidth = strokeWidth || 1;
-
-            if (tool === "pencil") {
-              previewColor = applyPencilAlpha(color);
-              toolWidth = pencilWidth || 1;
-            } else if (tool === "brush") {
-              previewOpacity = 0.95;
-              previewBlend = "srcOver";
-              toolWidth = brushWidth || 1;
-            } else if (tool === "calligraphy") {
-              previewOpacity = 1.0;
-              previewBlend = "srcOver";
-              toolWidth = calligraphyWidth || 1;
-            } else if (tool === "highlighter") {
-              previewOpacity = 0.3;
-              previewBlend = "multiply";
-              toolWidth = (strokeWidth || 1) * 2;
-            } else if (tool === "marker") {
-              previewOpacity = 0.85;
-              previewBlend = "srcOver";
-              toolWidth = strokeWidth || 1;
-            } else if (tool === "airbrush") {
-              previewOpacity = 0.18;
-              previewBlend = "srcOver";
-              toolWidth = (strokeWidth || 1) * 1.2;
-            } else if (tool === "crayon") {
-              previewOpacity = 0.6;
-              previewBlend = "overlay";
-              toolWidth = strokeWidth || 1;
-            }
-
-            const basePath = makePathFromPoints(
-              smoothPoints(currentPoints, dynamicStab)
+          if (tool === "comment") {
+            const tailH = 8;
+            const bubble = Skia.Path.Make();
+            bubble.moveTo(left + 10, top);
+            bubble.lineTo(left + textWidth - 10, top);
+            bubble.quadTo(left + textWidth, top, left + textWidth, top + 10);
+            bubble.lineTo(left + textWidth, top + textHeight - 10);
+            bubble.quadTo(
+              left + textWidth,
+              top + textHeight,
+              left + textWidth - 10,
+              top + textHeight
             );
-            const effWidth = computeEffectiveWidth(
-              toolWidth,
-              dynamicThickness,
-              dynamicPressure
+            bubble.lineTo(left + 18, top + textHeight);
+            bubble.quadTo(
+              left + 10,
+              top + textHeight + tailH,
+              left + 8,
+              top + textHeight
             );
-
-            if (tool === "brush") {
-              return (
-                <Group key="current-brush-group">
-                  <Path
-                    key="brush-glaze"
-                    path={basePath}
-                    color={makeRGBA(
-                      previewColor,
-                      Math.max(0.12, brushSoftness)
-                    )}
-                    strokeWidth={effWidth * (1.8 + brushSoftness)}
-                    style="stroke"
-                    strokeCap="round"
-                    strokeJoin="round"
-                    blendMode="screen"
-                  />
-                  <Path
-                    key="brush-core"
-                    path={basePath}
-                    color={makeRGBA(previewColor, previewOpacity)}
-                    strokeWidth={effWidth * 0.9}
-                    style="stroke"
-                    strokeCap="round"
-                    strokeJoin="round"
-                    blendMode="srcOver"
-                  />
-                  <Path
-                    key="brush-highlight"
-                    path={basePath}
-                    color={makeRGBA("#ffffff", 0.06)}
-                    strokeWidth={Math.max(1, effWidth * 0.25)}
-                    style="stroke"
-                    strokeCap="round"
-                    strokeJoin="round"
-                    blendMode="overlay"
-                  />
-                </Group>
-              );
-            }
-
-            if (tool === "airbrush") {
-              const baseDots = makeSprayDots(
-                smoothPoints(currentPoints, dynamicStab),
-                Math.min(1, airbrushDensity * 1.0),
-                airbrushSpread,
-                Math.max(4, effWidth)
-              );
-              const dotGroup = makeDotPaths(baseDots, previewColor);
-              return (
-                <Group key="current-airbrush-group">
-                  <Path
-                    key="air-outer"
-                    path={basePath}
-                    color={makeRGBA(previewColor, 0.12)}
-                    strokeWidth={effWidth * airbrushSpread * 2.0}
-                    style="stroke"
-                    strokeCap="round"
-                    strokeJoin="round"
-                    blendMode="srcOver"
-                  />
-                  <Path
-                    key="air-inner"
-                    path={basePath}
-                    color={makeRGBA(previewColor, 0.28)}
-                    strokeWidth={effWidth * 0.95}
-                    style="stroke"
-                    strokeCap="round"
-                    strokeJoin="round"
-                    blendMode="srcOver"
-                  />
-                  {dotGroup}
-                </Group>
-              );
-            }
-
-            if (tool === "calligraphy") {
-              return (
-                <Group key="current-calligraphy-group">
-                  <Path
-                    key="calligraphy-inner"
-                    path={basePath}
-                    color={makeRGBA(previewColor, 1.0)}
-                    strokeWidth={effWidth}
-                    style="stroke"
-                    strokeCap="butt"
-                    strokeJoin="miter"
-                    blendMode="srcOver"
-                  />
-                  <Path
-                    key="calligraphy-outer"
-                    path={basePath}
-                    color={makeRGBA(previewColor, 0.22)}
-                    strokeWidth={effWidth * 1.4}
-                    style="stroke"
-                    strokeCap="butt"
-                    strokeJoin="miter"
-                    blendMode="overlay"
-                    dashEffect={[3, 5]}
-                  />
-                </Group>
-              );
-            }
-
-            const capPrev = ["highlighter", "marker"].includes(tool)
-              ? "butt"
-              : "round";
-            const joinPrev = ["highlighter", "marker"].includes(tool)
-              ? "miter"
-              : "round";
-            return (
+            bubble.quadTo(left, top + textHeight, left, top + textHeight - 10);
+            bubble.lineTo(left, top + 10);
+            bubble.quadTo(left, top, left + 10, top);
+            bubble.close();
+            elements.push(
+              <Path key="rt-comment-bg" path={bubble} color="#E3F2FD" />
+            );
+            elements.push(
               <Path
-                key="current"
-                path={basePath}
-                color={makeRGBA(previewColor, previewOpacity)}
-                strokeWidth={effWidth}
+                key="rt-comment-border"
+                path={bubble}
+                color="rgba(0,0,0,0.15)"
                 style="stroke"
-                strokeCap={capPrev}
-                strokeJoin={joinPrev}
-                blendMode={previewBlend}
+                strokeWidth={1.2}
               />
             );
-          })()}
+          }
 
-        {currentPoints?.length > 0 && tool === "calligraphy" && (
-          <Path
-            key="current-soft"
-            path={makePathFromPoints(
-              smoothPoints(currentPoints, stabilization)
-            )}
-            color={makeRGBA(color, 0.9)}
-            strokeWidth={computeEffectiveWidth(
-              calligraphyWidth || 1,
-              thickness,
-              pressure
-            )}
-            style="stroke"
-            strokeCap="round"
-            strokeJoin="round"
-          />
-        )}
+          if (safeFont) {
+            elements.push(
+              <SkiaText
+                key="rt-text"
+                x={x / scaleFactor}
+                y={y / scaleFactor}
+                text={typeof text === "string" ? text : ""}
+                font={safeFont}
+                color={makeRGBA(color, 1)}
+                transform={[{ scale: scaleFactor }]}
+              />
+            );
+          }
 
-        {tool === "eraser" && currentPoints?.length > 0 && (
-          <Path
-            key="eraser-preview"
-            path={makePathFromPoints(currentPoints, false)}
-            color={PAGE_BGCOLOR}
-            strokeWidth={eraserSize || 1}
-            style="stroke"
-            strokeCap="round"
-            strokeJoin="round"
-            blendMode="dstOut"
-          />
-        )}
-      </Group>
+          if (underline) {
+            elements.push(
+              <Rect
+                key="rt-underline"
+                x={x}
+                y={y + fontSize * 0.15}
+                width={textWidth * 0.95}
+                height={1.5}
+                color={makeRGBA(color, 1)}
+              />
+            );
+          }
+
+          return <Group key="rt-text-preview">{elements}</Group>;
+        })()}
+
+      {/* lasso, previews, eraser previews etc. reuse original logic (kept) */}
+      {tool === "lasso" &&
+        Array.isArray(currentPoints) &&
+        currentPoints.length > 1 &&
+        (() => {
+          const pts = currentPoints;
+          const dashLength = 6;
+          const gapLength = 4;
+          const paths = [];
+
+          for (let i = 0; i < pts.length - 1; i++) {
+            const p1 = pts[i];
+            const p2 = pts[i + 1];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const segLen = Math.sqrt(dx * dx + dy * dy);
+            let offset = 0;
+            while (offset < segLen) {
+              const start = offset;
+              const end = Math.min(offset + dashLength, segLen);
+              const t1 = start / segLen;
+              const t2 = end / segLen;
+              const x1 = p1.x + dx * t1;
+              const y1 = p1.y + dy * t1;
+              const x2 = p1.x + dx * t2;
+              const y2 = p1.y + dy * t2;
+
+              const path = Skia.Path.Make();
+              path.moveTo(x1, y1);
+              path.lineTo(x2, y2);
+              paths.push(
+                <Path
+                  key={`lasso-${i}-${offset}`}
+                  path={path}
+                  color="#00BCD4"
+                  strokeWidth={1.4}
+                  style="stroke"
+                  strokeCap="round"
+                />
+              );
+
+              offset += dashLength + gapLength;
+            }
+          }
+
+          const polyPath = Skia.Path.Make();
+          if (pts.length > 0) {
+            polyPath.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++)
+              polyPath.lineTo(pts[i].x, pts[i].y);
+            try {
+              polyPath.close();
+            } catch {}
+          }
+          paths.push(
+            <Path
+              key="lasso-fill"
+              path={polyPath}
+              color="rgba(0,188,212,0.08)"
+              style="fill"
+            />
+          );
+
+          return paths;
+        })()}
+
+      {/* Preview drawing logic (kept but adapted for new tools) */}
+      {currentPoints?.length > 0 &&
+        tool !== "eraser" &&
+        eraserMode !== "object" &&
+        (() => {
+          let previewColor = color;
+          let previewBlend = "srcOver";
+          let previewOpacity = 1;
+          let toolWidth = strokeWidth || 1;
+
+          if (tool === "pencil") {
+            previewColor = applyPencilAlpha(color);
+            toolWidth = pencilWidth || 1;
+          } else if (tool === "brush") {
+            previewOpacity = 0.95;
+            previewBlend = "srcOver";
+            toolWidth = brushWidth || 1;
+          } else if (tool === "calligraphy") {
+            previewOpacity = 1.0;
+            previewBlend = "srcOver";
+            toolWidth = calligraphyWidth || 1;
+          } else if (tool === "highlighter") {
+            previewOpacity = 0.3;
+            previewBlend = "multiply";
+            toolWidth = (strokeWidth || 1) * 2;
+          } else if (tool === "marker") {
+            previewOpacity = 0.85;
+            previewBlend = "srcOver";
+            toolWidth = strokeWidth || 1;
+          } else if (tool === "airbrush") {
+            previewOpacity = 0.18;
+            previewBlend = "srcOver";
+            toolWidth = (strokeWidth || 1) * 1.2;
+          } else if (tool === "crayon") {
+            previewOpacity = 0.75;
+            // Use normal compositing while previewing so the stroke is clearly visible
+            // on white backgrounds. Final saved strokes still use overlay in renderStroke.
+            previewBlend = "srcOver";
+            toolWidth = strokeWidth || 1;
+          }
+
+          const basePath = makePathFromPoints(
+            // Khi có thước, bỏ smoothing để preview bám cạnh thước thẳng tuyệt đối
+            hasRuler ? currentPoints : smoothPoints(currentPoints, dynamicStab)
+          );
+          const effWidth = computeEffectiveWidth(
+            toolWidth,
+            dynamicThickness,
+            dynamicPressure
+          );
+
+          if (tool === "brush") {
+            return (
+              <Group key="current-brush-group">
+                <Path
+                  key="brush-glaze"
+                  path={basePath}
+                  color={makeRGBA(previewColor, Math.max(0.12, brushSoftness))}
+                  strokeWidth={effWidth * (1.8 + brushSoftness)}
+                  style="stroke"
+                  strokeCap="round"
+                  strokeJoin="round"
+                  blendMode="screen"
+                />
+                <Path
+                  key="brush-core"
+                  path={basePath}
+                  color={makeRGBA(previewColor, previewOpacity)}
+                  strokeWidth={effWidth * 0.9}
+                  style="stroke"
+                  strokeCap="round"
+                  strokeJoin="round"
+                  blendMode="srcOver"
+                />
+                <Path
+                  key="brush-highlight"
+                  path={basePath}
+                  color={makeRGBA("#ffffff", 0.06)}
+                  strokeWidth={Math.max(1, effWidth * 0.25)}
+                  style="stroke"
+                  strokeCap="round"
+                  strokeJoin="round"
+                  blendMode="overlay"
+                />
+              </Group>
+            );
+          }
+
+          if (tool === "airbrush") {
+            const baseDots = makeSprayDots(
+              hasRuler
+                ? currentPoints
+                : smoothPoints(currentPoints, dynamicStab),
+              Math.min(1, airbrushDensity * 1.0),
+              airbrushSpread,
+              Math.max(4, effWidth)
+            );
+            const dotGroup = makeDotPaths(baseDots, previewColor);
+            return (
+              <Group key="current-airbrush-group">
+                <Path
+                  key="air-outer"
+                  path={basePath}
+                  color={makeRGBA(previewColor, 0.12)}
+                  strokeWidth={effWidth * airbrushSpread * 2.0}
+                  style="stroke"
+                  strokeCap="round"
+                  strokeJoin="round"
+                  blendMode="srcOver"
+                />
+                <Path
+                  key="air-inner"
+                  path={basePath}
+                  color={makeRGBA(previewColor, 0.28)}
+                  strokeWidth={effWidth * 0.95}
+                  style="stroke"
+                  strokeCap="round"
+                  strokeJoin="round"
+                  blendMode="srcOver"
+                />
+                {dotGroup}
+              </Group>
+            );
+          }
+
+          if (tool === "calligraphy") {
+            return (
+              <Group key="current-calligraphy-group">
+                <Path
+                  key="calligraphy-inner"
+                  path={basePath}
+                  color={makeRGBA(previewColor, 1.0)}
+                  strokeWidth={effWidth}
+                  style="stroke"
+                  strokeCap="butt"
+                  strokeJoin="miter"
+                  blendMode="srcOver"
+                />
+                <Path
+                  key="calligraphy-outer"
+                  path={basePath}
+                  color={makeRGBA(previewColor, 0.22)}
+                  strokeWidth={effWidth * 1.4}
+                  style="stroke"
+                  strokeCap="butt"
+                  strokeJoin="miter"
+                  blendMode="overlay"
+                  dashEffect={[3, 5]}
+                />
+              </Group>
+            );
+          }
+
+          const capPrev = ["highlighter", "marker"].includes(tool)
+            ? "butt"
+            : "round";
+          const joinPrev = ["highlighter", "marker"].includes(tool)
+            ? "miter"
+            : "round";
+          return (
+            <Path
+              key="current"
+              path={basePath}
+              color={makeRGBA(previewColor, previewOpacity)}
+              strokeWidth={effWidth}
+              style="stroke"
+              strokeCap={capPrev}
+              strokeJoin={joinPrev}
+              blendMode={previewBlend}
+            />
+          );
+        })()}
+
+      {currentPoints?.length > 0 && tool === "calligraphy" && (
+        <Path
+          key="current-soft"
+          path={makePathFromPoints(smoothPoints(currentPoints, stabilization))}
+          color={makeRGBA(color, 0.9)}
+          strokeWidth={computeEffectiveWidth(
+            calligraphyWidth || 1,
+            thickness,
+            pressure
+          )}
+          style="stroke"
+          strokeCap="round"
+          strokeJoin="round"
+        />
+      )}
 
       {/* eraser selection and pixel previews (kept original) */}
       {tool === "eraser" &&

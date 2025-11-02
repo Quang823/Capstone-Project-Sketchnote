@@ -1,24 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   Pressable,
-  ImageBackground,
-  Animated,
   useWindowDimensions,
+  ActivityIndicator,
+  ScrollView,
+  Platform,
 } from "react-native";
 import { useToast } from "../../../hooks/use-toast";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Shadow } from "react-native-shadow-2";
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  Easing,
+  withSpring,
 } from "react-native-reanimated";
-import heroImage from "../../../assets/logo1.webp";
 import { loginStyles } from "./LoginScreen.styles";
 import { useNavigation } from "@react-navigation/native";
 import { authService } from "../../../service/authService";
@@ -29,237 +28,350 @@ export default function LoginScreen({ onBack }) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const { toast } = useToast();
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
- 
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(50);
 
-  useEffect(() => {
-    opacity.value = withTiming(1, { duration: 800, easing: Easing.ease });
-    translateY.value = withTiming(0, { duration: 800, easing: Easing.ease });
-  }, []);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
-  }));
-
-
+  // chỉ giữ animation cho button và icon (không đụng layout)
   const buttonScale = useSharedValue(1);
+  const rotateIcon = useSharedValue(0);
+
   const animatedButtonStyle = useAnimatedStyle(() => ({
     transform: [{ scale: buttonScale.value }],
   }));
 
+  const animatedIconStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotateIcon.value}deg` }],
+  }));
+
   const handleButtonPressIn = () => {
-    buttonScale.value = withTiming(0.95, { duration: 150 });
+    buttonScale.value = withTiming(0.92, { duration: 100 });
   };
 
   const handleButtonPressOut = () => {
-    buttonScale.value = withTiming(1, { duration: 150 });
+    buttonScale.value = withSpring(1);
+  };
+
+  const handlePasswordToggle = () => {
+    rotateIcon.value = withTiming(rotateIcon.value + 180, { duration: 300 });
+    setShowPassword((prev) => !prev);
   };
 
   const handleLogin = async () => {
     if (!email || !password) {
       toast({
-        title: "Please fill in both email and password",
+        title: "Vui lòng nhập email và mật khẩu",
         variant: "destructive",
       });
       return;
     }
-  try {
-    const {roles} = await authService.login(email, password);
-    toast({
-      title: "Login successful",
-      variant: "success",
-    });
-     if (roles.includes("ADMIN")) {
-  navigation.navigate("AdminDashboard");
-} else if (roles.includes("DESIGNER")) {
-  navigation.navigate("DesignerDashboard");
-} else if (roles.includes("CUSTOMER")) {
-  navigation.navigate("Home");
-}
 
-  } catch (error) {
-    toast({
-      title: "Login failed",
-      description: error.message,
-      variant: "destructive",
-    });
-  }
+    setIsLoading(true);
+    try {
+      const { roles } = await authService.login(email, password);
+      toast({
+        title: "Đăng nhập thành công! 🎉",
+        variant: "success",
+      });
+
+      if (roles.includes("CUSTOMER")) navigation.navigate("Home");
+      else if (roles.includes("DESIGNER"))
+        navigation.navigate("DesignerDashboard");
+      else if (roles.includes("ADMIN")) navigation.navigate("AdminDashboard");
+    } catch (error) {
+      toast({
+        title: "Đăng nhập thất bại",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialLogin = (provider) => {
     toast({
-      title: `Login with ${provider}`,
-      description: `Continue with ${provider} integration`,
+      title: `Đăng nhập với ${provider}`,
+      description: `Tính năng sẽ sớm được cập nhật`,
     });
   };
 
   return (
-    <LinearGradient
-      colors={["#E0F2FE", "#FEF3C7"]} // Eye-catching gradient: light blue to light yellow
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={loginStyles.container}
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
     >
-      {/* Background Hero Image with overlay gradient */}
-      <ImageBackground source={heroImage} style={loginStyles.heroBackground}>
-        <LinearGradient
-          colors={["rgba(0,0,0,0.1)", "rgba(0,0,0,0.3)"]}
-          style={loginStyles.heroOverlay}
-        />
-      </ImageBackground>
+      <LinearGradient
+        colors={["#F8FAFC", "#EFF6FF", "#F5F3FF"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={loginStyles.container}
+      >
+        {/* ✅ Background không chặn touch */}
+        <View pointerEvents="none" style={loginStyles.backgroundContainer}>
+          <View style={[loginStyles.gradientOrb, loginStyles.orbTop]} />
+          <View style={[loginStyles.gradientOrb, loginStyles.orbBottom]} />
+          <View style={[loginStyles.gradientOrb, loginStyles.orbRight]} />
+          <View style={[loginStyles.floatingElement, loginStyles.float1]} />
+          <View style={[loginStyles.floatingElement, loginStyles.float2]} />
+          <View style={[loginStyles.floatingElement, loginStyles.float3]} />
+        </View>
 
-      {/* Main Content */}
-      <ReanimatedView style={[loginStyles.contentWrapper, animatedStyle]}>
-        {/* Left Side - Branding */}
-        {width > 768 && (
-          <View style={loginStyles.brandingSection}>
-            <Shadow distance={8} startColor="#00000010" finalColor="#00000005">
+        {/* Main Content */}
+        <View style={loginStyles.contentWrapper}>
+          {/* Left Side - Branding */}
+          {width > 768 && (
+            <View style={loginStyles.brandingSection}>
               <View style={loginStyles.brandContent}>
                 <View style={loginStyles.logoContainer}>
-                  <Icon name="palette" size={32} color="#4F46E5" />
-                  <Text style={loginStyles.logoText}>SketchNote</Text>
-                </View>
-                <Text style={loginStyles.heroTitle}>
-                  Unlock{" "}
-                  <Text style={loginStyles.heroHighlight}>
-                    your creative potential
-                  </Text>
-                </Text>
-                <Text style={loginStyles.heroDescription}>
-                  Transform your ideas into beautiful sketches and notes.
-                </Text>
-              </View>
-            </Shadow>
-          </View>
-        )}
-
-        {/* Right Side - Login Form */}
-        <View style={loginStyles.formSection}>
-          <Shadow distance={12} startColor="#00000020" finalColor="#00000005">
-            <ReanimatedView style={[loginStyles.loginCard, animatedStyle]}>
-              <View style={loginStyles.cardHeader}>
-                <Text style={loginStyles.cardTitle}>Welcome back!</Text>
-                <Text style={loginStyles.cardDescription}>
-                  Log in to continue your creative journey
-                </Text>
-              </View>
-
-              <View style={loginStyles.cardContent}>
-                <View style={loginStyles.form}>
-                  <View style={loginStyles.inputGroup}>
-                    <Text style={loginStyles.label}>Email</Text>
-                    <TextInput
-                      style={loginStyles.input}
-                      placeholder="example@gmail.com"
-                      value={email}
-                      onChangeText={setEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
+                  <LinearGradient
+                    colors={["#1D4ED8", "#3B82F6", "#60A5FA"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={loginStyles.logoBg}
+                  >
+                    <Icon name="palette" size={48} color="#FFFFFF" />
+                  </LinearGradient>
+                  <View>
+                    <Text style={loginStyles.logoText}>SketchNote</Text>
+                    <Text style={loginStyles.logoSubtext}>Creative Studio</Text>
                   </View>
+                </View>
 
-                  <View style={loginStyles.inputGroup}>
-                    <Text style={loginStyles.label}>Password</Text>
-                    <View style={loginStyles.passwordContainer}>
-                      <TextInput
-                        style={loginStyles.passwordInput}
-                        placeholder="••••••••"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry={!showPassword}
-                      />
-                      <Pressable
-                        onPress={() => setShowPassword(!showPassword)}
-                        style={loginStyles.passwordToggle}
-                      >
-                        <Icon
-                          name={showPassword ? "visibility-off" : "visibility"}
-                          size={20}
-                          color="#4F46E5"
-                        />
-                      </Pressable>
+                <View style={loginStyles.heroContent}>
+                  <Text style={loginStyles.heroTitle}>
+                    Sketch Your{"\n"}
+                    <Text style={loginStyles.heroHighlight}>Ideas to Life</Text>
+                  </Text>
+                  <Text style={loginStyles.heroDescription}>
+                    Transform your thoughts into beautiful sketches, notes, and
+                    designs in seconds
+                  </Text>
+                </View>
+
+                <View style={loginStyles.featuresContainer}>
+                  <View style={loginStyles.featureCard}>
+                    <View style={loginStyles.featureIconBg}>
+                      <Icon name="bolt" size={24} color="#FCD34D" />
+                    </View>
+                    <View>
+                      <Text style={loginStyles.featureTitle}>
+                        Lightning Fast
+                      </Text>
+                      <Text style={loginStyles.featureDesc}>
+                        Instant sync across devices
+                      </Text>
                     </View>
                   </View>
 
-                  <View style={loginStyles.formActions}>
-                    <Pressable>
-                      <Text style={loginStyles.forgotPassword}>
-                        Forgot password?
+                  <View style={loginStyles.featureCard}>
+                    <View style={loginStyles.featureIconBg}>
+                      <Icon name="palette" size={24} color="#34D399" />
+                    </View>
+                    <View>
+                      <Text style={loginStyles.featureTitle}>
+                        Creative Tools
                       </Text>
-                    </Pressable>
+                      <Text style={loginStyles.featureDesc}>
+                        Professional drawing tools
+                      </Text>
+                    </View>
                   </View>
 
-                  <Reanimated.View style={[animatedButtonStyle]}>
+                  <View style={loginStyles.featureCard}>
+                    <View style={loginStyles.featureIconBg}>
+                      <Icon name="shield" size={24} color="#60A5FA" />
+                    </View>
+                    <View>
+                      <Text style={loginStyles.featureTitle}>Fully Secure</Text>
+                      <Text style={loginStyles.featureDesc}>
+                        End-to-end encryption
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Right Side - Login Form */}
+          <View style={loginStyles.formSection}>
+            <View style={loginStyles.formContainer}>
+              <View style={loginStyles.formDecorator} />
+
+              {/* Header */}
+              <View style={loginStyles.cardHeader}>
+                <View style={loginStyles.headerGradient}>
+                  <Icon name="login" size={32} color="#FFFFFF" />
+                </View>
+                <Text style={loginStyles.cardTitle}>Welcome Back</Text>
+                <Text style={loginStyles.cardDescription}>
+                  Sign in to continue creating magic
+                </Text>
+              </View>
+
+              {/* Form Inputs */}
+              <View style={loginStyles.form}>
+                {/* Email */}
+                <View style={loginStyles.inputGroup}>
+                  <Text style={loginStyles.label}>Email Address</Text>
+                  <View
+                    style={[
+                      loginStyles.inputContainer,
+                      emailFocused && loginStyles.inputContainerFocused,
+                    ]}
+                  >
+                    <Icon name="mail" size={20} color="#6366F1" />
+                    <TextInput
+                      style={loginStyles.textInput}
+                      placeholder="your@email.com"
+                      placeholderTextColor="#CBD5E1"
+                      value={email}
+                      onChangeText={setEmail}
+                      onFocus={() => setEmailFocused(true)}
+                      onBlur={() => setEmailFocused(false)}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!isLoading}
+                    />
+                  </View>
+                </View>
+
+                {/* Password */}
+                <View style={loginStyles.inputGroup}>
+                  <View style={loginStyles.labelRow}>
+                    <Text style={loginStyles.label}>Password</Text>
+                    <Pressable>
+                      <Text style={loginStyles.forgotLink}>Forgot?</Text>
+                    </Pressable>
+                  </View>
+                  <View
+                    style={[
+                      loginStyles.inputContainer,
+                      passwordFocused && loginStyles.inputContainerFocused,
+                    ]}
+                  >
+                    <Icon name="lock" size={20} color="#6366F1" />
+                    <TextInput
+                      style={[loginStyles.textInput, loginStyles.passwordField]}
+                      placeholder="••••••••"
+                      placeholderTextColor="#CBD5E1"
+                      value={password}
+                      onChangeText={setPassword}
+                      onFocus={() => setPasswordFocused(true)}
+                      onBlur={() => setPasswordFocused(false)}
+                      secureTextEntry={!showPassword}
+                      editable={!isLoading}
+                    />
                     <Pressable
-                      onPressIn={handleButtonPressIn}
-                      onPressOut={handleButtonPressOut}
-                      onPress={handleLogin}
-                      style={loginStyles.loginButton}
+                      onPress={handlePasswordToggle}
+                      style={loginStyles.eyeButton}
                     >
-                      <LinearGradient
-                        colors={["#4F46E5", "#6366F1"]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={loginStyles.buttonGradient}
-                      >
-                        <Text style={loginStyles.buttonText}>Log In</Text>
-                      </LinearGradient>
-                    </Pressable>
-                  </Reanimated.View>
-
-                  <View style={loginStyles.separatorContainer}>
-                    <View style={loginStyles.separator} />
-                    <Text style={loginStyles.separatorText}>or login with</Text>
-                    <View style={loginStyles.separator} />
-                  </View>
-
-                  <View style={loginStyles.socialButtons}>
-                    <Reanimated.View style={[animatedButtonStyle]}>
-                      <Pressable
-                        onPressIn={handleButtonPressIn}
-                        onPressOut={handleButtonPressOut}
-                        onPress={() => handleSocialLogin("Google")}
-                        style={loginStyles.socialButton}
-                      >
-                        <Text style={loginStyles.buttonText}>Google</Text>
-                      </Pressable>
-                    </Reanimated.View>
-                    <Reanimated.View style={[animatedButtonStyle]}>
-                      <Pressable
-                        onPressIn={handleButtonPressIn}
-                        onPressOut={handleButtonPressOut}
-                        onPress={() => handleSocialLogin("Apple")}
-                        style={loginStyles.socialButton}
-                      >
-                        <Text style={loginStyles.buttonText}>Apple</Text>
-                      </Pressable>
-                    </Reanimated.View>
-                  </View>
-
-                  <View style={loginStyles.signupPrompt}>
-                    <Text>Don't have an account? </Text>
-                    <Pressable onPress={() => navigation.navigate("Register")}>
-                      <Text style={loginStyles.signupLink}>Sign up now</Text>
+                      <ReanimatedView style={animatedIconStyle}>
+                        <Icon
+                          name={showPassword ? "visibility-off" : "visibility"}
+                          size={20}
+                          color="#6366F1"
+                        />
+                      </ReanimatedView>
                     </Pressable>
                   </View>
                 </View>
 
+                {/* Login Button */}
+                <ReanimatedView style={animatedButtonStyle}>
+                  <Pressable
+                    onPressIn={handleButtonPressIn}
+                    onPressOut={handleButtonPressOut}
+                    onPress={handleLogin}
+                    disabled={isLoading}
+                    style={loginStyles.loginButtonWrapper}
+                  >
+                    <LinearGradient
+                      colors={["#1D4ED8", "#3B82F6", "#60A5FA"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={loginStyles.loginButton}
+                    >
+                      {isLoading ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <>
+                          <Icon name="arrow-forward" size={20} color="#fff" />
+                          <Text style={loginStyles.buttonText}>Sign In</Text>
+                        </>
+                      )}
+                    </LinearGradient>
+                  </Pressable>
+                </ReanimatedView>
+
+                {/* Divider */}
+                <View style={loginStyles.divider}>
+                  <View style={loginStyles.dividerLine} />
+                  <Text style={loginStyles.dividerText}>or continue with</Text>
+                  <View style={loginStyles.dividerLine} />
+                </View>
+
+                {/* Social Buttons */}
+                <View style={loginStyles.socialContainer}>
+                  <Pressable
+                    onPress={() => handleSocialLogin("Google")}
+                    disabled={isLoading}
+                    style={({ pressed }) => [
+                      loginStyles.socialBtn,
+                      pressed && loginStyles.socialBtnPressed,
+                    ]}
+                  >
+                    <View style={loginStyles.socialBtnGradient}>
+                      <Icon name="language" size={20} color="#6366F1" />
+                      <Text style={loginStyles.socialBtnText}>Google</Text>
+                    </View>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => handleSocialLogin("Apple")}
+                    disabled={isLoading}
+                    style={({ pressed }) => [
+                      loginStyles.socialBtn,
+                      pressed && loginStyles.socialBtnPressed,
+                    ]}
+                  >
+                    <View style={loginStyles.socialBtnGradient}>
+                      <Icon name="phone-iphone" size={20} color="#6366F1" />
+                      <Text style={loginStyles.socialBtnText}>Apple</Text>
+                    </View>
+                  </Pressable>
+                </View>
+
+                {/* Signup */}
+                <View style={loginStyles.signupContainer}>
+                  <Text style={loginStyles.signupText}>
+                    Don't have an account?{" "}
+                  </Text>
+                  <Pressable
+                    onPress={() => navigation.navigate("Register")}
+                    disabled={isLoading}
+                  >
+                    <Text style={loginStyles.signupLink}>Create account</Text>
+                  </Pressable>
+                </View>
+
+                {/* Back Button */}
                 {onBack && (
-                  <Pressable onPress={onBack} style={loginStyles.backButton}>
-                    <Text>← Back to Home</Text>
+                  <Pressable onPress={onBack} style={loginStyles.backBtn}>
+                    <Icon name="arrow-back" size={20} color="#6366F1" />
+                    <Text style={loginStyles.backBtnText}>Back</Text>
                   </Pressable>
                 )}
               </View>
-            </ReanimatedView>
-          </Shadow>
+            </View>
+          </View>
         </View>
-      </ReanimatedView>
-    </LinearGradient>
+      </LinearGradient>
+    </ScrollView>
   );
 }

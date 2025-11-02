@@ -56,7 +56,10 @@ export default function CartScreen() {
         })),
       };
 
-      console.log("📤 Creating order with data:", JSON.stringify(orderData, null, 2));
+      console.log(
+        "📤 Creating order with data:",
+        JSON.stringify(orderData, null, 2)
+      );
 
       // Gọi API
       const response = await orderService.createOrder(orderData);
@@ -64,7 +67,7 @@ export default function CartScreen() {
       console.log("✅ Order created successfully:", response);
 
       // Clear cart sau khi tạo order thành công
-      cart.forEach(item => removeFromCart(item.id));
+      cart.forEach((item) => removeFromCart(item.id));
 
       Toast.show({
         type: "success",
@@ -96,7 +99,10 @@ export default function CartScreen() {
     return (
       <SafeAreaView style={cartStyles.container}>
         <View style={cartStyles.header}>
-          <Pressable onPress={() => navigation.goBack()} style={cartStyles.backBtn}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={cartStyles.backBtn}
+          >
             <Icon name="arrow-back" size={24} color="#1F2937" />
           </Pressable>
           <Text style={cartStyles.headerTitle}>Your Cart</Text>
@@ -124,7 +130,10 @@ export default function CartScreen() {
     <SafeAreaView style={cartStyles.container}>
       {/* Header */}
       <View style={cartStyles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={cartStyles.backBtn}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={cartStyles.backBtn}
+        >
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={cartStyles.headerTitle}>Cart ({cart.length})</Text>
@@ -240,7 +249,8 @@ export default function CartScreen() {
           {/* Coupon Section */}
           <View style={cartStyles.couponSection}>
             <Text style={cartStyles.couponTitle}>
-              <Icon name="local-offer" size={16} color="#6B7280" /> Discount Code
+              <Icon name="local-offer" size={16} color="#6B7280" /> Discount
+              Code
             </Text>
             <View style={cartStyles.couponRow}>
               <TextInput

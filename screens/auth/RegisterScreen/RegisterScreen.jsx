@@ -63,7 +63,6 @@ export default function RegisterScreen() {
   };
 
   const handleRegister = async () => {
-  console.log("Register button pressed");
   if (!email || !password || !fullName) {
     toast({
       title: "Please fill in all fields",
@@ -77,7 +76,6 @@ export default function RegisterScreen() {
   const lastName = rest.join(" ");
 
   try {
-    console.log("Sending data:", { email, password, firstName, lastName, avatarUrl });
     const res = await authService.register({
       email,
       password,
@@ -85,9 +83,7 @@ export default function RegisterScreen() {
       lastName,
       avatarUrl,
     });
-    console.log("Register response:", res);
 
-    
     toast({
       title: "Register Successful! 🎨",
       description: "Welcome to SketchNote!",

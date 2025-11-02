@@ -10,6 +10,7 @@ export default function ColorButton({
   onSelectColor,
   onSelectColorSet,
   selectedColor,
+  colorHistory, // 👈 Thêm prop
 }) {
   const buttonRef = useRef(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -56,6 +57,7 @@ export default function ColorButton({
         from={buttonRef}
         onClose={() => setShowDropdown(false)}
         selectedColor={selectedColor || color}
+        colorHistory={colorHistory} // 👈 Truyền colorHistory
         onSelectColor={(c) => {
           onSelectColor(c);
           setShowDropdown(false);

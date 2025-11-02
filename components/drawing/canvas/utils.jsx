@@ -201,6 +201,34 @@ export function getBoundingBoxForStroke(s) {
     };
   }
 
+  // Text-like objects: text, sticky, comment, emoji
+  if (["text", "sticky", "comment", "emoji"].includes(s.tool)) {
+    const x = s.x ?? 0;
+    const y = s.y ?? 0;
+    const fontSize = s.fontSize || 18;
+    const padding = s.padding || 0;
+    // Approximate text width
+    const text = typeof s.text === "string" ? s.text : "";
+    const approxWidth = text.length * fontSize * 0.6 + padding * 2;
+    const height = fontSize + padding * 2;
+    // Text position is baseline, so box top is y - fontSize - padding
+    return {
+      minX: x - padding,
+      minY: y - fontSize - padding,
+      maxX: x + approxWidth,
+      maxY: y + padding,
+    };
+  }
+
+  // Image/Sticker/Table: use x,y,width,height (rotation handled by center point check)
+  if (["image", "sticker", "table"].includes(s.tool)) {
+    const x = s.x ?? 0;
+    const y = s.y ?? 0;
+    const w = s.width || 100;
+    const h = s.height || 100;
+    return { minX: x, minY: y, maxX: x + w, maxY: y + h };
+  }
+
   if (s.shape) {
     const sh = s.shape;
     if (s.tool === "circle") {

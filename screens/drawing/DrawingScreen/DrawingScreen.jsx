@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useMemo,
   useEffect,
+  useDeferredValue,
 } from "react";
 import { View, Alert, TextInput, Image, Button } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -13,6 +14,7 @@ import PenSettingsPanel from "../../../components/drawing/toolbar/PenSettingsPan
 import MultiPageCanvas from "../../../components/drawing/canvas/MultiPageCanvas";
 import EraserDropdown from "../../../components/drawing/toolbar/EraserDropdown";
 import StickerModal from "../../../components/drawing/media/StickerModal";
+import RulerOverlay from "../../../components/drawing/ruler/RulerOverlay";
 import useOrientation from "../../../hooks/useOrientation";
 import { useNavigation } from "@react-navigation/native";
 import * as ExportUtils from "../../../utils/ExportUtils";
@@ -46,20 +48,150 @@ const getImageSize = (uri) => {
   });
 };
 
-export default function DrawingScreen() {
+export default function DrawingScreen({ route }) {
   const navigation = useNavigation();
+  const noteConfig = route?.params?.noteConfig;
 
   // HAND/PEN MODE
   const [isPenMode, setIsPenMode] = useState(false);
 
-  // LAYERS
+  // LAYERS - Per-page layer management
   const [showLayerPanel, setShowLayerPanel] = useState(false);
-  const [layers, setLayers] = useState([
-    { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
-  ]);
+  const [activePageId, setActivePageId] = useState(1);
+  const [pageLayers, setPageLayers] = useState({
+    1: [{ id: "layer1", name: "Layer 1", visible: true, strokes: [] }],
+  });
 
   const [activeLayerId, setActiveLayerId] = useState("layer1");
   const [layerCounter, setLayerCounter] = useState(2);
+
+  // Ensure layers exist for active page and reset active layer when page changes
+  useEffect(() => {
+    setPageLayers((prev) => {
+      if (!prev[activePageId]) {
+        return {
+          ...prev,
+          [activePageId]: [
+            { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+          ],
+        };
+      }
+      return prev;
+    });
+    // Reset active layer to first layer when switching pages
+    setActiveLayerId("layer1");
+  }, [activePageId]);
+
+  // Validate activeLayerId exists in current page layers
+  useEffect(() => {
+    const currentPageLayers = pageLayers[activePageId] || [];
+    const layerExists = currentPageLayers.some((l) => l.id === activeLayerId);
+    
+    // If active layer doesn't exist in current page, reset to first layer
+    if (!layerExists && currentPageLayers.length > 0) {
+      setActiveLayerId(currentPageLayers[0].id);
+    }
+  }, [activePageId, pageLayers, activeLayerId]);
+
+  // Get layers for active page - use useMemo to ensure it updates when pageLayers changes
+  const currentLayers = useMemo(() => {
+    return (
+      pageLayers[activePageId] || [
+        { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+      ]
+    );
+  }, [pageLayers, activePageId]);
+
+  // Defer layer updates to prevent flickering in LayerPanel
+  const deferredLayers = useDeferredValue(currentLayers);
+
+  // Helper to update layers for active page
+  const updateCurrentPageLayers = useCallback(
+    (updater) => {
+      setPageLayers((prev) => ({
+        ...prev,
+        [activePageId]:
+          typeof updater === "function"
+            ? updater(
+                prev[activePageId] || [
+                  { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+                ]
+              )
+            : updater,
+      }));
+    },
+    [activePageId]
+  );
+
+  // Handler for adding new layer
+  const handleAddLayer = useCallback(
+    (pageId) => {
+      const newId = `layer_${Date.now()}`;
+      const newLayer = {
+        id: newId,
+        name: `Layer ${layerCounter}`,
+        visible: true,
+        locked: false,
+        strokes: [],
+      };
+      setLayerCounter((c) => c + 1);
+
+      // Directly update pageLayers for the active page
+      setPageLayers((prev) => {
+        const currentPageLayers = prev[pageId] || [
+          { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+        ];
+        return {
+          ...prev,
+          [pageId]: [...currentPageLayers, newLayer],
+        };
+      });
+    },
+    [layerCounter]
+  );
+
+  // Layer panel callbacks - memoized to prevent re-renders
+  const handleLayerSelect = useCallback((id) => setActiveLayerId(id), []);
+
+  const handleToggleVisibility = useCallback(
+    (id) => {
+      updateCurrentPageLayers((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
+      );
+    },
+    [updateCurrentPageLayers]
+  );
+
+  const handleToggleLock = useCallback(
+    (id) => {
+      updateCurrentPageLayers((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l))
+      );
+    },
+    [updateCurrentPageLayers]
+  );
+
+  const handleLayerAdd = useCallback(() => {
+    handleAddLayer(activePageId);
+  }, [handleAddLayer, activePageId]);
+
+  const handleLayerDelete = useCallback(
+    (id) => {
+      updateCurrentPageLayers((prev) => prev.filter((l) => l.id !== id));
+    },
+    [updateCurrentPageLayers]
+  );
+
+  const handleLayerRename = useCallback(
+    (id, newName) => {
+      updateCurrentPageLayers((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
+      );
+    },
+    [updateCurrentPageLayers]
+  );
+
+  const handleCloseLayerPanel = useCallback(() => setShowLayerPanel(false), []);
 
   // TOOL VISIBILITY
   const [toolbarVisible, setToolbarVisible] = useState(true);
@@ -67,6 +199,31 @@ export default function DrawingScreen() {
   // 🎨 ===== TOOL & COLOR =====
   const [tool, setTool] = useState("pen");
   const [color, setColor] = useState("#111827");
+
+  // 🎨 ===== EYEDROPPER PICKED COLORS =====
+  const [pickedColors, setPickedColors] = useState([]);
+  const handleColorPicked = useCallback((colorHex) => {
+    if (colorHex && colorHex !== "#000000" && colorHex !== "#111827") {
+      setPickedColors((prev) => {
+        const filtered = prev.filter((c) => c !== colorHex);
+        return [colorHex, ...filtered].slice(0, 10);
+      });
+    }
+  }, []);
+
+  // 🆕 ===== NEW TOOLS STATE =====
+  // Grid
+  const [gridVisible, setGridVisible] = useState(false);
+  const [gridSettings, setGridSettings] = useState({
+    gridSize: 20,
+    gridColor: "#cbd5e1",
+    gridType: "square",
+  });
+  const [gridDropdownVisible, setGridDropdownVisible] = useState(false);
+
+  // 📏 RULER
+  const [rulerVisible, setRulerVisible] = useState(false);
+  const [rulerPosition, setRulerPosition] = useState(null);
 
   // ✏️ ===== WIDTH & OPACITY =====
   const [strokeWidth, setStrokeWidth] = useState(2);
@@ -92,7 +249,6 @@ export default function DrawingScreen() {
   const [paperStyle] = useState("plain");
   const [shapeType] = useState("auto");
   const [editingText, setEditingText] = useState(null);
-  const [activePageId, setActivePageId] = useState(1);
 
   // ⚙️ ===== TOOL CONFIGS =====
   const [toolConfigs, setToolConfigs] = useState({
@@ -157,6 +313,10 @@ export default function DrawingScreen() {
     ],
     []
   );
+  const shapeTools = useMemo(
+    () => ["line", "arrow", "rect", "circle", "triangle", "star", "polygon"],
+    []
+  );
   const [penColors, setPenColors] = useState({
     pen: "#111827",
     pencil: "#111827",
@@ -167,21 +327,40 @@ export default function DrawingScreen() {
     airbrush: "#111827",
     crayon: "#111827",
   });
+  const [shapeColors, setShapeColors] = useState({
+    line: "#111827",
+    arrow: "#111827",
+    rect: "#111827",
+    circle: "#111827",
+    triangle: "#111827",
+    star: "#111827",
+    polygon: "#111827",
+  });
 
-  // Restore color when switching to a pen tool
+  // Restore color only when switching tools
   useEffect(() => {
     if (penTools.includes(tool)) {
       const saved = penColors[tool];
       if (typeof saved === "string") setColor(saved);
+    } else if (shapeTools.includes(tool)) {
+      const saved = shapeColors[tool];
+      if (typeof saved === "string") setColor(saved);
     }
-  }, [tool, penTools, penColors]);
+  }, [tool]);
 
-  // Store color per-tool when it changes on an active pen tool
+  // Store color per-tool when it changes on an active pen/shape tool
   useEffect(() => {
-    if (penTools.includes(tool) && typeof color === "string") {
-      setPenColors((prev) => (prev[tool] === color ? prev : { ...prev, [tool]: color }));
+    if (typeof color !== "string") return;
+    if (penTools.includes(tool)) {
+      setPenColors((prev) =>
+        prev[tool] === color ? prev : { ...prev, [tool]: color }
+      );
+    } else if (shapeTools.includes(tool)) {
+      setShapeColors((prev) =>
+        prev[tool] === color ? prev : { ...prev, [tool]: color }
+      );
     }
-  }, [tool, color, penTools]);
+  }, [tool, color]);
 
   // 📱 ===== ORIENTATION =====
   const orientation = useOrientation();
@@ -208,10 +387,10 @@ export default function DrawingScreen() {
 
   const activeStrokeWidth = tool.includes("eraser") ? eraserSize : strokeWidth;
   useEffect(() => {
-    if (tool !== "eraser") {
+    if (tool !== "eraser" && eraserMode !== null) {
       setEraserMode(null);
     }
-  }, [tool]);
+  }, [tool, eraserMode]);
 
   // When switching back to a pen tool, restore its last base width
   useEffect(() => {
@@ -227,9 +406,10 @@ export default function DrawingScreen() {
     ];
     if (penTools.includes(tool)) {
       const saved = penBaseWidths[tool];
-      if (typeof saved === "number") setStrokeWidth(saved);
+      if (typeof saved === "number" && saved !== strokeWidth)
+        setStrokeWidth(saved);
     }
-  }, [tool, penBaseWidths]);
+  }, [tool, penBaseWidths, strokeWidth]);
 
   const handleSelectBaseWidth = useCallback(
     (size) => {
@@ -556,37 +736,15 @@ export default function DrawingScreen() {
       />
       {showLayerPanel && (
         <LayerPanel
-          layers={layers}
+          layers={deferredLayers}
           activeLayerId={activeLayerId}
-          onSelect={(id) => setActiveLayerId(id)}
-          onToggleVisibility={(id) =>
-            setLayers((prev) =>
-              prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
-            )
-          }
-          onAdd={() =>
-            setLayers((prev) => {
-              const newId = `layer_${Date.now()}`;
-              const newLayer = {
-                id: newId,
-                name: `Layer ${layerCounter}`,
-                visible: true,
-                locked: false,
-                strokes: [],
-              };
-              setLayerCounter((c) => c + 1); // ✅ tăng bộ đếm sau mỗi lần thêm
-              return [...prev, newLayer];
-            })
-          }
-          onDelete={(id) =>
-            setLayers((prev) => prev.filter((l) => l.id !== id))
-          }
-          onRename={(id, newName) =>
-            setLayers((prev) =>
-              prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
-            )
-          } // ✅ Thêm dòng này
-          onClose={() => setShowLayerPanel(false)} // ✅ đóng panel khi bấm X
+          onSelect={handleLayerSelect}
+          onToggleVisibility={handleToggleVisibility}
+          onToggleLock={handleToggleLock}
+          onAdd={handleLayerAdd}
+          onDelete={handleLayerDelete}
+          onRename={handleLayerRename}
+          onClose={handleCloseLayerPanel}
         />
       )}
       {/* 🎨 Main Toolbar */}
@@ -594,10 +752,36 @@ export default function DrawingScreen() {
         <ToolbarContainer
           tool={tool}
           setTool={(name) => {
+            if (name === "ruler") {
+              // Toggle ruler overlay without changing current drawing tool
+              setRulerVisible((prev) => {
+                const next = !prev;
+                // if (__DEV__) console.log("[DrawingScreen] toggle ruler:", next);
+                return next;
+              });
+              if (!rulerPosition) {
+                setRulerPosition({
+                  x: 0,
+                  y: 120,
+                  width: undefined,
+                  height: 60,
+                  rotation: 0,
+                  scale: 1,
+                });
+              } else {
+                if (__DEV__)
+                  console.log("[DrawingScreen] rulerPosition:", rulerPosition);
+              }
+              return;
+            }
             setTool(name);
             if (name === "image") handleInsertImage();
             else if (name === "camera") handleOpenCamera();
             else if (name === "sticker") setStickerModalVisible(true);
+            else if (name === "grid") setGridDropdownVisible(true);
+            else if (name === "eyedropper") {
+              // handled in GestureHandler
+            }
           }}
           color={color}
           setColor={setColor}
@@ -617,6 +801,12 @@ export default function DrawingScreen() {
           eraserDropdownVisible={eraserDropdownVisible}
           setEraserDropdownVisible={setEraserDropdownVisible}
           eraserButtonRef={eraserButtonRef}
+          pickedColors={pickedColors}
+          onColorPicked={handleColorPicked}
+          onInsertTable={(rows, cols) => {
+            // Insert table vào canvas
+            multiPageCanvasRef.current?.insertTable?.(rows, cols);
+          }}
         />
       )}
       {/* 🧽 Eraser Dropdown */}
@@ -659,11 +849,13 @@ export default function DrawingScreen() {
       <View style={{ flex: 1 }}>
         <MultiPageCanvas
           ref={multiPageCanvasRef}
-          layers={layers}
+          pageLayers={pageLayers}
+          setPageLayers={setPageLayers}
           activeLayerId={activeLayerId}
-          setLayers={setLayers}
           tool={tool}
+          setTool={setTool}
           color={color}
+          setColor={setColor}
           isPenMode={isPenMode}
           strokeWidth={activeStrokeWidth}
           pencilWidth={pencilWidth}
@@ -679,14 +871,24 @@ export default function DrawingScreen() {
           thickness={activeConfig.thickness}
           stabilization={activeConfig.stabilization}
           toolConfigs={toolConfigs}
+          rulerPosition={rulerPosition}
           registerPageRef={registerPageRef}
           onActivePageChange={setActivePageId}
+          onColorPicked={handleColorPicked}
+          noteConfig={noteConfig}
           onRequestTextInput={(x, y) => {
             if (tool === "text") {
               setTimeout(() => setEditingText({ x, y, text: "" }), 0);
             }
           }}
         />
+
+        <RulerOverlay
+          visible={rulerVisible}
+          position={rulerPosition}
+          onChange={(pos) => setRulerPosition(pos)}
+        />
+
         <StickerModal
           visible={stickerModalVisible}
           onClose={() => setStickerModalVisible(false)}

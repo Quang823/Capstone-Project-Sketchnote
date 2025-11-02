@@ -20,6 +20,16 @@ import UpdateBlogScreen from "../screens/auth/myblog/create/UpdateBlogScreen";
 import PaymentWebViewScreen from "../screens/payment/PaymentWebViewScreen";
 import PaymentSuccessScreen from "../screens/payment/PaymentSuccessScreen";
 import PaymentFailedScreen from "../screens/payment/PaymentFailedScreen";
+import NoteSetupScreen from "../screens/note/NoteSetupScreenFinal";
+
+// Designer Screens
+import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen";
+import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/DesignerProductsScreen";
+import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
+import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
+import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
+import OrderSuccessScreen from "../screens/store/Payment/OrderSuccessScreen";
+import TransactionHistoryScreen from "../screens/store/Transaction/TransactionHistoryScreen";
 
 // Designer Screens
 import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen";
@@ -41,6 +51,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="NoteSetupScreen" component={NoteSetupScreen} />
       <Stack.Screen name="DrawingScreen" component={DrawingScreen} />
       <Stack.Screen name="CourseDetailScreen" component={CourseDetailScreen} />
       <Stack.Screen name="CoursesScreen" component={CoursesScreen} />

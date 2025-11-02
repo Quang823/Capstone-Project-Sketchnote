@@ -91,6 +91,7 @@ export default function ColorDropdownCompact({
   onSelectColor = () => {},
   onSelectColorSet = () => {},
   selectedColor = "#3b82f6",
+  colorHistory = [], // 👈 Thêm prop colorHistory
 }) {
   const [tab, setTab] = useState("palette");
   const [hue, setHue] = useState(0);
@@ -382,6 +383,48 @@ export default function ColorDropdownCompact({
               />
             </View>
 
+            {/* Color History */}
+            {colorHistory && colorHistory.length > 0 && (
+              <View style={s.historySection}>
+                <Text style={s.sectionLabel}>Color History</Text>
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false}
+                  style={s.historyScroll}
+                >
+                  {colorHistory.map((color, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[s.historyColor, { backgroundColor: color }]}
+                      onPress={() => {
+                        // Parse color nếu là rgba
+                        let baseHex = color;
+                        let initOpacity = 100;
+                        if (color.startsWith("rgba")) {
+                          const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+),?\s*([\d.]+)?\)/);
+                          if (m) {
+                            const [r, g, b, a] = m.slice(1);
+                            baseHex = `#${[r, g, b].map((x) => parseInt(x, 10).toString(16).padStart(2, "0")).join("")}`;
+                            initOpacity = Math.round((a ? parseFloat(a) : 1) * 100);
+                          }
+                        }
+                        const { h, s, v } = hexToHsv(baseHex);
+                        setHue(h);
+                        setSaturation(s);
+                        setValue(v);
+                        setOpacity(initOpacity);
+                        cursorAnim.setValue({
+                          x: (s / 100) * boxSize.width,
+                          y: (1 - v / 100) * boxSize.height,
+                        });
+                        lastSVRef.current = { s, v };
+                      }}
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
             <View style={s.btnRow}>
               <TouchableOpacity style={s.cancelBtn} onPress={onClose}>
                 <Text>Cancel</Text>
@@ -535,4 +578,24 @@ const s = StyleSheet.create({
     overflow: "hidden",
   },
   colorPreview: { flex: 1, height: "100%" },
+  historySection: {
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  historyScroll: {
+    marginTop: 8,
+  },
+  historyColor: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
 });

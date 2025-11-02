@@ -41,7 +41,6 @@ export default function CreateBlogScreen({ navigation }) {
 
       navigation.goBack();
     } catch (err) {
-      console.log("Error:", err.message);
       Toast.show({
         type: "error",
         text1: "Error creating post",
