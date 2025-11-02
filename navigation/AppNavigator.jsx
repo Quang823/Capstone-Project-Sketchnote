@@ -31,6 +31,15 @@ import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
 import OrderSuccessScreen from "../screens/store/Payment/OrderSuccessScreen";
 import TransactionHistoryScreen from "../screens/store/Transaction/TransactionHistoryScreen";
 
+// Designer Screens
+import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen";
+import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/DesignerProductsScreen";
+import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
+import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
+import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
+import OrderSuccessScreen from "../screens/store/Payment/OrderSuccessScreen";
+import TransactionHistoryScreen from "../screens/store/Transaction/TransactionHistoryScreen";
+
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
