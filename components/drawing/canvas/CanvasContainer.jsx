@@ -94,6 +94,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   const idCounter = useRef(1);
   const rendererRef = useRef(null);
 
+  // Track pinch state to distinguish zoom from scroll
+  const pinchStartDistance = useRef(0);
+  const isPinchZoom = useRef(false);
+
   const activeConfig = toolConfigs?.[tool] || {
     pressure: 0.5,
     thickness: 1.5,
@@ -134,20 +138,30 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   //LAYERS MANAGEMENT
   const [selectedId, setSelectedId] = useState(null);
 
-  const getActiveLayer = useCallback(
-    () => layers.find((layer) => layer.id === activeLayerId),
-    [layers, activeLayerId]
-  );
+  const getActiveLayer = useCallback(() => {
+    if (!Array.isArray(layers) || layers.length === 0) return null;
+    
+    // Try to find layer by activeLayerId
+    let layer = layers.find((l) => l.id === activeLayerId);
+    
+    // If not found, fallback to first layer
+    if (!layer && layers.length > 0) {
+      layer = layers[0];
+    }
+    
+    return layer || null;
+  }, [layers, activeLayerId]);
 
   const updateActiveLayer = useCallback(
     (updateFn) => {
-      setLayers((prev) =>
-        prev.map((layer) => {
+      setLayers((prev) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map((layer) => {
           if (layer.id !== activeLayerId) return layer;
           const safeStrokes = Array.isArray(layer.strokes) ? layer.strokes : [];
           return { ...layer, strokes: updateFn(safeStrokes) };
-        })
-      );
+        });
+      });
     },
     [activeLayerId]
   );
@@ -181,60 +195,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   const isZooming = useSharedValue(false);
   const isZoomingRef = useRef(false); // For JS thread access
 
-  const pinch = Gesture.Pinch()
-    .enabled(!zoomLocked)
-    .onStart((e) => {
-      "worklet";
-      // ignore nếu <2 ngón (bảo vệ cho trường hợp library không hỗ trợ minPointers)
-      if (!e || !e.numberOfPointers || e.numberOfPointers < 2) return;
-      isZooming.value = true;
-      isZoomingRef.current = true;
-      baseScale.value = scale.value;
-      runOnJS(() => {
-        try {
-          setShowZoomOverlay((prev) => (prev ? prev : true));
-          // Notify parent to disable scroll when zoom starts
-          if (typeof onZoomChange === "function") {
-            onZoomChange(true); // true = zoom is active
-          }
-        } catch (err) {
-          console.error("[CanvasContainer] Error in zoom onStart:", err);
-        }
-      })();
-    })
-    .onUpdate((e) => {
-      "worklet";
-      if (!e || !e.numberOfPointers || e.numberOfPointers < 2) return; // guard
-      if (typeof e.scale !== "number" || !isFinite(e.scale)) return; // safety check
-      scale.value = baseScale.value * e.scale;
-      // Clamp scale to prevent extreme values
-      if (scale.value < 0.5) scale.value = 0.5;
-      if (scale.value > 5) scale.value = 5;
-      const isZoomed = scale.value > 1.01;
-      if (isZoomed !== lastZoomState.current) {
-        lastZoomState.current = isZoomed;
-      }
-    })
-    .onEnd(() => {
-      "worklet";
-      if (scale.value < 1) scale.value = withTiming(1);
-      if (scale.value > 3) scale.value = withTiming(3);
-      isZooming.value = false;
-      // Capture scale value before runOnJS
-      const finalScale = scale.value;
-      const wasZoomed = finalScale > 1.01;
-      runOnJS((stillZoomed) => {
-        isZoomingRef.current = false;
-        setShowZoomOverlay(false);
-        if (!stillZoomed && lastZoomState.current) {
-          lastZoomState.current = false;
-        }
-        // Notify parent: always false when pinch ends (re-enable scroll)
-        if (typeof onZoomChange === "function") {
-          onZoomChange(false); // Pinch ended, re-enable scroll
-        }
-      })(wasZoomed);
-    });
+  // ⚠️ Pinch zoom được xử lý ở MultiPageCanvas (project-wide)
+  // CanvasContainer chỉ xử lý pan và drawing
+  const pinch = Gesture.Pinch().enabled(false); // Disable - zoom được handle ở MultiPageCanvas
 
   const pan = Gesture.Pan()
     .minPointers(1)
@@ -263,22 +226,25 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
-    //.maxPointers(1) // Chỉ nhận khi 1 ngón tay
     .onEnd(() => {
       "worklet";
-      scale.value = withTiming(1);
-      translateX.value = withTiming(0);
-      translateY.value = withTiming(0);
-      runOnJS(() => {
-        lastZoomState.current = false;
-        if (typeof onZoomChange === "function") {
-          onZoomChange(false);
-        }
-      })();
+      try {
+        scale.value = withTiming(1, { duration: 300 });
+        translateX.value = withTiming(0, { duration: 300 });
+        translateY.value = withTiming(0, { duration: 300 });
+        runOnJS(() => {
+          lastZoomState.current = false;
+          if (typeof onZoomChange === "function") {
+            onZoomChange(false);
+          }
+        })();
+      } catch (err) {
+        console.warn("[CanvasContainer] Double tap error:", err);
+      }
     });
 
   // Compose gestures: pinch riêng, pan và doubleTap có thể cùng lúc
-  const composedGesture = Gesture.Race(
+  const composedGesture = Gesture.Exclusive(
     pinch,
     Gesture.Simultaneous(pan, doubleTap)
   );
@@ -723,7 +689,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
       <GestureDetector gesture={composedGesture}>
         <Animated.View
           key={activeLayerId}
@@ -809,42 +775,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           </GestureHandler>
         </Animated.View>
       </GestureDetector>
-
-      {showZoomOverlay && (
-        <View
-          style={{
-            position: "absolute",
-            top: 40,
-            alignSelf: "center",
-            backgroundColor: "rgba(0,0,0,0.8)",
-            padding: 10,
-            borderRadius: 12,
-            flexDirection: "row",
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ fontSize: 16, fontWeight: "600", color: "white" }}>
-            {zoomPercent}%
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              setZoomLocked((prev) => !prev);
-              if (!zoomLocked) setShowZoomOverlay(false);
-            }}
-            style={{
-              marginLeft: 12,
-              paddingVertical: 6,
-              paddingHorizontal: 10,
-              backgroundColor: zoomLocked ? "#007AFF" : "#E5E5EA",
-              borderRadius: 8,
-            }}
-          >
-            <Text style={{ color: zoomLocked ? "white" : "black" }}>
-              {zoomLocked ? "🔒" : "Lock"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 });

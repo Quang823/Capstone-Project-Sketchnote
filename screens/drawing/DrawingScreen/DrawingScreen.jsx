@@ -6,7 +6,7 @@ import React, {
   useEffect,
   useDeferredValue,
 } from "react";
-import { View, Alert, TextInput, Image, Button } from "react-native";
+import { View, Alert, TextInput, Image, Button, Dimensions } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import HeaderToolbar from "../../../components/drawing/toolbar/HeaderToolbar";
 import ToolbarContainer from "../../../components/drawing/toolbar/ToolbarContainer";
@@ -65,10 +65,11 @@ export default function DrawingScreen({ route }) {
   const [activeLayerId, setActiveLayerId] = useState("layer1");
   const [layerCounter, setLayerCounter] = useState(2);
 
-  // Ensure layers exist for active page and reset active layer when page changes
+  // Ensure layers exist for active page when page changes
   useEffect(() => {
     setPageLayers((prev) => {
       if (!prev[activePageId]) {
+        // Initialize layers for new page
         return {
           ...prev,
           [activePageId]: [
@@ -78,20 +79,16 @@ export default function DrawingScreen({ route }) {
       }
       return prev;
     });
-    // Reset active layer to first layer when switching pages
-    setActiveLayerId("layer1");
   }, [activePageId]);
 
-  // Validate activeLayerId exists in current page layers
+  // Reset active layer when page changes
   useEffect(() => {
     const currentPageLayers = pageLayers[activePageId] || [];
-    const layerExists = currentPageLayers.some((l) => l.id === activeLayerId);
-    
-    // If active layer doesn't exist in current page, reset to first layer
-    if (!layerExists && currentPageLayers.length > 0) {
+    if (currentPageLayers.length > 0) {
+      // Always reset to first layer when switching pages
       setActiveLayerId(currentPageLayers[0].id);
     }
-  }, [activePageId, pageLayers, activeLayerId]);
+  }, [activePageId]); // ⚠️ IMPORTANT: Only depend on activePageId, NOT pageLayers
 
   // Get layers for active page - use useMemo to ensure it updates when pageLayers changes
   const currentLayers = useMemo(() => {
