@@ -1,20 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, Animated,ScrollView } from "react-native";
+import { View, Text, Pressable, Animated, ScrollView } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { drawerStyles } from "./NavigationDrawer.styles";
 import { useNavigation } from "@react-navigation/native";
 import { getUserFromToken } from "../../../utils/AuthUtils";
 import { authService } from "../../../service/authService";
 
-export default function NavigationDrawer({ 
-  drawerOpen, 
-  drawerAnimation, 
-  overlayAnimation, 
-  activeNavItem, 
-  onToggleDrawer, 
-  onNavPress 
+export default function NavigationDrawer({
+  drawerOpen,
+  drawerAnimation,
+  overlayAnimation,
+  activeNavItem,
+  onToggleDrawer,
+  onNavPress,
 }) {
-   const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);
   const navigation = useNavigation();
   useEffect(() => {
     const getUser = async () => {
@@ -23,30 +23,27 @@ export default function NavigationDrawer({
     };
     getUser();
   }, []);
-   const handleLogout = async () => {
+  const handleLogout = async () => {
     const ok = await authService.logout();
     if (ok) {
-      navigation.replace("Login"); 
+      navigation.replace("Login");
     }
   };
   return (
     <>
       {/* Overlay khi drawer mở */}
       {drawerOpen && (
-        <Animated.View 
-          style={[
-            drawerStyles.overlay, 
-            { opacity: overlayAnimation }
-          ]}
+        <Animated.View
+          style={[drawerStyles.overlay, { opacity: overlayAnimation }]}
           onTouchStart={onToggleDrawer}
         />
       )}
-      
+
       {/* Navigation Drawer */}
-      <Animated.View 
+      <Animated.View
         style={[
-          drawerStyles.drawer, 
-          { transform: [{ translateX: drawerAnimation }] }
+          drawerStyles.drawer,
+          { transform: [{ translateX: drawerAnimation }] },
         ]}
       >
         {/* Header */}
@@ -59,120 +56,132 @@ export default function NavigationDrawer({
             <Icon name="close" size={24} color="#6B7280" />
           </Pressable>
         </View>
-        
+
         {/* User Info */}
         <View style={drawerStyles.userInfo}>
           <View style={drawerStyles.avatar}>
             <Icon name="account-circle" size={48} color="#4F46E5" />
           </View>
-          <Text style={drawerStyles.userName}>{user?.name || "Người dùng"}</Text>
-          <Text style={drawerStyles.userEmail}>{user?.email || "user@example.com"}</Text>
+          <Text style={drawerStyles.userName}>
+            {user?.name || "Người dùng"}
+          </Text>
+          <Text style={drawerStyles.userEmail}>
+            {user?.email || "user@example.com"}
+          </Text>
         </View>
-        
+
         {/* Navigation Items */}
         <ScrollView style={drawerStyles.drawerItems}>
-          <Pressable 
+          <Pressable
             style={[
-              drawerStyles.drawerItem, 
-              activeNavItem === 'home' && drawerStyles.drawerItemActive
+              drawerStyles.drawerItem,
+              activeNavItem === "home" && drawerStyles.drawerItemActive,
             ]}
-            onPress={() => onNavPress('home')}
+            onPress={() => onNavPress("home")}
           >
-            <View style={[
-              drawerStyles.iconContainer,
-              activeNavItem === 'home' && drawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="home" 
-                size={20} 
-                color={activeNavItem === 'home' ? "#FFFFFF" : "#6B7280"} 
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "home" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="home"
+                size={20}
+                color={activeNavItem === "home" ? "#FFFFFF" : "#6B7280"}
               />
             </View>
-            <Text 
+            <Text
               style={[
                 drawerStyles.drawerText,
-                activeNavItem === 'home' && drawerStyles.drawerTextActive
+                activeNavItem === "home" && drawerStyles.drawerTextActive,
               ]}
             >
               Trang chủ
             </Text>
           </Pressable>
-          
-          <Pressable 
+
+          <Pressable
             style={[
-              drawerStyles.drawerItem, 
-              activeNavItem === 'courses' && drawerStyles.drawerItemActive
+              drawerStyles.drawerItem,
+              activeNavItem === "courses" && drawerStyles.drawerItemActive,
             ]}
-            onPress={() => onNavPress('courses')}
+            onPress={() => onNavPress("courses")}
           >
-            <View style={[
-              drawerStyles.iconContainer,
-              activeNavItem === 'courses' && drawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="school" 
-                size={20} 
-                color={activeNavItem === 'courses' ? "#FFFFFF" : "#6B7280"} 
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "courses" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="school"
+                size={20}
+                color={activeNavItem === "courses" ? "#FFFFFF" : "#6B7280"}
               />
             </View>
-            <Text 
+            <Text
               style={[
                 drawerStyles.drawerText,
-                activeNavItem === 'courses' && drawerStyles.drawerTextActive
+                activeNavItem === "courses" && drawerStyles.drawerTextActive,
               ]}
             >
               Khóa học
             </Text>
           </Pressable>
-          
-          <Pressable 
+
+          <Pressable
             style={[
-              drawerStyles.drawerItem, 
-              activeNavItem === 'create' && drawerStyles.drawerItemActive
+              drawerStyles.drawerItem,
+              activeNavItem === "create" && drawerStyles.drawerItemActive,
             ]}
-            onPress={() => onNavPress('create')}
+            onPress={() => onNavPress("create")}
           >
-            <View style={[
-              drawerStyles.iconContainer,
-              activeNavItem === 'create' && drawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="add-circle" 
-                size={20} 
-                color={activeNavItem === 'create' ? "#FFFFFF" : "#6B7280"} 
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "create" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="add-circle"
+                size={20}
+                color={activeNavItem === "create" ? "#FFFFFF" : "#6B7280"}
               />
             </View>
-            <Text 
+            <Text
               style={[
                 drawerStyles.drawerText,
-                activeNavItem === 'create' && drawerStyles.drawerTextActive
+                activeNavItem === "create" && drawerStyles.drawerTextActive,
               ]}
             >
               Tạo mới
             </Text>
           </Pressable>
-          
-          <Pressable 
+
+          <Pressable
             style={[
-              drawerStyles.drawerItem, 
-              activeNavItem === 'gallery' && drawerStyles.drawerItemActive
+              drawerStyles.drawerItem,
+              activeNavItem === "gallery" && drawerStyles.drawerItemActive,
             ]}
-            onPress={() => onNavPress('gallery')}
+            onPress={() => onNavPress("gallery")}
           >
-            <View style={[
-              drawerStyles.iconContainer,
-              activeNavItem === 'gallery' && drawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="photo-library" 
-                size={20} 
-                color={activeNavItem === 'gallery' ? "#FFFFFF" : "#6B7280"} 
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "gallery" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="photo-library"
+                size={20}
+                color={activeNavItem === "gallery" ? "#FFFFFF" : "#6B7280"}
               />
             </View>
-            <Text 
+            <Text
               style={[
                 drawerStyles.drawerText,
-                activeNavItem === 'gallery' && drawerStyles.drawerTextActive
+                activeNavItem === "gallery" && drawerStyles.drawerTextActive,
               ]}
             >
               Thư viện
@@ -180,181 +189,195 @@ export default function NavigationDrawer({
           </Pressable>
 
           {/* Store Section */}
-          <Pressable 
+          <Pressable
             style={[
-              drawerStyles.drawerItem, 
-              activeNavItem === 'store' && drawerStyles.drawerItemActive
+              drawerStyles.drawerItem,
+              activeNavItem === "store" && drawerStyles.drawerItemActive,
             ]}
-            onPress={() => onNavPress('store')}
+            onPress={() => onNavPress("store")}
           >
-            <View style={[
-              drawerStyles.iconContainer,
-              activeNavItem === 'store' && drawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="store" 
-                size={20} 
-                color={activeNavItem === 'store' ? "#FFFFFF" : "#6B7280"} 
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "store" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="store"
+                size={20}
+                color={activeNavItem === "store" ? "#FFFFFF" : "#6B7280"}
               />
             </View>
-            <Text 
+            <Text
               style={[
                 drawerStyles.drawerText,
-                activeNavItem === 'store' && drawerStyles.drawerTextActive
+                activeNavItem === "store" && drawerStyles.drawerTextActive,
               ]}
             >
               Cửa hàng Resource
             </Text>
           </Pressable>
 
-
-          <Pressable 
-  style={[
-    drawerStyles.drawerItem, 
-    activeNavItem === 'orderHistory' && drawerStyles.drawerItemActive
-  ]}
-  onPress={() => onNavPress('orderHistory')}
->
-  <View style={[
-    drawerStyles.iconContainer,
-    activeNavItem === 'orderHistory' && drawerStyles.iconContainerActive
-  ]}>
-    <Icon 
-      name="receipt-long" 
-      size={20} 
-      color={activeNavItem === 'orderHistory' ? "#FFFFFF" : "#6B7280"} 
-    />
-  </View>
-  <Text 
-    style={[
-      drawerStyles.drawerText,
-      activeNavItem === 'orderHistory' && drawerStyles.drawerTextActive
-    ]}
-  >
-    Lịch sử đơn hàng
-  </Text>
-</Pressable>
-
-
-          {/* New: Blogs */}
-          <Pressable 
+          <Pressable
             style={[
-              drawerStyles.drawerItem, 
-              activeNavItem === 'blogAll' && drawerStyles.drawerItemActive
+              drawerStyles.drawerItem,
+              activeNavItem === "orderHistory" && drawerStyles.drawerItemActive,
             ]}
-            onPress={() => onNavPress('blogAll')}
+            onPress={() => onNavPress("orderHistory")}
           >
-            <View style={[
-              drawerStyles.iconContainer,
-              activeNavItem === 'blogAll' && drawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="dynamic-feed" 
-                size={20} 
-                color={activeNavItem === 'blogAll' ? "#FFFFFF" : "#6B7280"} 
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "orderHistory" &&
+                  drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="receipt-long"
+                size={20}
+                color={activeNavItem === "orderHistory" ? "#FFFFFF" : "#6B7280"}
               />
             </View>
-            <Text 
+            <Text
               style={[
                 drawerStyles.drawerText,
-                activeNavItem === 'blogAll' && drawerStyles.drawerTextActive
+                activeNavItem === "orderHistory" &&
+                  drawerStyles.drawerTextActive,
+              ]}
+            >
+              Lịch sử đơn hàng
+            </Text>
+          </Pressable>
+
+          {/* New: Blogs */}
+          <Pressable
+            style={[
+              drawerStyles.drawerItem,
+              activeNavItem === "blogAll" && drawerStyles.drawerItemActive,
+            ]}
+            onPress={() => onNavPress("blogAll")}
+          >
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "blogAll" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="dynamic-feed"
+                size={20}
+                color={activeNavItem === "blogAll" ? "#FFFFFF" : "#6B7280"}
+              />
+            </View>
+            <Text
+              style={[
+                drawerStyles.drawerText,
+                activeNavItem === "blogAll" && drawerStyles.drawerTextActive,
               ]}
             >
               Xem tất cả blog
             </Text>
           </Pressable>
 
-          <Pressable 
+          <Pressable
             style={[
-              drawerStyles.drawerItem, 
-              activeNavItem === 'blogMine' && drawerStyles.drawerItemActive
+              drawerStyles.drawerItem,
+              activeNavItem === "blogMine" && drawerStyles.drawerItemActive,
             ]}
-            onPress={() => onNavPress('blogMine')}
+            onPress={() => onNavPress("blogMine")}
           >
-            <View style={[
-              drawerStyles.iconContainer,
-              activeNavItem === 'blogMine' && drawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="person-outline" 
-                size={20} 
-                color={activeNavItem === 'blogMine' ? "#FFFFFF" : "#6B7280"} 
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "blogMine" &&
+                  drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="person-outline"
+                size={20}
+                color={activeNavItem === "blogMine" ? "#FFFFFF" : "#6B7280"}
               />
             </View>
-            <Text 
+            <Text
               style={[
                 drawerStyles.drawerText,
-                activeNavItem === 'blogMine' && drawerStyles.drawerTextActive
+                activeNavItem === "blogMine" && drawerStyles.drawerTextActive,
               ]}
             >
               Blog của tôi
             </Text>
           </Pressable>
-          
+
           <View style={drawerStyles.divider} />
-          
-          <Pressable 
+
+          <Pressable
             style={[
-              drawerStyles.drawerItem, 
-              activeNavItem === 'profile' && drawerStyles.drawerItemActive
+              drawerStyles.drawerItem,
+              activeNavItem === "profile" && drawerStyles.drawerItemActive,
             ]}
-            onPress={() => onNavPress('profile')}
+            onPress={() => onNavPress("profile")}
           >
-            <View style={[
-              drawerStyles.iconContainer,
-              activeNavItem === 'profile' && drawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="person" 
-                size={20} 
-                color={activeNavItem === 'profile' ? "#FFFFFF" : "#6B7280"} 
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "profile" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="person"
+                size={20}
+                color={activeNavItem === "profile" ? "#FFFFFF" : "#6B7280"}
               />
             </View>
-            <Text 
+            <Text
               style={[
                 drawerStyles.drawerText,
-                activeNavItem === 'profile' && drawerStyles.drawerTextActive
+                activeNavItem === "profile" && drawerStyles.drawerTextActive,
               ]}
             >
               Hồ sơ
             </Text>
           </Pressable>
-          
-          <Pressable 
+
+          <Pressable
             style={[
-              drawerStyles.drawerItem, 
-              activeNavItem === 'settings' && drawerStyles.drawerItemActive
+              drawerStyles.drawerItem,
+              activeNavItem === "settings" && drawerStyles.drawerItemActive,
             ]}
-            onPress={() => onNavPress('settings')}
+            onPress={() => onNavPress("settings")}
           >
-            <View style={[
-              drawerStyles.iconContainer,
-              activeNavItem === 'settings' && drawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="settings" 
-                size={20} 
-                color={activeNavItem === 'settings' ? "#FFFFFF" : "#6B7280"} 
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "settings" &&
+                  drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="settings"
+                size={20}
+                color={activeNavItem === "settings" ? "#FFFFFF" : "#6B7280"}
               />
             </View>
-            <Text 
+            <Text
               style={[
                 drawerStyles.drawerText,
-                activeNavItem === 'settings' && drawerStyles.drawerTextActive
+                activeNavItem === "settings" && drawerStyles.drawerTextActive,
               ]}
             >
               Cài đặt
             </Text>
           </Pressable>
         </ScrollView>
-        
+
         {/* Footer */}
         <View style={drawerStyles.drawerFooter}>
           <Pressable style={drawerStyles.logoutButton} onPress={handleLogout}>
             <Icon name="logout" size={20} color="#EF4444" />
             <Text style={drawerStyles.logoutText}>Đăng xuất</Text>
           </Pressable>
-          
+
           <Text style={drawerStyles.versionText}>Phiên bản 1.0.0</Text>
         </View>
       </Animated.View>

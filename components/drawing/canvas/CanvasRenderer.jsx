@@ -874,7 +874,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   return (
     <Canvas
       ref={canvasRef}
-      style={{ width: safePage.w + safePage.x * 2, height: safeCanvasHeight }}
+      style={{ width: safePage.w + safePage.x * 2, height: safeCanvasHeight, alignSelf: 'center' }}
     >
       {/* Desk background */}
       <Rect

@@ -27,7 +27,6 @@ export const projectService = {
 
       const { uploadUrl, strokeUrl } = presignRes.data.result;
 
-
       // 🟢 B2: Upload dữ liệu JSON lên S3 bằng fetch PUT
       const putRes = await fetch(uploadUrl, {
         method: "PUT",
@@ -40,7 +39,6 @@ export const projectService = {
         throw new Error(`Upload failed: ${putRes.status} - ${errText}`);
       }
 
-      
       return strokeUrl;
     } catch (err) {
       console.error(`❌ Upload ${fileName} thất bại:`, err);
