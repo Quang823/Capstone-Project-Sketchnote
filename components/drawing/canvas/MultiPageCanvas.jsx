@@ -21,6 +21,7 @@ import Animated, {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import CanvasContainer from "./CanvasContainer";
 import CustomScrollbar from "./CustomScrollbar";
+import DocumentSidebar from "../sidebar/DocumentSidebar";
 import { projectService } from "../../../service/projectService";
 import { calculatePageDimensions } from "../../../utils/pageDimensions";
 
@@ -47,7 +48,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     thickness,
     stabilization,
     eraserMode,
-    isPenMode,
     pageLayers, // 👈 Changed from layers to pageLayers
     activeLayerId,
     setPageLayers, // 👈 Changed from setLayers to setPageLayers
@@ -58,6 +58,9 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   ref
 ) {
   const drawingDataRef = useRef({ pages: {} });
+
+  // Sidebar state
+  const [sidebarVisible, setSidebarVisible] = useState(true);
 
   // Initialize pages based on noteConfig
   const initialPages = useMemo(() => {
@@ -90,6 +93,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const [pages, setPages] = useState(initialPages);
 
   // Initialize layers for initial pages
+  // ⚠️ IMPORTANT: Only run once when component mounts, NOT when setPageLayers changes
   useEffect(() => {
     if (initialPages.length > 0 && setPageLayers) {
       const initialLayers = {};
@@ -100,7 +104,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       });
       setPageLayers((prev) => ({ ...prev, ...initialLayers }));
     }
-  }, [initialPages, setPageLayers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPages]); // ✅ Only depend on initialPages, NOT setPageLayers
   const [activeIndex, setActiveIndex] = useState(0);
   const [pageLayouts, setPageLayouts] = useState({});
   const [scrollY, setScrollY] = useState(0);
@@ -111,9 +116,13 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const [zoomLocked, setZoomLocked] = useState(false);
   const [showZoomOverlay, setShowZoomOverlay] = useState(false);
 
-  // Zoom state - áp dụng cho toàn bộ project
+  // Zoom/Pan state - áp dụng cho toàn bộ project
   const projectScale = useSharedValue(1);
   const baseProjectScale = useSharedValue(1);
+  const projectTranslateX = useSharedValue(0);
+  const projectTranslateY = useSharedValue(0);
+  const baseProjectTranslateX = useSharedValue(0);
+  const baseProjectTranslateY = useSharedValue(0);
   const lastZoomState = useRef(false);
 
   const scrollRef = useRef(null);
@@ -127,6 +136,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   // last-handled in JS to throttle tiny updates
   const lastHandledScrollRef = useRef(0);
   const zoomOverlayTimeoutRef = useRef(null);
+  const scrollRafRef = useRef(null);
+  const [isZoomedIn, setIsZoomedIn] = useState(false);
 
   // Auto-hide zoom overlay sau 2 giây sau khi buông tay
   useEffect(() => {
@@ -155,7 +166,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   });
 
   const { height, width } = Dimensions.get("window");
-  const PAGE_SPACING = 30;
+  const PAGE_SPACING = 12;
   const fallbackHeight = Math.round(height * 0.9);
 
   // Calculate page dimensions from noteConfig
@@ -275,49 +286,74 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   // 🖱 Theo dõi scroll
   // Replace old handleScroll with this JS handler (called from UI worklet via runOnJS)
   const handleScrollFromUI = (offset) => {
-    // throttle tiny moves to avoid spamming JS
-    if (Math.abs(offset - lastHandledScrollRef.current) < 4) return;
+    // Throttle bằng RAF để giảm tần suất setState
+    if (scrollRafRef.current) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      // throttle tiny moves to avoid spamming JS (reduced to 1px for better transform box sync)
+      if (Math.abs(offset - lastHandledScrollRef.current) < 1) return;
 
-    lastHandledScrollRef.current = offset;
+      lastHandledScrollRef.current = offset;
 
-    setScrollY(offset);
+      setScrollY(offset);
 
-    // compute visible window
-    const viewTop = offset;
-    const viewBottom = offset + height;
+      // ✅ Compute visible window
+      const viewTop = offset;
+      const viewBottom = offset + height;
 
-    // only update pageRefs that overlap the visible window
-    pages.forEach((p, i) => {
-      const top = offsets[i] ?? 0;
-      const h = pageLayouts[p.id] ?? fallbackHeight;
-      const bottom = top + h + PAGE_SPACING;
-      const isVisible = bottom >= viewTop && top <= viewBottom;
+      // ✅ Find visible range (binary search-like approach)
+      let firstVisible = 0;
+      let lastVisible = pages.length - 1;
 
-      if (isVisible) {
+      // Find first visible page
+      for (let i = 0; i < pages.length; i++) {
+        const top = offsets[i] ?? 0;
+        const h = pageLayouts[pages[i].id] ?? fallbackHeight;
+        const bottom = top + h + PAGE_SPACING;
+        if (bottom >= viewTop) {
+          firstVisible = i;
+          break;
+        }
+      }
+
+      // Find last visible page
+      for (let i = pages.length - 1; i >= firstVisible; i--) {
+        const top = offsets[i] ?? 0;
+        if (top <= viewBottom) {
+          lastVisible = i;
+          break;
+        }
+      }
+
+      // ✅ Only update visible pages (optimized range)
+      for (let i = firstVisible; i <= lastVisible; i++) {
+        const p = pages[i];
         const pageRef = pageRefs.current[p.id];
         pageRef?.setScrollOffsetY?.(offset - (offsets[i] ?? 0));
       }
-    });
 
-    // compute active page (midpoint method) — same idea as before
-    let current = pages.length - 1;
-    for (let i = 0; i < offsets.length; i++) {
-      const start = offsets[i];
-      const end =
-        i + 1 < offsets.length
-          ? offsets[i + 1]
-          : start + (pageLayouts[pages[i].id] ?? fallbackHeight) + PAGE_SPACING;
-      const mid = start + (end - start) / 2;
-      if (offset < mid) {
-        current = i;
-        break;
+      // compute active page (midpoint method)
+      let current = pages.length - 1;
+      for (let i = 0; i < offsets.length; i++) {
+        const start = offsets[i];
+        const end =
+          i + 1 < offsets.length
+            ? offsets[i + 1]
+            : start +
+              (pageLayouts[pages[i].id] ?? fallbackHeight) +
+              PAGE_SPACING;
+        const mid = start + (end - start) / 2;
+        if (offset < mid) {
+          current = i;
+          break;
+        }
       }
-    }
 
-    if (current !== activeIndex) {
-      setActiveIndex(current);
-      onActivePageChange?.(pages[current]?.id);
-    }
+      if (current !== activeIndex) {
+        setActiveIndex(current);
+        onActivePageChange?.(pages[current]?.id);
+      }
+    });
   };
 
   useAnimatedReaction(
@@ -335,12 +371,43 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   };
 
   // ====== ZOOM PROJECT (Áp dụng cho toàn bộ project) ======
+  const clampProjectPan = () => {
+    "worklet";
+    // Clamp theo kích thước nội dung đã scale để tránh kéo quá
+    const scaleVal = projectScale.value || 1;
+    const contH = containerHeight || 0;
+    const contentH = contentHeight || 0;
+    const pageW = pageDimensions?.width || width || 0;
+    if (!scaleVal || !isFinite(scaleVal) || contH <= 0) return;
+    const scaledHeight = Math.max(0, contentH * scaleVal);
+    const scaledWidth = Math.max(0, pageW * scaleVal);
+
+    const maxY = Math.max(0, (scaledHeight - contH) / 2);
+    const maxX = Math.max(0, (scaledWidth - width) / 2);
+
+    if (isFinite(maxY)) {
+      projectTranslateY.value = Math.min(
+        Math.max(projectTranslateY.value, -maxY),
+        maxY
+      );
+    }
+    if (isFinite(maxX)) {
+      projectTranslateX.value = Math.min(
+        Math.max(projectTranslateX.value, -maxX),
+        maxX
+      );
+    }
+  };
+
   const pinch = Gesture.Pinch()
     .enabled(!zoomLocked)
     .onStart((e) => {
       "worklet";
       try {
         baseProjectScale.value = projectScale.value;
+        // Lưu translate hiện tại để anchor vào tiêu điểm pinch
+        baseProjectTranslateX.value = projectTranslateX.value;
+        baseProjectTranslateY.value = projectTranslateY.value;
         runOnJS(setShowZoomOverlay)(true);
         // Disable scroll khi zoom
         runOnJS(setIsZooming)(true);
@@ -357,13 +424,33 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         const sensitivityFactor = 1.2;
         const scaleDelta = (e.scale - 1) * sensitivityFactor + 1;
 
-        const newScale = baseProjectScale.value * scaleDelta;
-        if (newScale < 0.5) {
-          projectScale.value = 0.5;
+        const newScale = Math.max(
+          1.0,
+          Math.min(3, baseProjectScale.value * scaleDelta)
+        );
+        const prevScale = projectScale.value;
+        if (newScale < 1.0) {
+          projectScale.value = 1.0;
         } else if (newScale > 3) {
           projectScale.value = 3;
         } else {
           projectScale.value = newScale;
+        }
+
+        // Anchor zoom theo tiêu điểm 2 ngón để cảm giác tự nhiên hơn
+        if (
+          typeof e.focalX === "number" &&
+          typeof e.focalY === "number" &&
+          isFinite(e.focalX) &&
+          isFinite(e.focalY)
+        ) {
+          const s = projectScale.value / (prevScale || 1);
+          // Tịnh tiến để giữ tiêu điểm tại chỗ khi scale
+          const dx = e.focalX - width / 2;
+          const dy = e.focalY - height / 2;
+          projectTranslateX.value = (baseProjectTranslateX.value - dx) * s + dx;
+          projectTranslateY.value = (baseProjectTranslateY.value - dy) * s + dy;
+          clampProjectPan();
         }
       } catch (err) {
         console.warn("[Pinch.onUpdate] Error:", err);
@@ -378,12 +465,46 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         if (projectScale.value > 3) {
           projectScale.value = withTiming(3, { duration: 300 });
         }
+        // Sau khi scale, clamp lại pan để không vượt biên
+        clampProjectPan();
         runOnJS(setShowZoomOverlay)(false);
         // Re-enable scroll khi zoom xong
         runOnJS(setIsZooming)(false);
       } catch (err) {
         console.warn("[Pinch.onEnd] Error:", err);
       }
+    });
+
+  // Two-finger pan khi đang zoom để di chuyển project mượt mà
+  const pan = Gesture.Pan()
+    .minPointers(2)
+    .enabled(!zoomLocked)
+    .onStart(() => {
+      "worklet";
+      baseProjectTranslateX.value = projectTranslateX.value;
+      baseProjectTranslateY.value = projectTranslateY.value;
+      // Khi pan 2 ngón, disable scroll
+      runOnJS(setIsZooming)(true);
+    })
+    .onUpdate((e) => {
+      "worklet";
+      try {
+        if (
+          typeof e.translationX !== "number" ||
+          typeof e.translationY !== "number"
+        )
+          return;
+        // Chỉ pan khi đã phóng to để tránh conflict với scroll
+        if ((projectScale.value || 1) <= 1) return;
+        projectTranslateX.value = baseProjectTranslateX.value + e.translationX;
+        projectTranslateY.value = baseProjectTranslateY.value + e.translationY;
+        clampProjectPan();
+      } catch (err) {}
+    })
+    .onEnd(() => {
+      "worklet";
+      clampProjectPan();
+      runOnJS(setIsZooming)(false);
     });
 
   const derivedZoom = useDerivedValue(() =>
@@ -396,14 +517,29 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     }
   );
 
+  // Mirror scale to JS to control scrollEnabled reactively
+  useAnimatedReaction(
+    () => projectScale.value,
+    (s, prev) => {
+      if (s !== prev) runOnJS(setIsZoomedIn)(s > 1.01);
+    }
+  );
+
   const projectAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: projectScale.value }],
+    transform: [
+      { translateX: projectTranslateX.value },
+      { translateY: projectTranslateY.value },
+      { scale: projectScale.value },
+    ],
   }));
 
   // 🪄 Public API
   useImperativeHandle(ref, () => ({
     scrollToPage,
     addPage,
+    
+    // Get current zoom level for image size calculation
+    getCurrentZoom: () => projectScale.value,
 
     addImageStroke: (stroke) => {
       const page = pages[activeIndex];
@@ -493,65 +629,32 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
   return (
     <View style={{ flex: 1, flexDirection: "row" }}>
-      {/* Sidebar */}
-      <View
-        style={{
-          width: 60,
-          backgroundColor: "#fafafa",
-          borderRightWidth: 1,
-          borderColor: "#ddd",
-          alignItems: "center",
+      {/* Document Sidebar */}
+      <DocumentSidebar
+        visible={sidebarVisible}
+        onToggle={() => setSidebarVisible(!sidebarVisible)}
+        pages={pages.map((p, i) => ({ ...p, id: p.id }))}
+        activePageId={pages[activeIndex]?.id}
+        onPageSelect={(pageId) => {
+          const index = pages.findIndex((p) => p.id === pageId);
+          if (index !== -1) scrollToPage(index);
         }}
-      >
-        <Animated.ScrollView
-          contentContainerStyle={{ alignItems: "center", paddingVertical: 10 }}
-        >
-          {pages.map((p, i) => (
-            <TouchableOpacity
-              key={p.id}
-              onPress={() => scrollToPage(i)}
-              style={{
-                marginBottom: 12,
-                width: 40,
-                height: 40,
-                justifyContent: "center",
-                alignItems: "center",
-                borderRadius: 6,
-                borderWidth: 1,
-                borderColor: activeIndex === i ? "#007AFF" : "#ccc",
-                backgroundColor: activeIndex === i ? "#E6F0FF" : "#fff",
-              }}
-            >
-              <Text
-                style={{
-                  fontWeight: "600",
-                  color: activeIndex === i ? "#007AFF" : "#333",
-                }}
-              >
-                {i + 1}
-              </Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            onPress={addPage}
-            style={{
-              marginTop: 8,
-              width: 40,
-              height: 40,
-              justifyContent: "center",
-              alignItems: "center",
-              backgroundColor: "#007AFF",
-              borderRadius: 20,
-            }}
-          >
-            <Text style={{ color: "white", fontSize: 20 }}>＋</Text>
-          </TouchableOpacity>
-        </Animated.ScrollView>
-      </View>
+        onAddPage={addPage}
+        resourceItems={[]}
+      />
 
       {/* Pages - Wrapped with Gesture Detector for project-wide zoom */}
-      <View style={{ flex: 1, overflow: "hidden" }}>
-        <GestureDetector gesture={pinch} simultaneousHandlers={scrollRef}>
+      <View
+        style={{
+          flex: 1,
+          overflow: "hidden",
+          paddingLeft: sidebarVisible ? 280 : 0,
+        }}
+      >
+        <GestureDetector
+          gesture={Gesture.Simultaneous(pinch, pan)}
+          simultaneousHandlers={scrollRef}
+        >
           <Animated.View
             style={[{ flex: 1, alignSelf: "center" }, projectAnimatedStyle]}
           >
@@ -563,13 +666,18 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 paddingVertical: 20,
               }}
               onScroll={onScrollAnimated}
-              scrollEventThrottle={8} // Giảm xuống 8 để tăng độ nhạy
+              scrollEventThrottle={16}
               decelerationRate="normal" // Thêm để scroll mượt hơn
               showsVerticalScrollIndicator={false}
-              scrollEnabled={!isZooming} // Disable scroll when zooming
+              // Chỉ cho phép scroll khi không đang zoom & không phóng to
+              scrollEnabled={!isZooming && !isZoomedIn}
               simultaneousHandlers={scrollRef}
+              onLayout={(e) => {
+                const h = e?.nativeEvent?.layout?.height;
+                if (Number.isFinite(h) && h > 0) setContainerHeight(h);
+              }}
             >
-              {pages.map((p) => (
+              {pages.map((p, i) => (
                 <View
                   key={p.id}
                   style={{
@@ -638,10 +746,11 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                               : updater,
                         }));
                       }, // 👈 Update page-specific layers
-                      isPenMode,
                       rulerPosition,
                       onColorPicked,
                       scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
+                      scrollYShared, // ✅ Animated scroll value
+                      pageOffsetY: offsets[i] ?? 0, // ✅ Page offset trong project
                       backgroundColor: p.backgroundColor,
                       pageTemplate: p.template,
                       backgroundImageUrl: p.imageUrl,
@@ -664,7 +773,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
             {/* CustomScrollbar Component */}
             <CustomScrollbar
-              scrollY={scrollY}
+              scrollYShared={scrollYShared}
               contentHeight={contentHeight}
               containerHeight={containerHeight}
               onScroll={handleCustomScrollbarScroll}
@@ -755,7 +864,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         <TouchableOpacity
           onPress={() => {
             projectScale.value = withTiming(
-              Math.max(projectScale.value - 0.2, 0.5),
+              Math.max(projectScale.value - 0.2, 1.0),
               {
                 duration: 200,
               }

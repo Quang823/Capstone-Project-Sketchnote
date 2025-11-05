@@ -67,7 +67,6 @@ export default function GestureHandler(
     onModifyStrokesBulk,
     onDeleteStroke,
     children,
-    isPenMode,
     canvasRef,
     setRealtimeText,
     zoomState,
@@ -78,6 +77,8 @@ export default function GestureHandler(
     onRulerMoveStart,
     onRulerMoveEnd,
     scrollOffsetY = 0,
+    scrollYShared, // ✅ Animated scroll value
+    pageOffsetY = 0, // ✅ Page offset trong project
     onColorPicked, // 👈 Thêm prop
   },
   ref
@@ -326,9 +327,13 @@ export default function GestureHandler(
   const [draggingText, setDraggingText] = useState(null);
   const [tempStrokeId, setTempStrokeId] = useState(null);
   const getActiveStrokes = useCallback(() => {
+    // ✅ Validate strokes is array before filtering
+    if (!Array.isArray(strokes)) return [];
     return strokes.filter(
       (s) =>
-        (!activeLayerId || s.layerId === activeLayerId) && (s.visible ?? true)
+        s &&
+        (!activeLayerId || s.layerId === activeLayerId) &&
+        (s.visible ?? true)
     );
   }, [strokes, activeLayerId]);
 
@@ -559,7 +564,8 @@ export default function GestureHandler(
   }, [editorVisible, selectedId]);
 
   const selectedStroke = useMemo(
-    () => strokes.find((s) => s.id === selectedId),
+    () =>
+      Array.isArray(strokes) ? strokes.find((s) => s?.id === selectedId) : null,
     [strokes, selectedId]
   );
 
@@ -1134,24 +1140,7 @@ export default function GestureHandler(
       let py = e.y;
       const pressure = e.pressure ?? 0.5;
 
-      // Áp dụng snap to ruler khi bắt đầu vẽ
-      if (
-        tool === "pen" &&
-        isPenMode &&
-        rulerPosition &&
-        typeof snapPointToRuler === "function"
-      ) {
-        const p = { x: px, y: py, pressure };
-        const snapped = snapPointToRuler(p);
-        if (
-          snapped &&
-          Number.isFinite(snapped.x) &&
-          Number.isFinite(snapped.y)
-        ) {
-          px = snapped.x;
-          py = snapped.y;
-        }
-      }
+      // Snap to ruler removed - no longer needed
 
       // === defensive hit-test + RULER logic: chuyển screen -> canvas, tính cạnh, set lock, apply barrier ===
       try {
@@ -1229,7 +1218,7 @@ export default function GestureHandler(
                   py = constrained.y;
                 }
               } catch (errCon) {
-                console.warn("[RULER] constrainToRulerBarrier failed", errCon);
+                // Silent fail - avoid console spam in gesture handlers
               }
 
               // debug info
@@ -1238,7 +1227,7 @@ export default function GestureHandler(
           }
         }
       } catch (err) {
-        console.warn("ruler lock check failed:", err);
+        // Silent fail - avoid console spam in gesture handlers
       }
 
       // 🎨 Eyedropper tool - pick color from stroke (trong pan gesture)
@@ -1356,9 +1345,11 @@ export default function GestureHandler(
       }
 
       // Các logic text/drag init (giữ nguyên) - nhưng dùng px/py thay vì e.x/e.y
-      const validStrokes = strokes.filter(
-        (s) => s.layerId === activeLayerId && (s.visible ?? true)
-      );
+      const validStrokes = Array.isArray(strokes)
+        ? strokes.filter(
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+          )
+        : [];
       if (selectedId && draggingText) {
         const base = strokes.find((s) => s.id === selectedId);
         if (base) dragOriginRef.current = { x: base.x ?? 0, y: base.y ?? 0 };
@@ -1435,9 +1426,11 @@ export default function GestureHandler(
       }
 
       // Các xử lý khác giữ nguyên (text dragging, eraser, normal drawing...)
-      const validStrokes = strokes.filter(
-        (s) => s.layerId === activeLayerId && (s.visible ?? true)
-      );
+      const validStrokes = Array.isArray(strokes)
+        ? strokes.filter(
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+          )
+        : [];
 
       // Text dragging (live visual + commit updates)
       if (selectedId && draggingText) {
@@ -1596,7 +1589,7 @@ export default function GestureHandler(
             );
           }
         } catch (err) {
-          console.warn("[RULER] Error applying ruler lock:", err);
+          // Silent fail - avoid console spam in gesture handlers
         }
       } else if (rulerPosition && !["lasso", "eraser"].includes(tool)) {
         try {
@@ -1617,7 +1610,7 @@ export default function GestureHandler(
             }
           }
         } catch (err) {
-          console.warn("[RULER] Error applying ruler barrier:", err);
+          // Silent fail - avoid console spam in gesture handlers
         }
       }
 
@@ -1647,20 +1640,23 @@ export default function GestureHandler(
         return;
       if (tool === "lasso" && !isMovingLasso && lassoPoints.length > 3) {
         const poly = lassoPoints;
-        const insideIds = strokes
-          .filter(
-            (s) =>
-              (!activeLayerId || s.layerId === activeLayerId) &&
-              (s.points || s.x)
-          )
-          .filter((s) => {
-            const bbox = getBoundingBoxForStroke(s);
-            if (!bbox) return false;
-            const cx = (bbox.minX + bbox.maxX) / 2;
-            const cy = (bbox.minY + bbox.maxY) / 2;
-            return pointInPolygon(poly, cx, cy);
-          })
-          .map((s) => s.id);
+        const insideIds = Array.isArray(strokes)
+          ? strokes
+              .filter(
+                (s) =>
+                  s &&
+                  (!activeLayerId || s.layerId === activeLayerId) &&
+                  (s.points || s.x)
+              )
+              .filter((s) => {
+                const bbox = getBoundingBoxForStroke(s);
+                if (!bbox) return false;
+                const cx = (bbox.minX + bbox.maxX) / 2;
+                const cy = (bbox.minY + bbox.maxY) / 2;
+                return pointInPolygon(poly, cx, cy);
+              })
+              .map((s) => s.id)
+          : [];
 
         if (insideIds.length > 0) {
           setLassoOrigin(
@@ -1768,9 +1764,11 @@ export default function GestureHandler(
       liveRef.current = [];
       setCurrentPoints([]);
 
-      const validStrokes = strokes.filter(
-        (s) => s.layerId === activeLayerId && (s.visible ?? true)
-      );
+      const validStrokes = Array.isArray(strokes)
+        ? strokes.filter(
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+          )
+        : [];
       if (!activeLayerId) return;
 
       if (eraserMode === "object" && finalPoints.length > 2) {
@@ -1951,7 +1949,9 @@ export default function GestureHandler(
         height: lassoBaseBox.height,
       };
     }
-    const sel = strokes.filter((s) => lassoSelection.includes(s.id));
+    const sel = Array.isArray(strokes)
+      ? strokes.filter((s) => s && lassoSelection.includes(s.id))
+      : [];
     if (!sel.length) return null;
     let minX = Infinity,
       minY = Infinity,
@@ -2021,9 +2021,9 @@ export default function GestureHandler(
             );
           }}
           onCopy={() => {
-            const selStrokes = strokes.filter((s) =>
-              lassoSelection.includes(s.id)
-            );
+            const selStrokes = Array.isArray(strokes)
+              ? strokes.filter((s) => s && lassoSelection.includes(s.id))
+              : [];
             selStrokes.forEach((s) => {
               const clone = {
                 ...s,
@@ -2312,283 +2312,284 @@ export default function GestureHandler(
       />
       {selectedId &&
         selectedBox &&
-        ["image", "sticker", "table"].includes(selectedStroke?.tool) && (
-          <>
-            <ImageTransformBox
-              {...selectedBox}
-              scale={zoomMirror.scale}
-              pan={{
-                x: zoomMirror.x,
-                y: zoomMirror.y,
-              }}
-              onMoveStart={() => {
-                const s = strokes.find((it) => it.id === selectedId);
-                if (s) {
+        ["image", "sticker", "table"].includes(selectedStroke?.tool) &&
+        (() => {
+          // --- TÍNH SCREEN COORDINATES ---
+          const s = zoomMirror?.scale || 1;
+          const tx = zoomMirror?.x || 0;
+          const ty = zoomMirror?.y || 0;
+          const pageX = page?.x ?? 0;
+          const pageY = page?.y ?? 0;
+          const soY = scrollOffsetY || 0;
+
+          const screenX = (selectedBox.x - pageX) * s + tx;
+          const screenY = (selectedBox.y - pageY) * s + ty - soY;
+          const screenW = (selectedBox.width || 0) * s;
+          const screenH = (selectedBox.height || 0) * s;
+
+          // --- RENDER ---
+          return (
+            <>
+              <ImageTransformBox
+                x={screenX}
+                y={screenY}
+                width={screenW}
+                height={screenH}
+                rotation={selectedBox.rotation ?? 0}
+                scale={1}
+                pan={{ x: 0, y: 0 }}
+                onMoveStart={() => {
+                  const sItem = strokes.find((it) => it.id === selectedId);
+                  if (sItem) {
+                    liveTransformRef.current.origin = {
+                      x: sItem.x ?? 0,
+                      y: sItem.y ?? 0,
+                      rotation: sItem.rotation ?? 0,
+                    };
+                  } else if (selectedBox) {
+                    liveTransformRef.current.origin = {
+                      x: selectedBox.x ?? 0,
+                      y: selectedBox.y ?? 0,
+                      rotation: selectedBox.rotation ?? 0,
+                    };
+                  }
+                  liveTransformRef.current.dx = 0;
+                  liveTransformRef.current.dy = 0;
+                  liveTransformRef.current.dw = 0;
+                  liveTransformRef.current.dh = 0;
+                  liveTransformRef.current.drot = 0;
+                }}
+                onMove={(dx, dy) => {
+                  if (!selectedId) return;
+                  setSelectedBox((b) =>
+                    b ? { ...b, x: b.x + dx, y: b.y + dy } : b
+                  );
+                  liveTransformRef.current.dx =
+                    (liveTransformRef.current.dx || 0) + dx;
+                  liveTransformRef.current.dy =
+                    (liveTransformRef.current.dy || 0) + dy;
+                  if (
+                    typeof onLiveUpdateStroke === "function" &&
+                    liveTransformRef.current.origin
+                  ) {
+                    const origin = liveTransformRef.current.origin;
+                    onLiveUpdateStroke(selectedId, {
+                      x: (origin.x ?? 0) + (liveTransformRef.current.dx || 0),
+                      y: (origin.y ?? 0) + (liveTransformRef.current.dy || 0),
+                    });
+                  }
+                }}
+                onMoveEnd={() => {
+                  const index = strokes.findIndex((s) => s.id === selectedId);
+                  if (index !== -1) {
+                    const sItem = strokes[index];
+                    const final = {
+                      ...sItem,
+                      x: (sItem.x ?? 0) + (liveTransformRef.current.dx || 0),
+                      y: (sItem.y ?? 0) + (liveTransformRef.current.dy || 0),
+                      width:
+                        (sItem.width ?? 0) + (liveTransformRef.current.dw || 0),
+                      height:
+                        (sItem.height ?? 0) +
+                        (liveTransformRef.current.dh || 0),
+                      rotation:
+                        (sItem.rotation ?? 0) +
+                        (liveTransformRef.current.drot || 0),
+                    };
+                    if (typeof onModifyStroke === "function")
+                      onModifyStroke(index, final);
+                  }
+                  liveTransformRef.current.dx = 0;
+                  liveTransformRef.current.dy = 0;
+                  liveTransformRef.current.dw = 0;
+                  liveTransformRef.current.dh = 0;
+                  liveTransformRef.current.drot = 0;
+                }}
+                onResizeStart={(corner) => {
+                  const sItem = strokes.find((it) => it.id === selectedId);
+                  const base = sItem || selectedBox || {};
+                  const baseWidth =
+                    base.width && base.width > 0
+                      ? base.width
+                      : sItem?.naturalWidth || selectedBox?.width || 100;
+                  const baseHeight =
+                    base.height && base.height > 0
+                      ? base.height
+                      : sItem?.naturalHeight || selectedBox?.height || 100;
+
                   liveTransformRef.current.origin = {
-                    x: s.x ?? 0,
-                    y: s.y ?? 0,
-                    rotation: s.rotation ?? 0,
+                    x: Number.isFinite(base.x) ? base.x : 0,
+                    y: Number.isFinite(base.y) ? base.y : 0,
+                    width: baseWidth,
+                    height: baseHeight,
+                    rotation: base.rotation ?? 0,
                   };
-                } else if (selectedBox) {
+                  liveTransformRef.current.corner = corner;
+                  liveTransformRef.current.dw = 0;
+                  liveTransformRef.current.dh = 0;
+                  liveTransformRef.current.dx = 0;
+                  liveTransformRef.current.dy = 0;
+                }}
+                onResize={(corner, dx, dy) => {
+                  const o = liveTransformRef.current.origin;
+                  if (!o) return;
+                  const ratio = (o.width || 1) / (o.height || 1);
+                  let newWidth = o.width;
+                  let newHeight = o.height;
+                  let newX = o.x;
+                  let newY = o.y;
+
+                  switch (corner) {
+                    case "br":
+                      newWidth = Math.max(20, o.width + dx);
+                      newHeight = Math.max(20, newWidth / ratio);
+                      break;
+                    case "tr":
+                      newWidth = Math.max(20, o.width + dx);
+                      newHeight = Math.max(20, newWidth / ratio);
+                      newY = o.y - (newHeight - o.height);
+                      break;
+                    case "bl":
+                      newWidth = Math.max(20, o.width - dx);
+                      newHeight = Math.max(20, newWidth / ratio);
+                      newX = o.x + dx;
+                      break;
+                    case "tl":
+                      newWidth = Math.max(20, o.width - dx);
+                      newHeight = Math.max(20, newWidth / ratio);
+                      newX = o.x + dx;
+                      newY = o.y - (newHeight - o.height);
+                      break;
+                  }
+
+                  liveTransformRef.current.dw = newWidth - o.width;
+                  liveTransformRef.current.dh = newHeight - o.height;
+                  liveTransformRef.current.dx = newX - o.x;
+                  liveTransformRef.current.dy = newY - o.y;
+
+                  setSelectedBox((box) =>
+                    box
+                      ? {
+                          ...box,
+                          x: newX,
+                          y: newY,
+                          width: newWidth,
+                          height: newHeight,
+                        }
+                      : box
+                  );
+
+                  if (typeof onLiveUpdateStroke === "function" && selectedId) {
+                    onLiveUpdateStroke(selectedId, {
+                      x: newX,
+                      y: newY,
+                      width: newWidth,
+                      height: newHeight,
+                    });
+                    return;
+                  }
+
+                  const index = strokes.findIndex((s) => s.id === selectedId);
+                  if (index !== -1 && typeof onModifyStroke === "function") {
+                    onModifyStroke(index, {
+                      x: newX,
+                      y: newY,
+                      width: newWidth,
+                      height: newHeight,
+                      __transient: true,
+                    });
+                  }
+                }}
+                onResizeEnd={() => {
+                  const index = strokes.findIndex((s) => s.id === selectedId);
+                  if (index !== -1) {
+                    const sItem = strokes[index];
+                    const o = liveTransformRef.current.origin || sItem;
+                    const final = {
+                      ...sItem,
+                      x: (o.x ?? 0) + (liveTransformRef.current.dx || 0),
+                      y: (o.y ?? 0) + (liveTransformRef.current.dy || 0),
+                      width:
+                        (o.width ?? 0) + (liveTransformRef.current.dw || 0),
+                      height:
+                        (o.height ?? 0) + (liveTransformRef.current.dh || 0),
+                    };
+                    if (typeof onModifyStroke === "function")
+                      onModifyStroke(index, final);
+                  }
+                  liveTransformRef.current.dx = 0;
+                  liveTransformRef.current.dy = 0;
+                  liveTransformRef.current.dw = 0;
+                  liveTransformRef.current.dh = 0;
+                }}
+                onRotateStart={() => {
+                  const sItem = strokes.find((it) => it.id === selectedId);
+                  const base = sItem || selectedBox;
                   liveTransformRef.current.origin = {
-                    x: selectedBox.x ?? 0,
-                    y: selectedBox.y ?? 0,
-                    rotation: selectedBox.rotation ?? 0,
+                    ...(liveTransformRef.current.origin || {}),
+                    rotation: base?.rotation ?? 0,
                   };
-                }
-                liveTransformRef.current.dx = 0;
-                liveTransformRef.current.dy = 0;
-                liveTransformRef.current.dw = 0;
-                liveTransformRef.current.dh = 0;
-                liveTransformRef.current.drot = 0;
-              }}
-              onMove={(dx, dy) => {
-                if (!selectedId) return;
-
-                // update selection box UI
-                setSelectedBox((b) =>
-                  b ? { ...b, x: b.x + dx, y: b.y + dy } : b
-                );
-
-                // accumulate delta into ref
-                liveTransformRef.current.dx =
-                  (liveTransformRef.current.dx || 0) + dx;
-                liveTransformRef.current.dy =
-                  (liveTransformRef.current.dy || 0) + dy;
-
-                // propagate live update (if parent supports it)
-                if (
-                  typeof onLiveUpdateStroke === "function" &&
-                  liveTransformRef.current.origin
-                ) {
-                  const origin = liveTransformRef.current.origin;
-                  onLiveUpdateStroke(selectedId, {
-                    x: (origin.x ?? 0) + (liveTransformRef.current.dx || 0),
-                    y: (origin.y ?? 0) + (liveTransformRef.current.dy || 0),
-                  });
-                }
-              }}
-              // on release / end - commit once
-              onMoveEnd={() => {
-                const index = strokes.findIndex((s) => s.id === selectedId);
-                if (index !== -1) {
-                  const s = strokes[index];
-                  const final = {
-                    ...s,
-                    x: (s.x ?? 0) + (liveTransformRef.current.dx || 0),
-                    y: (s.y ?? 0) + (liveTransformRef.current.dy || 0),
-                    width: (s.width ?? 0) + (liveTransformRef.current.dw || 0),
-                    height:
-                      (s.height ?? 0) + (liveTransformRef.current.dh || 0),
-                    rotation:
-                      (s.rotation ?? 0) + (liveTransformRef.current.drot || 0),
-                  };
-                  if (typeof onModifyStroke === "function")
-                    onModifyStroke(index, final);
-                }
-                // reset accumulators
-                liveTransformRef.current.dx = 0;
-                liveTransformRef.current.dy = 0;
-                liveTransformRef.current.dw = 0;
-                liveTransformRef.current.dh = 0;
-                liveTransformRef.current.drot = 0;
-              }}
-              onResizeStart={(corner) => {
-                const s = strokes.find((it) => it.id === selectedId);
-                const base = s || selectedBox || {};
-                // fallback width/height để tránh 0 hoặc undefined
-                const baseWidth =
-                  base.width && base.width > 0
-                    ? base.width
-                    : s?.naturalWidth || selectedBox?.width || 100;
-                const baseHeight =
-                  base.height && base.height > 0
-                    ? base.height
-                    : s?.naturalHeight || selectedBox?.height || 100;
-
-                liveTransformRef.current.origin = {
-                  x: Number.isFinite(base.x) ? base.x : 0,
-                  y: Number.isFinite(base.y) ? base.y : 0,
-                  width: baseWidth,
-                  height: baseHeight,
-                  rotation: base.rotation ?? 0,
-                };
-                liveTransformRef.current.corner = corner;
-                liveTransformRef.current.dw = 0;
-                liveTransformRef.current.dh = 0;
-                liveTransformRef.current.dx = 0;
-                liveTransformRef.current.dy = 0;
-              }}
-              onResize={(corner, dx, dy) => {
-                const o = liveTransformRef.current.origin;
-                if (!o) return;
-
-                // Nếu ImageTransformBox truyền deltas đã scale -> dùng trực tiếp.
-                // Nếu không chắc, bạn có thể thử chia cho scale: dx/scale (nếu cần).
-                // Mình giả định ImageTransformBox đã trả về deltas ở cùng hệ với origin.
-
-                const ratio = (o.width || 1) / (o.height || 1);
-                let newWidth = o.width;
-                let newHeight = o.height;
-                let newX = o.x;
-                let newY = o.y;
-
-                // NOTE: convention: dx positive = pointer moved right; dy positive = pointer moved down.
-                switch (corner) {
-                  case "br":
-                    newWidth = Math.max(20, o.width + dx);
-                    newHeight = Math.max(20, newWidth / ratio);
-                    break;
-                  case "tr":
-                    newWidth = Math.max(20, o.width + dx);
-                    newHeight = Math.max(20, newWidth / ratio);
-                    newY = o.y - (newHeight - o.height);
-                    break;
-                  case "bl":
-                    // left corners: dragging left (dx negative) should increase width
-                    newWidth = Math.max(20, o.width - dx);
-                    newHeight = Math.max(20, newWidth / ratio);
-                    newX = o.x + dx;
-                    break;
-                  case "tl":
-                    newWidth = Math.max(20, o.width - dx);
-                    newHeight = Math.max(20, newWidth / ratio);
-                    newX = o.x + dx;
-                    newY = o.y - (newHeight - o.height);
-                    break;
-                }
-
-                liveTransformRef.current.dw = newWidth - o.width;
-                liveTransformRef.current.dh = newHeight - o.height;
-                liveTransformRef.current.dx = newX - o.x;
-                liveTransformRef.current.dy = newY - o.y;
-
-                // Update selection box UI immediately
-                setSelectedBox((box) =>
-                  box
-                    ? {
-                        ...box,
-                        x: newX,
-                        y: newY,
-                        width: newWidth,
-                        height: newHeight,
-                      }
-                    : box
-                );
-
-                // If parent supports fast live update (Skia), call it
-                if (typeof onLiveUpdateStroke === "function" && selectedId) {
-                  onLiveUpdateStroke(selectedId, {
-                    x: newX,
-                    y: newY,
-                    width: newWidth,
-                    height: newHeight,
-                  });
-                  // do NOT call onModifyStroke here (we rely on Skia live)
-                  return;
-                }
-
-                // Fallback: emit a transient onModifyStroke so image updates visually during resize
-                const index = strokes.findIndex((s) => s.id === selectedId);
-                if (index !== -1 && typeof onModifyStroke === "function") {
-                  onModifyStroke(index, {
-                    x: newX,
-                    y: newY,
-                    width: newWidth,
-                    height: newHeight,
-                    __transient: true, // parent can treat transient updates lightweight
-                  });
-                }
-              }}
-              onResizeEnd={() => {
-                const index = strokes.findIndex((s) => s.id === selectedId);
-                if (index !== -1) {
-                  const s = strokes[index];
-                  const o = liveTransformRef.current.origin || s;
-                  const final = {
-                    ...s,
-                    x: (o.x ?? 0) + (liveTransformRef.current.dx || 0),
-                    y: (o.y ?? 0) + (liveTransformRef.current.dy || 0),
-                    width: (o.width ?? 0) + (liveTransformRef.current.dw || 0),
-                    height:
-                      (o.height ?? 0) + (liveTransformRef.current.dh || 0),
-                  };
-                  if (typeof onModifyStroke === "function")
-                    onModifyStroke(index, final); // final commit (no __transient)
-                }
-                liveTransformRef.current.dx = 0;
-                liveTransformRef.current.dy = 0;
-                liveTransformRef.current.dw = 0;
-                liveTransformRef.current.dh = 0;
-              }}
-              onRotateStart={() => {
-                const s = strokes.find((it) => it.id === selectedId);
-                const base = s || selectedBox;
-                liveTransformRef.current.origin = {
-                  ...(liveTransformRef.current.origin || {}),
-                  rotation: base?.rotation ?? 0,
-                };
-                liveTransformRef.current.drot = 0;
-              }}
-              onRotate={(rot) => {
-                const originRot =
-                  liveTransformRef.current.origin?.rotation || 0;
-                liveTransformRef.current.drot = rot - originRot;
-                setSelectedBox((b) => (b ? { ...b, rotation: rot } : b));
-                // live update rotation for the image
-                if (typeof onLiveUpdateStroke === "function" && selectedId) {
-                  onLiveUpdateStroke(selectedId, { rotation: rot });
-                }
-              }}
-              onRotateEnd={() => {
-                const index = strokes.findIndex((s) => s.id === selectedId);
-                if (index !== -1) {
-                  const s = strokes[index];
+                  liveTransformRef.current.drot = 0;
+                }}
+                onRotate={(rot) => {
                   const originRot =
-                    liveTransformRef.current.origin?.rotation ||
-                    s.rotation ||
-                    0;
-                  const finalRot =
-                    originRot + (liveTransformRef.current.drot || 0);
-                  if (typeof onModifyStroke === "function")
-                    onModifyStroke(index, { rotation: finalRot });
-                }
-                liveTransformRef.current.drot = 0;
-              }}
-            />
+                    liveTransformRef.current.origin?.rotation || 0;
+                  liveTransformRef.current.drot = rot - originRot;
+                  setSelectedBox((b) => (b ? { ...b, rotation: rot } : b));
+                  if (typeof onLiveUpdateStroke === "function" && selectedId) {
+                    onLiveUpdateStroke(selectedId, { rotation: rot });
+                  }
+                }}
+                onRotateEnd={() => {
+                  const index = strokes.findIndex((s) => s.id === selectedId);
+                  if (index !== -1) {
+                    const sItem = strokes[index];
+                    const originRot =
+                      liveTransformRef.current.origin?.rotation ||
+                      sItem.rotation ||
+                      0;
+                    const finalRot =
+                      originRot + (liveTransformRef.current.drot || 0);
+                    if (typeof onModifyStroke === "function")
+                      onModifyStroke(index, { rotation: finalRot });
+                  }
+                  liveTransformRef.current.drot = 0;
+                }}
+              />
 
-            <ImageSelectionBox
-              {...selectedBox}
-              onCopy={() => {
-                const target = strokes.find((s) => s.id === selectedId);
-                if (!target) return;
-                const newStroke = {
-                  ...target,
-                  id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-                  x: target.x + 20,
-                  y: target.y + 20,
-                };
-                onAddStroke?.(newStroke);
-                setSelectedId(null);
-                setSelectedBox(null);
-              }}
-              onCut={() => {
-                const index = strokes.findIndex((s) => s.id === selectedId);
-                if (index !== -1 && typeof onDeleteStroke === "function")
-                  onDeleteStroke(index);
-                setSelectedId(null);
-                setSelectedBox(null);
-              }}
-              onDelete={() => {
-                const index = strokes.findIndex((s) => s.id === selectedId);
-                if (index !== -1 && typeof onDeleteStroke === "function")
-                  onDeleteStroke(index);
-                setSelectedId(null);
-                setSelectedBox(null);
-              }}
-            />
-          </>
-        )}
+              <ImageSelectionBox
+                {...selectedBox}
+                onCopy={() => {
+                  const target = strokes.find((s) => s.id === selectedId);
+                  if (!target) return;
+                  const newStroke = {
+                    ...target,
+                    id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                    x: target.x + 20,
+                    y: target.y + 20,
+                  };
+                  onAddStroke?.(newStroke);
+                  setSelectedId(null);
+                  setSelectedBox(null);
+                }}
+                onCut={() => {
+                  const index = strokes.findIndex((s) => s.id === selectedId);
+                  if (index !== -1 && typeof onDeleteStroke === "function")
+                    onDeleteStroke(index);
+                  setSelectedId(null);
+                  setSelectedBox(null);
+                }}
+                onDelete={() => {
+                  const index = strokes.findIndex((s) => s.id === selectedId);
+                  if (index !== -1 && typeof onDeleteStroke === "function")
+                    onDeleteStroke(index);
+                  setSelectedId(null);
+                  setSelectedBox(null);
+                }}
+              />
+            </>
+          );
+        })()}
     </>
   );
 }

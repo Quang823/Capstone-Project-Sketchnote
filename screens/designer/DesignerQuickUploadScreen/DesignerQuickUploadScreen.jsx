@@ -16,7 +16,6 @@ import { designerQuickUploadStyles } from "./DesignerQuickUploadScreen.styles";
 import { resourceService } from "../../../service/resourceService";
 import MultipleImageUploader from "../../../common/MultipleImageUploader";
 
-
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerQuickUploadScreen() {
@@ -36,7 +35,8 @@ export default function DesignerQuickUploadScreen() {
   // ====== PERMISSION ======
   useEffect(() => {
     (async () => {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Toast.show({
           type: "error",
@@ -48,16 +48,16 @@ export default function DesignerQuickUploadScreen() {
   }, []);
 
   // ====== DEBUG: Log images state ======
-  useEffect(() => {
-    console.log("🖼️ Images state updated:", images);
-  }, [images]);
+  // useEffect(() => {
+  //   console.log("🖼️ Images state updated:", images);
+  // }, [images]);
 
   // ====== HANDLE IMAGE UPLOADED ======
   const handleImageUploaded = (url) => {
-    console.log("📸 Received image URL:", url);
+    // console.log("📸 Received image URL:", url);
     setImages((prev) => {
       const updated = [...prev, url];
-      console.log("✅ Updated images array:", updated);
+      // console.log("✅ Updated images array:", updated);
       return updated;
     });
   };
@@ -151,7 +151,9 @@ export default function DesignerQuickUploadScreen() {
         <Pressable onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
-        <Text style={designerQuickUploadStyles.headerTitle}>Upload Template</Text>
+        <Text style={designerQuickUploadStyles.headerTitle}>
+          Upload Template
+        </Text>
         <Pressable onPress={handleUpload} disabled={isUploading}>
           <Text
             style={[
@@ -164,10 +166,15 @@ export default function DesignerQuickUploadScreen() {
         </Pressable>
       </View>
 
-      <ScrollView style={designerQuickUploadStyles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={designerQuickUploadStyles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Template Name */}
         <View style={designerQuickUploadStyles.inputContainer}>
-          <Text style={designerQuickUploadStyles.inputLabel}>Template Name *</Text>
+          <Text style={designerQuickUploadStyles.inputLabel}>
+            Template Name *
+          </Text>
           <TextInput
             style={designerQuickUploadStyles.textInput}
             value={name}
@@ -178,9 +185,14 @@ export default function DesignerQuickUploadScreen() {
 
         {/* Description */}
         <View style={designerQuickUploadStyles.inputContainer}>
-          <Text style={designerQuickUploadStyles.inputLabel}>Description *</Text>
+          <Text style={designerQuickUploadStyles.inputLabel}>
+            Description *
+          </Text>
           <TextInput
-            style={[designerQuickUploadStyles.textInput, designerQuickUploadStyles.textArea]}
+            style={[
+              designerQuickUploadStyles.textInput,
+              designerQuickUploadStyles.textArea,
+            ]}
             value={description}
             onChangeText={setDescription}
             placeholder="Enter description..."
@@ -201,7 +213,9 @@ export default function DesignerQuickUploadScreen() {
 
         {/* Price */}
         <View style={designerQuickUploadStyles.inputContainer}>
-          <Text style={designerQuickUploadStyles.inputLabel}>Price (VND) *</Text>
+          <Text style={designerQuickUploadStyles.inputLabel}>
+            Price (VND) *
+          </Text>
           <TextInput
             style={designerQuickUploadStyles.textInput}
             value={price}
@@ -212,9 +226,17 @@ export default function DesignerQuickUploadScreen() {
         </View>
 
         {/* Release & Expire Dates */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
           <View style={[designerQuickUploadStyles.inputContainer, { flex: 1 }]}>
-            <Text style={designerQuickUploadStyles.inputLabel}>Release Date *</Text>
+            <Text style={designerQuickUploadStyles.inputLabel}>
+              Release Date *
+            </Text>
             <TextInput
               style={designerQuickUploadStyles.textInput}
               value={releaseDate}
@@ -223,7 +245,9 @@ export default function DesignerQuickUploadScreen() {
             />
           </View>
           <View style={[designerQuickUploadStyles.inputContainer, { flex: 1 }]}>
-            <Text style={designerQuickUploadStyles.inputLabel}>Expired Date *</Text>
+            <Text style={designerQuickUploadStyles.inputLabel}>
+              Expired Date *
+            </Text>
             <TextInput
               style={designerQuickUploadStyles.textInput}
               value={expiredTime}
@@ -235,7 +259,9 @@ export default function DesignerQuickUploadScreen() {
 
         {/* Images Section */}
         <View style={designerQuickUploadStyles.imageUploadSection}>
-          <Text style={designerQuickUploadStyles.sectionTitle}>Images * ({images.length})</Text>
+          <Text style={designerQuickUploadStyles.sectionTitle}>
+            Images * ({images.length})
+          </Text>
           <MultipleImageUploader
             onImageUploaded={handleImageUploaded}
             maxImages={10}
@@ -244,8 +270,16 @@ export default function DesignerQuickUploadScreen() {
 
         {/* Item URLs Section - Text Input */}
         <View style={designerQuickUploadStyles.itemsSection}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={designerQuickUploadStyles.sectionTitle}>Item URLs (Optional)</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Text style={designerQuickUploadStyles.sectionTitle}>
+              Item URLs (Optional)
+            </Text>
             <Pressable
               onPress={addItemUrl}
               style={{
@@ -258,7 +292,9 @@ export default function DesignerQuickUploadScreen() {
               }}
             >
               <Icon name="add" size={16} color="#fff" />
-              <Text style={{ color: "#fff", marginLeft: 4, fontSize: 14 }}>Add URL</Text>
+              <Text style={{ color: "#fff", marginLeft: 4, fontSize: 14 }}>
+                Add URL
+              </Text>
             </Pressable>
           </View>
 
@@ -301,13 +337,16 @@ export default function DesignerQuickUploadScreen() {
         <Pressable
           style={[
             designerQuickUploadStyles.uploadButtonContainer,
-            isUploading && designerQuickUploadStyles.uploadButtonContainerDisabled,
+            isUploading &&
+              designerQuickUploadStyles.uploadButtonContainerDisabled,
           ]}
           onPress={handleUpload}
           disabled={isUploading}
         >
           <LinearGradient
-            colors={isUploading ? ["#9CA3AF", "#6B7280"] : ["#10B981", "#059669"]}
+            colors={
+              isUploading ? ["#9CA3AF", "#6B7280"] : ["#10B981", "#059669"]
+            }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={designerQuickUploadStyles.uploadButtonGradient}

@@ -53,9 +53,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     onZoomChange,
     toolConfigs = {},
     eraserMode,
-    isPenMode,
     rulerPosition,
     scrollOffsetY = 0,
+    scrollYShared, // ✅ Animated scroll value
+    pageOffsetY = 0, // ✅ Page offset trong project
     onColorPicked,
     backgroundColor = "#FFFFFF", // 👈 Add backgroundColor prop
     pageTemplate = "blank", // 👈 Add template prop
@@ -140,15 +141,15 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   const getActiveLayer = useCallback(() => {
     if (!Array.isArray(layers) || layers.length === 0) return null;
-    
+
     // Try to find layer by activeLayerId
     let layer = layers.find((l) => l.id === activeLayerId);
-    
+
     // If not found, fallback to first layer
     if (!layer && layers.length > 0) {
       layer = layers[0];
     }
-    
+
     return layer || null;
   }, [layers, activeLayerId]);
 
@@ -167,13 +168,17 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   );
 
   const updateLayerById = (layerId, updateFn) => {
-    setLayers((prev) =>
-      prev.map((l) =>
-        l.id === layerId ? { ...l, strokes: updateFn(l.strokes) } : l
-      )
-    );
+    setLayers((prev) => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((l) =>
+        l?.id === layerId ? { ...l, strokes: updateFn(l.strokes || []) } : l
+      );
+    });
   };
-  const visibleLayers = layers.filter((l) => l.visible);
+  // ✅ Safe filter with validation
+  const visibleLayers = Array.isArray(layers)
+    ? layers.filter((l) => l?.visible)
+    : [];
 
   // ====== ZOOM / PAN ======
   const scale = useSharedValue(1);
@@ -419,7 +424,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       };
 
       addStrokeInternal(newStroke);
-      console.log("🖼️ Image added:", newStroke);
+      // console.log("🖼️ Image added:", newStroke);
     } catch (err) {
       console.error("Failed to add image:", err);
       Alert.alert("Lỗi ảnh", "Không thể đọc hoặc hiển thị ảnh này.");
@@ -703,7 +708,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             setColor={setColor}
             setTool={setTool}
             eraserMode={eraserMode}
-            isPenMode={isPenMode}
             // ⬇️ giữ nguyên các callback xử lý stroke nhưng không truyền setStrokes trực tiếp
             activeLayerId={activeLayerId}
             onAddStroke={addStrokeInternal}
@@ -733,6 +737,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             setRealtimeText={setRealtimeText}
             rulerPosition={rulerPosition}
             scrollOffsetY={scrollOffsetY}
+            scrollYShared={scrollYShared}
+            pageOffsetY={pageOffsetY}
             onColorPicked={onColorPicked}
             zoomState={{
               scale,

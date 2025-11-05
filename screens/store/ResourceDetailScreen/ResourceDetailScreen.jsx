@@ -30,14 +30,11 @@ export default function ResourceDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-
-
-
   useEffect(() => {
     const fetchResource = async () => {
       try {
         const data = await resourceService.getResourceById(resourceId);
-        console.log("📦 Resource Detail:", data);
+        //console.log("📦 Resource Detail:", data);
         setResource(data);
       } catch (error) {
         Toast.show({
@@ -86,12 +83,11 @@ export default function ResourceDetailScreen() {
         resource.images?.find((img) => img.isThumbnail)?.imageUrl ||
         resource.images?.[0]?.imageUrl ||
         "https://via.placeholder.com/150",
-         designer: resource.designer,
-    releaseDate: resource.releaseDate,
-    expiredTime: resource.expiredTime,
-    isActive: resource.isActive,
+      designer: resource.designer,
+      releaseDate: resource.releaseDate,
+      expiredTime: resource.expiredTime,
+      isActive: resource.isActive,
     };
-    
 
     addToCart(newItem);
 
@@ -138,10 +134,14 @@ export default function ResourceDetailScreen() {
       stars.push(<Icon key={i} name="star" size={18} color="#FFC107" />);
     }
     if (hasHalfStar) {
-      stars.push(<Icon key="half" name="star-half" size={18} color="#FFC107" />);
+      stars.push(
+        <Icon key="half" name="star-half" size={18} color="#FFC107" />
+      );
     }
     while (stars.length < 5) {
-      stars.push(<Icon key={stars.length} name="star-border" size={18} color="#D1D5DB" />);
+      stars.push(
+        <Icon key={stars.length} name="star-border" size={18} color="#D1D5DB" />
+      );
     }
     return stars;
   };
@@ -168,7 +168,10 @@ export default function ResourceDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>
@@ -193,7 +196,9 @@ export default function ResourceDetailScreen() {
             renderItem={({ item }) => (
               <View style={styles.imageWrapper}>
                 <Image
-                  source={{ uri: item.imageUrl || "https://via.placeholder.com/400x300" }}
+                  source={{
+                    uri: item.imageUrl || "https://via.placeholder.com/400x300",
+                  }}
                   style={styles.galleryImage}
                   resizeMode="cover"
                 />
@@ -210,7 +215,7 @@ export default function ResourceDetailScreen() {
             }}
             keyExtractor={(item, index) => index.toString()}
           />
-          
+
           {/* Image Indicators */}
           <View style={styles.indicatorContainer}>
             {(resource.images || []).map((_, index) => (
@@ -248,7 +253,9 @@ export default function ResourceDetailScreen() {
           <View style={styles.authorContainer}>
             <Image
               source={{
-                uri: resource.designer?.avatar || "https://ui-avatars.com/api/?name=Designer&background=4F46E5&color=fff",
+                uri:
+                  resource.designer?.avatar ||
+                  "https://ui-avatars.com/api/?name=Designer&background=4F46E5&color=fff",
               }}
               style={styles.authorAvatar}
             />
@@ -267,7 +274,9 @@ export default function ResourceDetailScreen() {
           <View style={styles.priceSection}>
             <View>
               <Text style={styles.priceLabel}>Giá bán</Text>
-              <Text style={styles.price}>{resource.price.toLocaleString()} đ</Text>
+              <Text style={styles.price}>
+                {resource.price.toLocaleString()} đ
+              </Text>
             </View>
             <View style={styles.releaseDateContainer}>
               <Icon name="calendar-today" size={16} color="#6B7280" />
@@ -323,44 +332,57 @@ export default function ResourceDetailScreen() {
             </View>
           )}
 
-        {/* 🟣 Reviews & Ratings Section */}
-<View style={styles.section}>
-  <View style={styles.reviewsHeader}>
-    <Text style={styles.sectionTitle}>Đánh giá sản phẩm</Text>
-    <Pressable style={styles.writeReviewButton}>
-      <Icon name="rate-review" size={18} color="#4F46E5" />
-      <Text style={styles.writeReviewText}>Viết đánh giá</Text>
-    </Pressable>
-  </View>
-
-  {/* ⭐ Rating Overview */}
-  <View style={styles.ratingStats}>
-    <View style={styles.ratingOverview}>
-      <Text style={styles.ratingNumber}>4.5</Text>
-      <View style={styles.starsContainerSmall}>{renderStars(4.5)}</View>
-      <Text style={styles.totalReviews}>128 đánh giá</Text>
-    </View>
-
-    <View style={styles.ratingBars}>
-      {[5, 4, 3, 2, 1].map((star) => {
-        const percentage = star === 5 ? 70 : star === 4 ? 20 : star === 3 ? 5 : star === 2 ? 3 : 2;
-        return (
-          <View key={star} style={styles.ratingBarRow}>
-            <Text style={styles.starLabel}>{star}</Text>
-            <Icon name="star" size={14} color="#FFC107" />
-            <View style={styles.barContainer}>
-              <View style={[styles.barFill, { width: `${percentage}%` }]} />
+          {/* 🟣 Reviews & Ratings Section */}
+          <View style={styles.section}>
+            <View style={styles.reviewsHeader}>
+              <Text style={styles.sectionTitle}>Đánh giá sản phẩm</Text>
+              <Pressable style={styles.writeReviewButton}>
+                <Icon name="rate-review" size={18} color="#4F46E5" />
+                <Text style={styles.writeReviewText}>Viết đánh giá</Text>
+              </Pressable>
             </View>
-            <Text style={styles.barPercentage}>{percentage}%</Text>
-          </View>
-        );
-      })}
-    </View>
-  </View>
 
-  {/* 🧠 Reviews List */}
-  <View style={styles.reviewsList}>
-    {/* {reviews.map((review, index) => (
+            {/* ⭐ Rating Overview */}
+            <View style={styles.ratingStats}>
+              <View style={styles.ratingOverview}>
+                <Text style={styles.ratingNumber}>4.5</Text>
+                <View style={styles.starsContainerSmall}>
+                  {renderStars(4.5)}
+                </View>
+                <Text style={styles.totalReviews}>128 đánh giá</Text>
+              </View>
+
+              <View style={styles.ratingBars}>
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const percentage =
+                    star === 5
+                      ? 70
+                      : star === 4
+                      ? 20
+                      : star === 3
+                      ? 5
+                      : star === 2
+                      ? 3
+                      : 2;
+                  return (
+                    <View key={star} style={styles.ratingBarRow}>
+                      <Text style={styles.starLabel}>{star}</Text>
+                      <Icon name="star" size={14} color="#FFC107" />
+                      <View style={styles.barContainer}>
+                        <View
+                          style={[styles.barFill, { width: `${percentage}%` }]}
+                        />
+                      </View>
+                      <Text style={styles.barPercentage}>{percentage}%</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* 🧠 Reviews List */}
+            <View style={styles.reviewsList}>
+              {/* {reviews.map((review, index) => (
       <View key={index} style={styles.reviewItem}>
         <View style={styles.reviewHeader}>
           <Image
@@ -393,14 +415,13 @@ export default function ResourceDetailScreen() {
       </View>
     ))} */}
 
-    {/* Load More */}
-    <Pressable style={styles.loadMoreButton}>
-      <Text style={styles.loadMoreText}>Xem thêm đánh giá</Text>
-      <Icon name="keyboard-arrow-down" size={20} color="#4F46E5" />
-    </Pressable>
-  </View>
-</View>
-
+              {/* Load More */}
+              <Pressable style={styles.loadMoreButton}>
+                <Text style={styles.loadMoreText}>Xem thêm đánh giá</Text>
+                <Icon name="keyboard-arrow-down" size={20} color="#4F46E5" />
+              </Pressable>
+            </View>
+          </View>
         </View>
       </ScrollView>
 

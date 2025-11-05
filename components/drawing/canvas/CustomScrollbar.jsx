@@ -7,13 +7,14 @@ import Animated, {
   runOnJS,
   interpolate,
   Extrapolation,
+  useDerivedValue,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 const CustomScrollbar = ({
   contentHeight,
   containerHeight,
-  scrollY,
+  scrollYShared, // ✅ Changed from scrollY to scrollYShared
   onScroll,
   isZooming = false,
 }) => {
@@ -26,16 +27,16 @@ const CustomScrollbar = ({
   const thumbHeight = Math.max(containerHeight * scrollRatio, 40);
 
   // Animated values
-  const thumbPosition = useSharedValue(0);
   const opacity = useSharedValue(0.2);
 
-  // Update thumb position when scrollY changes
-  useEffect(() => {
-    if (!isDragging) {
-      const scrollProgress = scrollY / (contentHeight - containerHeight);
-      thumbPosition.value = scrollProgress * (containerHeight - thumbHeight);
+  // ✅ Derive thumb position from scrollYShared (runs on UI thread)
+  const thumbPosition = useDerivedValue(() => {
+    if (!contentHeight || !containerHeight || contentHeight <= containerHeight) {
+      return 0;
     }
-  }, [scrollY, contentHeight, containerHeight, thumbHeight, isDragging]);
+    const scrollProgress = scrollYShared.value / (contentHeight - containerHeight);
+    return Math.max(0, Math.min(scrollProgress * (containerHeight - thumbHeight), containerHeight - thumbHeight));
+  }, [contentHeight, containerHeight, thumbHeight]);
 
   // Handle drag gesture
   const dragGesture = Gesture.Pan()

@@ -78,17 +78,17 @@ function CreatePopover({ visible, onClose, onSelect }) {
   if (!visible) return null;
 
   const options = [
-    { id: "notebook", label: "Notebook", icon: "description" },
+    { id: "sketchnote", label: "SketchNote", icon: "description" },
     {
       id: "whiteboard",
       label: "Whiteboard",
-      icon: "crop_original",
+      icon: "photo",
       badge: "NEW",
     },
     { id: "folder", label: "Folder", icon: "folder" },
-    { id: "import", label: "Import", icon: "cloud_download" },
+    { id: "import", label: "Import", icon: "cloud-download" },
     { id: "image", label: "Image", icon: "image" },
-    { id: "quick_note", label: "Quick note", icon: "flash_on" },
+    { id: "quick_note", label: "Quick note", icon: "flash-on" },
   ];
 
   return (
@@ -307,7 +307,7 @@ export default function HomeScreen({ navigation }) {
   const handleCreate = (type) => {
     setPopoverVisible(false);
     switch (type) {
-      case "notebook":
+      case "sketchnote":
         navigation?.navigate?.("NoteSetupScreen");
         break;
       case "whiteboard":

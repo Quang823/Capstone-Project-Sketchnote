@@ -6,22 +6,30 @@ import React, {
   useEffect,
   useDeferredValue,
 } from "react";
-import { View, Alert, TextInput, Image, Button, Dimensions } from "react-native";
+import {
+  View,
+  Alert,
+  TextInput,
+  Image,
+  Button,
+  Dimensions,
+} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import HeaderToolbar from "../../../components/drawing/toolbar/HeaderToolbar";
 import ToolbarContainer from "../../../components/drawing/toolbar/ToolbarContainer";
-import PenSettingsPanel from "../../../components/drawing/toolbar/PenSettingsPanel";
 import MultiPageCanvas from "../../../components/drawing/canvas/MultiPageCanvas";
-import EraserDropdown from "../../../components/drawing/toolbar/EraserDropdown";
-import StickerModal from "../../../components/drawing/media/StickerModal";
 import RulerOverlay from "../../../components/drawing/ruler/RulerOverlay";
+import StickerModal from "../../../components/drawing/media/StickerModal";
+import LayerPanel from "../../../components/drawing/layer/LayerPanel";
+import PenSettingsPanel from "../../../components/drawing/toolbar/PenSettingsPanel";
+import EraserDropdown from "../../../components/drawing/toolbar/EraserDropdown";
+
 import useOrientation from "../../../hooks/useOrientation";
 import { useNavigation } from "@react-navigation/native";
 import * as ExportUtils from "../../../utils/ExportUtils";
 import { projectService } from "../../../service/projectService";
 import styles from "./DrawingScreen.styles";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import LayerPanel from "../../../components/drawing/toolbar/LayerPanel";
 import { manipulateAsync, FlipType, SaveFormat } from "expo-image-manipulator";
 // Hàm helper để lấy kích thước hình ảnh
 const getImageSize = (uri) => {
@@ -52,8 +60,22 @@ export default function DrawingScreen({ route }) {
   const navigation = useNavigation();
   const noteConfig = route?.params?.noteConfig;
 
-  // HAND/PEN MODE
-  const [isPenMode, setIsPenMode] = useState(false);
+  // ✅ Validate noteConfig to prevent crash
+  useEffect(() => {
+    if (!noteConfig) {
+      console.warn('[DrawingScreen] No noteConfig provided, navigating back');
+      Alert.alert(
+        'Error',
+        'No project configuration found. Please create a new project.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
+    }
+  }, [noteConfig, navigation]);
 
   // LAYERS - Per-page layer management
   const [showLayerPanel, setShowLayerPanel] = useState(false);
@@ -562,13 +584,28 @@ export default function DrawingScreen({ route }) {
         size = { width: manipulated.width, height: manipulated.height };
       }
 
-      const scale = Math.min(1, 400 / size.width);
+      // ✅ Get current zoom level and page dimensions
+      const currentZoom = multiPageCanvasRef.current?.getCurrentZoom?.() || 1;
+      const screenWidth = Dimensions.get("window").width;
+
+      // Calculate max image width based on zoom and page width
+      // When zoomed in (e.g., 2x), image should be smaller to fit viewport
+      // Max 80% of page width to prevent overflow
+      const maxImageWidth = Math.min(
+        (screenWidth * 0.5) / currentZoom, // Adjust for zoom
+        400 // Absolute max width
+      );
+
+      const scale = Math.min(1, maxImageWidth / size.width);
+      const finalWidth = size.width * scale;
+      const finalHeight = size.height * scale;
+
       multiPageCanvasRef.current.addImageStroke({
         uri,
         x: 100,
         y: 100,
-        width: size.width * scale,
-        height: size.height * scale,
+        width: finalWidth,
+        height: finalHeight,
       });
     } catch (err) {
       Alert.alert("Error", "Failed to load image: " + err.message);
@@ -718,18 +755,23 @@ export default function DrawingScreen({ route }) {
   );
 
   // 🧱 ===== RENDER =====
+  // ✅ Early return if noteConfig is missing
+  if (!noteConfig) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        {/* Empty view - Alert will show and navigate back */}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* 🧰 Header Toolbar */}
       <HeaderToolbar
         onBack={() => navigation.navigate("Home")}
         onToggleToolbar={() => setToolbarVisible((v) => !v)}
-        onTogglePenType={() => setIsPenMode((prev) => !prev)}
-        onLayers={() => setShowLayerPanel((prev) => !prev)}
-        onAddPage={() => {}}
-        onPreview={() => {}}
-        onSettings={() => {}}
-        onMore={() => {}}
+        onPreview={() => {}} // Sidebar đã tích hợp trong MultiPageCanvas
+        onCamera={handleOpenCamera}
       />
       {showLayerPanel && (
         <LayerPanel
@@ -765,10 +807,11 @@ export default function DrawingScreen({ route }) {
                   rotation: 0,
                   scale: 1,
                 });
-              } else {
-                if (__DEV__)
-                  console.log("[DrawingScreen] rulerPosition:", rulerPosition);
               }
+              // else {
+              //   if (__DEV__)
+              //     console.log("[DrawingScreen] rulerPosition:", rulerPosition);
+              // }
               return;
             }
             setTool(name);
@@ -853,7 +896,6 @@ export default function DrawingScreen({ route }) {
           setTool={setTool}
           color={color}
           setColor={setColor}
-          isPenMode={isPenMode}
           strokeWidth={activeStrokeWidth}
           pencilWidth={pencilWidth}
           eraserSize={eraserSize}
