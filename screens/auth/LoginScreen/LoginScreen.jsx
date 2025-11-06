@@ -77,10 +77,10 @@ export default function LoginScreen({ onBack }) {
         variant: "success",
       });
 
-      if (roles.includes("CUSTOMER")) navigation.navigate("Home");
+      if (roles.includes("ADMIN")) navigation.navigate("AdminDashboard");
       else if (roles.includes("DESIGNER"))
         navigation.navigate("DesignerDashboard");
-      else if (roles.includes("ADMIN")) navigation.navigate("AdminDashboard");
+      else if (roles.includes("CUSTOMER")) navigation.navigate("Home");
     } catch (error) {
       toast({
         title: "Đăng nhập thất bại",

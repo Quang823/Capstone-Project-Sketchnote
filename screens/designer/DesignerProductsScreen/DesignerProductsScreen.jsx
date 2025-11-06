@@ -21,7 +21,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 export default function DesignerProductsScreen() {
   const navigation = useNavigation();
   const [products, setProducts] = useState([]);
-  const [filter, setFilter] = useState("all"); // all, active, inactive
+  const [filter, setFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -67,26 +67,52 @@ export default function DesignerProductsScreen() {
     fetchProducts(0, newSize);
   };
 
-  const filteredProducts = products.filter((product) => {
-    const matchesFilter = 
-      filter === "all" || 
-      (filter === "active" && product.isActive) ||
-      (filter === "inactive" && !product.isActive);
-    
-    const matchesSearch = 
-      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    return matchesFilter && matchesSearch;
-  });
+ const filteredProducts = products.filter((product) => {
+  const matchesFilter =
+    filter === "ALL" || product.status === filter;
 
-  const getStatusColor = (isActive) => {
-    return isActive ? "#10B981" : "#F59E0B";
-  };
+  const matchesSearch =
+    product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const getStatusText = (isActive) => {
-    return isActive ? "Đang hoạt động" : "Không hoạt động";
-  };
+  return matchesFilter && matchesSearch;
+});
+
+
+  const getStatusColor = (status) => {
+  switch (status) {
+     case "PENDING_REVIEW":
+      return "#3B82F6";
+    case "PUBLISHED":
+      return "#10B981"; 
+    case "REJECTED":
+      return "#EF4444"; 
+    case "ARCHIVED":
+      return "#F59E0B"; 
+    case "DELETED":
+      return "#6B7280"; 
+    default:
+      return "#9CA3AF";
+  }
+};
+
+const getStatusText = (status) => {
+  switch (status) {
+     case "PENDING_REVIEW":
+      return "Pending Review";
+    case "PUBLISHED":
+      return "Published";
+    case "REJECTED":
+      return "Rejected";
+    case "ARCHIVED":
+      return "Archived";
+    case "DELETED":
+      return "Deleted";
+    default:
+      return "All";
+  }
+};
+
 
   const formatCurrency = (amount) => {
     return (amount ?? 0).toLocaleString("vi-VN") + " VND";
@@ -189,55 +215,27 @@ export default function DesignerProductsScreen() {
 
       {/* Filter Tabs */}
       <View style={designerProductsStyles.filterTabs}>
-        <Pressable
-          style={[
-            designerProductsStyles.filterTab,
-            filter === "all" && designerProductsStyles.filterTabActive,
-          ]}
-          onPress={() => setFilter("all")}
-        >
-          <Text
-            style={[
-              designerProductsStyles.filterTabText,
-              filter === "all" && designerProductsStyles.filterTabTextActive,
-            ]}
-          >
-            Tất cả
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[
-            designerProductsStyles.filterTab,
-            filter === "active" && designerProductsStyles.filterTabActive,
-          ]}
-          onPress={() => setFilter("active")}
-        >
-          <Text
-            style={[
-              designerProductsStyles.filterTabText,
-              filter === "active" && designerProductsStyles.filterTabTextActive,
-            ]}
-          >
-            Hoạt động
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[
-            designerProductsStyles.filterTab,
-            filter === "inactive" && designerProductsStyles.filterTabActive,
-          ]}
-          onPress={() => setFilter("inactive")}
-        >
-          <Text
-            style={[
-              designerProductsStyles.filterTabText,
-              filter === "inactive" && designerProductsStyles.filterTabTextActive,
-            ]}
-          >
-            Không hoạt động
-          </Text>
-        </Pressable>
-      </View>
+  {["ALL", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED", "DELETED"].map((status) => (
+    <Pressable
+      key={status}
+      style={[
+        designerProductsStyles.filterTab,
+        filter === status && designerProductsStyles.filterTabActive,
+      ]}
+      onPress={() => setFilter(status)}
+    >
+      <Text
+        style={[
+          designerProductsStyles.filterTabText,
+          filter === status && designerProductsStyles.filterTabTextActive,
+        ]}
+      >
+        {getStatusText(status)}
+      </Text>
+    </Pressable>
+  ))}
+</View>
+
 
       {/* Products List */}
       <ScrollView style={designerProductsStyles.productsList} showsVerticalScrollIndicator={false}>
@@ -269,10 +267,10 @@ export default function DesignerProductsScreen() {
                 </Text>
                 <View style={[
                   designerProductsStyles.statusBadge,
-                  { backgroundColor: getStatusColor(product.isActive) }
+                  { backgroundColor: getStatusColor(product.status) }
                 ]}>
                   <Text style={designerProductsStyles.statusText}>
-                    {getStatusText(product.isActive)}
+                    {getStatusText(product.status)}
                   </Text>
                 </View>
               </View>
@@ -404,39 +402,25 @@ export default function DesignerProductsScreen() {
               </Pressable>
             </View>
             
-            <View style={designerProductsStyles.modalBody}>
-              <Text style={designerProductsStyles.modalSectionTitle}>Trạng thái</Text>
-              <Pressable
-                style={designerProductsStyles.modalOption}
-                onPress={() => {
-                  setFilter("all");
-                  setShowFilterModal(false);
-                }}
-              >
-                <Text style={designerProductsStyles.modalOptionText}>Tất cả</Text>
-                {filter === "all" && <Icon name="check" size={20} color="#3B82F6" />}
-              </Pressable>
-              <Pressable
-                style={designerProductsStyles.modalOption}
-                onPress={() => {
-                  setFilter("active");
-                  setShowFilterModal(false);
-                }}
-              >
-                <Text style={designerProductsStyles.modalOptionText}>Hoạt động</Text>
-                {filter === "active" && <Icon name="check" size={20} color="#3B82F6" />}
-              </Pressable>
-              <Pressable
-                style={designerProductsStyles.modalOption}
-                onPress={() => {
-                  setFilter("inactive");
-                  setShowFilterModal(false);
-                }}
-              >
-                <Text style={designerProductsStyles.modalOptionText}>Không hoạt động</Text>
-                {filter === "inactive" && <Icon name="check" size={20} color="#3B82F6" />}
-              </Pressable>
-            </View>
+           <View style={designerProductsStyles.modalBody}>
+  <Text style={designerProductsStyles.modalSectionTitle}>Trạng thái</Text>
+  {["ALL", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED", "DELETED"].map((status) => (
+    <Pressable
+      key={status}
+      style={designerProductsStyles.modalOption}
+      onPress={() => {
+        setFilter(status);
+        setShowFilterModal(false);
+      }}
+    >
+      <Text style={designerProductsStyles.modalOptionText}>
+        {getStatusText(status)}
+      </Text>
+      {filter === status && <Icon name="check" size={20} color="#3B82F6" />}
+    </Pressable>
+  ))}
+</View>
+
           </View>
         </View>
       </Modal>
