@@ -1,19 +1,15 @@
 import React, { useState } from "react";
 import { View, TouchableOpacity, Animated, StyleSheet } from "react-native";
-import { Ionicons, MaterialIcons, Entypo, Feather } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
 
 export default function HeaderToolbar({
   onBack,
   onToggleToolbar,
-  onLayers,
-  onAddPage,
   onPreview,
-  onSettings,
-  onMore,
-  onTogglePenType, // callback báo cho cha biết chế độ vẽ
+  onCamera,
+  onToggleLayerPanel,
+  isLayerPanelVisible = false,
 }) {
-  const [isPenMode, setIsPenMode] = useState(false); // true = stylus, false = hand
-
   const renderButton = (
     icon,
     onPress,
@@ -38,7 +34,7 @@ export default function HeaderToolbar({
         style={{
           transform: [{ scale }],
           borderRadius: 12,
-          backgroundColor: active ? "#E0F2FE" : "transparent", // highlight khi active
+          backgroundColor: active ? "#E0F2FE" : "transparent", // highlight when active
         }}
       >
         <TouchableOpacity
@@ -59,32 +55,14 @@ export default function HeaderToolbar({
         {/* Left */}
         <View style={[styles.row, { gap: 12 }]}>
           {renderButton("arrow-back", onBack, Ionicons)}
-          {renderButton("camera-outline", () => {})}
-          {renderButton("crop", () => {}, MaterialIcons)}
-          {renderButton("mic-outline", () => {}, Ionicons)}
+          {renderButton("camera-outline", onCamera, Ionicons)}
         </View>
 
         {/* Right */}
         <View style={[styles.row, { gap: 12 }]}>
-          {renderButton("circle-with-cross", onToggleToolbar, Entypo)}
-
-          {/* ✍️ Toggle Pen / Hand mode */}
-          {renderButton(
-            isPenMode ? "pencil" : "hand-left-outline", // fix icon tay
-            () => {
-              const nextMode = !isPenMode;
-              setIsPenMode(nextMode);
-              onTogglePenType?.(nextMode); // báo cho cha biết mode
-            },
-            Ionicons,
-            true // luôn highlight khi active
-          )}
-
-          {renderButton("layers", onLayers, MaterialIcons)}
-          {renderButton("add-circle-outline", onAddPage, Ionicons)}
           {renderButton("preview", onPreview, MaterialIcons)}
-          {renderButton("settings", onSettings, Feather)}
-          {renderButton("dots-three-vertical", onMore, Entypo)}
+          {renderButton("layers", onToggleLayerPanel, MaterialIcons, isLayerPanelVisible)}
+          {renderButton("circle-with-cross", onToggleToolbar, Entypo)}
         </View>
       </View>
     </View>

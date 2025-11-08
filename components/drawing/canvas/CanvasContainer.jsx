@@ -53,9 +53,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     onZoomChange,
     toolConfigs = {},
     eraserMode,
-    isPenMode,
     rulerPosition,
     scrollOffsetY = 0,
+    scrollYShared, // ✅ Animated scroll value
+    pageOffsetY = 0, // ✅ Page offset trong project
     onColorPicked,
     backgroundColor = "#FFFFFF", // 👈 Add backgroundColor prop
     pageTemplate = "blank", // 👈 Add template prop
@@ -93,6 +94,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   const idCounter = useRef(1);
   const rendererRef = useRef(null);
+
+  // Track pinch state to distinguish zoom from scroll
+  const pinchStartDistance = useRef(0);
+  const isPinchZoom = useRef(false);
 
   const activeConfig = toolConfigs?.[tool] || {
     pressure: 0.5,
@@ -134,32 +139,78 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   //LAYERS MANAGEMENT
   const [selectedId, setSelectedId] = useState(null);
 
-  const getActiveLayer = useCallback(
-    () => layers.find((layer) => layer.id === activeLayerId),
-    [layers, activeLayerId]
-  );
+  const getActiveLayer = useCallback(() => {
+    if (!Array.isArray(layers) || layers.length === 0) return null;
+
+    // ✅ Validate layers trước khi tìm
+    const validLayers = layers.filter(
+      (l) => l && typeof l === "object" && l.id
+    );
+
+    if (validLayers.length === 0) return null;
+
+    // Try to find layer by activeLayerId
+    let layer = validLayers.find((l) => l.id === activeLayerId);
+
+    // If not found, fallback to first layer
+    if (!layer && validLayers.length > 0) {
+      layer = validLayers[0];
+    }
+
+    return layer || null;
+  }, [layers, activeLayerId]);
 
   const updateActiveLayer = useCallback(
     (updateFn) => {
-      setLayers((prev) =>
-        prev.map((layer) => {
+      // ✅ Kiểm tra activeLayerId trước khi update
+      if (!activeLayerId) {
+        console.warn("[CanvasContainer] updateActiveLayer: No activeLayerId");
+        return;
+      }
+
+      setLayers((prev) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map((layer) => {
+          if (!layer || typeof layer !== "object") return layer;
           if (layer.id !== activeLayerId) return layer;
           const safeStrokes = Array.isArray(layer.strokes) ? layer.strokes : [];
           return { ...layer, strokes: updateFn(safeStrokes) };
-        })
-      );
+        });
+      });
     },
     [activeLayerId]
   );
 
   const updateLayerById = (layerId, updateFn) => {
-    setLayers((prev) =>
-      prev.map((l) =>
-        l.id === layerId ? { ...l, strokes: updateFn(l.strokes) } : l
-      )
-    );
+    // ✅ Kiểm tra layerId trước khi update
+    if (!layerId) {
+      console.warn("[CanvasContainer] updateLayerById: No layerId provided");
+      return;
+    }
+
+    if (typeof updateFn !== "function") {
+      console.warn(
+        "[CanvasContainer] updateLayerById: updateFn is not a function"
+      );
+      return;
+    }
+
+    setLayers((prev) => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((l) => {
+        if (!l || typeof l !== "object") return l;
+        if (l?.id === layerId) {
+          const safeStrokes = Array.isArray(l.strokes) ? l.strokes : [];
+          return { ...l, strokes: updateFn(safeStrokes) };
+        }
+        return l;
+      });
+    });
   };
-  const visibleLayers = layers.filter((l) => l.visible);
+  // ✅ Safe filter with validation
+  const visibleLayers = Array.isArray(layers)
+    ? layers.filter((l) => l?.visible)
+    : [];
 
   // ====== ZOOM / PAN ======
   const scale = useSharedValue(1);
@@ -181,60 +232,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   const isZooming = useSharedValue(false);
   const isZoomingRef = useRef(false); // For JS thread access
 
-  const pinch = Gesture.Pinch()
-    .enabled(!zoomLocked)
-    .onStart((e) => {
-      "worklet";
-      // ignore nếu <2 ngón (bảo vệ cho trường hợp library không hỗ trợ minPointers)
-      if (!e || !e.numberOfPointers || e.numberOfPointers < 2) return;
-      isZooming.value = true;
-      isZoomingRef.current = true;
-      baseScale.value = scale.value;
-      runOnJS(() => {
-        try {
-          setShowZoomOverlay((prev) => (prev ? prev : true));
-          // Notify parent to disable scroll when zoom starts
-          if (typeof onZoomChange === "function") {
-            onZoomChange(true); // true = zoom is active
-          }
-        } catch (err) {
-          console.error("[CanvasContainer] Error in zoom onStart:", err);
-        }
-      })();
-    })
-    .onUpdate((e) => {
-      "worklet";
-      if (!e || !e.numberOfPointers || e.numberOfPointers < 2) return; // guard
-      if (typeof e.scale !== "number" || !isFinite(e.scale)) return; // safety check
-      scale.value = baseScale.value * e.scale;
-      // Clamp scale to prevent extreme values
-      if (scale.value < 0.5) scale.value = 0.5;
-      if (scale.value > 5) scale.value = 5;
-      const isZoomed = scale.value > 1.01;
-      if (isZoomed !== lastZoomState.current) {
-        lastZoomState.current = isZoomed;
-      }
-    })
-    .onEnd(() => {
-      "worklet";
-      if (scale.value < 1) scale.value = withTiming(1);
-      if (scale.value > 3) scale.value = withTiming(3);
-      isZooming.value = false;
-      // Capture scale value before runOnJS
-      const finalScale = scale.value;
-      const wasZoomed = finalScale > 1.01;
-      runOnJS((stillZoomed) => {
-        isZoomingRef.current = false;
-        setShowZoomOverlay(false);
-        if (!stillZoomed && lastZoomState.current) {
-          lastZoomState.current = false;
-        }
-        // Notify parent: always false when pinch ends (re-enable scroll)
-        if (typeof onZoomChange === "function") {
-          onZoomChange(false); // Pinch ended, re-enable scroll
-        }
-      })(wasZoomed);
-    });
+  // ⚠️ Pinch zoom được xử lý ở MultiPageCanvas (project-wide)
+  // CanvasContainer chỉ xử lý pan và drawing
+  const pinch = Gesture.Pinch().enabled(false); // Disable - zoom được handle ở MultiPageCanvas
 
   const pan = Gesture.Pan()
     .minPointers(1)
@@ -263,22 +263,25 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
-    //.maxPointers(1) // Chỉ nhận khi 1 ngón tay
     .onEnd(() => {
       "worklet";
-      scale.value = withTiming(1);
-      translateX.value = withTiming(0);
-      translateY.value = withTiming(0);
-      runOnJS(() => {
-        lastZoomState.current = false;
-        if (typeof onZoomChange === "function") {
-          onZoomChange(false);
-        }
-      })();
+      try {
+        scale.value = withTiming(1, { duration: 300 });
+        translateX.value = withTiming(0, { duration: 300 });
+        translateY.value = withTiming(0, { duration: 300 });
+        runOnJS(() => {
+          lastZoomState.current = false;
+          if (typeof onZoomChange === "function") {
+            onZoomChange(false);
+          }
+        })();
+      } catch (err) {
+        console.warn("[CanvasContainer] Double tap error:", err);
+      }
     });
 
   // Compose gestures: pinch riêng, pan và doubleTap có thể cùng lúc
-  const composedGesture = Gesture.Race(
+  const composedGesture = Gesture.Exclusive(
     pinch,
     Gesture.Simultaneous(pan, doubleTap)
   );
@@ -317,49 +320,98 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   };
 
   const addStrokeInternal = (stroke) => {
-    updateActiveLayer((strokes) => [...strokes, stroke]);
-    pushUndo({ type: "add", stroke, layerId: activeLayerId });
+    // ✅ Kiểm tra stroke và activeLayerId trước khi thêm
+    if (!stroke || typeof stroke !== "object") {
+      console.warn("[CanvasContainer] addStrokeInternal: Invalid stroke");
+      return;
+    }
+
+    if (!activeLayerId) {
+      console.warn(
+        "[CanvasContainer] addStrokeInternal: No activeLayerId, cannot add stroke"
+      );
+      return;
+    }
+
+    try {
+      updateActiveLayer((strokes) => [...strokes, stroke]);
+      pushUndo({ type: "add", stroke, layerId: activeLayerId });
+    } catch (e) {
+      console.error("[CanvasContainer] addStrokeInternal error:", e);
+    }
   };
 
   const deleteStrokeAt = (index) => {
+    // ✅ Kiểm tra activeLayerId và index trước khi xóa
+    if (!activeLayerId) {
+      console.warn("[CanvasContainer] deleteStrokeAt: No activeLayerId");
+      return;
+    }
+
+    if (typeof index !== "number" || index < 0) {
+      console.warn("[CanvasContainer] deleteStrokeAt: Invalid index");
+      return;
+    }
+
     let removed = null;
-    updateActiveLayer((strokes) => {
-      if (index < 0 || index >= strokes.length) return strokes;
-      removed = strokes[index];
-      return [...strokes.slice(0, index), ...strokes.slice(index + 1)];
-    });
-    // Push undo AFTER update để tránh setState cascade
-    if (removed) {
-      pushUndo({
-        type: "delete",
-        index,
-        stroke: removed,
-        layerId: activeLayerId,
+    try {
+      updateActiveLayer((strokes) => {
+        if (index < 0 || index >= strokes.length) return strokes;
+        removed = strokes[index];
+        return [...strokes.slice(0, index), ...strokes.slice(index + 1)];
       });
+      // Push undo AFTER update để tránh setState cascade
+      if (removed) {
+        pushUndo({
+          type: "delete",
+          index,
+          stroke: removed,
+          layerId: activeLayerId,
+        });
+      }
+    } catch (e) {
+      console.error("[CanvasContainer] deleteStrokeAt error:", e);
     }
   };
 
   const modifyStrokeAt = (index, newProps) => {
-    updateActiveLayer((strokes) => {
-      if (index < 0 || index >= strokes.length) return strokes;
-      const old = strokes[index];
-      const { __transient, ...cleanProps } = newProps || {};
-      const updated = { ...old, ...cleanProps };
-      if (!__transient) {
-        pushUndo({
-          type: "modify",
-          index,
-          before: old,
-          after: updated,
-          layerId: activeLayerId,
-        });
-      }
-      // avoid creating new array if not changing
-      if (updated === old) return strokes;
-      const next = [...strokes];
-      next[index] = updated;
-      return next;
-    });
+    // ✅ Kiểm tra activeLayerId và index trước khi sửa
+    if (!activeLayerId) {
+      console.warn("[CanvasContainer] modifyStrokeAt: No activeLayerId");
+      return;
+    }
+
+    if (typeof index !== "number" || index < 0) {
+      console.warn("[CanvasContainer] modifyStrokeAt: Invalid index");
+      return;
+    }
+
+    try {
+      updateActiveLayer((strokes) => {
+        if (index < 0 || index >= strokes.length) return strokes;
+        const old = strokes[index];
+        if (!old || typeof old !== "object") return strokes;
+
+        const { __transient, ...cleanProps } = newProps || {};
+        const updated = { ...old, ...cleanProps };
+        if (!__transient) {
+          pushUndo({
+            type: "modify",
+            index,
+            before: old,
+            after: updated,
+            layerId: activeLayerId,
+          });
+        }
+        // avoid creating new array if not changing
+        if (updated === old) return strokes;
+        const next = [...strokes];
+        next[index] = updated;
+        return next;
+      });
+    } catch (e) {
+      console.error("[CanvasContainer] modifyStrokeAt error:", e);
+    }
   };
 
   // Thêm scrollOffsetX, scrollOffsetY làm tham số
@@ -449,11 +501,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         width,
         height,
         rotation: opts.rotation ?? 0,
-        layerId: opts.layerId ?? activeLayerId ?? "default", // ✅ fix chính
+        layerId: opts.layerId ?? activeLayerId ?? "default", // fix chính
       };
 
       addStrokeInternal(newStroke);
-      console.log("🖼️ Image added:", newStroke);
+      // console.log("Image added:", newStroke);
     } catch (err) {
       console.error("Failed to add image:", err);
       Alert.alert("Lỗi ảnh", "Không thể đọc hoặc hiển thị ảnh này.");
@@ -523,7 +575,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   // ====== API EXPOSED ======
   useImperativeHandle(ref, () => ({
-    // 🔙 Hoàn tác
+    // Hoàn tác
     undo: () => {
       setUndoStack((prevUndo) => {
         if (prevUndo.length === 0) return prevUndo;
@@ -561,7 +613,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       });
     },
 
-    // 🔁 Làm lại
+    // Làm lại
     redo: () => {
       setRedoStack((prevRedo) => {
         if (prevRedo.length === 0) return prevRedo;
@@ -593,7 +645,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       });
     },
 
-    // 🧹 Xóa layer hiện tại
+    // Xóa layer hiện tại
     clear: () => {
       if (!activeLayerId) return;
       updateLayerById(activeLayerId, () => []);
@@ -602,28 +654,70 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       setCurrentPoints([]);
     },
 
-    // 🧾 Lấy strokes của layer đang active
+    // Lấy tất cả strokes từ tất cả layers (để lưu đầy đủ)
     getStrokes: () => {
-      const activeLayer = layers.find((l) => l.id === activeLayerId);
-      return activeLayer?.strokes || [];
+      if (!Array.isArray(layers) || layers.length === 0) return [];
+
+      // ✅ Lấy tất cả strokes từ tất cả layers (không chỉ active layer)
+      const allStrokes = layers
+        .filter((layer) => layer && typeof layer === "object")
+        .flatMap((layer) => {
+          const layerStrokes = Array.isArray(layer.strokes)
+            ? layer.strokes
+            : [];
+          // Đảm bảo mỗi stroke có layerId
+          return layerStrokes.map((stroke) => ({
+            ...stroke,
+            layerId: stroke.layerId || layer.id || "layer1",
+          }));
+        });
+
+      return allStrokes;
     },
 
-    // ➕ Thêm stroke trực tiếp vào layer đang active
+    // ✅ Lấy layer metadata (name, visible, locked) để lưu
+    getLayersMetadata: () => {
+      if (!Array.isArray(layers) || layers.length === 0) return [];
+
+      return layers
+        .filter((layer) => layer && typeof layer === "object" && layer.id)
+        .map((layer) => ({
+          id: layer.id,
+          name: layer.name || `Layer ${layer.id}`,
+          visible: layer.visible !== false, // Default true
+          locked: layer.locked === true, // Default false
+        }));
+    },
+
+    // Thêm stroke trực tiếp vào layer đang active
     addStrokeDirect: (stroke) => {
-      if (!activeLayerId) return;
-      const s = { ...stroke, id: stroke.id ?? nextId() };
-      addStrokeInternal(s);
+      if (!activeLayerId) {
+        console.warn("[CanvasContainer] addStrokeDirect: No activeLayerId");
+        return;
+      }
+      if (!stroke || typeof stroke !== "object") {
+        console.warn("[CanvasContainer] addStrokeDirect: Invalid stroke");
+        return;
+      }
+      try {
+        const s = { ...stroke, id: stroke.id ?? nextId() };
+        addStrokeInternal(s);
+      } catch (e) {
+        console.error("[CanvasContainer] addStrokeDirect error:", e);
+      }
     },
 
     modifyStrokeAt,
 
-    // 🖼️ Thêm ảnh / sticker / text (giữ logic layer)
+    // Thêm ảnh / sticker / text (giữ logic layer)
     // CanvasContainer.jsx (thêm vào ref exposes)
     addImageStroke: (stroke) => {
-      const adjustedY = (stroke.y ?? 100) + (stroke.scrollOffsetY ?? 0); // ✅ Adjust y để visible
+      // ✅ Không thêm scrollOffsetY vào y vì image position là absolute trong canvas
+      // scrollOffsetY chỉ dùng để tính toán vị trí ban đầu, không lưu vào stroke
       const s = {
         ...stroke,
-        y: adjustedY,
+        x: stroke.x ?? 100,
+        y: stroke.y ?? 100, // ✅ Dùng y trực tiếp, không adjust với scrollOffsetY
         id: stroke.id ?? nextId(),
         tool: "image",
         layerId: stroke.layerId ?? activeLayerId,
@@ -683,12 +777,117 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       addStrokeInternal(s);
     },
 
-    // 📦 Load lại toàn bộ strokes cho layer hiện tại
-    loadStrokes: (strokesArray = []) => {
-      if (!Array.isArray(strokesArray) || !activeLayerId) return;
-      updateLayerById(activeLayerId, () => strokesArray);
-      setUndoStack([]);
-      setRedoStack([]);
+    // 📦 Load lại toàn bộ strokes, phân loại theo layerId
+    // ✅ Có thể nhận thêm layersMetadata để restore layer names
+    loadStrokes: (strokesArray = [], layersMetadata = []) => {
+      if (!Array.isArray(strokesArray)) {
+        console.warn("[CanvasContainer] loadStrokes: invalid strokesArray");
+        return;
+      }
+
+      try {
+        // ✅ Tạo map của layer metadata để lookup nhanh
+        const layerMetadataMap = new Map();
+        if (Array.isArray(layersMetadata)) {
+          layersMetadata.forEach((meta) => {
+            if (meta && meta.id) {
+              layerMetadataMap.set(meta.id, {
+                name: meta.name || `Layer ${meta.id}`,
+                visible: meta.visible !== false,
+                locked: meta.locked === true,
+              });
+            }
+          });
+        }
+
+        // Validate và filter strokes
+        const validStrokes = strokesArray
+          .filter((s) => s && typeof s === "object")
+          .map((s) => ({
+            ...s,
+            // Đảm bảo mỗi stroke có layerId, fallback về layer1 nếu không có
+            layerId: s.layerId || "layer1",
+          }));
+
+        // Limit số lượng để tránh crash
+        const safeStrokes = validStrokes.slice(0, 1000);
+
+        // ✅ Phân loại strokes theo layerId
+        const strokesByLayer = {};
+        safeStrokes.forEach((stroke) => {
+          const layerId = stroke.layerId || "layer1";
+          if (!strokesByLayer[layerId]) {
+            strokesByLayer[layerId] = [];
+          }
+          strokesByLayer[layerId].push(stroke);
+        });
+
+        // ✅ Load strokes vào đúng layer với metadata
+        setLayers((prev) => {
+          if (!Array.isArray(prev)) {
+            // Nếu không có layers, tạo mới từ strokes và metadata
+            return Object.keys(strokesByLayer).map((layerId) => {
+              const meta = layerMetadataMap.get(layerId);
+              return {
+                id: layerId,
+                name:
+                  meta?.name ||
+                  (layerId === "layer1" ? "Layer 1" : `Layer ${layerId}`),
+                visible: meta?.visible !== false,
+                locked: meta?.locked === true,
+                strokes: strokesByLayer[layerId],
+              };
+            });
+          }
+
+          // Tạo map của layers hiện tại
+          const layerMap = new Map(prev.map((l) => [l.id, { ...l }]));
+
+          // Cập nhật hoặc tạo layers cho mỗi layerId có strokes
+          Object.keys(strokesByLayer).forEach((layerId) => {
+            const meta = layerMetadataMap.get(layerId);
+            if (layerMap.has(layerId)) {
+              // Layer đã tồn tại, thay thế strokes và update metadata nếu có
+              const layer = layerMap.get(layerId);
+              layerMap.set(layerId, {
+                ...layer,
+                strokes: strokesByLayer[layerId],
+                // ✅ Update metadata từ saved nếu có
+                name: meta?.name || layer.name,
+                visible:
+                  meta !== undefined ? meta.visible !== false : layer.visible,
+                locked:
+                  meta !== undefined ? meta.locked === true : layer.locked,
+              });
+            } else {
+              // Layer chưa tồn tại, tạo layer mới với metadata
+              layerMap.set(layerId, {
+                id: layerId,
+                name:
+                  meta?.name ||
+                  (layerId === "layer1" ? "Layer 1" : `Layer ${layerId}`),
+                visible: meta?.visible !== false,
+                locked: meta?.locked === true,
+                strokes: strokesByLayer[layerId],
+              });
+            }
+          });
+
+          // ✅ Giữ lại tất cả layers (cả layers không có strokes mới)
+          return Array.from(layerMap.values());
+        });
+
+        setUndoStack([]);
+        setRedoStack([]);
+
+        // console.log(
+        //   `[CanvasContainer] Loaded ${safeStrokes.length} strokes into ${
+        //     Object.keys(strokesByLayer).length
+        //   } layer(s)`
+        // );
+      } catch (e) {
+        console.error("[CanvasContainer] loadStrokes error:", e);
+      }
     },
   }));
 
@@ -723,7 +922,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
       <GestureDetector gesture={composedGesture}>
         <Animated.View
           key={activeLayerId}
@@ -737,7 +936,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             setColor={setColor}
             setTool={setTool}
             eraserMode={eraserMode}
-            isPenMode={isPenMode}
             // ⬇️ giữ nguyên các callback xử lý stroke nhưng không truyền setStrokes trực tiếp
             activeLayerId={activeLayerId}
             onAddStroke={addStrokeInternal}
@@ -767,6 +965,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             setRealtimeText={setRealtimeText}
             rulerPosition={rulerPosition}
             scrollOffsetY={scrollOffsetY}
+            scrollYShared={scrollYShared}
+            pageOffsetY={pageOffsetY}
             onColorPicked={onColorPicked}
             zoomState={{
               scale,
@@ -809,42 +1009,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           </GestureHandler>
         </Animated.View>
       </GestureDetector>
-
-      {showZoomOverlay && (
-        <View
-          style={{
-            position: "absolute",
-            top: 40,
-            alignSelf: "center",
-            backgroundColor: "rgba(0,0,0,0.8)",
-            padding: 10,
-            borderRadius: 12,
-            flexDirection: "row",
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ fontSize: 16, fontWeight: "600", color: "white" }}>
-            {zoomPercent}%
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              setZoomLocked((prev) => !prev);
-              if (!zoomLocked) setShowZoomOverlay(false);
-            }}
-            style={{
-              marginLeft: 12,
-              paddingVertical: 6,
-              paddingHorizontal: 10,
-              backgroundColor: zoomLocked ? "#007AFF" : "#E5E5EA",
-              borderRadius: 8,
-            }}
-          >
-            <Text style={{ color: zoomLocked ? "white" : "black" }}>
-              {zoomLocked ? "🔒" : "Lock"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 });

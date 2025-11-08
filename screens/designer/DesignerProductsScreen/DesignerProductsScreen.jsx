@@ -27,7 +27,7 @@ export default function DesignerProductsScreen() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [loading, setLoading] = useState(false);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(7);
@@ -38,8 +38,8 @@ export default function DesignerProductsScreen() {
     try {
       setLoading(true);
       const response = await resourceService.getResourceByUserId(page, size);
-      console.log("API Response:", response);
-      
+      // console.log("API Response:", response);
+
       setProducts(response.content || []);
       setTotalPages(response.totalPages || 0);
       setTotalElements(response.totalElements || 0);
@@ -136,36 +136,41 @@ const getStatusText = (status) => {
   };
 
   const handleDeleteProduct = (product) => {
-    Alert.alert(
-      "Xóa sản phẩm",
-      `Bạn có chắc muốn xóa "${product.name}"?`,
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: () => {
-            setProducts(products.filter(p => p.resourceTemplateId !== product.resourceTemplateId));
-            setShowDetailModal(false);
-          },
+    Alert.alert("Xóa sản phẩm", `Bạn có chắc muốn xóa "${product.name}"?`, [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: () => {
+          setProducts(
+            products.filter(
+              (p) => p.resourceTemplateId !== product.resourceTemplateId
+            )
+          );
+          setShowDetailModal(false);
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleToggleActive = (product) => {
-    setProducts(products.map(p => 
-      p.resourceTemplateId === product.resourceTemplateId 
-        ? { ...p, isActive: !p.isActive } 
-        : p
-    ));
-    Alert.alert("Thành công", `Sản phẩm đã được ${product.isActive ? 'tắt' : 'bật'}!`);
+    setProducts(
+      products.map((p) =>
+        p.resourceTemplateId === product.resourceTemplateId
+          ? { ...p, isActive: !p.isActive }
+          : p
+      )
+    );
+    Alert.alert(
+      "Thành công",
+      `Sản phẩm đã được ${product.isActive ? "tắt" : "bật"}!`
+    );
   };
 
   const getFilterStats = () => {
     const total = products.length;
-    const active = products.filter(p => p.isActive).length;
-    const inactive = products.filter(p => !p.isActive).length;
+    const active = products.filter((p) => p.isActive).length;
+    const inactive = products.filter((p) => !p.isActive).length;
     return { total, active, inactive };
   };
 
@@ -195,7 +200,9 @@ const getStatusText = (status) => {
           <Text style={designerProductsStyles.statLabel}>Hoạt động</Text>
         </View>
         <View style={designerProductsStyles.statCard}>
-          <Text style={designerProductsStyles.statNumber}>{stats.inactive}</Text>
+          <Text style={designerProductsStyles.statNumber}>
+            {stats.inactive}
+          </Text>
           <Text style={designerProductsStyles.statLabel}>Không hoạt động</Text>
         </View>
       </View>
@@ -238,10 +245,15 @@ const getStatusText = (status) => {
 
 
       {/* Products List */}
-      <ScrollView style={designerProductsStyles.productsList} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={designerProductsStyles.productsList}
+        showsVerticalScrollIndicator={false}
+      >
         {loading ? (
           <View style={designerProductsStyles.emptyState}>
-            <Text style={designerProductsStyles.emptyStateTitle}>Đang tải...</Text>
+            <Text style={designerProductsStyles.emptyStateTitle}>
+              Đang tải...
+            </Text>
           </View>
         ) : filteredProducts.map((product) => (
           <Pressable
@@ -343,48 +355,60 @@ const getStatusText = (status) => {
         {!loading && filteredProducts.length === 0 && (
           <View style={designerProductsStyles.emptyState}>
             <Icon name="inventory" size={64} color="#D1D5DB" />
-            <Text style={designerProductsStyles.emptyStateTitle}>Không có sản phẩm</Text>
+            <Text style={designerProductsStyles.emptyStateTitle}>
+              Không có sản phẩm
+            </Text>
             <Text style={designerProductsStyles.emptyStateText}>
-              {searchQuery ? "Không tìm thấy sản phẩm phù hợp" : "Bạn chưa có sản phẩm nào"}
+              {searchQuery
+                ? "Không tìm thấy sản phẩm phù hợp"
+                : "Bạn chưa có sản phẩm nào"}
             </Text>
           </View>
         )}
       </ScrollView>
       {!loading && (
-  <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", marginVertical: 16 }}>
-    <Pressable
-      onPress={() => handlePageChange(currentPage - 1)}
-      disabled={currentPage === 0}
-      style={{
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        backgroundColor: currentPage === 0 ? "#E5E7EB" : "#3B82F6",
-        borderRadius: 8,
-        marginRight: 8,
-      }}
-    >
-      <Text style={{ color: "#FFF" }}>Trước</Text>
-    </Pressable>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "center",
+            alignItems: "center",
+            marginVertical: 16,
+          }}
+        >
+          <Pressable
+            onPress={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 0}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              backgroundColor: currentPage === 0 ? "#E5E7EB" : "#3B82F6",
+              borderRadius: 8,
+              marginRight: 8,
+            }}
+          >
+            <Text style={{ color: "#FFF" }}>Trước</Text>
+          </Pressable>
 
-    <Text style={{ fontSize: 16, color: "#374151" }}>
-      Trang {currentPage + 1} / {totalPages}
-    </Text>
+          <Text style={{ fontSize: 16, color: "#374151" }}>
+            Trang {currentPage + 1} / {totalPages}
+          </Text>
 
-    <Pressable
-      onPress={() => handlePageChange(currentPage + 1)}
-      disabled={currentPage + 1 >= totalPages}
-      style={{
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        backgroundColor: currentPage + 1 >= totalPages ? "#E5E7EB" : "#3B82F6",
-        borderRadius: 8,
-        marginLeft: 8,
-      }}
-    >
-      <Text style={{ color: "#FFF" }}>Sau</Text>
-    </Pressable>
-  </View>
-)}
+          <Pressable
+            onPress={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage + 1 >= totalPages}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              backgroundColor:
+                currentPage + 1 >= totalPages ? "#E5E7EB" : "#3B82F6",
+              borderRadius: 8,
+              marginLeft: 8,
+            }}
+          >
+            <Text style={{ color: "#FFF" }}>Sau</Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* Filter Modal */}
       <Modal
@@ -435,67 +459,91 @@ const getStatusText = (status) => {
         <View style={designerProductsStyles.modalOverlay}>
           <View style={designerProductsStyles.detailModalContent}>
             <View style={designerProductsStyles.modalHeader}>
-              <Text style={designerProductsStyles.modalTitle}>Chi tiết sản phẩm</Text>
+              <Text style={designerProductsStyles.modalTitle}>
+                Chi tiết sản phẩm
+              </Text>
               <Pressable onPress={() => setShowDetailModal(false)}>
                 <Icon name="close" size={24} color="#6B7280" />
               </Pressable>
             </View>
-            
-            <ScrollView style={designerProductsStyles.detailModalBody} showsVerticalScrollIndicator={false}>
+
+            <ScrollView
+              style={designerProductsStyles.detailModalBody}
+              showsVerticalScrollIndicator={false}
+            >
               {selectedProduct && (
                 <>
                   {/* Product Images */}
-                  {selectedProduct.images && selectedProduct.images.length > 0 && (
-                    <ScrollView 
-                      horizontal 
-                      showsHorizontalScrollIndicator={false}
-                      style={designerProductsStyles.detailImagesContainer}
-                    >
-                      {selectedProduct.images.map((img, index) => (
-                        <Image
-                          key={index}
-                          source={{ uri: img.url || img.imageUrl }}
-                          style={designerProductsStyles.detailImage}
-                        />
-                      ))}
-                    </ScrollView>
-                  )}
+                  {selectedProduct.images &&
+                    selectedProduct.images.length > 0 && (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={designerProductsStyles.detailImagesContainer}
+                      >
+                        {selectedProduct.images.map((img, index) => (
+                          <Image
+                            key={index}
+                            source={{ uri: img.url || img.imageUrl }}
+                            style={designerProductsStyles.detailImage}
+                          />
+                        ))}
+                      </ScrollView>
+                    )}
 
                   {/* Product Info */}
                   <View style={designerProductsStyles.detailSection}>
-                    <Text style={designerProductsStyles.detailLabel}>Tên sản phẩm</Text>
-                    <Text style={designerProductsStyles.detailValue}>{selectedProduct.name}</Text>
+                    <Text style={designerProductsStyles.detailLabel}>
+                      Tên sản phẩm
+                    </Text>
+                    <Text style={designerProductsStyles.detailValue}>
+                      {selectedProduct.name}
+                    </Text>
                   </View>
 
                   <View style={designerProductsStyles.detailSection}>
-                    <Text style={designerProductsStyles.detailLabel}>Mô tả</Text>
-                    <Text style={designerProductsStyles.detailValue}>{selectedProduct.description}</Text>
+                    <Text style={designerProductsStyles.detailLabel}>
+                      Mô tả
+                    </Text>
+                    <Text style={designerProductsStyles.detailValue}>
+                      {selectedProduct.description}
+                    </Text>
                   </View>
 
                   <View style={designerProductsStyles.detailRow}>
                     <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>Giá</Text>
+                      <Text style={designerProductsStyles.detailLabel}>
+                        Giá
+                      </Text>
                       <Text style={designerProductsStyles.detailValue}>
                         {formatCurrency(selectedProduct.price)}
                       </Text>
                     </View>
 
                     <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>Loại</Text>
-                      <Text style={designerProductsStyles.detailValue}>{selectedProduct.type}</Text>
+                      <Text style={designerProductsStyles.detailLabel}>
+                        Loại
+                      </Text>
+                      <Text style={designerProductsStyles.detailValue}>
+                        {selectedProduct.type}
+                      </Text>
                     </View>
                   </View>
 
                   <View style={designerProductsStyles.detailRow}>
                     <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>Ngày phát hành</Text>
+                      <Text style={designerProductsStyles.detailLabel}>
+                        Ngày phát hành
+                      </Text>
                       <Text style={designerProductsStyles.detailValue}>
                         {formatDate(selectedProduct.releaseDate)}
                       </Text>
                     </View>
 
                     <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>Ngày hết hạn</Text>
+                      <Text style={designerProductsStyles.detailLabel}>
+                        Ngày hết hạn
+                      </Text>
                       <Text style={designerProductsStyles.detailValue}>
                         {formatDate(selectedProduct.expiredTime)}
                       </Text>
@@ -503,11 +551,20 @@ const getStatusText = (status) => {
                   </View>
 
                   <View style={designerProductsStyles.detailSection}>
-                    <Text style={designerProductsStyles.detailLabel}>Trạng thái</Text>
-                    <View style={[
-                      designerProductsStyles.statusBadge,
-                      { backgroundColor: getStatusColor(selectedProduct.isActive), alignSelf: 'flex-start' }
-                    ]}>
+                    <Text style={designerProductsStyles.detailLabel}>
+                      Trạng thái
+                    </Text>
+                    <View
+                      style={[
+                        designerProductsStyles.statusBadge,
+                        {
+                          backgroundColor: getStatusColor(
+                            selectedProduct.isActive
+                          ),
+                          alignSelf: "flex-start",
+                        },
+                      ]}
+                    >
                       <Text style={designerProductsStyles.statusText}>
                         {getStatusText(selectedProduct.isActive)}
                       </Text>
@@ -517,9 +574,12 @@ const getStatusText = (status) => {
                   {/* Designer Info */}
                   {selectedProduct.designerInfo && (
                     <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>Thông tin Designer</Text>
+                      <Text style={designerProductsStyles.detailLabel}>
+                        Thông tin Designer
+                      </Text>
                       <Text style={designerProductsStyles.detailValue}>
-                        {selectedProduct.designerInfo.firstName} {selectedProduct.designerInfo.lastName}
+                        {selectedProduct.designerInfo.firstName}{" "}
+                        {selectedProduct.designerInfo.lastName}
                       </Text>
                       <Text style={designerProductsStyles.detailSubValue}>
                         {selectedProduct.designerInfo.email}
@@ -528,57 +588,71 @@ const getStatusText = (status) => {
                   )}
 
                   {/* Items */}
-                  {selectedProduct.items && selectedProduct.items.length > 0 && (
-                    <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>
-                        Số lượng items: {selectedProduct.items.length}
-                      </Text>
-                    </View>
-                  )}
+                  {selectedProduct.items &&
+                    selectedProduct.items.length > 0 && (
+                      <View style={designerProductsStyles.detailSection}>
+                        <Text style={designerProductsStyles.detailLabel}>
+                          Số lượng items: {selectedProduct.items.length}
+                        </Text>
+                      </View>
+                    )}
 
                   {/* Action Buttons */}
                   <View style={designerProductsStyles.detailActions}>
                     <Pressable
-                      style={[designerProductsStyles.detailButton, { backgroundColor: '#3B82F6' }]}
+                      style={[
+                        designerProductsStyles.detailButton,
+                        { backgroundColor: "#3B82F6" },
+                      ]}
                       onPress={() => handleEditProduct(selectedProduct)}
                     >
                       <Icon name="edit" size={20} color="#FFFFFF" />
-                      <Text style={designerProductsStyles.detailButtonText}>Chỉnh sửa</Text>
+                      <Text style={designerProductsStyles.detailButtonText}>
+                        Chỉnh sửa
+                      </Text>
                     </Pressable>
 
                     <Pressable
-                      style={[designerProductsStyles.detailButton, { backgroundColor: '#10B981' }]}
+                      style={[
+                        designerProductsStyles.detailButton,
+                        { backgroundColor: "#10B981" },
+                      ]}
                       onPress={() => {
                         handleToggleActive(selectedProduct);
                         setShowDetailModal(false);
                       }}
                     >
-                      <Icon 
-                        name={selectedProduct.isActive ? "toggle-off" : "toggle-on"} 
-                        size={20} 
-                        color="#FFFFFF" 
+                      <Icon
+                        name={
+                          selectedProduct.isActive ? "toggle-off" : "toggle-on"
+                        }
+                        size={20}
+                        color="#FFFFFF"
                       />
                       <Text style={designerProductsStyles.detailButtonText}>
-                        {selectedProduct.isActive ? 'Tắt' : 'Bật'}
+                        {selectedProduct.isActive ? "Tắt" : "Bật"}
                       </Text>
                     </Pressable>
 
                     <Pressable
-                      style={[designerProductsStyles.detailButton, { backgroundColor: '#EF4444' }]}
+                      style={[
+                        designerProductsStyles.detailButton,
+                        { backgroundColor: "#EF4444" },
+                      ]}
                       onPress={() => handleDeleteProduct(selectedProduct)}
                     >
                       <Icon name="delete" size={20} color="#FFFFFF" />
-                      <Text style={designerProductsStyles.detailButtonText}>Xóa</Text>
+                      <Text style={designerProductsStyles.detailButtonText}>
+                        Xóa
+                      </Text>
                     </Pressable>
                   </View>
                 </>
               )}
             </ScrollView>
-            
           </View>
         </View>
       </Modal>
-      
     </View>
   );
 }

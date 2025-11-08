@@ -6,22 +6,32 @@ import React, {
   useEffect,
   useDeferredValue,
 } from "react";
-import { View, Alert, TextInput, Image, Button } from "react-native";
+import {
+  View,
+  Alert,
+  TextInput,
+  Image,
+  Button,
+  Dimensions,
+  ActivityIndicator,
+  Text,
+} from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import HeaderToolbar from "../../../components/drawing/toolbar/HeaderToolbar";
 import ToolbarContainer from "../../../components/drawing/toolbar/ToolbarContainer";
-import PenSettingsPanel from "../../../components/drawing/toolbar/PenSettingsPanel";
 import MultiPageCanvas from "../../../components/drawing/canvas/MultiPageCanvas";
-import EraserDropdown from "../../../components/drawing/toolbar/EraserDropdown";
-import StickerModal from "../../../components/drawing/media/StickerModal";
 import RulerOverlay from "../../../components/drawing/ruler/RulerOverlay";
+import StickerModal from "../../../components/drawing/media/StickerModal";
+import LayerPanel from "../../../components/drawing/layer/LayerPanel";
+import PenSettingsPanel from "../../../components/drawing/toolbar/PenSettingsPanel";
+import EraserDropdown from "../../../components/drawing/toolbar/EraserDropdown";
+
 import useOrientation from "../../../hooks/useOrientation";
 import { useNavigation } from "@react-navigation/native";
 import * as ExportUtils from "../../../utils/ExportUtils";
 import { projectService } from "../../../service/projectService";
 import styles from "./DrawingScreen.styles";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import LayerPanel from "../../../components/drawing/toolbar/LayerPanel";
 import { manipulateAsync, FlipType, SaveFormat } from "expo-image-manipulator";
 // Hàm helper để lấy kích thước hình ảnh
 const getImageSize = (uri) => {
@@ -52,23 +62,168 @@ export default function DrawingScreen({ route }) {
   const navigation = useNavigation();
   const noteConfig = route?.params?.noteConfig;
 
-  // HAND/PEN MODE
-  const [isPenMode, setIsPenMode] = useState(false);
+  // ✅ Validate noteConfig to prevent crash
+  useEffect(() => {
+    if (!noteConfig) {
+      console.warn("[DrawingScreen] No noteConfig provided, navigating back");
+      Alert.alert(
+        "Error",
+        "No project configuration found. Please create a new project.",
+        [
+          {
+            text: "OK",
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
+    }
+  }, [noteConfig, navigation]);
 
   // LAYERS - Per-page layer management
   const [showLayerPanel, setShowLayerPanel] = useState(false);
-  const [activePageId, setActivePageId] = useState(1);
-  const [pageLayers, setPageLayers] = useState({
-    1: [{ id: "layer1", name: "Layer 1", visible: true, strokes: [] }],
+
+  // Helper function to get page ID (consistent with MultiPageCanvas logic)
+  // Note: This is a pure function, not a hook, so it can be used in useState initializer
+  const getPageId = (page) => {
+    if (!page) return 1;
+    // ✅ Nếu pageNumber === 1, đó là cover page, luôn dùng id = 1
+    if (page.pageNumber === 1) return 1;
+    // Paper pages: dùng pageId từ API hoặc pageNumber + 10000
+    if (page.pageId) return Number(page.pageId);
+    if (page.pageNumber) return Number(page.pageNumber) + 10000;
+    return 1;
+  };
+
+  // Initialize activePageId and pageLayers from noteConfig
+  const [activePageId, setActivePageId] = useState(() => {
+    if (!noteConfig) return 1;
+
+    // Nếu có cover page, cover có id = 1
+    if (noteConfig.hasCover) {
+      return 1;
+    }
+
+    // Nếu có pages từ API, lấy page đầu tiên
+    if (noteConfig.pages?.length > 0) {
+      const firstPage = noteConfig.pages[0];
+      return getPageId(firstPage);
+    }
+
+    // Fallback
+    return 1;
+  });
+
+  const [pageLayers, setPageLayers] = useState(() => {
+    const initialLayers = {};
+
+    // Nếu có cover page, khởi tạo layer cho cover (id = 1)
+    if (noteConfig?.hasCover) {
+      initialLayers[1] = [
+        { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+      ];
+    }
+
+    // Khởi tạo layers cho các paper pages
+    if (noteConfig?.pages?.length > 0) {
+      noteConfig.pages.forEach((page) => {
+        const pageId = getPageId(page);
+        if (!initialLayers[pageId]) {
+          initialLayers[pageId] = [
+            { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+          ];
+        }
+      });
+    } else if (!noteConfig?.hasCover) {
+      // Fallback: nếu không có pages và không có cover, tạo page mặc định
+      initialLayers[1] = [
+        { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+      ];
+    }
+
+    return initialLayers;
   });
 
   const [activeLayerId, setActiveLayerId] = useState("layer1");
   const [layerCounter, setLayerCounter] = useState(2);
 
-  // Ensure layers exist for active page and reset active layer when page changes
+  const sanitizeStroke = useCallback((stroke) => {
+    if (!stroke || typeof stroke !== "object") return null;
+
+    const safe = { ...stroke };
+
+    safe.id =
+      typeof stroke.id === "string" && stroke.id.trim()
+        ? stroke.id
+        : `stroke-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const clampNumber = (value, fallback = 0, min = -100000, max = 100000) => {
+      if (!Number.isFinite(value)) return fallback;
+      if (value < min) return min;
+      if (value > max) return max;
+      return value;
+    };
+
+    safe.x = clampNumber(stroke.x, 0);
+    safe.y = clampNumber(stroke.y, 0);
+    safe.width = clampNumber(stroke.width, 0);
+    safe.height = clampNumber(stroke.height, 0);
+    safe.rotation = clampNumber(stroke.rotation, 0, -360, 360);
+    safe.opacity = clampNumber(stroke.opacity, 1, 0, 1);
+    safe.layerId =
+      typeof stroke.layerId === "string" && stroke.layerId.trim()
+        ? stroke.layerId
+        : "layer1";
+
+    if (Array.isArray(stroke.points)) {
+      const safePoints = stroke.points
+        .map((p) => {
+          const px = clampNumber(p?.x, safe.x);
+          const py = clampNumber(p?.y, safe.y);
+          if (!Number.isFinite(px) || !Number.isFinite(py)) return null;
+          return {
+            x: px,
+            y: py,
+            pressure: clampNumber(p?.pressure, 0.5, 0, 1),
+            thickness: clampNumber(p?.thickness, 1, 0.01, 20),
+            stabilization: clampNumber(p?.stabilization, 0, 0, 1),
+          };
+        })
+        .filter(Boolean);
+
+      if (safePoints.length >= 2) {
+        safe.points = safePoints;
+      } else {
+        delete safe.points;
+      }
+    }
+
+    if (
+      safe.tool === "text" ||
+      safe.tool === "sticky" ||
+      safe.tool === "comment"
+    ) {
+      safe.text = typeof stroke.text === "string" ? stroke.text : "";
+      safe.fontSize = clampNumber(stroke.fontSize, 18, 6, 200);
+      safe.padding = clampNumber(stroke.padding, 6, 0, 100);
+      safe.color = typeof stroke.color === "string" ? stroke.color : "#000";
+    }
+
+    if (safe.tool === "image" || safe.tool === "sticker") {
+      safe.uri = typeof stroke.uri === "string" ? stroke.uri : null;
+      if (!safe.uri) return null;
+    }
+
+    return safe;
+  }, []);
+
+  // Ensure layers exist for active page when page changes
   useEffect(() => {
     setPageLayers((prev) => {
       if (!prev[activePageId]) {
+        // Initialize layers for new page
+        // console.log(
+        //   `[DrawingScreen] Initializing layers for pageId: ${activePageId}`
+        // );
         return {
           ...prev,
           [activePageId]: [
@@ -78,20 +233,55 @@ export default function DrawingScreen({ route }) {
       }
       return prev;
     });
-    // Reset active layer to first layer when switching pages
-    setActiveLayerId("layer1");
   }, [activePageId]);
 
-  // Validate activeLayerId exists in current page layers
+  // Track previous activePageId to detect page changes
+  const prevActivePageIdRef = useRef(activePageId);
+  const isMountedRef = useRef(true);
+
+  // ✅ Cleanup khi component unmount
   useEffect(() => {
-    const currentPageLayers = pageLayers[activePageId] || [];
-    const layerExists = currentPageLayers.some((l) => l.id === activeLayerId);
-    
-    // If active layer doesn't exist in current page, reset to first layer
-    if (!layerExists && currentPageLayers.length > 0) {
-      setActiveLayerId(currentPageLayers[0].id);
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Clear layer select timeout
+      if (layerSelectTimeoutRef.current) {
+        clearTimeout(layerSelectTimeoutRef.current);
+        layerSelectTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  // Reset active layer when page changes (after layers are ensured to exist)
+  useEffect(() => {
+    // Chỉ reset khi page thực sự thay đổi
+    if (prevActivePageIdRef.current !== activePageId) {
+      prevActivePageIdRef.current = activePageId;
+
+      // Đợi một chút để đảm bảo pageLayers đã được update từ useEffect trước
+      const timer = setTimeout(() => {
+        // ✅ Kiểm tra component còn mount không
+        if (!isMountedRef.current) return;
+
+        const currentPageLayers = pageLayers[activePageId] || [];
+        if (currentPageLayers.length > 0) {
+          // Always reset to first layer when switching pages
+          const firstLayerId = currentPageLayers[0]?.id;
+          if (firstLayerId) {
+            setActiveLayerId(firstLayerId);
+          } else {
+            // Fallback: nếu không có id, set layer1
+            setActiveLayerId("layer1");
+          }
+        } else {
+          // Fallback: nếu vẫn chưa có layers, set layer1
+          setActiveLayerId("layer1");
+        }
+      }, 10);
+
+      return () => clearTimeout(timer);
     }
-  }, [activePageId, pageLayers, activeLayerId]);
+  }, [activePageId, pageLayers]); // ✅ Include pageLayers để đảm bảo có dữ liệu mới nhất
 
   // Get layers for active page - use useMemo to ensure it updates when pageLayers changes
   const currentLayers = useMemo(() => {
@@ -101,6 +291,39 @@ export default function DrawingScreen({ route }) {
       ]
     );
   }, [pageLayers, activePageId]);
+
+  // ✅ Đảm bảo activeLayerId luôn hợp lệ khi layers thay đổi
+  useEffect(() => {
+    if (!isMountedRef.current) return;
+
+    const currentPageLayers = pageLayers[activePageId] || [];
+
+    // Nếu không có layers, tạo layer mặc định
+    if (currentPageLayers.length === 0) {
+      setPageLayers((prev) => ({
+        ...prev,
+        [activePageId]: [
+          { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+        ],
+      }));
+      setActiveLayerId("layer1");
+      return;
+    }
+
+    // Kiểm tra activeLayerId có tồn tại trong layers không
+    const layerExists = currentPageLayers.some((l) => l?.id === activeLayerId);
+
+    if (!layerExists) {
+      // Nếu activeLayerId không tồn tại, set về layer đầu tiên
+      const firstLayerId = currentPageLayers[0]?.id;
+      if (firstLayerId) {
+        setActiveLayerId(firstLayerId);
+      } else {
+        // Fallback về layer1 nếu không có id
+        setActiveLayerId("layer1");
+      }
+    }
+  }, [pageLayers, activePageId, activeLayerId]);
 
   // Defer layer updates to prevent flickering in LayerPanel
   const deferredLayers = useDeferredValue(currentLayers);
@@ -151,7 +374,45 @@ export default function DrawingScreen({ route }) {
   );
 
   // Layer panel callbacks - memoized to prevent re-renders
-  const handleLayerSelect = useCallback((id) => setActiveLayerId(id), []);
+  // ✅ Thêm validation và debounce để tránh crash khi chuyển layer liên tục
+  const layerSelectTimeoutRef = useRef(null);
+  const handleLayerSelect = useCallback(
+    (id) => {
+      // Clear timeout trước đó nếu có
+      if (layerSelectTimeoutRef.current) {
+        clearTimeout(layerSelectTimeoutRef.current);
+      }
+
+      // ✅ Validate layer ID
+      if (!id || typeof id !== "string") {
+        console.warn("[DrawingScreen] handleLayerSelect: Invalid layer ID");
+        return;
+      }
+
+      // ✅ Kiểm tra layer có tồn tại trong currentLayers không
+      const currentLayers = pageLayers[activePageId] || [];
+      const layerExists = currentLayers.some((l) => l?.id === id);
+
+      if (!layerExists) {
+        console.warn(
+          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`
+        );
+        // Fallback về layer đầu tiên nếu layer không tồn tại
+        if (currentLayers.length > 0) {
+          const firstLayerId = currentLayers[0].id;
+          setActiveLayerId(firstLayerId);
+        }
+        return;
+      }
+
+      // ✅ Debounce để tránh chuyển layer quá nhanh (có thể gây crash)
+      layerSelectTimeoutRef.current = setTimeout(() => {
+        setActiveLayerId(id);
+        layerSelectTimeoutRef.current = null;
+      }, 50); // 50ms debounce
+    },
+    [pageLayers, activePageId]
+  );
 
   const handleToggleVisibility = useCallback(
     (id) => {
@@ -420,7 +681,363 @@ export default function DrawingScreen({ route }) {
   );
 
   const multiPageCanvasRef = useRef();
-  // 💾 SAVE (Cloud → JSON only)
+  const [isLoadingProject, setIsLoadingProject] = useState(false);
+
+  // 🔄 Auto-load strokes from strokeUrl when opening an existing project
+  useEffect(() => {
+    let isMounted = true;
+    const timeoutIds = [];
+
+    const loadExistingStrokes = async () => {
+      try {
+        const pagesToLoad = [];
+
+        // ✅ Kiểm tra xem page đầu tiên từ API có phải là cover không
+        const firstPageFromAPI =
+          Array.isArray(noteConfig?.pages) && noteConfig.pages.length > 0
+            ? noteConfig.pages[0]
+            : null;
+        const isFirstPageCover = firstPageFromAPI?.pageNumber === 1;
+
+        // ✅ Chỉ load cover từ noteConfig.cover nếu:
+        //    - Có hasCover và cover.strokeUrl
+        //    - VÀ page đầu tiên từ API KHÔNG phải là cover
+        if (
+          noteConfig?.hasCover &&
+          noteConfig?.cover?.strokeUrl &&
+          !isFirstPageCover
+        ) {
+          pagesToLoad.push({
+            ...noteConfig.cover,
+            pageId: 1,
+            pageNumber: 1,
+            type: "cover",
+          });
+        }
+
+        // Load tất cả pages từ API (bao gồm cover nếu có)
+        if (Array.isArray(noteConfig?.pages) && noteConfig.pages.length > 0) {
+          pagesToLoad.push(...noteConfig.pages);
+        }
+        if (pagesToLoad.length === 0) return;
+        if (!multiPageCanvasRef.current?.loadProjectData) return;
+
+        if (!isMounted) return;
+        setIsLoadingProject(true);
+
+        // Đợi một chút để đảm bảo MultiPageCanvas đã mount và pageRefs đã sẵn sàng
+        const delay1 = new Promise((resolve) => {
+          const id = setTimeout(() => {
+            if (isMounted) resolve();
+          }, 800);
+          timeoutIds.push(id);
+        });
+        await delay1;
+
+        if (!isMounted) {
+          setIsLoadingProject(false);
+          return;
+        }
+
+        // Load từng page một để tránh quá tải memory
+        for (const p of pagesToLoad) {
+          if (!isMounted) break;
+
+          const pageId = getPageId(p);
+
+          if (!p?.strokeUrl) {
+            continue;
+          }
+
+          try {
+            // console.log(`🔄 Loading page ${p.pageNumber} from:`, p.strokeUrl);
+            const data = await projectService.getProjectFile(p.strokeUrl);
+
+            if (!isMounted) break;
+
+            // ✅ Load template và backgroundColor từ JSON với validation
+            if (data?.template || data?.backgroundColor) {
+              // ✅ Validate template values để đảm bảo an toàn
+              const VALID_TEMPLATES = [
+                "blank",
+                "thin_line",
+                "bold_line",
+                "mini_check",
+                "mid_check",
+                "dot_grid",
+                "square_grid",
+                "cornell",
+                "weekly",
+                "monthly",
+                "daily",
+                "hex_grid",
+                "notes",
+                "flashcard",
+                "mindmap",
+                "outline",
+                "vocab",
+                "todo",
+                "habit",
+                "goal",
+                "meeting",
+                "project",
+                "brainstorm",
+                "kanban",
+                "journal",
+                "diary",
+                "gratitude",
+                "budget",
+              ];
+
+              const safeTemplate =
+                typeof data.template === "string" &&
+                VALID_TEMPLATES.includes(data.template)
+                  ? data.template
+                  : "blank";
+
+              // ✅ Validate backgroundColor (phải là hex color hợp lệ)
+              const safeBackgroundColor =
+                typeof data.backgroundColor === "string" &&
+                /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(data.backgroundColor)
+                  ? data.backgroundColor
+                  : "#FFFFFF";
+
+              // Update page trong MultiPageCanvas với template và backgroundColor
+              if (multiPageCanvasRef.current?.updatePage) {
+                multiPageCanvasRef.current.updatePage(pageId, {
+                  template: safeTemplate,
+                  backgroundColor: safeBackgroundColor,
+                });
+              }
+            }
+
+            // ✅ Load layer metadata từ JSON và sync với pageLayers
+            if (Array.isArray(data?.layers) && data.layers.length > 0) {
+              setPageLayers((prev) => {
+                const existingLayers = prev[pageId] || [];
+                // Merge layers từ JSON với existing layers
+                const mergedLayers = data.layers.map((savedLayer) => {
+                  // Tìm layer tương ứng trong existing layers
+                  const existingLayer = existingLayers.find(
+                    (l) => l?.id === savedLayer.id
+                  );
+
+                  if (existingLayer) {
+                    // Merge: giữ strokes từ existing, update metadata từ saved
+                    return {
+                      ...existingLayer,
+                      name:
+                        savedLayer.name ||
+                        existingLayer.name ||
+                        `Layer ${savedLayer.id}`,
+                      visible:
+                        savedLayer.visible !== undefined
+                          ? savedLayer.visible
+                          : existingLayer.visible !== false,
+                      locked:
+                        savedLayer.locked !== undefined
+                          ? savedLayer.locked
+                          : existingLayer.locked === true,
+                    };
+                  } else {
+                    // Layer mới từ saved
+                    return {
+                      id: savedLayer.id,
+                      name: savedLayer.name || `Layer ${savedLayer.id}`,
+                      visible: savedLayer.visible !== false,
+                      locked: savedLayer.locked === true,
+                      strokes: [], // Strokes sẽ được load sau
+                    };
+                  }
+                });
+
+                return {
+                  ...prev,
+                  [pageId]: mergedLayers,
+                };
+              });
+            }
+
+            // Validate và filter strokes
+            let strokes = Array.isArray(data?.strokes) ? data.strokes : [];
+
+            // Filter out invalid strokes trước
+            strokes = strokes.filter((s) => s && typeof s === "object");
+
+            // Optimize: Filter/limit strokes có hình ảnh base64 lớn
+            strokes = strokes
+              .map((s) => {
+                // Nếu stroke có hình ảnh base64 quá lớn, có thể skip hoặc optimize
+                if (s.tool === "image" || s.tool === "sticker") {
+                  if (
+                    s.uri &&
+                    s.uri.startsWith("data:image") &&
+                    s.uri.length > 5000000
+                  ) {
+                    // Skip hình ảnh base64 quá lớn (>5MB) để tránh crash
+                    console.warn(`⚠️ Skipping large image stroke: ${s.id}`);
+                    return null;
+                  }
+                }
+                return s;
+              })
+              .filter(Boolean)
+              .map(sanitizeStroke)
+              .filter(Boolean);
+
+            // Giới hạn số lượng strokes để tránh crash
+            if (strokes.length > 500) {
+              console.warn(
+                `⚠️ Page ${p.pageNumber} has ${strokes.length} strokes, limiting to 500`
+              );
+              strokes = strokes.slice(0, 500);
+            }
+
+            // console.log(
+            //   `✅ Loaded ${strokes.length} strokes for page ${p.pageNumber}`
+            // );
+
+            if (!isMounted) break;
+
+            // Load từng page vào canvas với retry
+            // console.log(
+            //   `🔄 Attempting to load page ${p.pageNumber} (id: ${pageId}) with ${strokes.length} strokes`
+            // );
+            let retries = 3;
+            while (retries > 0 && isMounted) {
+              if (multiPageCanvasRef.current?.loadProjectData) {
+                try {
+                  // ✅ Truyền cả layers metadata để restore layer names
+                  const layersMetadata = Array.isArray(data?.layers)
+                    ? data.layers
+                    : [];
+                  multiPageCanvasRef.current.loadProjectData({
+                    pages: [{ id: pageId, strokes, layersMetadata }],
+                  });
+                  // console.log(
+                  //   `✅ Successfully loaded page ${p.pageNumber} (id: ${pageId})`
+                  // );
+                  break;
+                } catch (loadError) {
+                  console.error(
+                    `❌ Error loading data to canvas for page ${p.pageNumber} (id: ${pageId}):`,
+                    loadError?.message || loadError
+                  );
+                  break;
+                }
+              } else {
+                console.warn(
+                  `⚠️ loadProjectData not available, retrying... (${retries} retries left)`
+                );
+              }
+              const delay2 = new Promise((resolve) => {
+                const id = setTimeout(() => {
+                  if (isMounted) resolve();
+                }, 300);
+                timeoutIds.push(id);
+              });
+              await delay2;
+              retries--;
+            }
+            if (retries === 0 && isMounted) {
+              console.error(
+                `❌ Failed to load page ${p.pageNumber} (id: ${pageId}) after all retries`
+              );
+            }
+
+            if (!isMounted) break;
+
+            // Delay giữa các page để tránh quá tải
+            const delay3 = new Promise((resolve) => {
+              const id = setTimeout(() => {
+                if (isMounted) resolve();
+              }, 200);
+              timeoutIds.push(id);
+            });
+            await delay3;
+          } catch (e) {
+            console.error(
+              `❌ Load page ${p.pageNumber} failed:`,
+              e?.message || e
+            );
+            // Continue với page tiếp theo thay vì dừng lại
+          }
+        }
+
+        if (isMounted) {
+          // console.log("✅ All pages loaded");
+          setIsLoadingProject(false);
+
+          // ✅ Sau khi load xong, đảm bảo activeLayerId hợp lệ
+          // Đợi một chút để layers được sync
+          setTimeout(() => {
+            if (!isMountedRef.current) return;
+
+            const currentPageLayers = pageLayers[activePageId] || [];
+            const currentActiveLayerId = activeLayerId;
+
+            // Kiểm tra activeLayerId có tồn tại trong layers không
+            const layerExists = currentPageLayers.some(
+              (l) => l?.id === currentActiveLayerId
+            );
+
+            if (!layerExists && currentPageLayers.length > 0) {
+              // Nếu activeLayerId không tồn tại, set về layer đầu tiên
+              const firstLayerId = currentPageLayers[0]?.id;
+              if (firstLayerId) {
+                setActiveLayerId(firstLayerId);
+              }
+            } else if (currentPageLayers.length === 0) {
+              // Nếu không có layers, tạo layer mặc định
+              setPageLayers((prev) => ({
+                ...prev,
+                [activePageId]: [
+                  { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+                ],
+              }));
+              setActiveLayerId("layer1");
+            }
+          }, 500); // Đợi 500ms để layers được sync
+        }
+      } catch (e) {
+        console.error("[DrawingScreen] Auto-load error:", e);
+        if (isMounted) {
+          setIsLoadingProject(false);
+          // Chỉ hiển thị alert nếu component vẫn còn mount
+          try {
+            Alert.alert(
+              "Lỗi",
+              "Không thể tải dữ liệu project. Vui lòng thử lại."
+            );
+          } catch (alertError) {
+            console.error("Error showing alert:", alertError);
+          }
+        }
+      }
+    };
+
+    loadExistingStrokes().catch((error) => {
+      console.error(
+        "[DrawingScreen] Unhandled promise rejection in loadExistingStrokes:",
+        error
+      );
+      if (isMounted) {
+        setIsLoadingProject(false);
+      }
+    });
+
+    // ✅ Cleanup function - QUAN TRỌNG để tránh crash khi unmount
+    return () => {
+      isMounted = false;
+      // Clear tất cả timeouts
+      timeoutIds.forEach((id) => {
+        if (id) clearTimeout(id);
+      });
+      timeoutIds.length = 0;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteConfig?.projectId]);
+  // 💾 SAVE: Presign → Upload to Cloud → Create Pages in DB
   const handleSaveFile = async () => {
     try {
       if (!multiPageCanvasRef.current?.uploadAllPages) {
@@ -428,25 +1045,36 @@ export default function DrawingScreen({ route }) {
         return;
       }
 
+      // 1) Presign + Upload all pages (returns [{ pageId, url }])
       const results = await multiPageCanvasRef.current.uploadAllPages();
 
-      if (results?.length) {
-        // 🟢 Lưu kết quả lên AsyncStorage
-        await AsyncStorage.setItem(
-          "lastUploadResults",
-          JSON.stringify(results)
-        );
-
-        const urls = results
-          .map((r) => `• Page ${r.pageId}: ${r.url}`)
-          .join("\n");
-        Alert.alert("✅ Đã lưu thành công!", urls);
-      } else {
-        Alert.alert("⚠️ Không có trang nào được lưu");
+      if (!results || results.length === 0) {
+        Alert.alert("Không có trang nào được lưu");
+        return;
       }
+
+      // 2) Persist to DB: POST /api/pages with projectId and pages list
+      const payload = {
+        projectId: noteConfig?.projectId,
+        pages: results.map((r) => ({ pageNumber: r.pageId, strokeUrl: r.url })),
+      };
+      await projectService.createPage(payload);
+
+      // 3) Save last upload locally for quick restore
+      await AsyncStorage.setItem("lastUploadResults", JSON.stringify(results));
+
+      const urls = results
+        .map((r) => `• Page ${r.pageId}: ${r.url}`)
+        .join("\n");
+      Alert.alert("Đã lưu & ghi DB thành công!", urls);
     } catch (err) {
       console.error("❌ Lưu thất bại:", err);
-      Alert.alert("❌ Lưu thất bại", err.message || "Không thể lưu lên cloud");
+      Alert.alert(
+        "❌ Lưu thất bại",
+        err.response?.data?.message ||
+          err.message ||
+          "Không thể lưu lên cloud/db"
+      );
     }
   };
 
@@ -455,7 +1083,7 @@ export default function DrawingScreen({ route }) {
       // 🟡 Lấy danh sách file đã upload lần gần nhất
       const savedResults = await AsyncStorage.getItem("lastUploadResults");
       if (!savedResults) {
-        Alert.alert("⚠️ Không tìm thấy file nào đã upload trước đó!");
+        Alert.alert("Không tìm thấy file nào đã upload trước đó!");
         return;
       }
 
@@ -464,11 +1092,19 @@ export default function DrawingScreen({ route }) {
       // 🔹 Lấy trang đầu tiên (hoặc bạn có thể load tất cả vòng lặp)
       const firstFile = results[0];
       if (!firstFile?.url) {
-        Alert.alert("⚠️ Không có URL hợp lệ để load file!");
+        Alert.alert("Không có URL hợp lệ để load file!");
         return;
       }
 
       const jsonData = await projectService.getProjectFile(firstFile.url);
+
+      // ✅ Sanitize strokes trước khi load
+      if (Array.isArray(jsonData?.strokes)) {
+        jsonData.strokes = jsonData.strokes
+          .map(sanitizeStroke)
+          .filter(Boolean)
+          .slice(0, 500);
+      }
 
       // ✅ Load lại vào canvas
       if (multiPageCanvasRef.current?.loadProjectData) {
@@ -482,7 +1118,7 @@ export default function DrawingScreen({ route }) {
       }
     } catch (err) {
       console.error("❌ Lỗi load file:", err);
-      Alert.alert("❌ Load thất bại", err.message || "Không thể tải file JSON");
+      Alert.alert("Load thất bại", err.message || "Không thể tải file JSON");
     }
   };
 
@@ -565,13 +1201,28 @@ export default function DrawingScreen({ route }) {
         size = { width: manipulated.width, height: manipulated.height };
       }
 
-      const scale = Math.min(1, 400 / size.width);
+      // ✅ Get current zoom level and page dimensions
+      const currentZoom = multiPageCanvasRef.current?.getCurrentZoom?.() || 1;
+      const screenWidth = Dimensions.get("window").width;
+
+      // Calculate max image width based on zoom and page width
+      // When zoomed in (e.g., 2x), image should be smaller to fit viewport
+      // Max 80% of page width to prevent overflow
+      const maxImageWidth = Math.min(
+        (screenWidth * 0.5) / currentZoom, // Adjust for zoom
+        400 // Absolute max width
+      );
+
+      const scale = Math.min(1, maxImageWidth / size.width);
+      const finalWidth = size.width * scale;
+      const finalHeight = size.height * scale;
+
       multiPageCanvasRef.current.addImageStroke({
         uri,
         x: 100,
         y: 100,
-        width: size.width * scale,
-        height: size.height * scale,
+        width: finalWidth,
+        height: finalHeight,
       });
     } catch (err) {
       Alert.alert("Error", "Failed to load image: " + err.message);
@@ -721,22 +1372,64 @@ export default function DrawingScreen({ route }) {
   );
 
   // 🧱 ===== RENDER =====
+  // ✅ Early return if noteConfig is missing
+  if (!noteConfig) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        {/* Empty view - Alert will show and navigate back */}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
+      {/* Loading Overlay */}
+      {isLoadingProject && (
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#FFFFFF",
+              padding: 24,
+              borderRadius: 12,
+              alignItems: "center",
+            }}
+          >
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text style={{ marginTop: 12, fontSize: 16, color: "#374151" }}>
+              Đang tải project...
+            </Text>
+          </View>
+        </View>
+      )}
       {/* 🧰 Header Toolbar */}
       <HeaderToolbar
         onBack={() => navigation.navigate("Home")}
         onToggleToolbar={() => setToolbarVisible((v) => !v)}
-        onTogglePenType={() => setIsPenMode((prev) => !prev)}
-        onLayers={() => setShowLayerPanel((prev) => !prev)}
-        onAddPage={() => {}}
-        onPreview={() => {}}
-        onSettings={() => {}}
-        onMore={() => {}}
+        onPreview={() => {}} // Sidebar đã tích hợp trong MultiPageCanvas
+        onCamera={handleOpenCamera}
+        onToggleLayerPanel={() => setShowLayerPanel((v) => !v)}
+        isLayerPanelVisible={showLayerPanel}
       />
       {showLayerPanel && (
         <LayerPanel
-          layers={deferredLayers}
+          layers={Array.isArray(deferredLayers) ? deferredLayers : []}
           activeLayerId={activeLayerId}
           onSelect={handleLayerSelect}
           onToggleVisibility={handleToggleVisibility}
@@ -768,10 +1461,11 @@ export default function DrawingScreen({ route }) {
                   rotation: 0,
                   scale: 1,
                 });
-              } else {
-                if (__DEV__)
-                  console.log("[DrawingScreen] rulerPosition:", rulerPosition);
               }
+              // else {
+              //   if (__DEV__)
+              //     console.log("[DrawingScreen] rulerPosition:", rulerPosition);
+              // }
               return;
             }
             setTool(name);
@@ -849,6 +1543,9 @@ export default function DrawingScreen({ route }) {
       <View style={{ flex: 1 }}>
         <MultiPageCanvas
           ref={multiPageCanvasRef}
+          noteConfig={noteConfig}
+          activePageId={activePageId}
+          setActivePageId={setActivePageId}
           pageLayers={pageLayers}
           setPageLayers={setPageLayers}
           activeLayerId={activeLayerId}
@@ -856,7 +1553,6 @@ export default function DrawingScreen({ route }) {
           setTool={setTool}
           color={color}
           setColor={setColor}
-          isPenMode={isPenMode}
           strokeWidth={activeStrokeWidth}
           pencilWidth={pencilWidth}
           eraserSize={eraserSize}
@@ -875,7 +1571,6 @@ export default function DrawingScreen({ route }) {
           registerPageRef={registerPageRef}
           onActivePageChange={setActivePageId}
           onColorPicked={handleColorPicked}
-          noteConfig={noteConfig}
           onRequestTextInput={(x, y) => {
             if (tool === "text") {
               setTimeout(() => setEditingText({ x, y, text: "" }), 0);

@@ -42,16 +42,16 @@ export default function ToolbarContainer({
   onColorPicked, // 👈 Nhận từ parent
   onInsertTable, // 👈 Callback khi insert table
 }) {
-  // 🎨 ===== COLOR STATE =====
+  // ===== COLOR STATE =====
   const [colors, setColors] = useState(DEFAULT_COLORS);
   const [selectedColor, setSelectedColor] = useState(color ?? colors[0]);
   const [colorHistory, setColorHistory] = useState([]); // 👈 Color history cho ColorPalette
 
-  // 📊 ===== TABLE STATE =====
+  // ===== TABLE STATE =====
   const [tableDropdownVisible, setTableDropdownVisible] = useState(false);
   const tableButtonRef = useRef(null);
 
-  // 🖊️ Remember last selected pen sub-tool
+  // Remember last selected pen sub-tool
   const PEN_TOOLS = [
     "pen",
     "pencil",
@@ -67,7 +67,7 @@ export default function ToolbarContainer({
     if (PEN_TOOLS.includes(tool)) setLastPenTool(tool);
   }, [tool]);
 
-  // ▭ Remember last selected shape sub-tool
+  // Remember last selected shape sub-tool
   const SHAPE_TOOLS = [
     "line",
     "arrow",
@@ -134,7 +134,7 @@ export default function ToolbarContainer({
       setColor(first);
   };
 
-  // 🧱 ===== RENDER =====
+  // ===== RENDER =====
   return (
     <View style={styles.container}>
       <ScrollView
@@ -142,7 +142,7 @@ export default function ToolbarContainer({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* ↩️ Undo / Redo / Clear */}
+        {/* Undo / Redo / Clear */}
         <ToolButton onPress={onUndo}>
           <MaterialCommunityIcons
             name="undo"
@@ -167,7 +167,7 @@ export default function ToolbarContainer({
 
         <View style={styles.divider} />
 
-        {/* ✍️ Pen Group */}
+        {/* Pen Group */}
         <ToolGroup
           label="Pens"
           mainIcon={
@@ -272,7 +272,7 @@ export default function ToolbarContainer({
           setTool={setTool}
         />
 
-        {/* 🧽 Eraser */}
+        {/* Eraser */}
         <View ref={eraserButtonRef}>
           <TouchableOpacity
             style={[
@@ -309,7 +309,7 @@ export default function ToolbarContainer({
 
         <View style={styles.divider} />
 
-        {/* 🔷 Shapes */}
+        {/* Shapes */}
         <ToolGroup
           label="Shapes"
           mainIcon={
@@ -403,7 +403,7 @@ export default function ToolbarContainer({
           setTool={setTool}
         />
 
-        {/* 🪣 Fill Tool */}
+        {/* Fill Tool */}
         <ToolButton
           icon={
             <MaterialCommunityIcons
@@ -416,7 +416,7 @@ export default function ToolbarContainer({
           onPress={() => setTool("fill")}
         />
 
-        {/* 🔤 Text */}
+        {/* Text */}
         <ToolGroup
           label="Text"
           mainIcon={
@@ -465,7 +465,7 @@ export default function ToolbarContainer({
           setTool={setTool}
         />
 
-        {/* 🖼 Media */}
+        {/* Media */}
         <ToolGroup
           label="Media"
           mainIcon={
@@ -514,7 +514,7 @@ export default function ToolbarContainer({
           setTool={setTool}
         />
 
-        {/* 📄 Pages */}
+        {/* Pages */}
         <ToolGroup
           label="Pages"
           mainIcon={
@@ -563,7 +563,7 @@ export default function ToolbarContainer({
           setTool={setTool}
         />
 
-        {/* 🔍 Navigation */}
+        {/* Navigation */}
         <ToolGroup
           label="Navigation"
           mainIcon={
@@ -634,7 +634,7 @@ export default function ToolbarContainer({
           setTool={setTool}
         />
 
-        {/* ☁️ Save Project (tự động lưu JSON lên cloud) */}
+        {/* Save Project (tự động lưu JSON lên cloud) */}
         <ToolButton
           icon={
             <MaterialCommunityIcons
@@ -643,7 +643,7 @@ export default function ToolbarContainer({
               color={ICON_COLOR}
             />
           }
-          onPress={() => onSaveFile?.("json")} // 💾 Bấm phát là lưu luôn JSON
+          onPress={() => onSaveFile?.("json")} // Bấm phát là lưu luôn JSON
         />
 
         <ToolButton
@@ -678,7 +678,7 @@ export default function ToolbarContainer({
           onPress={onImportJSON}
         /> */}
 
-        {/* 🧪 Extra Tools */}
+        {/* Extra Tools */}
         {/* <ToolButton
           icon={
             <MaterialCommunityIcons
@@ -691,7 +691,7 @@ export default function ToolbarContainer({
           active={tool === "grid"}
         /> */}
 
-        {/* 📊 Table Tool */}
+        {/* Table Tool */}
         <View ref={tableButtonRef}>
           <ToolButton
             icon={
@@ -724,7 +724,7 @@ export default function ToolbarContainer({
           active={tool === "ruler"}
         />
 
-        {/* 🔍 Eyedropper Tool */}
+        {/* Eyedropper Tool */}
         <EyeDropperTool
           tool={tool}
           setTool={setTool}
@@ -736,7 +736,7 @@ export default function ToolbarContainer({
 
         <View style={styles.divider} />
 
-        {/* 🎨 Color Palette */}
+        {/* Color Palette */}
         {[
           // pens
           "pen",
@@ -769,10 +769,10 @@ export default function ToolbarContainer({
 
         <View style={styles.divider} />
 
-        {/* ⚫ Size Selector (Pen or Eraser) */}
+        {/* Size Selector (Pen or Eraser) */}
         <View style={styles.widthGroup}>
           {tool.includes("eraser")
-            ? // 🧽 Hiển thị 3 kích thước gôm
+            ? // Hiển thị 3 kích thước gôm
               [8, 20, 40].map((size) => (
                 <ToolButton
                   key={size}
@@ -795,7 +795,7 @@ export default function ToolbarContainer({
                   onPress={() => setEraserSize(size)}
                 />
               ))
-            : // ✍️ Hiển thị 3 kích thước bút
+            : // Hiển thị 3 kích thước bút
               [2, 4, 6].map((size) => (
                 <ToolButton
                   key={size}
@@ -824,7 +824,7 @@ export default function ToolbarContainer({
         </View>
       </ScrollView>
 
-      {/* 📊 Table Dropdown */}
+      {/* Table Dropdown */}
       <TableDropdown
         visible={tableDropdownVisible}
         from={tableButtonRef}
@@ -838,7 +838,7 @@ export default function ToolbarContainer({
   );
 }
 
-// 💅 ===== STYLES =====
+// ===== STYLES =====
 const styles = StyleSheet.create({
   container: {
     backgroundColor: "#F7FAFC",

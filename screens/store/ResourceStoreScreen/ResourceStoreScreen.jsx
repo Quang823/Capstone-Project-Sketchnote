@@ -40,7 +40,7 @@ export default function ResourceStoreScreen() {
       try {
         const resAll = await resourceService.getAllResource(0, 10);
         const allData = resAll?.content || [];
-        console.log("✅ All Resources:", allData);
+        // console.log("✅ All Resources:", allData);
         setAllResources(allData);
 
         // 🔹 Sinh danh sách category từ type
@@ -55,7 +55,7 @@ export default function ResourceStoreScreen() {
       try {
         const resPopular = await resourceService.getAllResourcePopular(10);
         const popularData = resPopular || [];
-        console.log("✅ Popular Resources:", popularData);
+        //console.log("✅ Popular Resources:", popularData);
         setPopularResources(popularData);
       } catch (error) {
         console.error("❌ Fetch Popular Resources Failed:", error);
@@ -66,13 +66,12 @@ export default function ResourceStoreScreen() {
       try {
         const resLatest = await resourceService.getAllResourceLatest(10);
         const latestData = resLatest || [];
-        console.log("✅ Latest Resources:", latestData);
+        //  console.log("✅ Latest Resources:", latestData);
         setLatestResources(latestData);
       } catch (error) {
         console.error("❌ Fetch Latest Resources Failed:", error);
         setLatestResources([]);
       }
-
     } catch (error) {
       console.error("❌ Fetch Resource Failed:", error);
       Toast.show({
@@ -92,8 +91,10 @@ export default function ResourceStoreScreen() {
   // ✅ Add to Cart
   const handleAddToCart = (resource, navigateToCart = false) => {
     const designerName = resource.designerInfo
-    ? `${resource.designerInfo.firstName || ""} ${resource.designerInfo.lastName || ""}`.trim()
-    : "Updating...";
+      ? `${resource.designerInfo.firstName || ""} ${
+          resource.designerInfo.lastName || ""
+        }`.trim()
+      : "Updating...";
 
     const item = {
       id: resource.resourceTemplateId,
@@ -101,30 +102,32 @@ export default function ResourceStoreScreen() {
       description: resource.description,
       price: resource.price,
       image: resource.images?.[0]?.imageUrl || resource.images?.[0]?.url,
-         designer: {
-      name: designerName,
-      email: resource.designerInfo?.email || "",
-      avatarUrl: resource.designerInfo?.avatarUrl || null,
-    },
-    releaseDate: resource.releaseDate,
-       isActive: resource.isActive,
+      designer: {
+        name: designerName,
+        email: resource.designerInfo?.email || "",
+        avatarUrl: resource.designerInfo?.avatarUrl || null,
+      },
+      releaseDate: resource.releaseDate,
+      isActive: resource.isActive,
     };
 
     addToCart(item);
 
     if (navigateToCart) navigation.navigate("Cart");
-    else Toast.show({
-      type: "success",
-      text1: "Success",
-      text2: "Added to Cart",
-    });
+    else
+      Toast.show({
+        type: "success",
+        text1: "Success",
+        text2: "Added to Cart",
+      });
   };
 
   // ✅ Render resource card - Giao diện đẹp hơn
   const renderResourceItem = (item) => {
-    const imageUrl = item.images?.[0]?.imageUrl || 
-                     item.images?.[0]?.url || 
-                     "https://via.placeholder.com/280x160?text=No+Image";
+    const imageUrl =
+      item.images?.[0]?.imageUrl ||
+      item.images?.[0]?.url ||
+      "https://via.placeholder.com/280x160?text=No+Image";
 
     return (
       <Shadow
@@ -163,7 +166,10 @@ export default function ResourceStoreScreen() {
               {item.name}
             </Text>
 
-            <Text style={resourceStoreStyles.resourceDescription} numberOfLines={2}>
+            <Text
+              style={resourceStoreStyles.resourceDescription}
+              numberOfLines={2}
+            >
               {item.description}
             </Text>
 
@@ -174,25 +180,35 @@ export default function ResourceStoreScreen() {
             {/* Action Buttons */}
             <View style={resourceStoreStyles.actionButtons}>
               <Pressable
-                style={[resourceStoreStyles.actionButton, resourceStoreStyles.addToCartButton]}
+                style={[
+                  resourceStoreStyles.actionButton,
+                  resourceStoreStyles.addToCartButton,
+                ]}
                 onPress={(e) => {
                   e.stopPropagation();
                   handleAddToCart(item, false);
                 }}
               >
                 <Icon name="shopping-cart" size={16} color="#fff" />
-                <Text style={resourceStoreStyles.actionButtonText}>Add to Cart</Text>
+                <Text style={resourceStoreStyles.actionButtonText}>
+                  Add to Cart
+                </Text>
               </Pressable>
 
               <Pressable
-                style={[resourceStoreStyles.actionButton, resourceStoreStyles.buyNowButton]}
+                style={[
+                  resourceStoreStyles.actionButton,
+                  resourceStoreStyles.buyNowButton,
+                ]}
                 onPress={(e) => {
                   e.stopPropagation();
                   handleAddToCart(item, true);
                 }}
               >
                 <Icon name="flash-on" size={16} color="#fff" />
-                <Text style={resourceStoreStyles.actionButtonText}>Buy Now</Text>
+                <Text style={resourceStoreStyles.actionButtonText}>
+                  Buy Now
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -244,16 +260,26 @@ export default function ResourceStoreScreen() {
           <Icon name="shopping-cart" size={24} color="#1F2937" />
           {cart.length > 0 && (
             <View style={resourceStoreStyles.cartBadge}>
-              <Text style={resourceStoreStyles.cartBadgeText}>{cart.length}</Text>
+              <Text style={resourceStoreStyles.cartBadgeText}>
+                {cart.length}
+              </Text>
             </View>
           )}
         </Pressable>
       </View>
 
-      <ScrollView style={resourceStoreStyles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={resourceStoreStyles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Search */}
         <View style={resourceStoreStyles.searchContainer}>
-          <Icon name="search" size={20} color="#9CA3AF" style={resourceStoreStyles.searchIcon} />
+          <Icon
+            name="search"
+            size={20}
+            color="#9CA3AF"
+            style={resourceStoreStyles.searchIcon}
+          />
           <TextInput
             style={resourceStoreStyles.searchInput}
             placeholder="Tìm kiếm resource..."
@@ -275,14 +301,16 @@ export default function ResourceStoreScreen() {
               key={category}
               style={[
                 resourceStoreStyles.categoryButton,
-                selectedCategory === category && resourceStoreStyles.selectedCategoryButton,
+                selectedCategory === category &&
+                  resourceStoreStyles.selectedCategoryButton,
               ]}
               onPress={() => setSelectedCategory(category)}
             >
               <Text
                 style={[
                   resourceStoreStyles.categoryText,
-                  selectedCategory === category && resourceStoreStyles.selectedCategoryText,
+                  selectedCategory === category &&
+                    resourceStoreStyles.selectedCategoryText,
                 ]}
               >
                 {category}
@@ -330,7 +358,9 @@ export default function ResourceStoreScreen() {
           <View style={resourceStoreStyles.sectionContainer}>
             <View style={resourceStoreStyles.sectionHeader}>
               <Icon name="apps" size={24} color="#10B981" />
-              <Text style={resourceStoreStyles.sectionTitle}>Tất cả Resource</Text>
+              <Text style={resourceStoreStyles.sectionTitle}>
+                Tất cả Resource
+              </Text>
             </View>
             <ScrollView
               horizontal
@@ -343,12 +373,16 @@ export default function ResourceStoreScreen() {
         )}
 
         {/* Empty State */}
-        {allResources.length === 0 && popularResources.length === 0 && latestResources.length === 0 && (
-          <View style={resourceStoreStyles.emptyState}>
-            <Icon name="inbox" size={80} color="#D1D5DB" />
-            <Text style={resourceStoreStyles.emptyStateText}>Không có resource nào</Text>
-          </View>
-        )}
+        {allResources.length === 0 &&
+          popularResources.length === 0 &&
+          latestResources.length === 0 && (
+            <View style={resourceStoreStyles.emptyState}>
+              <Icon name="inbox" size={80} color="#D1D5DB" />
+              <Text style={resourceStoreStyles.emptyStateText}>
+                Không có resource nào
+              </Text>
+            </View>
+          )}
       </ScrollView>
     </View>
   );

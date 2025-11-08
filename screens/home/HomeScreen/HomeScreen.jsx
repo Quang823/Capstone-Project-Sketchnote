@@ -1,554 +1,696 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  ScrollView,
-  Pressable,
+  FlatList,
+  TouchableOpacity,
   Image,
-  Animated,
   Dimensions,
+  StyleSheet,
+  Pressable,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Shadow } from "react-native-shadow-2";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  Easing,
+  runOnJS,
 } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Shadow } from "react-native-shadow-2";
+import { useNavigation } from "@react-navigation/native";
+import { projectService } from "../../../service/projectService";
+import NavigationDrawer, { SidebarNavigation } from "../../home/nav/NavigationDrawer";
+import { SIDEBAR_WIDTH } from "../../home/nav/NavigationDrawer.styles";
 
-import { homeStyles } from "./HomeScreen.styles";
-import NavigationDrawer from "../nav/NavigationDrawer";
-import { getUserFromToken } from "../../../utils/AuthUtils";
-import CreateNoteModal from "../../../components/drawing/modals/CreateNoteModal";
-
-const ReanimatedView = Reanimated.createAnimatedComponent(View);
 const { width } = Dimensions.get("window");
 
-// Sample purchased courses
-const purchasedCourses = [
-  {
-    id: "1",
-    title: "Basic Sketchnote Art",
-    instructor: "John Nguyen",
-    image: require("../../../assets/logo1.webp"),
-    progress: 45,
-    lastAccessed: "Today, 10:30 AM",
-    level: "Beginner",
-    duration: "2.5h",
-  },
-  {
-    id: "2",
-    title: "Advanced Sketchnote for Business",
-    instructor: "Mary Tran",
-    image: require("../../../assets/logo1.webp"),
-    progress: 20,
-    lastAccessed: "Yesterday, 3:45 PM",
-    level: "Advanced",
-    duration: "4h",
-  },
-  {
-    id: "3",
-    title: "Visual Chart Techniques",
-    instructor: "Liam Le",
-    image: require("../../../assets/logo1.webp"),
-    progress: 75,
-    lastAccessed: "06/24/2023",
-    level: "Intermediate",
-    duration: "3h",
-  },
-];
+// --- CONFIG / RESPONSIVE ---
+const CONTENT_PADDING = 28; // styles.content paddingHorizontal
+const CARD_GAP = 12;
 
-// Recent projects
-const recentProjects = [
-  {
-    id: "1",
-    title: "Math Lesson Plan",
-    preview: require("../../../assets/logo1.webp"),
-    date: "Today",
-    time: "10:30 AM",
-    color: "#E0F7FA",
-    category: "Education",
-  },
-  {
-    id: "2",
-    title: "New Project Ideas",
-    preview: require("../../../assets/logo1.webp"),
-    date: "Yesterday",
-    time: "3:45 PM",
-    color: "#E8F5E9",
-    category: "Brainstorm",
-  },
-  {
-    id: "3",
-    title: "Weekly Schedule",
-    preview: require("../../../assets/logo1.webp"),
-    date: "3 days ago",
-    time: "9:15 AM",
-    color: "#FFF3E0",
-    category: "Planning",
-  },
-];
+// responsive columns: màn lớn -> 3 cột, tablet/desktop trung -> 3, mobile -> 2
+const columns = width >= 1000 ? 3 : width >= 700 ? 3 : 2;
 
-// Quick actions
-const quickActions = [
-  {
-    id: 1,
-    title: "New Sketchnote",
-    icon: "edit",
-    color: "#2563EB",
-    action: "create",
-  },
-  {
-    id: 2,
-    title: "From Template",
-    icon: "content-copy",
-    color: "#059669",
-    action: "template",
-  },
-  {
-    id: 3,
-    title: "Scan & Edit",
-    icon: "camera",
-    color: "#DC2626",
-    action: "scan",
-  },
-  {
-    id: 4,
-    title: "Collaborate",
-    icon: "group",
-    color: "#7C3AED",
-    action: "collaborate",
-  },
-];
+// Tính CARD_WIDTH chính xác (floor để tránh sub-pixel rounding)
+const CARD_WIDTH = Math.floor(
+  (width - SIDEBAR_WIDTH - CONTENT_PADDING * 2 - CARD_GAP * (columns - 1)) /
+    columns
+);
 
-export default function HomeScreen() {
-  const navigation = useNavigation();
-  const [userName, setUserName] = useState("");
-  const [activeNavItem, setActiveNavItem] = useState("home");
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [createModalVisible, setCreateModalVisible] = useState(false);
-  const createButtonRef = useRef(null);
+// Format date helper
+const formatDate = (dateString) => {
+  if (!dateString) return "No date";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
-  // Drawer animation
-  const drawerAnimation = useRef(new Animated.Value(-320)).current;
-  const overlayAnimation = useRef(new Animated.Value(0)).current;
-
-  // Header animation
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(50);
-
+// --- Popover Component ---
+function CreatePopover({ visible, onClose, onSelect }) {
+  const anim = useSharedValue(0);
   useEffect(() => {
-    opacity.value = withTiming(1, {
-      duration: 800,
-      easing: Easing.out(Easing.ease),
-    });
-    translateY.value = withTiming(0, {
-      duration: 800,
-      easing: Easing.out(Easing.ease),
-    });
-  }, []);
-  useEffect(() => {
-    const getUser = async () => {
-      const user = await getUserFromToken();
-      setUserName(user?.name || "");
-    };
-    getUser();
-  }, []);
+    anim.value = withTiming(visible ? 1 : 0, { duration: 180 });
+  }, [visible]);
+
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
+    opacity: anim.value,
+    transform: [{ scale: 0.94 + 0.06 * anim.value }],
+    pointerEvents: visible ? "auto" : "none",
   }));
 
-  const toggleDrawer = () => {
-    if (drawerOpen) {
-      Animated.parallel([
-        Animated.timing(drawerAnimation, {
-          toValue: -320,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayAnimation, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => setDrawerOpen(false));
-    } else {
-      setDrawerOpen(true);
-      Animated.parallel([
-        Animated.timing(drawerAnimation, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayAnimation, {
-          toValue: 0.5,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  };
+  if (!visible) return null;
 
-  const handleNavPress = (navItem) => {
-    setActiveNavItem(navItem);
-    if (drawerOpen) {
-      Animated.parallel([
-        Animated.timing(drawerAnimation, {
-          toValue: -320,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayAnimation, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setDrawerOpen(false);
-        switch (navItem) {
-          case "courses":
-            navigation.navigate("CoursesScreen");
-            break;
-          case "blogAll":
-            navigation.navigate("BlogList");
-            break;
-          case "blogMine":
-            navigation.navigate("MyBlog");
-            break;
-          case "create":
-            navigation.navigate("DrawingScreen");
-            break;
-          case "gallery":
-            navigation.navigate("GalleryScreen");
-            break;
-          case "store":
-            navigation.navigate("ResourceStore");
-            break;
-          case "wallet":
-            navigation.navigate("Wallet");
-            break;
-          case "profile":
-            navigation.navigate("ProfileScreen");
-            break;
-          case "settings":
-            navigation.navigate("SettingsScreen");
-            break;
-          case "orderHistory":
-            navigation.navigate("OrderHistory");
-            break;
-          default:
-            break;
-        }
-      });
-    }
-  };
-
-  const handleQuickAction = (action) => {
-    switch (action) {
-      case "create":
-        setCreateModalVisible(true);
-        break;
-      case "template":
-        navigation.navigate("TemplateScreen");
-        break;
-      case "scan":
-        navigation.navigate("ScanScreen");
-        break;
-      case "collaborate":
-        navigation.navigate("CollaborationScreen");
-        break;
-      default:
-        break;
-    }
-  };
-
-  const handleCreateOption = (optionId) => {
-    switch (optionId) {
-      case "create_note":
-        navigation.navigate("NoteSetupScreen");
-        break;
-      case "infinite_note":
-        navigation.navigate("DrawingScreen", { infinite: true });
-        break;
-      case "import_files":
-        // TODO: Implement file import
-        break;
-      case "import_image":
-        // TODO: Implement image import
-        break;
-      case "take_photo":
-        // TODO: Implement camera
-        break;
-      case "quick_note":
-        navigation.navigate("DrawingScreen", { quick: true });
-        break;
-      default:
-        break;
-    }
-  };
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 18) return "Good Afternoon";
-    return "Good Evening";
-  };
+  const options = [
+    { id: "sketchnote", label: "SketchNote", icon: "description" },
+    {
+      id: "whiteboard",
+      label: "Whiteboard",
+      icon: "photo",
+      badge: "NEW",
+    },
+    { id: "folder", label: "Folder", icon: "folder" },
+    { id: "import", label: "Import", icon: "cloud-download" },
+    { id: "image", label: "Image", icon: "image" },
+    { id: "quick_note", label: "Quick note", icon: "flash-on" },
+  ];
 
   return (
-    <LinearGradient
-      colors={["#F0FAFF", "#FFFFFF"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={homeStyles.container}
-    >
-      {/* Drawer */}
-      <NavigationDrawer
-        drawerOpen={drawerOpen}
-        drawerAnimation={drawerAnimation}
-        overlayAnimation={overlayAnimation}
-        activeNavItem={activeNavItem}
-        onToggleDrawer={toggleDrawer}
-        onNavPress={handleNavPress}
-      />
-
-      {/* Main Content */}
-      <View style={homeStyles.mainContent}>
-        <ScrollView
-          style={homeStyles.scrollView}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <ReanimatedView style={[homeStyles.header, animatedStyle]}>
-            <View style={homeStyles.headerTop}>
-              <Pressable onPress={toggleDrawer} style={homeStyles.menuButton}>
-                <Icon name="menu" size={24} color="#1E40AF" />
-              </Pressable>
-
-              <View style={homeStyles.headerActions}>
-                <Pressable
-                  style={homeStyles.headerActionButton}
-                  onPress={() => navigation.navigate("Wallet")}
-                >
-                  <Icon
-                    name="account-balance-wallet"
-                    size={24}
-                    color="#1E3A8A"
-                  />
-                </Pressable>
-                <Pressable
-                  style={homeStyles.headerActionButton}
-                  onPress={() => navigation.navigate("Cart")}
-                >
-                  <Icon name="shopping-cart" size={24} color="#1E3A8A" />
-                  <View style={homeStyles.cartBadge}>
-                    <Text style={homeStyles.cartBadgeText}>2</Text>
-                  </View>
-                </Pressable>
-                <Pressable style={homeStyles.notificationButton}>
-                  <Icon name="notifications-none" size={24} color="#1E3A8A" />
-                  <View style={homeStyles.notificationBadge}>
-                    <Text style={homeStyles.notificationCount}>3</Text>
-                  </View>
-                </Pressable>
-              </View>
+    <Reanimated.View style={[styles.popoverContainer, animatedStyle]}>
+      <View style={styles.popover}>
+        {options.map((opt, idx) => (
+          <Pressable
+            key={opt.id}
+            style={({ pressed }) => [
+              styles.popoverItem,
+              pressed && { backgroundColor: "#F1F5F9" },
+              idx === 0 && {
+                borderTopLeftRadius: 14,
+                borderTopRightRadius: 14,
+              },
+              idx === options.length - 1 && {
+                borderBottomLeftRadius: 14,
+                borderBottomRightRadius: 14,
+              },
+            ]}
+            onPress={() => {
+              onSelect(opt.id);
+              onClose();
+            }}
+          >
+            <View style={styles.popoverRow}>
+              <Icon name={opt.icon} size={19} color="#64748B" />
+              <Text style={styles.popoverLabel}>{opt.label}</Text>
+              {opt.badge && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{opt.badge}</Text>
+                </View>
+              )}
             </View>
-
-            <View style={homeStyles.welcomeContainer}>
-              <Text style={homeStyles.greetingText}>{getGreeting()},</Text>
-              <Text style={homeStyles.userName}>{userName}!</Text>
-              <Text style={homeStyles.motivationText}>
-                Create amazing sketchnotes today 🎨
-              </Text>
-            </View>
-          </ReanimatedView>
-
-          {/* Quick Actions */}
-          <View style={homeStyles.sectionContainer}>
-            <Text style={homeStyles.sectionTitle}>Quick Actions</Text>
-            <View style={homeStyles.quickActionsContainer}>
-              {quickActions.map((action) => (
-                <Pressable
-                  key={action.id}
-                  ref={action.id === 1 ? createButtonRef : null}
-                  style={[
-                    homeStyles.quickActionButton,
-                    { backgroundColor: action.color + "15" },
-                  ]}
-                  onPress={() => handleQuickAction(action.action)}
-                >
-                  <View
-                    style={[
-                      homeStyles.quickActionIcon,
-                      { backgroundColor: action.color },
-                    ]}
-                  >
-                    <Icon name={action.icon} size={20} color="#fff" />
-                  </View>
-                  <Text style={homeStyles.quickActionText}>{action.title}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* Purchased Courses */}
-          <View style={homeStyles.sectionContainer}>
-            <View style={homeStyles.sectionHeader}>
-              <Text style={homeStyles.sectionTitle}>Your Courses</Text>
-              <Pressable onPress={() => navigation.navigate("CoursesScreen")}>
-                <Text style={homeStyles.viewAllText}>View All →</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={homeStyles.coursesContainer}
-            >
-              {purchasedCourses.map((course) => (
-                <Pressable
-                  key={course.id}
-                  style={homeStyles.courseCard}
-                  onPress={() =>
-                    navigation.navigate("LessonScreen", {
-                      courseId: course.id,
-                      lessonId: "l1",
-                    })
-                  }
-                >
-                  <Shadow
-                    distance={8}
-                    startColor="#00000015"
-                    finalColor="#00000005"
-                  >
-                    <View style={homeStyles.courseCardInner}>
-                      <Image
-                        source={course.image}
-                        style={homeStyles.courseImage}
-                      />
-                      <View style={homeStyles.courseOverlay}>
-                        <View style={homeStyles.courseLevelBadge}>
-                          <Text style={homeStyles.courseLevelText}>
-                            {course.level}
-                          </Text>
-                        </View>
-                        <Icon
-                          name="play-circle-outline"
-                          size={32}
-                          color="#fff"
-                        />
-                      </View>
-                      <View style={homeStyles.courseInfo}>
-                        <Text style={homeStyles.courseTitle} numberOfLines={2}>
-                          {course.title}
-                        </Text>
-                        <View style={homeStyles.courseMetaContainer}>
-                          <Icon name="person" size={14} color="#6B7280" />
-                          <Text style={homeStyles.courseInstructor}>
-                            {course.instructor}
-                          </Text>
-                        </View>
-                        <View style={homeStyles.courseDurationContainer}>
-                          <Icon name="access-time" size={14} color="#6B7280" />
-                          <Text style={homeStyles.courseDuration}>
-                            {course.duration}
-                          </Text>
-                        </View>
-                        <View style={homeStyles.progressContainer}>
-                          <View style={homeStyles.progressBar}>
-                            <View
-                              style={[
-                                homeStyles.progressFill,
-                                { width: `${course.progress}%` },
-                              ]}
-                            />
-                          </View>
-                          <Text style={homeStyles.progressText}>
-                            {course.progress}%
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </Shadow>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Recent Projects */}
-          <View style={homeStyles.sectionContainer}>
-            <View style={homeStyles.sectionHeader}>
-              <Text style={homeStyles.sectionTitle}>Recent Projects</Text>
-              <Pressable onPress={() => navigation.navigate("GalleryScreen")}>
-                <Text style={homeStyles.viewAllText}>View All →</Text>
-              </Pressable>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={homeStyles.coursesContainer}
-            >
-              {recentProjects.map((project) => (
-                <Pressable
-                  key={project.id}
-                  style={homeStyles.projectCard}
-                  onPress={() =>
-                    navigation.navigate("DrawingScreen", {
-                      projectId: project.id,
-                    })
-                  }
-                >
-                  <Shadow
-                    distance={8}
-                    startColor="#00000015"
-                    finalColor="#00000005"
-                  >
-                    <View style={homeStyles.projectCardInner}>
-                      <Image
-                        source={project.preview}
-                        style={homeStyles.projectPreview}
-                      />
-                      <View style={homeStyles.courseOverlay}>
-                        <View style={homeStyles.courseLevelBadge}>
-                          <Text style={homeStyles.courseLevelText}>
-                            {project.category}
-                          </Text>
-                        </View>
-                        <Icon name="more-vert" size={28} color="#fff" />
-                      </View>
-                      <View style={homeStyles.projectFooter}>
-                        <Text style={homeStyles.projectTitle} numberOfLines={2}>
-                          {project.title}
-                        </Text>
-                        <View style={homeStyles.projectTimeContainer}>
-                          <Icon name="access-time" size={14} color="#6B7280" />
-                          <Text style={homeStyles.projectDate}>
-                            {project.date}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </Shadow>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-
-          <View style={{ height: 40 }} />
-        </ScrollView>
+          </Pressable>
+        ))}
+        <View style={styles.popoverTip}>
+          <Text style={styles.popoverTipText}>
+            Tip: Double tap “+ New” button to create a Quick note
+          </Text>
+        </View>
       </View>
-
-      {/* Create Note Popover */}
-      <CreateNoteModal
-        visible={createModalVisible}
-        onClose={() => setCreateModalVisible(false)}
-        onSelectOption={handleCreateOption}
-        fromRef={createButtonRef}
-      />
-    </LinearGradient>
+    </Reanimated.View>
   );
 }
+
+
+// --- Main HomeScreen ---
+export default function HomeScreen({ navigation }) {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [popoverVisible, setPopoverVisible] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Mặc định mở
+  const [activeNavItem, setActiveNavItem] = useState("documents");
+
+  // Animations
+  const sidebarAnim = useSharedValue(sidebarOpen ? 0 : -SIDEBAR_WIDTH); // 0 = mở, -SIDEBAR_WIDTH = đóng
+  const fade = useSharedValue(0);
+  const translateX = useSharedValue(sidebarOpen ? 0 : -SIDEBAR_WIDTH);
+
+  useEffect(() => {
+    fade.value = withTiming(1, { duration: 400 });
+  }, []);
+
+  // Fetch projects from API
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await projectService.getUserProjects();
+      // console.log("✅ Projects fetched:", response);
+      setProjects(response);
+    } catch (err) {
+      console.error("❌ Error fetching projects:", err);
+      setError("Không thể tải danh sách dự án. Vui lòng thử lại sau.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  useEffect(() => {
+    translateX.value = withTiming(sidebarOpen ? 0 : -SIDEBAR_WIDTH, { duration: 300 });
+    sidebarAnim.value = translateX.value;
+  }, [sidebarOpen]);
+
+  const toggleSidebarWithState = (open) => {
+    setSidebarOpen(open);
+  };
+
+  // Gesture handler cho drag sidebar - sử dụng API mới
+  const startX = useSharedValue(0);
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-10, 10]) // Chỉ kích hoạt khi kéo ngang
+    .failOffsetY([-10, 10]) // Cho phép scroll dọc
+    .onStart(() => {
+      'worklet';
+      startX.value = translateX.value;
+    })
+    .onUpdate((event) => {
+      'worklet';
+      // Chỉ xử lý khi kéo ngang nhiều hơn kéo dọc
+      if (Math.abs(event.translationX) > Math.abs(event.translationY)) {
+        const newX = startX.value + event.translationX;
+        // Giới hạn drag trong khoảng [-SIDEBAR_WIDTH, 0]
+        translateX.value = Math.max(-SIDEBAR_WIDTH, Math.min(0, newX));
+        sidebarAnim.value = translateX.value;
+      }
+    })
+    .onEnd(() => {
+      'worklet';
+      const threshold = -SIDEBAR_WIDTH / 2;
+      const shouldOpen = translateX.value > threshold;
+      
+      translateX.value = withTiming(shouldOpen ? 0 : -SIDEBAR_WIDTH, { duration: 300 });
+      sidebarAnim.value = translateX.value;
+      
+      runOnJS(toggleSidebarWithState)(shouldOpen);
+    });
+
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
+  const sidebarStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+  const toggleButtonStyle = useAnimatedStyle(() => {
+    const togglePosition = translateX.value + SIDEBAR_WIDTH;
+    return {
+      transform: [{ translateX: togglePosition }],
+    };
+  });
+
+  const handleCreate = (type) => {
+    setPopoverVisible(false);
+    switch (type) {
+      case "sketchnote":
+        navigation?.navigate?.("NoteSetupScreen");
+        break;
+      case "whiteboard":
+        navigation?.navigate?.("NoteSetupScreen", { mode: "whiteboard" });
+        break;
+      case "quick_note":
+        navigation?.navigate?.("NoteSetupScreen", { quick: true });
+        break;
+    }
+  };
+
+  const toggleSidebar = () => setSidebarOpen((v) => !v);
+  const handleNavPress = (id) => {
+    setActiveNavItem(id);
+    
+    // Navigation logic
+    switch (id) {
+      case "documents":
+        // Documents = Home screen (current screen)
+        break;
+      case "favorites":
+        // TODO: Navigate to Favorites screen or filter projects
+        // For now, just stay on Home
+        break;
+      case "shared":
+        // TODO: Navigate to Shared screen or filter projects
+        // For now, just stay on Home
+        break;
+      case "marketplace":
+        navigation?.navigate?.("ResourceStore");
+        break;
+      case "trash":
+        // TODO: Navigate to Trash screen or filter projects
+        // For now, just stay on Home
+        break;
+      case "home":
+        // Already on Home
+        break;
+      case "courses":
+        navigation?.navigate?.("CoursesScreen");
+        break;
+      case "create":
+        setPopoverVisible(true);
+        break;
+      case "gallery":
+        // TODO: Navigate to Gallery screen
+        break;
+      case "store":
+        navigation?.navigate?.("ResourceStore");
+        break;
+      case "orderHistory":
+        navigation?.navigate?.("OrderHistory");
+        break;
+      case "blogAll":
+        navigation?.navigate?.("BlogList");
+        break;
+      case "blogMine":
+        navigation?.navigate?.("MyBlog");
+        break;
+      case "profile":
+        // TODO: Navigate to Profile screen
+        break;
+      case "settings":
+        // TODO: Navigate to Settings screen
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Double tap detection
+  let lastTap = 0;
+  const handleDoubleTap = () => {
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      setPopoverVisible(false);
+      navigation?.navigate?.("DrawingScreen", { quick: true });
+    }
+    lastTap = now;
+  };
+
+  const handleProjectClick = async (project) => {
+    try {
+      //console.log("🔄 Fetching project details for:", project.projectId);
+      const projectDetails = await projectService.getProjectById(
+        project.projectId
+      );
+      // console.log("✅ Project details fetched:", projectDetails);
+
+      // Build noteConfig từ projectDetails để DrawingScreen hiểu
+      const noteConfig = {
+        projectId: projectDetails.projectId,
+        title: projectDetails.name || "Untitled Note",
+        description: projectDetails.description || "",
+        hasCover: !!projectDetails.imageUrl,
+        orientation: "portrait", // Default, có thể lưu trong DB sau
+        paperSize: "A4", // Default, có thể lưu trong DB sau
+        cover: projectDetails.imageUrl
+          ? {
+              template: "custom_image",
+              color: "#F8FAFC",
+              imageUrl: projectDetails.imageUrl,
+            }
+          : null,
+        paper: { template: "blank" }, // Default
+        pages: projectDetails.pages || [], // Mảng pages với pageNumber và strokeUrl
+        projectDetails: projectDetails, // Giữ nguyên để dùng sau
+      };
+
+      // Navigate to DrawingScreen với noteConfig
+      navigation?.navigate?.("DrawingScreen", { noteConfig });
+    } catch (error) {
+      console.error("❌ Error fetching project details:", error);
+      Alert.alert("Lỗi", "Không thể tải thông tin dự án. Vui lòng thử lại.");
+    }
+  };
+
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      activeOpacity={0.88}
+      style={styles.cardWrapper}
+      onPress={() => handleProjectClick(item)}
+    >
+      <Shadow distance={6} startColor="#00000012" offset={[0, 3]}>
+        <View style={styles.card}>
+          <View style={styles.previewContainer}>
+            {item.imageUrl ? (
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={styles.previewImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Image
+                source={require("../../../assets/logo1.webp")}
+                style={styles.previewImage}
+                resizeMode="cover"
+              />
+            )}
+          </View>
+          <View style={styles.cardFooter}>
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {item.name || "Untitled Project"}
+            </Text>
+            <Text style={styles.cardDate}>
+              {item.description || "No description"}
+            </Text>
+            <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
+          </View>
+        </View>
+      </Shadow>
+    </TouchableOpacity>
+  );
+
+  return (
+    <View style={styles.container}>
+      
+      <GestureDetector gesture={panGesture}>
+        <Reanimated.View style={[styles.sidebarContainer, sidebarStyle]}>
+          <SidebarNavigation 
+            activeNavItem={activeNavItem} 
+            onNavPress={handleNavPress} 
+          />
+        </Reanimated.View>
+      </GestureDetector>
+      
+      {/* Nút toggle sidebar - có thể drag */}
+      <GestureDetector gesture={panGesture}>
+        <Reanimated.View style={[styles.toggleButtonContainer, toggleButtonStyle]}>
+          <TouchableOpacity
+            style={styles.toggleButton}
+            onPress={toggleSidebar}
+            activeOpacity={0.7}
+          >
+            <Icon 
+              name={sidebarOpen ? "menu" : "menu"} 
+              size={26} 
+              color="#2563EB" 
+            />
+          </TouchableOpacity>
+        </Reanimated.View>
+      </GestureDetector>
+      
+      {/* Main Content */}
+      <View style={styles.main}>
+        <Reanimated.View style={[styles.content, fadeStyle]}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Projects</Text>
+            <View style={styles.headerRight}>
+              <TouchableOpacity style={styles.sortButton}>
+                <Text style={styles.sortText}>Date</Text>
+                <Icon name="arrow-drop-down" size={18} color="#64748B" />
+              </TouchableOpacity>
+  
+              {/* Nút + New */}
+              <TouchableOpacity
+                style={styles.newButton}
+                onPress={() => setPopoverVisible(true)}
+                onPressIn={handleDoubleTap}
+              >
+                <LinearGradient
+                  colors={["#2563EB", "#0EA5E9"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.newButtonGradient}
+                >
+                  <Text style={styles.newButtonText}>+ New</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+  
+          {/* Popover */}
+          <CreatePopover
+            visible={popoverVisible}
+            onClose={() => setPopoverVisible(false)}
+            onSelect={handleCreate}
+          />
+  
+          {/* Loading / Error / Empty / Grid */}
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4F46E5" />
+              <Text style={styles.loadingText}>Loading project...</Text>
+            </View>
+          )}
+  
+          {error && !loading && (
+            <View style={styles.errorContainer}>
+              <Icon name="error-outline" size={48} color="#EF4444" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => fetchProjects()}
+              >
+                <Text style={styles.retryButtonText}>Retry again</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+  
+          {!loading && !error && projects.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Icon name="folder-open" size={64} color="#9CA3AF" />
+              <Text style={styles.emptyTitle}>No projects yet.</Text>
+              <Text style={styles.emptyText}>Create your first project!</Text>
+            </View>
+          )}
+  
+          {!loading && !error && projects.length > 0 && (
+            <FlatList
+              data={projects}
+              keyExtractor={(item) => item.projectId?.toString()}
+              renderItem={renderItem}
+              numColumns={columns}
+              columnWrapperStyle={[
+                styles.gridRow,
+                { marginBottom: CARD_GAP, paddingHorizontal: 2 },
+              ]}
+              contentContainerStyle={[
+                styles.gridContainer,
+                { paddingBottom: 100 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              key={`${columns}`}
+            />
+          )}
+        </Reanimated.View>
+      </View>
+    </View>
+  );
+  
+}
+
+// === STYLES ===
+const styles = StyleSheet.create({
+  container: { flex: 1, flexDirection: "row", backgroundColor: "#F9FAFB" },
+  sidebarContainer: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 10,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  toggleButtonContainer: {
+    position: "absolute",
+    left: 0,
+    top: Platform.OS === "ios" ? 60 : 44,
+    zIndex: 100,
+    marginLeft: 8,
+  },
+  main: { flex: 1, backgroundColor: "#F9FAFB" },
+  content: { flex: 1, paddingHorizontal: CONTENT_PADDING, paddingTop: 25 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    zIndex: 20,
+    position: "relative",
+  },
+  toggleButton: {
+    padding: 10,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 10,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  headerTitle: { fontSize: 28, fontWeight: "800", color: "#111827", flex: 1 },
+  headerRight: { flexDirection: "row", alignItems: "center" },
+  sortButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    marginRight: 12,
+  },
+  sortText: { color: "#6B7280", fontSize: 14.5, fontWeight: "500" },
+  newButton: {
+    borderRadius: 12,
+    overflow: "hidden",
+    elevation: 8,
+    shadowColor: "#7C3AED",
+  },
+  newButtonGradient: { paddingHorizontal: 16, paddingVertical: 10 },
+  newButtonText: { color: "#fff", fontWeight: "600", fontSize: 15.5 },
+
+  // Popover
+  popoverContainer: {
+    position: "absolute",
+    right: CONTENT_PADDING,
+    top: Platform.OS === "ios" ? 110 : 100,
+    zIndex: 100,
+  },
+  popover: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    minWidth: 210,
+    paddingVertical: 8,
+    elevation: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  popoverItem: { paddingHorizontal: 16, paddingVertical: 12 },
+  popoverRow: { flexDirection: "row", alignItems: "center" },
+  popoverLabel: {
+    color: "#1F2937",
+    fontSize: 15,
+    fontWeight: "500",
+    marginLeft: 14,
+    flex: 1,
+  },
+  badge: {
+    backgroundColor: "#10B981",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  badgeText: { color: "#fff", fontSize: 10.5, fontWeight: "600" },
+  popoverTip: {
+    marginTop: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  popoverTipText: { fontSize: 12, color: "#6B7280", fontStyle: "italic" },
+
+  // Grid & Card (SMALLER)
+  gridContainer: { paddingBottom: 100, paddingHorizontal: 4 },
+  gridRow: { justifyContent: "space-between" },
+  cardWrapper: { width: CARD_WIDTH },
+  card: {
+    width: CARD_WIDTH,
+    // Gọn hơn: giảm height (gần vuông, không quá cao)
+    height: Math.round(CARD_WIDTH * 0.98),
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  previewContainer: { height: "62%", position: "relative" },
+  previewImage: { width: "100%", height: "100%" },
+  starIcon: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: 10,
+    padding: 4,
+  },
+  cardFooter: { paddingHorizontal: 10, paddingVertical: 6 },
+  cardTitle: { color: "#111827", fontSize: 12.5, fontWeight: "600" },
+  cardDate: { color: "#6B7280", fontSize: 10, marginTop: 4 },
+
+  // Loading, Error, Empty States
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 32,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#EF4444",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  retryButton: {
+    marginTop: 20,
+    backgroundColor: "#4F46E5",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    marginTop: 16,
+    fontSize: 18,
+    color: "#374151",
+    fontWeight: "600",
+  },
+  emptyText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "#9CA3AF",
+    textAlign: "center",
+  },
+});

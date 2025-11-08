@@ -39,8 +39,8 @@ export default function InlineTextEditor({
   initialData = {}, // Full styles khi edit existing text
   onCancel,
   onSubmit,
-  onChange, // 🔑 Prop mới để cập nhật real-time
-  isEditingExisting = false, // 🔑 Biến để biết đang edit existing text
+  onChange, // Prop mới để cập nhật real-time
+  isEditingExisting = false, // Biến để biết đang edit existing text
 }) {
   const [text, setText] = useState(safeText || "");
 
@@ -87,8 +87,6 @@ export default function InlineTextEditor({
       color,
       fontSize,
       fontFamily: effectiveFont || "Roboto-Regular",
-
-      isEditing: isEditingExisting, // 🔑 Thêm dòng này
       ...override,
     });
   };
@@ -120,7 +118,7 @@ export default function InlineTextEditor({
     })
   ).current;
 
-  // 🔑 Load full initial data khi visible thay đổi
+  // Load full initial data khi visible thay đổi
   useEffect(() => {
     if (visible) {
       setText(initialData.text || safeTextValue);
@@ -134,7 +132,7 @@ export default function InlineTextEditor({
     }
   }, [visible, initialData, safeTextValue]);
 
-  // 🔑 Gửi thay đổi real-time về parent
+  // Gửi thay đổi real-time về parent
   useEffect(() => {
     if (visible && onChange) {
       // Hủy timeout trước đó nếu có
@@ -195,15 +193,15 @@ export default function InlineTextEditor({
         <View style={styles.overlay} />
       </TouchableWithoutFeedback>
 
-      {/* 🧰 Floating Toolbar */}
+      {/* Floating Toolbar */}
       <Animated.View
         {...(!showFonts ? panResponder.panHandlers : {})}
         pointerEvents={showFonts ? "box-none" : "auto"}
         style={[
           styles.toolbar,
           {
-            top: y - 90,
-            left: Math.max(10, x - 150),
+            top: Math.max(10, y - 90),
+            left: Math.max(10, Math.min(x - 150, width - 320)),
             maxWidth: width - 20,
           },
           animatedStyle,
@@ -213,10 +211,20 @@ export default function InlineTextEditor({
           colors={["#f9fafb", "#e2e8f0"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={[styles.toolbarInner, isLandscape && { flexWrap: "wrap" }]}
+          style={[
+            styles.toolbarInner,
+            !isLandscape && { flexDirection: "column", gap: 8 },
+          ]}
         >
-          {/* 🅰 Font Picker */}
-          <View style={styles.group}>
+          {/* Row 1: Font, Size, B/I/U (Portrait mode) */}
+          <View
+            style={[
+              styles.toolbarRow,
+              !isLandscape && { flexDirection: "row", gap: 4 },
+            ]}
+          >
+            {/* Font Picker */}
+            <View style={styles.group}>
             <TouchableOpacity
               onPress={() => setShowFonts((s) => !s)}
               style={styles.fontButton}
@@ -232,7 +240,7 @@ export default function InlineTextEditor({
             </TouchableOpacity>
           </View>
 
-          {/* 🔠 Font size */}
+          {/* Font size */}
           <View style={styles.group}>
             <TouchableOpacity
               onPress={() => setFontSize((f) => Math.max(10, f - 1))}
@@ -326,30 +334,38 @@ export default function InlineTextEditor({
               </TouchableOpacity>
             ))}
           </View>
-
-          {/* 🎨 Color picker */}
-          <View style={[styles.group, { paddingHorizontal: 4 }]}>
-            {COLORS.map((c) => (
-              <TouchableOpacity
-                key={c}
-                style={[
-                  styles.colorDot,
-                  {
-                    backgroundColor: c,
-                    borderColor: c === color ? "#2563EB" : "#cbd5e1",
-                    transform: [{ scale: c === color ? 1.2 : 1 }],
-                  },
-                ]}
-                onPress={() => {
-                  setColor(c);
-                  triggerChange({ color: c });
-                }}
-              />
-            ))}
           </View>
 
-          {/* ✅ Done / Cancel */}
-          <View style={styles.actions}>
+          {/* Row 2: Color, Cancel, Done (Portrait mode) */}
+          <View
+            style={[
+              styles.toolbarRow,
+              !isLandscape && { flexDirection: "row", gap: 4 },
+            ]}
+          >
+            {/* Color picker */}
+            <View style={[styles.group, { paddingHorizontal: 4 }]}>
+              {COLORS.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  style={[
+                    styles.colorDot,
+                    {
+                      backgroundColor: c,
+                      borderColor: c === color ? "#2563EB" : "#cbd5e1",
+                      transform: [{ scale: c === color ? 1.2 : 1 }],
+                    },
+                  ]}
+                  onPress={() => {
+                    setColor(c);
+                    triggerChange({ color: c });
+                  }}
+                />
+              ))}
+            </View>
+
+            {/* Done / Cancel */}
+            <View style={styles.actions}>
             <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
@@ -370,10 +386,11 @@ export default function InlineTextEditor({
             >
               <Text style={styles.doneText}>Done</Text>
             </TouchableOpacity>
+            </View>
           </View>
         </LinearGradient>
 
-        {/* ▼ Font Dropdown */}
+        {/* Font Dropdown */}
         {showFonts && (
           <Animated.View style={styles.dropdown}>
             {FONTS.map((item) => (
@@ -407,7 +424,7 @@ export default function InlineTextEditor({
         )}
       </Animated.View>
 
-      {/* 📝 Inline Text Box */}
+      {/* Inline Text Box */}
       <View
         style={[
           styles.textBoxWrapper,
@@ -419,16 +436,13 @@ export default function InlineTextEditor({
           },
         ]}
       >
-        {/* 🔹 Viền nét đứt giống TextSelectionBox */}
         <View style={styles.selectionBox}>
-          {/* 4 chấm góc */}
           <View style={[styles.dot, { top: -6, left: -6 }]} />
           <View style={[styles.dot, { top: -6, right: -6 }]} />
           <View style={[styles.dot, { bottom: -6, left: -6 }]} />
           <View style={[styles.dot, { bottom: -6, right: -6 }]} />
         </View>
 
-        {/* 📝 TextInput */}
         <TextInput
           key={`${fontFamily}-${bold}-${italic}-${underline}-${fontSize}-${color}`}
           value={text}
@@ -501,6 +515,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     flexWrap: "wrap",
   },
+  toolbarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 4,
+  },
   group: {
     flexDirection: "row",
     alignItems: "center",
@@ -532,6 +552,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 4,
     marginLeft: "auto",
   },
   cancelBtn: {
@@ -539,7 +560,6 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     backgroundColor: "#f1f5f9",
     borderRadius: 8,
-    marginRight: 4,
   },
   doneBtn: {
     backgroundColor: "#2563EB",

@@ -30,7 +30,7 @@ export default function ResourceDetailScreen() {
     const fetchResource = async () => {
       try {
         const data = await resourceService.getResourceById(resourceId);
-        console.log("📦 Resource Detail:", data);
+        //console.log("📦 Resource Detail:", data);
         setResource(data);
       } catch (error) {
         Toast.show({
@@ -143,7 +143,10 @@ export default function ResourceDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>

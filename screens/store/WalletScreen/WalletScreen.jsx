@@ -21,7 +21,10 @@ const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
 export default function WalletScreen() {
   const navigation = useNavigation();
-  const [walletData, setWalletData] = useState({ balance: 0, transactions: [] });
+  const [walletData, setWalletData] = useState({
+    balance: 0,
+    transactions: [],
+  });
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
 
@@ -129,7 +132,10 @@ console.log(url)
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={walletStyles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={walletStyles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 💰 Balance Card */}
         <LinearGradient
           colors={["#667EEA", "#764BA2"]}
@@ -152,12 +158,16 @@ console.log(url)
           <View style={walletStyles.statsRow}>
             <View style={walletStyles.statItem}>
               <Text style={walletStyles.statLabel}>Total Deposits</Text>
-              <Text style={walletStyles.statValue}>{formatCurrency(totalDeposit)}</Text>
+              <Text style={walletStyles.statValue}>
+                {formatCurrency(totalDeposit)}
+              </Text>
             </View>
             <View style={walletStyles.statDivider} />
             <View style={walletStyles.statItem}>
               <Text style={walletStyles.statLabel}>Total Spent</Text>
-              <Text style={walletStyles.statValue}>{formatCurrency(totalSpent)}</Text>
+              <Text style={walletStyles.statValue}>
+                {formatCurrency(totalSpent)}
+              </Text>
             </View>
           </View>
 
@@ -184,8 +194,16 @@ console.log(url)
               {recentTransactions.map((transaction) => {
                 const style = getTransactionStyle(transaction);
                 return (
-                  <View key={transaction.transactionId} style={styles.transactionItem}>
-                    <View style={[styles.transactionIcon, { backgroundColor: `${style.color}15` }]}>
+                  <View
+                    key={transaction.transactionId}
+                    style={styles.transactionItem}
+                  >
+                    <View
+                      style={[
+                        styles.transactionIcon,
+                        { backgroundColor: `${style.color}15` },
+                      ]}
+                    >
                       <Icon name={style.icon} size={24} color={style.color} />
                     </View>
 
@@ -208,7 +226,8 @@ console.log(url)
                           { color: style.color },
                         ]}
                       >
-                        {style.sign}{formatCurrency(transaction.amount)}
+                        {style.sign}
+                        {formatCurrency(transaction.amount)}
                       </Text>
                       {transaction.status && (
                         <View
@@ -304,7 +323,8 @@ console.log(url)
                       key={amt}
                       style={[
                         walletStyles.quickAmountButton,
-                        depositAmount === amt.toString() && walletStyles.quickAmountButtonActive,
+                        depositAmount === amt.toString() &&
+                          walletStyles.quickAmountButtonActive,
                       ]}
                       onPress={() => setDepositAmount(amt.toString())}
                     >
@@ -350,8 +370,13 @@ console.log(url)
                 >
                   <Text style={walletStyles.cancelButtonText}>Cancel</Text>
                 </Pressable>
-                <Pressable style={walletStyles.confirmButton} onPress={handleDeposit}>
-                  <Text style={walletStyles.confirmButtonText}>Confirm Deposit</Text>
+                <Pressable
+                  style={walletStyles.confirmButton}
+                  onPress={handleDeposit}
+                >
+                  <Text style={walletStyles.confirmButtonText}>
+                    Confirm Deposit
+                  </Text>
                 </Pressable>
               </View>
             </ScrollView>

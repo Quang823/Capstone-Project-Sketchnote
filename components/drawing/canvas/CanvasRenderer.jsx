@@ -242,7 +242,18 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 ) {
   const canvasRef = useCanvasRef();
   const loadedFonts = usePreloadedFonts();
-  const backgroundImage = useImage(backgroundImageUrl);
+  
+  // Safe image loading with error handling
+  let backgroundImage = null;
+  try {
+    // Only attempt to load if URL is valid
+    if (backgroundImageUrl && typeof backgroundImageUrl === 'string' && backgroundImageUrl.trim()) {
+      backgroundImage = useImage(backgroundImageUrl);
+    }
+  } catch (err) {
+    console.warn('[CanvasRenderer] Failed to load background image:', err);
+    backgroundImage = null;
+  }
 
   // Use provided dimensions or fallback to page dimensions
   const safePage = {
@@ -874,7 +885,11 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   return (
     <Canvas
       ref={canvasRef}
-      style={{ width: safePage.w + safePage.x * 2, height: safeCanvasHeight }}
+      style={{
+        width: safePage.w + safePage.x * 2,
+        height: safeCanvasHeight,
+        alignSelf: "center",
+      }}
     >
       {/* Desk background */}
       <Rect

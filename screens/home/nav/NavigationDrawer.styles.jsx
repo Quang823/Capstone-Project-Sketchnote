@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet,Platform  } from "react-native";
 
 const DRAWER_WIDTH = 320;
 
@@ -155,6 +155,92 @@ export const drawerStyles = StyleSheet.create({
     color: '#EF4444',
     fontWeight: '500',
     marginLeft: 12,
+  },
+  versionText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+});
+
+// Sidebar Styles
+export const SIDEBAR_WIDTH = 260;
+
+export const sidebarStyles = StyleSheet.create({
+  sidebar: {
+    width: SIDEBAR_WIDTH,
+    backgroundColor: '#FFFFFF',
+    paddingTop: Platform.OS === 'ios' ? 60 : 44,
+    paddingHorizontal: 20,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    height: '100%',
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 36,
+  },
+  logo: {
+    fontSize: 24,
+    fontFamily: 'Pacifico-Regular',
+    color: '#104D83',
+    marginLeft: 10,
+  },
+  menuContainer: {
+    flex: 1,
+  },
+  menuScroll: {
+    flex: 1,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginBottom: 6,
+  },
+  menuItemActive: {
+    backgroundColor: '#EEF2FF',
+  },
+  menuLabel: {
+    marginLeft: 14,
+    fontSize: 15.5,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  menuLabelActive: {
+    color: '#4F46E5',
+    fontWeight: '600',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 12,
+    marginHorizontal: 12,
+  },
+  footer: {
+    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: '#FEF2F2',
+    marginBottom: 12,
+  },
+  logoutText: {
+    marginLeft: 12,
+    color: '#EF4444',
+    fontWeight: '600',
+    fontSize: 15.5,
   },
   versionText: {
     fontSize: 12,

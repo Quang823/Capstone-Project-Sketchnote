@@ -33,14 +33,14 @@ const CanvasImage = forwardRef(function CanvasImage(
   const uri = stroke?.uri ?? stroke?.imageUri ?? null;
   const img = useImage(uri);
 
-  // Dùng useSharedValue để lưu vị trí / kích thước / góc quay
+  // Use useSharedValue to store position / size / rotation
   const xVal = useSharedValue(stroke?.x ?? 0);
   const yVal = useSharedValue(stroke?.y ?? 0);
   const wVal = useSharedValue(stroke?.width ?? (img ? img.width : 100));
   const hVal = useSharedValue(stroke?.height ?? (img ? img.height : 100));
   const rotVal = useSharedValue((stroke?.rotation ?? 0) * (Math.PI / 180));
 
-  // Tính toán transform động
+  // Calculate dynamic transform
   const transform = useDerivedValue(() => {
     const tx = xVal.value ?? 0;
     const ty = yVal.value ?? 0;
@@ -64,14 +64,14 @@ const CanvasImage = forwardRef(function CanvasImage(
   const widthDV = useDerivedValue(() => wVal.value, [wVal]);
   const heightDV = useDerivedValue(() => hVal.value, [hVal]);
 
-  // 🧩 FIX cảnh báo Reanimated:
-  // Dùng useMemo để đảm bảo React không đọc trực tiếp .value trong render
+  // FIX Reanimated warning:
+  // Use useMemo to ensure React doesn't directly read .value during render
   const transformMemo = useMemo(() => transform, [transform]);
   const widthMemo = useMemo(() => widthDV, [widthDV]);
   const heightMemo = useMemo(() => heightDV, [heightDV]);
 
   useEffect(() => {
-    // reset khi stroke thay đổi
+    // reset when stroke changes
     xVal.value = stroke?.x ?? xVal.value;
     yVal.value = stroke?.y ?? yVal.value;
     wVal.value = stroke?.width ?? wVal.value;
@@ -114,7 +114,7 @@ const CanvasImage = forwardRef(function CanvasImage(
 
   if (!img) return null;
 
-  // Group + SkiaImage sẽ tự subscribe vào DerivedValue
+  // Group + SkiaImage will automatically subscribe to DerivedValue
   return (
     <Group transform={transformMemo}>
       <SkiaImage
