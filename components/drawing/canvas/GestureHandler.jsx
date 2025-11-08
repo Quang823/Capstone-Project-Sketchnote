@@ -1740,10 +1740,34 @@ export default function GestureHandler(
         // Then commit with captured offset
         handleMoveCommit?.(dx, dy);
 
-        // Update base box position
-        setLassoBaseBox((box) =>
-          box ? { ...box, x: box.x + dx, y: box.y + dy } : box
-        );
+        // ✅ Recalculate base box từ strokes mới (không dùng offset cũ)
+        // Đợi một frame để strokes được update
+        requestAnimationFrame(() => {
+          const sel = Array.isArray(strokes)
+            ? strokes.filter((s) => s && lassoSelection.includes(s.id))
+            : [];
+          if (sel.length > 0) {
+            let minX = Infinity,
+              minY = Infinity,
+              maxX = -Infinity,
+              maxY = -Infinity;
+            sel.forEach((s) => {
+              const bbox = getBoundingBoxForStroke(s);
+              if (bbox) {
+                minX = Math.min(minX, bbox.minX);
+                minY = Math.min(minY, bbox.minY);
+                maxX = Math.max(maxX, bbox.maxX);
+                maxY = Math.max(maxY, bbox.maxY);
+              }
+            });
+            setLassoBaseBox({
+              x: minX,
+              y: minY,
+              width: maxX - minX,
+              height: maxY - minY,
+            });
+          }
+        });
 
         // Clean up
         lassoPendingDelta.current = { dx: 0, dy: 0 };
@@ -2015,10 +2039,34 @@ export default function GestureHandler(
             // Then commit the move with the captured offset
             handleMoveCommit?.(dx, dy);
 
-            // Update box position to match new stroke positions
-            setLassoBaseBox((box) =>
-              box ? { ...box, x: box.x + dx, y: box.y + dy } : box
-            );
+            // ✅ Recalculate base box từ strokes mới (không dùng offset cũ)
+            // Đợi một frame để strokes được update
+            requestAnimationFrame(() => {
+              const sel = Array.isArray(strokes)
+                ? strokes.filter((s) => s && lassoSelection.includes(s.id))
+                : [];
+              if (sel.length > 0) {
+                let minX = Infinity,
+                  minY = Infinity,
+                  maxX = -Infinity,
+                  maxY = -Infinity;
+                sel.forEach((s) => {
+                  const bbox = getBoundingBoxForStroke(s);
+                  if (bbox) {
+                    minX = Math.min(minX, bbox.minX);
+                    minY = Math.min(minY, bbox.minY);
+                    maxX = Math.max(maxX, bbox.maxX);
+                    maxY = Math.max(maxY, bbox.maxY);
+                  }
+                });
+                setLassoBaseBox({
+                  x: minX,
+                  y: minY,
+                  width: maxX - minX,
+                  height: maxY - minY,
+                });
+              }
+            });
           }}
           onCopy={() => {
             const selStrokes = Array.isArray(strokes)

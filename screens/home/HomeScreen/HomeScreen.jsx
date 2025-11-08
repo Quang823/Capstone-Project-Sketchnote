@@ -156,9 +156,14 @@ function NavigationDrawer({
       )}
       <Reanimated.View style={[drawerStyles.drawer, drawerStyle]}>
         <View style={drawerStyles.drawerHeader}>
-          <View style={drawerStyles.logoContainer}>
-            <Icon name="auto-awesome" size={26} color="#4F46E5" />
-            <Text style={drawerStyles.drawerTitle}>SketchNote</Text>
+          <View style={styles.logoContainer}>
+            <Image
+              source={{
+                uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
+              }}
+              style={{ width: 32, height: 32, resizeMode: "contain" }}
+            />
+            <Text style={styles.logo}>SketchNote</Text>
           </View>
           <Pressable onPress={onToggleDrawer}>
             <Icon name="close" size={24} color="#6B7280" />
@@ -324,10 +329,10 @@ export default function HomeScreen({ navigation }) {
         navigation?.navigate?.("NoteSetupScreen");
         break;
       case "whiteboard":
-        navigation?.navigate?.("DrawingScreen", { mode: "whiteboard" });
+        navigation?.navigate?.("NoteSetupScreen", { mode: "whiteboard" });
         break;
       case "quick_note":
-        navigation?.navigate?.("DrawingScreen", { quick: true });
+        navigation?.navigate?.("NoteSetupScreen", { quick: true });
         break;
     }
   };
@@ -426,7 +431,12 @@ export default function HomeScreen({ navigation }) {
       {/* Sidebar */}
       <View style={styles.sidebar}>
         <View style={styles.logoContainer}>
-          <Icon name="auto-awesome" size={30} color="#4F46E5" />
+          <Image
+            source={{
+              uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
+            }}
+            style={{ width: 32, height: 32, resizeMode: "contain" }}
+          />
           <Text style={styles.logo}>SketchNote</Text>
         </View>
         <View style={styles.menu}>
@@ -475,7 +485,7 @@ export default function HomeScreen({ navigation }) {
                 style={styles.settingsButton}
                 onPress={toggleDrawer}
               >
-                <Icon name="settings" size={24} color="#4F46E5" />
+                <Icon name="settings" size={24} color="#2563EB" />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -484,7 +494,7 @@ export default function HomeScreen({ navigation }) {
                 onPressIn={handleDoubleTap}
               >
                 <LinearGradient
-                  colors={["#4F46E5", "#7C3AED"]}
+                  colors={["#2563EB", "#0EA5E9"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.newButtonGradient}
@@ -506,7 +516,7 @@ export default function HomeScreen({ navigation }) {
           {loading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#4F46E5" />
-              <Text style={styles.loadingText}>Đang tải dự án...</Text>
+              <Text style={styles.loadingText}>Loading project...</Text>
             </View>
           )}
 
@@ -519,7 +529,7 @@ export default function HomeScreen({ navigation }) {
                 style={styles.retryButton}
                 onPress={() => fetchProjects()}
               >
-                <Text style={styles.retryButtonText}>Thử lại</Text>
+                <Text style={styles.retryButtonText}>Retry again</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -528,10 +538,8 @@ export default function HomeScreen({ navigation }) {
           {!loading && !error && projects.length === 0 && (
             <View style={styles.emptyContainer}>
               <Icon name="folder-open" size={64} color="#9CA3AF" />
-              <Text style={styles.emptyTitle}>Chưa có dự án nào</Text>
-              <Text style={styles.emptyText}>
-                Hãy tạo dự án đầu tiên của bạn!
-              </Text>
+              <Text style={styles.emptyTitle}>No projects yet.</Text>
+              <Text style={styles.emptyText}>Create your first project!</Text>
             </View>
           )}
 
@@ -587,7 +595,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 36,
   },
-  logo: { fontSize: 24, fontWeight: "800", color: "#1F2937", marginLeft: 10 },
+  logo: {
+    fontSize: 24,
+    fontFamily: "Pacifico-Regular",
+
+    color: "#104D83",
+    marginLeft: 10,
+  },
   menu: {},
   menuItem: {
     flexDirection: "row",
@@ -607,7 +621,7 @@ const styles = StyleSheet.create({
   menuLabelActive: { color: "#4F46E5", fontWeight: "600" },
 
   main: { flex: 1, backgroundColor: "#F9FAFB" },
-  content: { flex: 1, paddingHorizontal: CONTENT_PADDING, paddingTop: 20 },
+  content: { flex: 1, paddingHorizontal: CONTENT_PADDING, paddingTop: 25 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

@@ -237,6 +237,20 @@ export default function DrawingScreen({ route }) {
 
   // Track previous activePageId to detect page changes
   const prevActivePageIdRef = useRef(activePageId);
+  const isMountedRef = useRef(true);
+
+  // ✅ Cleanup khi component unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Clear layer select timeout
+      if (layerSelectTimeoutRef.current) {
+        clearTimeout(layerSelectTimeoutRef.current);
+        layerSelectTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Reset active layer when page changes (after layers are ensured to exist)
   useEffect(() => {
@@ -246,11 +260,19 @@ export default function DrawingScreen({ route }) {
 
       // Đợi một chút để đảm bảo pageLayers đã được update từ useEffect trước
       const timer = setTimeout(() => {
+        // ✅ Kiểm tra component còn mount không
+        if (!isMountedRef.current) return;
+
         const currentPageLayers = pageLayers[activePageId] || [];
         if (currentPageLayers.length > 0) {
           // Always reset to first layer when switching pages
-          const firstLayerId = currentPageLayers[0].id;
-          setActiveLayerId(firstLayerId);
+          const firstLayerId = currentPageLayers[0]?.id;
+          if (firstLayerId) {
+            setActiveLayerId(firstLayerId);
+          } else {
+            // Fallback: nếu không có id, set layer1
+            setActiveLayerId("layer1");
+          }
         } else {
           // Fallback: nếu vẫn chưa có layers, set layer1
           setActiveLayerId("layer1");
@@ -269,6 +291,39 @@ export default function DrawingScreen({ route }) {
       ]
     );
   }, [pageLayers, activePageId]);
+
+  // ✅ Đảm bảo activeLayerId luôn hợp lệ khi layers thay đổi
+  useEffect(() => {
+    if (!isMountedRef.current) return;
+
+    const currentPageLayers = pageLayers[activePageId] || [];
+
+    // Nếu không có layers, tạo layer mặc định
+    if (currentPageLayers.length === 0) {
+      setPageLayers((prev) => ({
+        ...prev,
+        [activePageId]: [
+          { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+        ],
+      }));
+      setActiveLayerId("layer1");
+      return;
+    }
+
+    // Kiểm tra activeLayerId có tồn tại trong layers không
+    const layerExists = currentPageLayers.some((l) => l?.id === activeLayerId);
+
+    if (!layerExists) {
+      // Nếu activeLayerId không tồn tại, set về layer đầu tiên
+      const firstLayerId = currentPageLayers[0]?.id;
+      if (firstLayerId) {
+        setActiveLayerId(firstLayerId);
+      } else {
+        // Fallback về layer1 nếu không có id
+        setActiveLayerId("layer1");
+      }
+    }
+  }, [pageLayers, activePageId, activeLayerId]);
 
   // Defer layer updates to prevent flickering in LayerPanel
   const deferredLayers = useDeferredValue(currentLayers);
@@ -319,7 +374,45 @@ export default function DrawingScreen({ route }) {
   );
 
   // Layer panel callbacks - memoized to prevent re-renders
-  const handleLayerSelect = useCallback((id) => setActiveLayerId(id), []);
+  // ✅ Thêm validation và debounce để tránh crash khi chuyển layer liên tục
+  const layerSelectTimeoutRef = useRef(null);
+  const handleLayerSelect = useCallback(
+    (id) => {
+      // Clear timeout trước đó nếu có
+      if (layerSelectTimeoutRef.current) {
+        clearTimeout(layerSelectTimeoutRef.current);
+      }
+
+      // ✅ Validate layer ID
+      if (!id || typeof id !== "string") {
+        console.warn("[DrawingScreen] handleLayerSelect: Invalid layer ID");
+        return;
+      }
+
+      // ✅ Kiểm tra layer có tồn tại trong currentLayers không
+      const currentLayers = pageLayers[activePageId] || [];
+      const layerExists = currentLayers.some((l) => l?.id === id);
+
+      if (!layerExists) {
+        console.warn(
+          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`
+        );
+        // Fallback về layer đầu tiên nếu layer không tồn tại
+        if (currentLayers.length > 0) {
+          const firstLayerId = currentLayers[0].id;
+          setActiveLayerId(firstLayerId);
+        }
+        return;
+      }
+
+      // ✅ Debounce để tránh chuyển layer quá nhanh (có thể gây crash)
+      layerSelectTimeoutRef.current = setTimeout(() => {
+        setActiveLayerId(id);
+        layerSelectTimeoutRef.current = null;
+      }, 50); // 50ms debounce
+    },
+    [pageLayers, activePageId]
+  );
 
   const handleToggleVisibility = useCallback(
     (id) => {
@@ -662,6 +755,109 @@ export default function DrawingScreen({ route }) {
 
             if (!isMounted) break;
 
+            // ✅ Load template và backgroundColor từ JSON với validation
+            if (data?.template || data?.backgroundColor) {
+              // ✅ Validate template values để đảm bảo an toàn
+              const VALID_TEMPLATES = [
+                "blank",
+                "thin_line",
+                "bold_line",
+                "mini_check",
+                "mid_check",
+                "dot_grid",
+                "square_grid",
+                "cornell",
+                "weekly",
+                "monthly",
+                "daily",
+                "hex_grid",
+                "notes",
+                "flashcard",
+                "mindmap",
+                "outline",
+                "vocab",
+                "todo",
+                "habit",
+                "goal",
+                "meeting",
+                "project",
+                "brainstorm",
+                "kanban",
+                "journal",
+                "diary",
+                "gratitude",
+                "budget",
+              ];
+
+              const safeTemplate =
+                typeof data.template === "string" &&
+                VALID_TEMPLATES.includes(data.template)
+                  ? data.template
+                  : "blank";
+
+              // ✅ Validate backgroundColor (phải là hex color hợp lệ)
+              const safeBackgroundColor =
+                typeof data.backgroundColor === "string" &&
+                /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(data.backgroundColor)
+                  ? data.backgroundColor
+                  : "#FFFFFF";
+
+              // Update page trong MultiPageCanvas với template và backgroundColor
+              if (multiPageCanvasRef.current?.updatePage) {
+                multiPageCanvasRef.current.updatePage(pageId, {
+                  template: safeTemplate,
+                  backgroundColor: safeBackgroundColor,
+                });
+              }
+            }
+
+            // ✅ Load layer metadata từ JSON và sync với pageLayers
+            if (Array.isArray(data?.layers) && data.layers.length > 0) {
+              setPageLayers((prev) => {
+                const existingLayers = prev[pageId] || [];
+                // Merge layers từ JSON với existing layers
+                const mergedLayers = data.layers.map((savedLayer) => {
+                  // Tìm layer tương ứng trong existing layers
+                  const existingLayer = existingLayers.find(
+                    (l) => l?.id === savedLayer.id
+                  );
+
+                  if (existingLayer) {
+                    // Merge: giữ strokes từ existing, update metadata từ saved
+                    return {
+                      ...existingLayer,
+                      name:
+                        savedLayer.name ||
+                        existingLayer.name ||
+                        `Layer ${savedLayer.id}`,
+                      visible:
+                        savedLayer.visible !== undefined
+                          ? savedLayer.visible
+                          : existingLayer.visible !== false,
+                      locked:
+                        savedLayer.locked !== undefined
+                          ? savedLayer.locked
+                          : existingLayer.locked === true,
+                    };
+                  } else {
+                    // Layer mới từ saved
+                    return {
+                      id: savedLayer.id,
+                      name: savedLayer.name || `Layer ${savedLayer.id}`,
+                      visible: savedLayer.visible !== false,
+                      locked: savedLayer.locked === true,
+                      strokes: [], // Strokes sẽ được load sau
+                    };
+                  }
+                });
+
+                return {
+                  ...prev,
+                  [pageId]: mergedLayers,
+                };
+              });
+            }
+
             // Validate và filter strokes
             let strokes = Array.isArray(data?.strokes) ? data.strokes : [];
 
@@ -711,8 +907,12 @@ export default function DrawingScreen({ route }) {
             while (retries > 0 && isMounted) {
               if (multiPageCanvasRef.current?.loadProjectData) {
                 try {
+                  // ✅ Truyền cả layers metadata để restore layer names
+                  const layersMetadata = Array.isArray(data?.layers)
+                    ? data.layers
+                    : [];
                   multiPageCanvasRef.current.loadProjectData({
-                    pages: [{ id: pageId, strokes }],
+                    pages: [{ id: pageId, strokes, layersMetadata }],
                   });
                   // console.log(
                   //   `✅ Successfully loaded page ${p.pageNumber} (id: ${pageId})`
@@ -767,6 +967,37 @@ export default function DrawingScreen({ route }) {
         if (isMounted) {
           // console.log("✅ All pages loaded");
           setIsLoadingProject(false);
+
+          // ✅ Sau khi load xong, đảm bảo activeLayerId hợp lệ
+          // Đợi một chút để layers được sync
+          setTimeout(() => {
+            if (!isMountedRef.current) return;
+
+            const currentPageLayers = pageLayers[activePageId] || [];
+            const currentActiveLayerId = activeLayerId;
+
+            // Kiểm tra activeLayerId có tồn tại trong layers không
+            const layerExists = currentPageLayers.some(
+              (l) => l?.id === currentActiveLayerId
+            );
+
+            if (!layerExists && currentPageLayers.length > 0) {
+              // Nếu activeLayerId không tồn tại, set về layer đầu tiên
+              const firstLayerId = currentPageLayers[0]?.id;
+              if (firstLayerId) {
+                setActiveLayerId(firstLayerId);
+              }
+            } else if (currentPageLayers.length === 0) {
+              // Nếu không có layers, tạo layer mặc định
+              setPageLayers((prev) => ({
+                ...prev,
+                [activePageId]: [
+                  { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+                ],
+              }));
+              setActiveLayerId("layer1");
+            }
+          }, 500); // Đợi 500ms để layers được sync
         }
       } catch (e) {
         console.error("[DrawingScreen] Auto-load error:", e);

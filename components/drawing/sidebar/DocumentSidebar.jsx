@@ -22,6 +22,8 @@ const DocumentSidebar = ({
   onAddPage,
   resourceItems = [],
 }) => {
+  // ✅ Đảm bảo activePageId luôn là string hợp lệ
+  const safeActivePageId = activePageId != null ? String(activePageId) : null;
   const [activeTab, setActiveTab] = useState("pages");
   const [slideAnim] = useState(new Animated.Value(visible ? 0 : -280));
 
@@ -58,15 +60,24 @@ const DocumentSidebar = ({
             <View style={styles.pagesList}>
               {pages.map((page, index) => {
                 // Dùng id làm key (id là unique từ MultiPageCanvas)
-                const pageId = page.id || page.pageId || `page-${index}`;
+                // ✅ Đảm bảo pageId luôn là string hợp lệ
+                const pageId =
+                  typeof page.id !== "undefined" && page.id !== null
+                    ? String(page.id)
+                    : typeof page.pageId !== "undefined" && page.pageId !== null
+                    ? String(page.pageId)
+                    : `page-${index}`;
                 return (
                   <Pressable
                     key={pageId}
                     style={[
                       styles.pageCard,
-                      pageId === activePageId && styles.activePageCard,
+                      pageId === safeActivePageId && styles.activePageCard,
                     ]}
-                    onPress={() => onPageSelect?.(pageId)}
+                    onPress={() => {
+                      // console.log(`[DocumentSidebar] onPageSelect called with pageId: ${pageId}`);
+                      onPageSelect?.(pageId);
+                    }}
                   >
                     {/* Page Thumbnail */}
                     <View style={styles.pageThumbnail}>
@@ -90,9 +101,11 @@ const DocumentSidebar = ({
                     {/* Page Number */}
                     <View style={styles.pageInfo}>
                       <Text style={styles.pageNumber}>
-                        {page.pageNumber || index + 1}
+                        {typeof page.pageNumber === "number"
+                          ? page.pageNumber
+                          : index + 1}
                       </Text>
-                      {pageId === activePageId && (
+                      {pageId === safeActivePageId && (
                         <View style={styles.activeDot} />
                       )}
                     </View>

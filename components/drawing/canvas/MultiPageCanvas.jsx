@@ -326,14 +326,81 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     onActivePageChange?.(newId);
   }, [pages, onActivePageChange, noteConfig, setPageLayers]);
 
-  // 🧭 Scroll tới page
+  // ✅ Lock để tránh race condition khi scroll programmatically
+  const isScrollingProgrammaticallyRef = useRef(false);
+  const scrollTimeoutRef = useRef(null);
+
+  // 🧭 Scroll tới page với debounce và lock
   const scrollToPage = useCallback(
     (index) => {
-      if (index < 0 || index >= pages.length) return;
-      const y = offsets[index] ?? 0;
-      scrollRef.current?.scrollTo({ y, animated: true });
-      setActiveIndex(index);
-      onActivePageChange?.(pages[index]?.id);
+      // ✅ Validate index
+      if (index < 0 || index >= pages.length) {
+        console.warn(
+          `[MultiPageCanvas] scrollToPage: Invalid index ${index}, pages.length=${pages.length}`
+        );
+        return;
+      }
+
+      // ✅ Check if component is mounted and scrollRef is available
+      if (isUnmountedRef.current || !scrollRef.current) {
+        console.warn(
+          `[MultiPageCanvas] scrollToPage: Component unmounted or scrollRef not available`
+        );
+        return;
+      }
+
+      // ✅ Validate page exists
+      const targetPage = pages[index];
+      if (!targetPage || targetPage.id == null) {
+        console.warn(
+          `[MultiPageCanvas] scrollToPage: Page at index ${index} is invalid`,
+          targetPage
+        );
+        return;
+      }
+
+      // ✅ Clear timeout trước đó nếu có
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
+      }
+
+      // ✅ Lock scroll để tránh conflict với handleScrollFromUI
+      isScrollingProgrammaticallyRef.current = true;
+
+      try {
+        const y = offsets[index] ?? 0;
+
+        // ✅ Double check scrollRef before using
+        if (!scrollRef.current) {
+          console.warn(`[MultiPageCanvas] scrollToPage: scrollRef became null`);
+          isScrollingProgrammaticallyRef.current = false;
+          return;
+        }
+
+        scrollRef.current.scrollTo({ y, animated: true });
+
+        // ✅ Safe state updates
+        if (!isUnmountedRef.current) {
+          setActiveIndex(index);
+          onActivePageChange?.(targetPage.id);
+        }
+
+        // ✅ Unlock sau khi scroll xong (đợi animation hoàn thành)
+        scrollTimeoutRef.current = setTimeout(() => {
+          if (!isUnmountedRef.current) {
+            isScrollingProgrammaticallyRef.current = false;
+          }
+          scrollTimeoutRef.current = null;
+        }, 500); // 500ms để animation hoàn thành
+      } catch (error) {
+        console.error(`[MultiPageCanvas] scrollToPage error:`, error);
+        isScrollingProgrammaticallyRef.current = false;
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+          scrollTimeoutRef.current = null;
+        }
+      }
     },
     [offsets, pages, onActivePageChange]
   );
@@ -362,16 +429,30 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   // 🖱 Theo dõi scroll
   // Replace old handleScroll with this JS handler (called from UI worklet via runOnJS)
   const handleScrollFromUI = (offset) => {
+    // ✅ Skip nếu component đã unmount
+    if (isUnmountedRef.current) return;
+
+    // ✅ Skip nếu đang scroll programmatically (check sớm để tránh unnecessary work)
+    if (isScrollingProgrammaticallyRef.current) return;
+
     // Throttle bằng RAF để giảm tần suất setState
     if (scrollRafRef.current) return;
     scrollRafRef.current = requestAnimationFrame(() => {
       scrollRafRef.current = null;
+
+      // ✅ Double check unmount và programmatic scroll
+      if (isUnmountedRef.current || isScrollingProgrammaticallyRef.current)
+        return;
+
       // throttle tiny moves to avoid spamming JS (reduced to 1px for better transform box sync)
       if (Math.abs(offset - lastHandledScrollRef.current) < 1) return;
 
       lastHandledScrollRef.current = offset;
 
-      setScrollY(offset);
+      // ✅ Safe state update
+      if (!isUnmountedRef.current) {
+        setScrollY(offset);
+      }
 
       // Compute visible window
       const viewTop = offset;
@@ -383,8 +464,10 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
       // Find first visible page
       for (let i = 0; i < pages.length; i++) {
+        const p = pages[i];
+        if (!p || p.id == null) continue;
         const top = offsets[i] ?? 0;
-        const h = pageLayouts[pages[i].id] ?? fallbackHeight;
+        const h = pageLayouts[p.id] ?? fallbackHeight;
         const bottom = top + h + PAGE_SPACING;
         if (bottom >= viewTop) {
           firstVisible = i;
@@ -404,20 +487,33 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       // Only update visible pages (optimized range)
       for (let i = firstVisible; i <= lastVisible; i++) {
         const p = pages[i];
+        if (!p || p.id == null) continue;
         const pageRef = pageRefs.current[p.id];
-        pageRef?.setScrollOffsetY?.(offset - (offsets[i] ?? 0));
+        if (pageRef && typeof pageRef.setScrollOffsetY === "function") {
+          try {
+            pageRef.setScrollOffsetY(offset - (offsets[i] ?? 0));
+          } catch (error) {
+            console.error(
+              `[MultiPageCanvas] Error setting scroll offset for page ${p.id}:`,
+              error
+            );
+          }
+        }
       }
+
+      // ✅ Skip nếu đang scroll programmatically (check lại sau khi update visible pages)
+      if (isScrollingProgrammaticallyRef.current) return;
 
       // compute active page (midpoint method)
       let current = pages.length - 1;
       for (let i = 0; i < offsets.length; i++) {
+        const p = pages[i];
+        if (!p || p.id == null) continue;
         const start = offsets[i];
         const end =
           i + 1 < offsets.length
             ? offsets[i + 1]
-            : start +
-              (pageLayouts[pages[i].id] ?? fallbackHeight) +
-              PAGE_SPACING;
+            : start + (pageLayouts[p.id] ?? fallbackHeight) + PAGE_SPACING;
         const mid = start + (end - start) / 2;
         if (offset < mid) {
           current = i;
@@ -425,9 +521,12 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         }
       }
 
-      if (current !== activeIndex) {
-        setActiveIndex(current);
-        onActivePageChange?.(pages[current]?.id);
+      if (current !== activeIndex && !isUnmountedRef.current) {
+        const currentPage = pages[current];
+        if (currentPage && currentPage.id != null) {
+          setActiveIndex(current);
+          onActivePageChange?.(currentPage.id);
+        }
       }
     });
   };
@@ -609,10 +708,80 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     ],
   }));
 
+  // ✅ Scroll đến page bằng pageId (dùng trong DocumentOverviewModal)
+  const scrollToPageById = useCallback(
+    (pageId) => {
+      if (!pageId) {
+        // Không log warning cho empty pageId (có thể là normal case)
+        return;
+      }
+
+      // ✅ Check if component is mounted - silent return để tránh spam warning
+      if (isUnmountedRef.current) {
+        // Không log warning vì có thể là normal case khi modal đóng
+        return;
+      }
+
+      // ✅ Convert pageId thành string để so sánh (vì có thể nhận number hoặc string)
+      const pageIdStr = String(pageId);
+
+      // ✅ Tìm page bằng cách so sánh cả number và string
+      const index = pages.findIndex((p) => {
+        if (!p || p.id == null) return false;
+        // So sánh cả number và string
+        return String(p.id) === pageIdStr || p.id === pageId;
+      });
+
+      if (index >= 0) {
+        // console.log(
+        //   `[MultiPageCanvas] scrollToPageById: Found page at index ${index} for pageId ${pageId}`
+        // );
+        // ✅ Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+          if (!isUnmountedRef.current) {
+            scrollToPage(index);
+          }
+        });
+      } else {
+        console.warn(
+          `[MultiPageCanvas] scrollToPageById: Page not found for pageId ${pageId}. Available pages:`,
+          pages.map((p) => p?.id)
+        );
+      }
+    },
+    [pages, scrollToPage]
+  );
+
+  // ✅ Cleanup timeout khi component unmount
+  useEffect(() => {
+    return () => {
+      isUnmountedRef.current = true;
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
+      }
+      isScrollingProgrammaticallyRef.current = false;
+    };
+  }, []);
+
   // 🪄 Public API
   useImperativeHandle(ref, () => ({
     scrollToPage,
+    scrollToPageById, // ✅ Expose method để scroll bằng pageId
     addPage,
+
+    // ✅ Update page template và backgroundColor
+    updatePage: (pageId, updates) => {
+      if (!pageId || !updates) return;
+      setPages((prev) =>
+        prev.map((pg) => {
+          if (pg.id === pageId) {
+            return { ...pg, ...updates };
+          }
+          return pg;
+        })
+      );
+    },
 
     // Get current zoom level for image size calculation
     getCurrentZoom: () => projectScale.value,
@@ -665,7 +834,11 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             drawingDataRef.current.pages[page.id] ||
             [];
 
-          // Tạo JSON để lưu (bao gồm metadata cover/background)
+          // ✅ Thu thập layer metadata (name, visible, locked)
+          const layersMetadata =
+            pageRefs.current[page.id]?.getLayersMetadata?.() || [];
+
+          // Tạo JSON để lưu (bao gồm metadata cover/background và layers)
           const jsonData = {
             id: page.id,
             createdAt: new Date().toISOString(),
@@ -674,6 +847,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             template: page.template,
             imageUrl: page.imageUrl,
             strokes,
+            layers: layersMetadata, // ✅ Lưu layer metadata
           };
 
           // Xác định pageNumber để lưu xuống backend/S3
@@ -737,11 +911,15 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 const strokes = Array.isArray(p.strokes) ? p.strokes : [];
                 // Limit strokes để tránh crash
                 const safeStrokes = strokes.slice(0, 1000);
+                // ✅ Lấy layers metadata từ data
+                const layersMetadata = Array.isArray(p.layersMetadata)
+                  ? p.layersMetadata
+                  : [];
                 // console.log(
                 //   `[MultiPageCanvas] Loading ${safeStrokes.length} strokes into page id: ${p.id}`
                 // );
                 try {
-                  pageRef.loadStrokes(safeStrokes);
+                  pageRef.loadStrokes(safeStrokes, layersMetadata);
                   // console.log(
                   //   `[MultiPageCanvas] Successfully loaded strokes into page id: ${p.id}`
                   // );
@@ -753,9 +931,9 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 }
               } else if (retries > 0) {
                 // Retry sau 200ms nếu pageRef chưa sẵn sàng
-                console.log(
-                  `[MultiPageCanvas] Page ref not ready for id: ${p.id}, retrying... (${retries} retries left)`
-                );
+                // console.log(
+                //   `[MultiPageCanvas] Page ref not ready for id: ${p.id}, retrying... (${retries} retries left)`
+                // );
                 scheduleSafeTimeout(() => tryLoad(retries - 1), 200);
               } else {
                 console.warn(
@@ -795,10 +973,16 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         visible={sidebarVisible}
         onToggle={() => setSidebarVisible(!sidebarVisible)}
         pages={pages}
-        activePageId={pages[activeIndex]?.id}
+        activePageId={
+          pages[activeIndex]?.id != null
+            ? String(pages[activeIndex].id)
+            : pages.length > 0 && pages[0]?.id != null
+            ? String(pages[0].id)
+            : "1"
+        }
         onPageSelect={(pageId) => {
-          const index = pages.findIndex((p) => p.id === pageId);
-          if (index !== -1) scrollToPage(index);
+          // ✅ Sử dụng scrollToPageById với debounce đã có trong scrollToPage
+          scrollToPageById(pageId);
         }}
         onAddPage={addPage}
         resourceItems={[]}
@@ -838,97 +1022,108 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 if (Number.isFinite(h) && h > 0) setContainerHeight(h);
               }}
             >
-              {pages.map((p, i) => (
-                <View
-                  key={p.id}
-                  style={{
-                    marginBottom: PAGE_SPACING,
-                    width: "100%",
-                    alignItems: "center",
-                  }}
-                  onLayout={(e) =>
-                    onPageLayout(p.id, e.nativeEvent.layout.height)
-                  }
-                >
-                  <CanvasContainer
-                    // MultiPageCanvas.jsx
-                    ref={(ref) => {
-                      // Always keep pageRefs in sync immediately (no setState)
-                      pageRefs.current[p.id] = ref || null;
-                      if (typeof registerPageRef === "function") {
-                        registerPageRef(p.id, ref || null);
+              {pages.map((p, i) => {
+                // ✅ Đảm bảo page id luôn hợp lệ cho key
+                const pageKey = p?.id != null ? String(p.id) : `page-${i}`;
+                return (
+                  <View
+                    key={pageKey}
+                    style={{
+                      marginBottom: PAGE_SPACING,
+                      width: "100%",
+                      alignItems: "center",
+                    }}
+                    onLayout={(e) => {
+                      if (p?.id != null) {
+                        onPageLayout(p.id, e.nativeEvent.layout.height);
                       }
                     }}
-                    {...{
-                      tool,
-                      color,
-                      setColor,
-                      setTool,
-                      strokeWidth,
-                      pencilWidth,
-                      eraserSize,
-                      eraserMode,
-                      brushWidth,
-                      brushOpacity,
-                      calligraphyWidth,
-                      calligraphyOpacity,
-                      paperStyle,
-                      shapeType,
-                      onRequestTextInput,
-                      toolConfigs,
-                      pressure,
-                      thickness,
-                      stabilization,
-                      layers: pageLayers?.[p.id] || [
-                        {
-                          id: "layer1",
-                          name: "Layer 1",
-                          visible: true,
-                          strokes: [],
+                  >
+                    <CanvasContainer
+                      // MultiPageCanvas.jsx
+                      ref={(ref) => {
+                        // Always keep pageRefs in sync immediately (no setState)
+                        if (p?.id != null) {
+                          pageRefs.current[p.id] = ref || null;
+                          if (typeof registerPageRef === "function") {
+                            registerPageRef(p.id, ref || null);
+                          }
+                        }
+                      }}
+                      {...{
+                        tool,
+                        color,
+                        setColor,
+                        setTool,
+                        strokeWidth,
+                        pencilWidth,
+                        eraserSize,
+                        eraserMode,
+                        brushWidth,
+                        brushOpacity,
+                        calligraphyWidth,
+                        calligraphyOpacity,
+                        paperStyle,
+                        shapeType,
+                        onRequestTextInput,
+                        toolConfigs,
+                        pressure,
+                        thickness,
+                        stabilization,
+                        layers: pageLayers?.[p.id] || [
+                          {
+                            id: "layer1",
+                            name: "Layer 1",
+                            visible: true,
+                            strokes: [],
+                          },
+                        ], // 👈 Pass page-specific layers
+                        activeLayerId,
+                        setLayers: (updater) => {
+                          if (p?.id == null) return;
+                          setPageLayers?.((prev) => ({
+                            ...prev,
+                            [p.id]:
+                              typeof updater === "function"
+                                ? updater(
+                                    prev[p.id] || [
+                                      {
+                                        id: "layer1",
+                                        name: "Layer 1",
+                                        visible: true,
+                                        strokes: [],
+                                      },
+                                    ]
+                                  )
+                                : updater,
+                          }));
+                        }, // 👈 Update page-specific layers
+                        rulerPosition,
+                        onColorPicked,
+                        scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
+                        scrollYShared, // ✅ Animated scroll value
+                        pageOffsetY: offsets[i] ?? 0, // ✅ Page offset trong project
+                        backgroundColor: p.backgroundColor,
+                        pageTemplate: p.template,
+                        backgroundImageUrl: p.imageUrl,
+                        pageWidth: pageDimensions.width,
+                        pageHeight: pageDimensions.height,
+                        onZoomChange: (isZoomActive) => {
+                          // Update zoom state: true when pinch gesture starts, false when ends
+                          // Disable ScrollView scroll when pinch gesture is active to prevent crash
+                          setIsZooming(isZoomActive);
                         },
-                      ], // 👈 Pass page-specific layers
-                      activeLayerId,
-                      setLayers: (updater) => {
-                        setPageLayers?.((prev) => ({
-                          ...prev,
-                          [p.id]:
-                            typeof updater === "function"
-                              ? updater(
-                                  prev[p.id] || [
-                                    {
-                                      id: "layer1",
-                                      name: "Layer 1",
-                                      visible: true,
-                                      strokes: [],
-                                    },
-                                  ]
-                                )
-                              : updater,
-                        }));
-                      }, // 👈 Update page-specific layers
-                      rulerPosition,
-                      onColorPicked,
-                      scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
-                      scrollYShared, // ✅ Animated scroll value
-                      pageOffsetY: offsets[i] ?? 0, // ✅ Page offset trong project
-                      backgroundColor: p.backgroundColor,
-                      pageTemplate: p.template,
-                      backgroundImageUrl: p.imageUrl,
-                      pageWidth: pageDimensions.width,
-                      pageHeight: pageDimensions.height,
-                      onZoomChange: (isZoomActive) => {
-                        // Update zoom state: true when pinch gesture starts, false when ends
-                        // Disable ScrollView scroll when pinch gesture is active to prevent crash
-                        setIsZooming(isZoomActive);
-                      },
-                    }}
-                    pageId={p.id}
-                    onChangeStrokes={(strokes) =>
-                      (drawingDataRef.current.pages[p.id] = strokes)
-                    }
-                  />
-                </View>
-              ))}
+                      }}
+                      pageId={p?.id != null ? p.id : `page-${i}`}
+                      onChangeStrokes={(strokes) => {
+                        if (p?.id != null) {
+                          drawingDataRef.current.pages[p.id] = strokes;
+                        }
+                      }}
+                    />
+                  </View>
+                );
+              })}
             </Animated.ScrollView>
 
             {/* CustomScrollbar Component */}
@@ -1069,7 +1264,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           <Text style={{ fontSize: 14, color: "white", fontWeight: "bold" }}>
             ↺
           </Text>
-        </TouchableOpacity>{" "}
+        </TouchableOpacity>
       </View>
     </View>
   );
