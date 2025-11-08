@@ -25,10 +25,10 @@ function LayerPanel({
   const [renameVisible, setRenameVisible] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameTargetId, setRenameTargetId] = useState(null);
-  
+
   // ✅ Safety check: Ensure layers is always an array
   const safeLayers = Array.isArray(layers) ? layers : [];
-  
+
   // Use immutable id 'layer1' when present; fallback to first layer id
   const baseLayerId = (() => {
     if (safeLayers.length > 0) {
@@ -48,7 +48,9 @@ function LayerPanel({
       setRenameValue(currentName);
       setRenameVisible(true);
     }
-    if (action === "clear") { /* Clear layer action */ }
+    if (action === "clear") {
+      /* Clear layer action */
+    }
     if (action === "delete") {
       // Block deletion for base layer (Layer 1)
       if (layerId === baseLayerId) return;
@@ -70,7 +72,10 @@ function LayerPanel({
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>LAYER</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={() => onClose?.()}>
+        <TouchableOpacity
+          style={styles.closeButton}
+          onPress={() => onClose?.()}
+        >
           <Ionicons name="close" size={18} color="#3B82F6" />
         </TouchableOpacity>
       </View>
@@ -78,9 +83,12 @@ function LayerPanel({
       <View style={styles.divider} />
 
       {/* Add Layer */}
-      <TouchableOpacity style={styles.addButton} onPress={() => {
-        onAdd?.();
-      }}>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => {
+          onAdd?.();
+        }}
+      >
         <Ionicons name="add" size={18} color="#fff" />
         <Text style={styles.addButtonText}>Add layer</Text>
       </TouchableOpacity>
@@ -106,14 +114,22 @@ function LayerPanel({
                   <View style={styles.layerPreview}>
                     <View style={styles.previewThumbnail} />
                     <Text style={styles.layerId}>
-                      {layer.name || `Layer ${layer.id}`}
+                      {typeof layer.name === "string" && layer.name.trim()
+                        ? layer.name
+                        : `Layer ${layer.id || "Unknown"}`}
                     </Text>
                   </View>
 
                   <View style={styles.layerControls}>
-                    <TouchableOpacity onPress={() => onToggleVisibility?.(layer.id)}>
+                    <TouchableOpacity
+                      onPress={() => onToggleVisibility?.(layer.id)}
+                    >
                       <Ionicons
-                        name={layer.visible !== false ? "eye-outline" : "eye-off-outline"}
+                        name={
+                          layer.visible !== false
+                            ? "eye-outline"
+                            : "eye-off-outline"
+                        }
                         size={18}
                         color="#3B82F6"
                       />
@@ -161,7 +177,9 @@ function LayerPanel({
               styles.dropdown,
               {
                 top:
-                  150 + (safeLayers.findIndex((l) => l?.id === dropdownVisible) * 64 || 0),
+                  150 +
+                  (safeLayers.findIndex((l) => l?.id === dropdownVisible) *
+                    64 || 0),
                 right: 24,
               },
             ]}

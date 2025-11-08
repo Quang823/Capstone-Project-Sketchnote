@@ -122,7 +122,7 @@ export default function DesignerQuickUploadScreen() {
         })),
       };
 
-      console.log("📦 Sending to backend:", template);
+      // console.log("📦 Sending to backend:", template);
       await resourceService.uploadResource(template);
 
       Toast.show({

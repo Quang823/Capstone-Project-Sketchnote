@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -22,7 +22,12 @@ const DocumentOverviewModal = ({
   onAddPage,
   resourceItems = [],
 }) => {
+  // ✅ Đảm bảo activePageId luôn là string hợp lệ
+  const safeActivePageId = activePageId != null ? String(activePageId) : null;
   const [activeTab, setActiveTab] = useState("pages"); // pages, resources, layers, history
+  // ✅ Debounce để tránh multiple clicks gây crash
+  const pageSelectTimeoutRef = useRef(null);
+  const isProcessingRef = useRef(false);
 
   const tabs = [
     { id: "pages", label: "Pages", icon: "insert-drive-file" },
@@ -30,6 +35,24 @@ const DocumentOverviewModal = ({
     { id: "layers", label: "Layers", icon: "layers" },
     { id: "history", label: "History", icon: "history" },
   ];
+
+  // ✅ Cleanup timeout khi component unmount hoặc modal đóng
+  React.useEffect(() => {
+    if (!visible) {
+      // Clear timeout khi modal đóng
+      if (pageSelectTimeoutRef.current) {
+        clearTimeout(pageSelectTimeoutRef.current);
+        pageSelectTimeoutRef.current = null;
+      }
+      isProcessingRef.current = false;
+    }
+    return () => {
+      if (pageSelectTimeoutRef.current) {
+        clearTimeout(pageSelectTimeoutRef.current);
+        pageSelectTimeoutRef.current = null;
+      }
+    };
+  }, [visible]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -49,17 +72,55 @@ const DocumentOverviewModal = ({
             <View style={styles.pagesGrid}>
               {pages.map((page, index) => {
                 // Dùng id làm key (id là unique từ MultiPageCanvas)
-                const pageId = page.id || page.pageId || `page-${index}`;
+                // ✅ Đảm bảo pageId luôn là string hợp lệ
+                const pageId =
+                  typeof page.id !== "undefined" && page.id !== null
+                    ? String(page.id)
+                    : typeof page.pageId !== "undefined" && page.pageId !== null
+                    ? String(page.pageId)
+                    : `page-${index}`;
                 return (
                   <Pressable
                     key={pageId}
                     style={[
                       styles.pageCard,
-                      pageId === activePageId && styles.activePageCard,
+                      pageId === safeActivePageId && styles.activePageCard,
                     ]}
                     onPress={() => {
-                      onPageSelect?.(pageId);
-                      onClose();
+                      // ✅ Debounce để tránh multiple clicks
+                      if (isProcessingRef.current) return;
+
+                      // Clear timeout trước đó nếu có
+                      if (pageSelectTimeoutRef.current) {
+                        clearTimeout(pageSelectTimeoutRef.current);
+                      }
+
+                      isProcessingRef.current = true;
+
+                      // Debounce 200ms để tránh rapid clicks
+                      pageSelectTimeoutRef.current = setTimeout(() => {
+                        try {
+                          //  console.log(`[DocumentOverviewModal] onPageSelect called with pageId: ${pageId}`);
+
+                          // ✅ Gọi onPageSelect trước
+                          onPageSelect?.(pageId);
+
+                          // ✅ Delay onClose một chút để đợi scroll bắt đầu (tránh crash khi modal đóng quá sớm)
+                          setTimeout(() => {
+                            onClose();
+                            isProcessingRef.current = false;
+                            pageSelectTimeoutRef.current = null;
+                          }, 100); // Delay 100ms để scroll có thời gian bắt đầu
+                        } catch (error) {
+                          console.error(
+                            `[DocumentOverviewModal] Error in pageSelect:`,
+                            error
+                          );
+                          isProcessingRef.current = false;
+                          pageSelectTimeoutRef.current = null;
+                          onClose();
+                        }
+                      }, 200);
                     }}
                   >
                     {/* Page Thumbnail */}
@@ -72,7 +133,11 @@ const DocumentOverviewModal = ({
                         />
                       ) : (
                         <View style={styles.emptyThumbnail}>
-                          <Icon name="insert-drive-file" size={40} color="#D1D5DB" />
+                          <Icon
+                            name="insert-drive-file"
+                            size={40}
+                            color="#D1D5DB"
+                          />
                         </View>
                       )}
                     </View>
@@ -80,9 +145,12 @@ const DocumentOverviewModal = ({
                     {/* Page Number */}
                     <View style={styles.pageInfo}>
                       <Text style={styles.pageNumber}>
-                        Page {page.pageNumber || index + 1}
+                        Page{" "}
+                        {typeof page.pageNumber === "number"
+                          ? page.pageNumber
+                          : index + 1}
                       </Text>
-                      {pageId === activePageId && (
+                      {pageId === safeActivePageId && (
                         <View style={styles.activeBadge}>
                           <Text style={styles.activeBadgeText}>Active</Text>
                         </View>
@@ -116,7 +184,9 @@ const DocumentOverviewModal = ({
                       resizeMode="cover"
                     />
                     <Text style={styles.resourceName} numberOfLines={1}>
-                      {item.name || `Resource ${index + 1}`}
+                      {typeof item.name === "string" && item.name.trim()
+                        ? item.name
+                        : `Resource ${index + 1}`}
                     </Text>
                   </View>
                 ))
@@ -140,7 +210,9 @@ const DocumentOverviewModal = ({
           <View style={styles.tabContent}>
             <View style={styles.emptyState}>
               <Icon name="history" size={64} color="#D1D5DB" />
-              <Text style={styles.emptyStateText}>History view coming soon</Text>
+              <Text style={styles.emptyStateText}>
+                History view coming soon
+              </Text>
             </View>
           </View>
         );
@@ -172,10 +244,7 @@ const DocumentOverviewModal = ({
             {tabs.map((tab) => (
               <Pressable
                 key={tab.id}
-                style={[
-                  styles.tab,
-                  activeTab === tab.id && styles.activeTab,
-                ]}
+                style={[styles.tab, activeTab === tab.id && styles.activeTab]}
                 onPress={() => setActiveTab(tab.id)}
               >
                 <Icon
