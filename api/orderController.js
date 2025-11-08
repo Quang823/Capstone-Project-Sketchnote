@@ -11,4 +11,9 @@ export const orderController = {
       baseURL: "http://146.190.90.222:8083"
     })
   },
+  getOrderById : async (orderId) =>{
+    return await privateApi.get(`api/orders/${orderId}`,{
+      baseURL: "http://146.190.90.222:8083"
+    })
+  }
 }

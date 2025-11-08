@@ -19,4 +19,13 @@ export const orderService = {
       throw new Error(message);
         }
     },
+    getOrderById : async (orderId) =>{
+        try {
+            const res = await orderController.getOrderById(orderId)
+            return res.data.result;
+        } catch (error) {
+             const message = error.response?.data?.message || error.message || "Get order by id failed.";
+      throw new Error(message);
+        }
+    },
 }

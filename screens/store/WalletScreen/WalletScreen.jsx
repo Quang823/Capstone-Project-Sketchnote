@@ -14,6 +14,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { walletStyles } from "./WalletScreen.styles";
 import { paymentService } from "../../../service/paymentService";
+import Toast from "react-native-toast-message";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
@@ -52,23 +53,32 @@ export default function WalletScreen() {
 
     try {
       const url = await paymentService.depositWallet(amount);
-
+console.log(url)
       setShowDepositModal(false);
-      navigation.navigate("PaymentWebView", { paymentUrl: url });
+      navigation.navigate("PaymentWebView", { paymentUrl: url.result });
     } catch (error) {
       console.error("Payment error:", error);
-      Alert.alert("Thất bại", "Không thể tạo liên kết thanh toán.");
+      Toast.show({
+        text1: "Failed",
+        text2: "Deposit failed. Please try again.",
+        type: "error",
+      }); 
     }
   };
 
-  // ⚡ Fetch wallet info
+
   const fetchWallet = async () => {
     try {
       const data = await paymentService.getWallet();
-      setWalletData(data);
+      console.log(data)
+      setWalletData(data.result);
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
-      Alert.alert("Lỗi", "Không thể tải thông tin ví.");
+      Toast.show({
+        text1: "Error",
+        text2: "Failed to load wallet information. Please try again.",
+        type: "error",
+      }); 
     }
   };
 
@@ -78,7 +88,7 @@ export default function WalletScreen() {
     return unsubscribe;
   }, [navigation]);
 
-  // 📊 Stats
+
   const totalDeposit = walletData.transactions
     .filter((t) => t.type === "DEPOSIT" && t.status === "SUCCESS")
     .reduce((sum, t) => sum + t.amount, 0);
@@ -87,7 +97,7 @@ export default function WalletScreen() {
     .filter((t) => t.type === "PURCHASE")
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
-  // 🧾 Lấy 5 giao dịch gần nhất (mới nhất trước)
+ 
   const recentTransactions = [...walletData.transactions]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5);
@@ -115,7 +125,7 @@ export default function WalletScreen() {
     <View style={walletStyles.container}>
       {/* Header */}
       <View style={walletStyles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
+        <Pressable onPress={() => navigation.navigate("Home")}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={walletStyles.headerTitle}>E-Wallet</Text>

@@ -1,10 +1,162 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, Animated, ScrollView } from "react-native";
+import { View, Text, Pressable, ScrollView, TouchableOpacity, Image, Platform } from "react-native";
+import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { drawerStyles } from "./NavigationDrawer.styles";
+import { drawerStyles, sidebarStyles } from "./NavigationDrawer.styles";
 import { useNavigation } from "@react-navigation/native";
 import { getUserFromToken } from "../../../utils/AuthUtils";
 import { authService } from "../../../service/authService";
+
+// Sidebar Navigation Component - hiển thị NavigationDrawer như sidebar (luôn mở)
+export function SidebarNavigation({ activeNavItem, onNavPress }) {
+  const [user, setUser] = useState(null);
+  const navigation = useNavigation();
+  
+  useEffect(() => {
+    const getUser = async () => {
+      const user = await getUserFromToken();
+      setUser(user);
+    };
+    getUser();
+  }, []);
+
+  const handleLogout = async () => {
+    const ok = await authService.logout();
+    if (ok) {
+      navigation.replace("Login");
+    }
+  };
+
+  return (
+    <View style={sidebarStyles.sidebar}>
+      <View style={sidebarStyles.logoContainer}>
+        <Image
+          source={{
+            uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
+          }}
+          style={{ width: 32, height: 32, resizeMode: "contain" }}
+        />
+        <Text style={sidebarStyles.logo}>SketchNote</Text>
+      </View>
+
+      <View style={sidebarStyles.menuContainer}>
+        <ScrollView 
+          style={sidebarStyles.menuScroll}
+          showsVerticalScrollIndicator={false}
+        >
+        {/* Sidebar Menu Items */}
+        {[
+          { icon: "description", label: "Documents", id: "documents" },
+          { icon: "star", label: "Favorites", id: "favorites" },
+          { icon: "share", label: "Shared", id: "shared" },
+          { icon: "store", label: "Marketplace", id: "marketplace" },
+          { icon: "delete", label: "Trash", id: "trash" },
+        ].map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={[
+              sidebarStyles.menuItem,
+              activeNavItem === item.id && sidebarStyles.menuItemActive,
+            ]}
+            onPress={() => onNavPress(item.id)}
+          >
+            <Icon
+              name={item.icon}
+              size={22}
+              color={activeNavItem === item.id ? "#4F46E5" : "#64748B"}
+            />
+            <Text
+              style={[
+                sidebarStyles.menuLabel,
+                activeNavItem === item.id && sidebarStyles.menuLabelActive,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+
+        <View style={sidebarStyles.divider} />
+
+        {/* Main Navigation Items */}
+        {[
+          { icon: "home", label: "Trang chủ", id: "home" },
+          { icon: "school", label: "Khóa học", id: "courses" },
+          { icon: "add-circle", label: "Tạo mới", id: "create" },
+          { icon: "photo-library", label: "Thư viện", id: "gallery" },
+          { icon: "store", label: "Cửa hàng Resource", id: "store" },
+          { icon: "receipt-long", label: "Lịch sử đơn hàng", id: "orderHistory" },
+          { icon: "dynamic-feed", label: "Xem tất cả blog", id: "blogAll" },
+          { icon: "person-outline", label: "Blog của tôi", id: "blogMine" },
+        ].map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={[
+              sidebarStyles.menuItem,
+              activeNavItem === item.id && sidebarStyles.menuItemActive,
+            ]}
+            onPress={() => onNavPress(item.id)}
+          >
+            <Icon
+              name={item.icon}
+              size={22}
+              color={activeNavItem === item.id ? "#4F46E5" : "#64748B"}
+            />
+            <Text
+              style={[
+                sidebarStyles.menuLabel,
+                activeNavItem === item.id && sidebarStyles.menuLabelActive,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+
+        <View style={sidebarStyles.divider} />
+
+        {/* Profile & Settings */}
+        {[
+          { icon: "person", label: "Hồ sơ", id: "profile" },
+          { icon: "settings", label: "Cài đặt", id: "settings" },
+        ].map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={[
+              sidebarStyles.menuItem,
+              activeNavItem === item.id && sidebarStyles.menuItemActive,
+            ]}
+            onPress={() => onNavPress(item.id)}
+          >
+            <Icon
+              name={item.icon}
+              size={22}
+              color={activeNavItem === item.id ? "#4F46E5" : "#64748B"}
+            />
+            <Text
+              style={[
+                sidebarStyles.menuLabel,
+                activeNavItem === item.id && sidebarStyles.menuLabelActive,
+              ]}
+            >
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+        </ScrollView>
+      </View>
+
+      {/* Footer */}
+      <View style={sidebarStyles.footer}>
+        <TouchableOpacity style={sidebarStyles.logoutButton} onPress={handleLogout}>
+          <Icon name="logout" size={20} color="#EF4444" />
+          <Text style={sidebarStyles.logoutText}>Đăng xuất</Text>
+        </TouchableOpacity>
+        <Text style={sidebarStyles.versionText}>Phiên bản 1.0.0</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function NavigationDrawer({
   drawerOpen,
@@ -29,22 +181,28 @@ export default function NavigationDrawer({
       navigation.replace("Login");
     }
   };
+
+  const drawerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: drawerAnimation.value }],
+  }));
+
+  const overlayStyle = useAnimatedStyle(() => ({
+    opacity: overlayAnimation.value,
+  }));
+
   return (
     <>
       {/* Overlay khi drawer mở */}
       {drawerOpen && (
-        <Animated.View
-          style={[drawerStyles.overlay, { opacity: overlayAnimation }]}
+        <Reanimated.View
+          style={[drawerStyles.overlay, overlayStyle]}
           onTouchStart={onToggleDrawer}
         />
       )}
 
       {/* Navigation Drawer */}
-      <Animated.View
-        style={[
-          drawerStyles.drawer,
-          { transform: [{ translateX: drawerAnimation }] },
-        ]}
+      <Reanimated.View
+        style={[drawerStyles.drawer, drawerStyle]}
       >
         {/* Header */}
         <View style={drawerStyles.drawerHeader}>
@@ -72,6 +230,155 @@ export default function NavigationDrawer({
 
         {/* Navigation Items */}
         <ScrollView style={drawerStyles.drawerItems}>
+          {/* Sidebar Menu Items */}
+          <Pressable
+            style={[
+              drawerStyles.drawerItem,
+              activeNavItem === "documents" && drawerStyles.drawerItemActive,
+            ]}
+            onPress={() => onNavPress("documents")}
+          >
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "documents" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="description"
+                size={20}
+                color={activeNavItem === "documents" ? "#FFFFFF" : "#6B7280"}
+              />
+            </View>
+            <Text
+              style={[
+                drawerStyles.drawerText,
+                activeNavItem === "documents" && drawerStyles.drawerTextActive,
+              ]}
+            >
+              Documents
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              drawerStyles.drawerItem,
+              activeNavItem === "favorites" && drawerStyles.drawerItemActive,
+            ]}
+            onPress={() => onNavPress("favorites")}
+          >
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "favorites" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="star"
+                size={20}
+                color={activeNavItem === "favorites" ? "#FFFFFF" : "#6B7280"}
+              />
+            </View>
+            <Text
+              style={[
+                drawerStyles.drawerText,
+                activeNavItem === "favorites" && drawerStyles.drawerTextActive,
+              ]}
+            >
+              Favorites
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              drawerStyles.drawerItem,
+              activeNavItem === "shared" && drawerStyles.drawerItemActive,
+            ]}
+            onPress={() => onNavPress("shared")}
+          >
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "shared" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="share"
+                size={20}
+                color={activeNavItem === "shared" ? "#FFFFFF" : "#6B7280"}
+              />
+            </View>
+            <Text
+              style={[
+                drawerStyles.drawerText,
+                activeNavItem === "shared" && drawerStyles.drawerTextActive,
+              ]}
+            >
+              Shared
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              drawerStyles.drawerItem,
+              activeNavItem === "marketplace" && drawerStyles.drawerItemActive,
+            ]}
+            onPress={() => onNavPress("marketplace")}
+          >
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "marketplace" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="store"
+                size={20}
+                color={activeNavItem === "marketplace" ? "#FFFFFF" : "#6B7280"}
+              />
+            </View>
+            <Text
+              style={[
+                drawerStyles.drawerText,
+                activeNavItem === "marketplace" && drawerStyles.drawerTextActive,
+              ]}
+            >
+              Marketplace
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              drawerStyles.drawerItem,
+              activeNavItem === "trash" && drawerStyles.drawerItemActive,
+            ]}
+            onPress={() => onNavPress("trash")}
+          >
+            <View
+              style={[
+                drawerStyles.iconContainer,
+                activeNavItem === "trash" && drawerStyles.iconContainerActive,
+              ]}
+            >
+              <Icon
+                name="delete"
+                size={20}
+                color={activeNavItem === "trash" ? "#FFFFFF" : "#6B7280"}
+              />
+            </View>
+            <Text
+              style={[
+                drawerStyles.drawerText,
+                activeNavItem === "trash" && drawerStyles.drawerTextActive,
+              ]}
+            >
+              Trash
+            </Text>
+          </Pressable>
+
+          <View style={drawerStyles.divider} />
+
+          {/* Main Navigation Items */}
           <Pressable
             style={[
               drawerStyles.drawerItem,
@@ -380,7 +687,7 @@ export default function NavigationDrawer({
 
           <Text style={drawerStyles.versionText}>Phiên bản 1.0.0</Text>
         </View>
-      </Animated.View>
+      </Reanimated.View>
     </>
   );
 }

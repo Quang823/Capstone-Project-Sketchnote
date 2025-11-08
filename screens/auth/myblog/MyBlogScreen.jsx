@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -20,8 +20,10 @@ export default function MyBlogScreen({ navigation }) {
 
   const fetchBlogs = async () => {
     try {
+      setLoading(true);
       const res = await blogService.getBlogByUserId();
-      setBlogs(res || []);
+      console.log("📚 Fetched blogs:", res);
+      setBlogs(res.result || []);
     } catch (error) {
       console.error("❌ Error fetching blogs:", error);
     } finally {
@@ -43,17 +45,29 @@ export default function MyBlogScreen({ navigation }) {
           try {
             await blogService.deleteBlog(id);
             fetchBlogs();
+            Toast.show({
+              type: "success",
+              text1: "Blog deleted successfully",
+            });
           } catch (err) {
             console.error("❌ Delete failed:", err.message);
+            Toast.show({
+              type: "error",
+              text1: "Delete failed",
+              text2: err.message,
+            });
           }
         },
       },
     ]);
   };
 
-  useEffect(() => {
-    fetchBlogs();
-  }, []);
+  // Refresh khi màn hình được focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchBlogs();
+    }, [])
+  );
 
   return (
     <View style={myBlogStyles.container}>
@@ -106,11 +120,11 @@ export default function MyBlogScreen({ navigation }) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={myBlogStyles.listContainer}>
-          {blogs.map((item) => (
+          {blogs?.map((item) => (
             <View key={item.id} style={myBlogStyles.blogItem}>
               <Image
                 source={{
-                  uri: item.imageurl || "https://i.imgur.com/9Y2w2fQ.jpeg",
+                  uri: item.imageUrl || "https://i.imgur.com/9Y2w2fQ.jpeg",
                 }}
                 style={myBlogStyles.blogImage}
               />
@@ -119,11 +133,18 @@ export default function MyBlogScreen({ navigation }) {
                   {item.title}
                 </Text>
                 <Text style={myBlogStyles.blogDesc} numberOfLines={2}>
-                  {item.content}
+                  {item.summary || "No summary available"}
                 </Text>
-                <Text style={myBlogStyles.blogDate}>
-                  🕒 {new Date(item.createdAt).toLocaleDateString()}
-                </Text>
+                <View style={myBlogStyles.blogMeta}>
+                  <Text style={myBlogStyles.blogDate}>
+                    🕒 {new Date(item.createdAt).toLocaleDateString()}
+                  </Text>
+                  {item.contents && item.contents.length > 0 && (
+                    <Text style={myBlogStyles.blogSections}>
+                      📄 {item.contents.length} section{item.contents.length > 1 ? 's' : ''}
+                    </Text>
+                  )}
+                </View>
               </View>
               <View style={myBlogStyles.actionColumn}>
                 <Pressable onPress={() => handleUpdateBlog(item)}>

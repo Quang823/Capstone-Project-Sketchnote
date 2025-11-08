@@ -19,15 +19,18 @@ import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  runOnJS,
 } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Shadow } from "react-native-shadow-2";
 import { useNavigation } from "@react-navigation/native";
 import { projectService } from "../../../service/projectService";
+import NavigationDrawer, { SidebarNavigation } from "../../home/nav/NavigationDrawer";
+import { SIDEBAR_WIDTH } from "../../home/nav/NavigationDrawer.styles";
 
 const { width } = Dimensions.get("window");
 
 // --- CONFIG / RESPONSIVE ---
-const SIDEBAR_WIDTH = 220; // giữ nếu bạn dùng sidebar
 const CONTENT_PADDING = 28; // styles.content paddingHorizontal
 const CARD_GAP = 12;
 
@@ -126,156 +129,6 @@ function CreatePopover({ visible, onClose, onSelect }) {
   );
 }
 
-// --- Navigation Drawer Component ---
-function NavigationDrawer({
-  drawerOpen,
-  drawerAnimation,
-  overlayAnimation,
-  activeNavItem,
-  onToggleDrawer,
-  onNavPress,
-}) {
-  const navigation = useNavigation();
-  const [user] = useState({ name: "Nguyễn Văn A", email: "user@example.com" });
-
-  const drawerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: drawerAnimation.value }],
-  }));
-
-  const overlayStyle = useAnimatedStyle(() => ({
-    opacity: overlayAnimation.value,
-  }));
-
-  return (
-    <>
-      {drawerOpen && (
-        <Reanimated.View
-          style={[drawerStyles.overlay, overlayStyle]}
-          onTouchStart={onToggleDrawer}
-        />
-      )}
-      <Reanimated.View style={[drawerStyles.drawer, drawerStyle]}>
-        <View style={drawerStyles.drawerHeader}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={{
-                uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
-              }}
-              style={{ width: 32, height: 32, resizeMode: "contain" }}
-            />
-            <Text style={styles.logo}>SketchNote</Text>
-          </View>
-          <Pressable onPress={onToggleDrawer}>
-            <Icon name="close" size={24} color="#6B7280" />
-          </Pressable>
-        </View>
-
-        <View style={drawerStyles.userInfo}>
-          <View style={drawerStyles.avatar}>
-            <Icon name="account-circle" size={48} color="#4F46E5" />
-          </View>
-          <Text style={drawerStyles.userName}>{user.name}</Text>
-          <Text style={drawerStyles.userEmail}>{user.email}</Text>
-        </View>
-
-        <ScrollView style={drawerStyles.drawerItems}>
-          {[
-            { id: "home", label: "Trang chủ", icon: "home" },
-            { id: "courses", label: "Khóa học", icon: "school" },
-            { id: "create", label: "Tạo mới", icon: "add-circle" },
-            { id: "gallery", label: "Thư viện", icon: "photo-library" },
-            { id: "store", label: "Cửa hàng Resource", icon: "store" },
-            {
-              id: "orderHistory",
-              label: "Lịch sử đơn hàng",
-              icon: "receipt-long",
-            },
-            { id: "blogAll", label: "Xem tất cả blog", icon: "dynamic-feed" },
-            { id: "blogMine", label: "Blog của tôi", icon: "person-outline" },
-          ].map((item) => (
-            <Pressable
-              key={item.id}
-              style={[
-                drawerStyles.drawerItem,
-                activeNavItem === item.id && drawerStyles.drawerItemActive,
-              ]}
-              onPress={() => onNavPress(item.id)}
-            >
-              <View
-                style={[
-                  drawerStyles.iconContainer,
-                  activeNavItem === item.id && drawerStyles.iconContainerActive,
-                ]}
-              >
-                <Icon
-                  name={item.icon}
-                  size={20}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#6B7280"}
-                />
-              </View>
-              <Text
-                style={[
-                  drawerStyles.drawerText,
-                  activeNavItem === item.id && drawerStyles.drawerTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-
-          <View style={drawerStyles.divider} />
-
-          {[
-            { id: "profile", label: "Hồ sơ", icon: "person" },
-            { id: "settings", label: "Cài đặt", icon: "settings" },
-          ].map((item) => (
-            <Pressable
-              key={item.id}
-              style={[
-                drawerStyles.drawerItem,
-                activeNavItem === item.id && drawerStyles.drawerItemActive,
-              ]}
-              onPress={() => onNavPress(item.id)}
-            >
-              <View
-                style={[
-                  drawerStyles.iconContainer,
-                  activeNavItem === item.id && drawerStyles.iconContainerActive,
-                ]}
-              >
-                <Icon
-                  name={item.icon}
-                  size={20}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#6B7280"}
-                />
-              </View>
-              <Text
-                style={[
-                  drawerStyles.drawerText,
-                  activeNavItem === item.id && drawerStyles.drawerTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        <View style={drawerStyles.drawerFooter}>
-          <Pressable
-            style={drawerStyles.logoutButton}
-            onPress={() => navigation.replace("Login")}
-          >
-            <Icon name="logout" size={20} color="#EF4444" />
-            <Text style={drawerStyles.logoutText}>Đăng xuất</Text>
-          </Pressable>
-          <Text style={drawerStyles.versionText}>Phiên bản 1.0.0</Text>
-        </View>
-      </Reanimated.View>
-    </>
-  );
-}
 
 // --- Main HomeScreen ---
 export default function HomeScreen({ navigation }) {
@@ -283,13 +136,13 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeNavItem] = useState("home");
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Mặc định mở
+  const [activeNavItem, setActiveNavItem] = useState("documents");
 
   // Animations
-  const drawerAnim = useSharedValue(-300);
-  const overlayAnim = useSharedValue(0);
+  const sidebarAnim = useSharedValue(sidebarOpen ? 0 : -SIDEBAR_WIDTH); // 0 = mở, -SIDEBAR_WIDTH = đóng
   const fade = useSharedValue(0);
+  const translateX = useSharedValue(sidebarOpen ? 0 : -SIDEBAR_WIDTH);
 
   useEffect(() => {
     fade.value = withTiming(1, { duration: 400 });
@@ -316,11 +169,54 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
-    drawerAnim.value = withTiming(drawerOpen ? 0 : -300, { duration: 300 });
-    overlayAnim.value = withTiming(drawerOpen ? 1 : 0, { duration: 300 });
-  }, [drawerOpen]);
+    translateX.value = withTiming(sidebarOpen ? 0 : -SIDEBAR_WIDTH, { duration: 300 });
+    sidebarAnim.value = translateX.value;
+  }, [sidebarOpen]);
+
+  const toggleSidebarWithState = (open) => {
+    setSidebarOpen(open);
+  };
+
+  // Gesture handler cho drag sidebar - sử dụng API mới
+  const startX = useSharedValue(0);
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-10, 10]) // Chỉ kích hoạt khi kéo ngang
+    .failOffsetY([-10, 10]) // Cho phép scroll dọc
+    .onStart(() => {
+      'worklet';
+      startX.value = translateX.value;
+    })
+    .onUpdate((event) => {
+      'worklet';
+      // Chỉ xử lý khi kéo ngang nhiều hơn kéo dọc
+      if (Math.abs(event.translationX) > Math.abs(event.translationY)) {
+        const newX = startX.value + event.translationX;
+        // Giới hạn drag trong khoảng [-SIDEBAR_WIDTH, 0]
+        translateX.value = Math.max(-SIDEBAR_WIDTH, Math.min(0, newX));
+        sidebarAnim.value = translateX.value;
+      }
+    })
+    .onEnd(() => {
+      'worklet';
+      const threshold = -SIDEBAR_WIDTH / 2;
+      const shouldOpen = translateX.value > threshold;
+      
+      translateX.value = withTiming(shouldOpen ? 0 : -SIDEBAR_WIDTH, { duration: 300 });
+      sidebarAnim.value = translateX.value;
+      
+      runOnJS(toggleSidebarWithState)(shouldOpen);
+    });
 
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
+  const sidebarStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+  const toggleButtonStyle = useAnimatedStyle(() => {
+    const togglePosition = translateX.value + SIDEBAR_WIDTH;
+    return {
+      transform: [{ translateX: togglePosition }],
+    };
+  });
 
   const handleCreate = (type) => {
     setPopoverVisible(false);
@@ -337,9 +233,63 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const toggleDrawer = () => setDrawerOpen((v) => !v);
+  const toggleSidebar = () => setSidebarOpen((v) => !v);
   const handleNavPress = (id) => {
-    setDrawerOpen(false);
+    setActiveNavItem(id);
+    
+    // Navigation logic
+    switch (id) {
+      case "documents":
+        // Documents = Home screen (current screen)
+        break;
+      case "favorites":
+        // TODO: Navigate to Favorites screen or filter projects
+        // For now, just stay on Home
+        break;
+      case "shared":
+        // TODO: Navigate to Shared screen or filter projects
+        // For now, just stay on Home
+        break;
+      case "marketplace":
+        navigation?.navigate?.("ResourceStore");
+        break;
+      case "trash":
+        // TODO: Navigate to Trash screen or filter projects
+        // For now, just stay on Home
+        break;
+      case "home":
+        // Already on Home
+        break;
+      case "courses":
+        navigation?.navigate?.("CoursesScreen");
+        break;
+      case "create":
+        setPopoverVisible(true);
+        break;
+      case "gallery":
+        // TODO: Navigate to Gallery screen
+        break;
+      case "store":
+        navigation?.navigate?.("ResourceStore");
+        break;
+      case "orderHistory":
+        navigation?.navigate?.("OrderHistory");
+        break;
+      case "blogAll":
+        navigation?.navigate?.("BlogList");
+        break;
+      case "blogMine":
+        navigation?.navigate?.("MyBlog");
+        break;
+      case "profile":
+        // TODO: Navigate to Profile screen
+        break;
+      case "settings":
+        // TODO: Navigate to Settings screen
+        break;
+      default:
+        break;
+    }
   };
 
   // Double tap detection
@@ -428,47 +378,33 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Sidebar */}
-      <View style={styles.sidebar}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={{
-              uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
-            }}
-            style={{ width: 32, height: 32, resizeMode: "contain" }}
+      
+      <GestureDetector gesture={panGesture}>
+        <Reanimated.View style={[styles.sidebarContainer, sidebarStyle]}>
+          <SidebarNavigation 
+            activeNavItem={activeNavItem} 
+            onNavPress={handleNavPress} 
           />
-          <Text style={styles.logo}>SketchNote</Text>
-        </View>
-        <View style={styles.menu}>
-          {[
-            { icon: "description", label: "Documents", active: true },
-            { icon: "star", label: "Favorites" },
-            { icon: "share", label: "Shared" },
-            { icon: "store", label: "Marketplace" },
-            { icon: "delete", label: "Trash" },
-          ].map((item, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={[styles.menuItem, item.active && styles.menuItemActive]}
-            >
-              <Icon
-                name={item.icon}
-                size={22}
-                color={item.active ? "#4F46E5" : "#64748B"}
-              />
-              <Text
-                style={[
-                  styles.menuLabel,
-                  item.active && styles.menuLabelActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
+        </Reanimated.View>
+      </GestureDetector>
+      
+      {/* Nút toggle sidebar - có thể drag */}
+      <GestureDetector gesture={panGesture}>
+        <Reanimated.View style={[styles.toggleButtonContainer, toggleButtonStyle]}>
+          <TouchableOpacity
+            style={styles.toggleButton}
+            onPress={toggleSidebar}
+            activeOpacity={0.7}
+          >
+            <Icon 
+              name={sidebarOpen ? "menu" : "menu"} 
+              size={26} 
+              color="#2563EB" 
+            />
+          </TouchableOpacity>
+        </Reanimated.View>
+      </GestureDetector>
+      
       {/* Main Content */}
       <View style={styles.main}>
         <Reanimated.View style={[styles.content, fadeStyle]}>
@@ -480,14 +416,8 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.sortText}>Date</Text>
                 <Icon name="arrow-drop-down" size={18} color="#64748B" />
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.settingsButton}
-                onPress={toggleDrawer}
-              >
-                <Icon name="settings" size={24} color="#2563EB" />
-              </TouchableOpacity>
-
+  
+              {/* Nút + New */}
               <TouchableOpacity
                 style={styles.newButton}
                 onPress={() => setPopoverVisible(true)}
@@ -504,23 +434,22 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           </View>
-
+  
           {/* Popover */}
           <CreatePopover
             visible={popoverVisible}
             onClose={() => setPopoverVisible(false)}
             onSelect={handleCreate}
           />
-
-          {/* Loading State */}
+  
+          {/* Loading / Error / Empty / Grid */}
           {loading && (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#4F46E5" />
               <Text style={styles.loadingText}>Loading project...</Text>
             </View>
           )}
-
-          {/* Error State */}
+  
           {error && !loading && (
             <View style={styles.errorContainer}>
               <Icon name="error-outline" size={48} color="#EF4444" />
@@ -533,8 +462,7 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           )}
-
-          {/* Empty State */}
+  
           {!loading && !error && projects.length === 0 && (
             <View style={styles.emptyContainer}>
               <Icon name="folder-open" size={64} color="#9CA3AF" />
@@ -542,8 +470,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.emptyText}>Create your first project!</Text>
             </View>
           )}
-
-          {/* Grid - sử dụng responsive columns */}
+  
           {!loading && !error && projects.length > 0 && (
             <FlatList
               data={projects}
@@ -559,67 +486,38 @@ export default function HomeScreen({ navigation }) {
                 { paddingBottom: 100 },
               ]}
               showsVerticalScrollIndicator={false}
-              // force re-render when columns change
               key={`${columns}`}
             />
           )}
         </Reanimated.View>
       </View>
-
-      {/* Drawer */}
-      <NavigationDrawer
-        drawerOpen={drawerOpen}
-        drawerAnimation={drawerAnim}
-        overlayAnimation={overlayAnim}
-        activeNavItem={activeNavItem}
-        onToggleDrawer={toggleDrawer}
-        onNavPress={handleNavPress}
-      />
     </View>
   );
+  
 }
 
 // === STYLES ===
 const styles = StyleSheet.create({
   container: { flex: 1, flexDirection: "row", backgroundColor: "#F9FAFB" },
-  sidebar: {
-    width: SIDEBAR_WIDTH,
-    backgroundColor: "#FFFFFF",
-    paddingTop: Platform.OS === "ios" ? 60 : 44,
-    paddingHorizontal: 20,
-    borderRightWidth: 1,
-    borderRightColor: "#E5E7EB",
+  sidebarContainer: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 10,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  logoContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 36,
+  toggleButtonContainer: {
+    position: "absolute",
+    left: 0,
+    top: Platform.OS === "ios" ? 60 : 44,
+    zIndex: 100,
+    marginLeft: 8,
   },
-  logo: {
-    fontSize: 24,
-    fontFamily: "Pacifico-Regular",
-
-    color: "#104D83",
-    marginLeft: 10,
-  },
-  menu: {},
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 13,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    marginBottom: 6,
-  },
-  menuItemActive: { backgroundColor: "#EEF2FF" },
-  menuLabel: {
-    marginLeft: 14,
-    fontSize: 15.5,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  menuLabelActive: { color: "#4F46E5", fontWeight: "600" },
-
   main: { flex: 1, backgroundColor: "#F9FAFB" },
   content: { flex: 1, paddingHorizontal: CONTENT_PADDING, paddingTop: 25 },
   header: {
@@ -627,8 +525,24 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
+    zIndex: 20,
+    position: "relative",
   },
-  headerTitle: { fontSize: 28, fontWeight: "800", color: "#111827" },
+  toggleButton: {
+    padding: 10,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 10,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  headerTitle: { fontSize: 28, fontWeight: "800", color: "#111827", flex: 1 },
   headerRight: { flexDirection: "row", alignItems: "center" },
   sortButton: {
     flexDirection: "row",
@@ -640,7 +554,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   sortText: { color: "#6B7280", fontSize: 14.5, fontWeight: "500" },
-  settingsButton: { padding: 6, marginRight: 8 },
   newButton: {
     borderRadius: 12,
     overflow: "hidden",
@@ -780,94 +693,4 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     textAlign: "center",
   },
-
-  // Drawer styles
-  // (giữ giống cũ)
-});
-
-const drawerStyles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    zIndex: 98,
-  },
-  drawer: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 280,
-    backgroundColor: "#FFFFFF",
-    zIndex: 99,
-    paddingTop: Platform.OS === "ios" ? 60 : 44,
-    elevation: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-  },
-  drawerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  logoContainer: { flexDirection: "row", alignItems: "center" },
-  drawerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#1F2937",
-    marginLeft: 8,
-  },
-  userInfo: {
-    padding: 20,
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  avatar: { marginBottom: 12 },
-  userName: { fontSize: 18, fontWeight: "600", color: "#1F2937" },
-  userEmail: { fontSize: 14, color: "#6B7280", marginTop: 4 },
-  drawerItems: { flex: 1, paddingHorizontal: 12, marginTop: 12 },
-  drawerItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 4,
-  },
-  drawerItemActive: { backgroundColor: "#4F46E5" },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F3F4F6",
-  },
-  iconContainerActive: { backgroundColor: "#FFFFFF" },
-  drawerText: {
-    marginLeft: 14,
-    fontSize: 15,
-    color: "#1F2937",
-    fontWeight: "500",
-  },
-  drawerTextActive: { color: "#FFFFFF", fontWeight: "600" },
-  divider: {
-    height: 1,
-    backgroundColor: "#E5E7EB",
-    marginVertical: 12,
-    marginHorizontal: 12,
-  },
-  drawerFooter: { padding: 20, borderTopWidth: 1, borderTopColor: "#E5E7EB" },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  logoutText: { marginLeft: 12, color: "#EF4444", fontWeight: "600" },
-  versionText: { fontSize: 12, color: "#9CA3AF", textAlign: "center" },
 });

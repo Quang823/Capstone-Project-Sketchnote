@@ -116,4 +116,15 @@ export const myBlogStyles = StyleSheet.create({
     height: 70,
     gap: 10,
   },
+  blogMeta: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginTop: 4,
+},
+blogSections: {
+  fontSize: 12,
+  color: "#667EEA",
+  fontWeight: "600",
+},
 });
