@@ -22,14 +22,14 @@ import { useNavigation } from "@react-navigation/native";
 import { authService } from "../../../service/authService";
 import ImageUploader from "../../../common/ImageUploader";
 
-
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 
 export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
- const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState(null);
   const { toast } = useToast();
   const navigation = useNavigation();
@@ -63,44 +63,39 @@ export default function RegisterScreen() {
   };
 
   const handleRegister = async () => {
-  if (!email || !password || !fullName) {
-    toast({
-      title: "Please fill in all fields",
-      description: "Please fill in all fields",
-      variant: "destructive",
-    });
-    return;
-  }
+    if (!email || !password || !firstName || !lastName) {
+      toast({
+        title: "Please fill in all fields",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const [firstName, ...rest] = fullName.trim().split(" ");
-  const lastName = rest.join(" ");
+    try {
+      const res = await authService.register({
+        email,
+        password,
+        firstName,
+        lastName,
+        avatarUrl,
+      });
 
-  try {
-    const res = await authService.register({
-      email,
-      password,
-      firstName,
-      lastName,
-      avatarUrl,
-    });
+      toast({
+        title: "Register Successful! 🎨",
+        description: "Welcome to SketchNote!",
+      });
 
-    toast({
-      title: "Register Successful! 🎨",
-      description: "Welcome to SketchNote!",
-    });
-
-    navigation.navigate("Login");
-  } catch (error) {
-   
-    console.error("Register error:", error);
-    toast({
-      title: "Register Failed",
-      description: error.message || "An error occurred while registering",
-      variant: "destructive",
-    });
-  }
-};
-
+      navigation.navigate("Login");
+    } catch (error) {
+      console.error("Register error:", error);
+      toast({
+        title: "Register Failed",
+        description: error.message || "An error occurred while registering",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSocialRegister = (provider) => {
     toast({
@@ -195,12 +190,23 @@ export default function RegisterScreen() {
               <View style={registerStyles.cardContent}>
                 <View style={registerStyles.form}>
                   <View style={registerStyles.inputGroup}>
-                    <Text style={registerStyles.label}>Full Name</Text>
+                    <Text style={registerStyles.label}>First Name</Text>
                     <TextInput
                       style={registerStyles.input}
-                      placeholder="Enter your full name"
-                      value={fullName}
-                      onChangeText={setFullName}
+                      placeholder="Enter your first name"
+                      value={firstName}
+                      onChangeText={setFirstName}
+                      autoCapitalize="words"
+                    />
+                  </View>
+
+                  <View style={registerStyles.inputGroup}>
+                    <Text style={registerStyles.label}>Last Name</Text>
+                    <TextInput
+                      style={registerStyles.input}
+                      placeholder="Enter your last name"
+                      value={lastName}
+                      onChangeText={setLastName}
                       autoCapitalize="words"
                     />
                   </View>
@@ -241,7 +247,7 @@ export default function RegisterScreen() {
                     </View>
                   </View>
                   
-               <ImageUploader onUploaded={setAvatarUrl} />
+                  <ImageUploader onUploaded={setAvatarUrl} />
 
                   <Reanimated.View style={[animatedButtonStyle]}>
                     <Pressable

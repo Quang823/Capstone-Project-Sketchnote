@@ -110,14 +110,18 @@ export default function BlogDetailScreen() {
       <View style={{ position: "relative" }}>
         {blog.imageUrl && (
           <>
-            <Image
-              source={{ uri: blog.imageUrl }}
-              style={{
-                width: width,
-                height: 320,
-                resizeMode: "cover",
-              }}
-            />
+           <Image
+  source={{ uri: blog.imageUrl }}
+  style={{
+    width: width * 0.9,       // nhỏ lại 90% chiều rộng màn hình
+    height: 250,
+    borderRadius: 20,
+    alignSelf: "center",
+    marginTop: 16,
+    resizeMode: "cover",
+  }}
+/>
+
             {/* Dark Gradient Overlay */}
             <LinearGradient
               colors={["rgba(0,0,0,0.6)", "transparent", "rgba(0,0,0,0.8)"]}
@@ -329,14 +333,17 @@ export default function BlogDetailScreen() {
                     elevation: 4,
                   }}
                 >
-                  <Image
-                    source={{ uri: section.contentUrl }}
-                    style={{
-                      width: "100%",
-                      height: 220,
-                      resizeMode: "cover",
-                    }}
-                  />
+                 <Image
+  source={{ uri: section.contentUrl }}
+  style={{
+    width: width * 0.85,       // chỉ chiếm 85% màn hình
+    height: 180,
+    borderRadius: 16,
+    alignSelf: "center",
+    resizeMode: "cover",
+  }}
+/>
+
                 </View>
               )}
 

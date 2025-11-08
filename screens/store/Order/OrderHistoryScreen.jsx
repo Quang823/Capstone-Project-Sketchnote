@@ -12,7 +12,6 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
 import { orderService } from "../../../service/orderService";
 
-
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
   const [orders, setOrders] = useState([]);
@@ -41,16 +40,21 @@ export default function OrderHistoryScreen() {
     fetchOrders();
   };
 
+  // 🎨 Màu trạng thái pastel đồng nhất
   const getStatusColor = (status) => {
     switch (status) {
       case "PENDING":
-        return "#F59E0B";
+        return "#FFD54F"; // Vàng pastel
       case "COMPLETED":
-        return "#10B981";
+        return "#81C784"; // Xanh lá dịu
       case "CANCELLED":
-        return "#EF4444";
+        return "#E57373"; // Đỏ nhẹ
+      case "CONFIRMED":
+        return "#64B5F6"; // Xanh dương sáng
+      case "PAID":
+        return "#9575CD"; // Tím nhẹ
       default:
-        return "#6B7280";
+        return "#BA68C8"; // Dự phòng
     }
   };
 
@@ -62,6 +66,8 @@ export default function OrderHistoryScreen() {
         return "check-circle";
       case "CANCELLED":
         return "cancel";
+      case "CONFIRMED":
+        return "check";
       default:
         return "info";
     }
@@ -82,14 +88,17 @@ export default function OrderHistoryScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack('Home')} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color="#1F2937" />
+          <Pressable
+            onPress={() => navigation.goBack("Home")}
+            style={styles.backBtn}
+          >
+            <Icon name="arrow-back" size={24} color="#2D2D2D" />
           </Pressable>
           <Text style={styles.headerTitle}>Order History</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
+          <ActivityIndicator size="large" color="#64B5F6" />
         </View>
       </SafeAreaView>
     );
@@ -100,13 +109,13 @@ export default function OrderHistoryScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color="#1F2937" />
+            <Icon name="arrow-back" size={24} color="#2D2D2D" />
           </Pressable>
           <Text style={styles.headerTitle}>Order History</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.emptyContainer}>
-          <Icon name="receipt-long" size={100} color="#D1D5DB" />
+          <Icon name="receipt-long" size={100} color="#B0BEC5" />
           <Text style={styles.emptyTitle}>No orders yet</Text>
           <Text style={styles.emptyText}>
             Start shopping to see your order history
@@ -126,11 +135,11 @@ export default function OrderHistoryScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
+          <Icon name="arrow-back" size={24} color="#2D2D2D" />
         </Pressable>
         <Text style={styles.headerTitle}>Order History</Text>
         <Pressable onPress={onRefresh}>
-          <Icon name="refresh" size={24} color="#3B82F6" />
+          <Icon name="refresh" size={24} color="#2D2D2D" />
         </Pressable>
       </View>
 
@@ -143,27 +152,29 @@ export default function OrderHistoryScreen() {
       >
         {orders?.map((order) => (
           <View key={order.orderId} style={styles.orderCard}>
-            {/* Order Header */}
+            {/* Header */}
             <View style={styles.orderHeader}>
               <View style={styles.orderHeaderLeft}>
-                <Icon name="receipt" size={20} color="#3B82F6" />
-                <Text style={styles.invoiceNumber}>{order.invoiceNumber}</Text>
+                <Icon name="receipt" size={20} color="#4FC3F7" />
+                <Text style={styles.invoiceNumber}>
+                  {order.invoiceNumber}
+                </Text>
               </View>
               <View
                 style={[
                   styles.statusBadge,
-                  { backgroundColor: `${getStatusColor(order.orderStatus)}15` },
+                  { backgroundColor: `${getStatusColor(order.orderStatus)}80` },
                 ]}
               >
                 <Icon
                   name={getStatusIcon(order.orderStatus)}
                   size={14}
-                  color={getStatusColor(order.orderStatus)}
+                  color="#1F2937"
                 />
                 <Text
                   style={[
                     styles.statusText,
-                    { color: getStatusColor(order.orderStatus) },
+                    { color: "#1F2937" },
                   ]}
                 >
                   {order.orderStatus}
@@ -171,31 +182,30 @@ export default function OrderHistoryScreen() {
               </View>
             </View>
 
-            {/* Order Info */}
+            {/* Info */}
             <View style={styles.orderInfo}>
               <View style={styles.infoRow}>
-                <Icon name="event" size={16} color="#6B7280" />
+                <Icon name="event" size={16} color="#90A4AE" />
                 <Text style={styles.infoText}>
                   {formatDate(order.issueDate)}
                 </Text>
               </View>
               <View style={styles.infoRow}>
-                <Icon name="shopping-bag" size={16} color="#6B7280" />
+                <Icon name="shopping-bag" size={16} color="#90A4AE" />
                 <Text style={styles.infoText}>
-                  {order.items.length} item{order.items.length > 1 ? "s" : ""}
+                  {order.items.length} item
+                  {order.items.length > 1 ? "s" : ""}
                 </Text>
               </View>
             </View>
 
-            {/* Order Items */}
+            {/* Items */}
             <View style={styles.itemsContainer}>
               {order?.items?.map((item) => (
                 <View key={item.orderDetailId} style={styles.itemRow}>
                   <View style={styles.itemInfo}>
-                    <Text style={styles.itemName} numberOfLines={1}>
-                      {item.templateName}
-                    </Text>
-                    <Text style={styles.itemDesc} numberOfLines={1}>
+                    <Text style={styles.itemName}>{item.templateName}</Text>
+                    <Text style={styles.itemDesc}>
                       {item.templateDescription}
                     </Text>
                     <View style={styles.typeBadge}>
@@ -218,7 +228,7 @@ export default function OrderHistoryScreen() {
               ))}
             </View>
 
-            {/* Order Footer */}
+            {/* Footer */}
             <View style={styles.orderFooter}>
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Total Amount</Text>
@@ -227,16 +237,11 @@ export default function OrderHistoryScreen() {
                 </Text>
               </View>
 
-              {/* Payment Status & Checkout Button */}
               <View style={styles.actionRow}>
                 <View
                   style={[
                     styles.paymentBadge,
-                    {
-                      backgroundColor: `${getStatusColor(
-                        order.paymentStatus
-                      )}15`,
-                    },
+                    { backgroundColor: `${getStatusColor(order.paymentStatus)}80` },
                   ]}
                 >
                   <Icon
@@ -246,12 +251,12 @@ export default function OrderHistoryScreen() {
                         : "check-circle"
                     }
                     size={14}
-                    color={getStatusColor(order.paymentStatus)}
+                    color="#1F2937"
                   />
                   <Text
                     style={[
                       styles.paymentText,
-                      { color: getStatusColor(order.paymentStatus) },
+                      { color: "#1F2937" },
                     ]}
                   >
                     {order.paymentStatus}
@@ -282,77 +287,61 @@ export default function OrderHistoryScreen() {
   );
 }
 
+
 const styles = {
-  container: {
-    flex: 1,
-    backgroundColor: "#F9FAFB",
-  },
+  container: { flex: 1, backgroundColor: "#FFF9E6" },
   header: {
+    paddingTop: 30,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    backgroundColor: "#B3E5FC",
+    borderBottomWidth: 2,
+    borderBottomColor: "#2D2D2D",
   },
   backBtn: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-  centerContainer: {
-    flex: 1,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#2D2D2D",
   },
+  headerTitle: { fontSize: 20, fontWeight: "900", color: "#2D2D2D" },
+  content: { flex: 1, padding: 16 },
+  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 32,
   },
-  emptyTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1F2937",
-    marginTop: 16,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginTop: 8,
-    textAlign: "center",
-  },
+  emptyTitle: { fontSize: 22, fontWeight: "900", color: "#2D2D2D", marginTop: 16 },
+  emptyText: { fontSize: 14, color: "#546E7A", marginTop: 8, textAlign: "center" },
   shopBtn: {
     marginTop: 24,
     paddingHorizontal: 32,
     paddingVertical: 12,
-    backgroundColor: "#3B82F6",
-    borderRadius: 8,
+    backgroundColor: "#81C784",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#2D2D2D",
   },
-  shopBtnText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  shopBtnText: { color: "#1F2937", fontSize: 16, fontWeight: "800" },
   orderCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    borderWidth: 2,
+    borderColor: "#2D2D2D",
+    shadowColor: "#90CAF9",
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.25,
     elevation: 2,
   },
   orderHeader: {
@@ -361,144 +350,81 @@ const styles = {
     alignItems: "center",
     marginBottom: 12,
   },
-  orderHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  invoiceNumber: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
+  orderHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  invoiceNumber: { fontSize: 16, fontWeight: "800", color: "#37474F" },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#2D2D2D",
   },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  statusText: { fontSize: 12, fontWeight: "800" },
   orderInfo: {
     flexDirection: "row",
     gap: 16,
     marginBottom: 12,
     paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomWidth: 2,
+    borderBottomColor: "#B3E5FC",
+    borderStyle: "dashed",
   },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  infoText: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  infoText: { fontSize: 13, color: "#607D8B", fontWeight: "600" },
   itemsContainer: {
     gap: 12,
     marginBottom: 12,
     paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomWidth: 2,
+    borderBottomColor: "#B3E5FC",
+    borderStyle: "dashed",
   },
-  itemRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  itemInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  itemName: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1F2937",
-    marginBottom: 4,
-  },
-  itemDesc: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginBottom: 6,
-  },
+  itemRow: { flexDirection: "row", justifyContent: "space-between" },
+  itemInfo: { flex: 1, marginRight: 12 },
+  itemName: { fontSize: 14, fontWeight: "800", color: "#2E4053", marginBottom: 4 },
+  itemDesc: { fontSize: 12, color: "#546E7A", marginBottom: 6 },
   typeBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#EDE7F6",
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#2D2D2D",
   },
-  typeBadgeText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "#3B82F6",
-  },
-  itemRight: {
-    alignItems: "flex-end",
-  },
-  itemPrice: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-  discountText: {
-    fontSize: 12,
-    color: "#10B981",
-    marginTop: 2,
-  },
-  orderFooter: {
-    gap: 12,
-  },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  totalLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6B7280",
-  },
-  totalAmount: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-  actionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
+  typeBadgeText: { fontSize: 10, fontWeight: "700", color: "#9575CD" },
+  itemRight: { alignItems: "flex-end" },
+  itemPrice: { fontSize: 14, fontWeight: "800", color: "#2E4053" },
+  discountText: { fontSize: 12, color: "#81C784", marginTop: 2 },
+  orderFooter: { gap: 12 },
+  totalRow: { flexDirection: "row", justifyContent: "space-between" },
+  totalLabel: { fontSize: 14, fontWeight: "700", color: "#37474F" },
+  totalAmount: { fontSize: 18, fontWeight: "900", color: "#E65100" },
+  actionRow: { flexDirection: "row", justifyContent: "space-between" },
   paymentBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#2D2D2D",
   },
-  paymentText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  paymentText: { fontSize: 12, fontWeight: "800" },
   checkoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#64B5F6",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#2D2D2D",
   },
-  checkoutBtnText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
+  checkoutBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
 };

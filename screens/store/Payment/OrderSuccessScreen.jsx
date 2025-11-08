@@ -66,7 +66,7 @@ export default function OrderSuccessScreen() {
 
           <View style={styles.infoBox}>
             <Text style={styles.label}>Mã đơn hàng:</Text>
-            <Text style={styles.value}>{order?.invoiceNumber}</Text>
+            <Text style={styles.value}>{order?.orderId}</Text>
 
             <Text style={styles.label}>Tổng tiền:</Text>
             <Text style={styles.value}>{order?.totalAmount} VND</Text>
