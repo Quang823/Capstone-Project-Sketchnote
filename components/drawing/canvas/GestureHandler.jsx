@@ -327,7 +327,7 @@ export default function GestureHandler(
   const [draggingText, setDraggingText] = useState(null);
   const [tempStrokeId, setTempStrokeId] = useState(null);
   const getActiveStrokes = useCallback(() => {
-    // ✅ Validate strokes is array before filtering
+    // Validate strokes is array before filtering
     if (!Array.isArray(strokes)) return [];
     return strokes.filter(
       (s) =>
@@ -1786,7 +1786,7 @@ export default function GestureHandler(
               );
               if (globalIndex !== -1) onDeleteStroke(globalIndex);
             } catch (err) {
-              console.error("⚠️ Error deleting stroke:", err);
+              console.error("Error deleting stroke:", err);
             }
           }
         }
@@ -1864,7 +1864,7 @@ export default function GestureHandler(
             try {
               onModifyStroke?.(i, { fill: true, fillColor: color });
             } catch (err) {
-              console.error("⚠️ Error modifying fill:", err);
+              console.error("Error modifying fill:", err);
             }
             break;
           }
@@ -1929,7 +1929,7 @@ export default function GestureHandler(
         try {
           onAddStroke(newStroke);
         } catch (err) {
-          console.error("⚠️ Error adding stroke:", err);
+          console.error("Error adding stroke:", err);
         }
       }
     });

@@ -39,8 +39,8 @@ export default function InlineTextEditor({
   initialData = {}, // Full styles khi edit existing text
   onCancel,
   onSubmit,
-  onChange, // 🔑 Prop mới để cập nhật real-time
-  isEditingExisting = false, // 🔑 Biến để biết đang edit existing text
+  onChange, // Prop mới để cập nhật real-time
+  isEditingExisting = false, // Biến để biết đang edit existing text
 }) {
   const [text, setText] = useState(safeText || "");
 
@@ -87,8 +87,6 @@ export default function InlineTextEditor({
       color,
       fontSize,
       fontFamily: effectiveFont || "Roboto-Regular",
-
-      isEditing: isEditingExisting, // 🔑 Thêm dòng này
       ...override,
     });
   };
@@ -120,7 +118,7 @@ export default function InlineTextEditor({
     })
   ).current;
 
-  // 🔑 Load full initial data khi visible thay đổi
+  // Load full initial data khi visible thay đổi
   useEffect(() => {
     if (visible) {
       setText(initialData.text || safeTextValue);
@@ -134,7 +132,7 @@ export default function InlineTextEditor({
     }
   }, [visible, initialData, safeTextValue]);
 
-  // 🔑 Gửi thay đổi real-time về parent
+  // Gửi thay đổi real-time về parent
   useEffect(() => {
     if (visible && onChange) {
       // Hủy timeout trước đó nếu có
@@ -195,7 +193,7 @@ export default function InlineTextEditor({
         <View style={styles.overlay} />
       </TouchableWithoutFeedback>
 
-      {/* 🧰 Floating Toolbar */}
+      {/* Floating Toolbar */}
       <Animated.View
         {...(!showFonts ? panResponder.panHandlers : {})}
         pointerEvents={showFonts ? "box-none" : "auto"}
@@ -218,14 +216,14 @@ export default function InlineTextEditor({
             !isLandscape && { flexDirection: "column", gap: 8 },
           ]}
         >
-          {/* 📏 Row 1: Font, Size, B/I/U (Portrait mode) */}
+          {/* Row 1: Font, Size, B/I/U (Portrait mode) */}
           <View
             style={[
               styles.toolbarRow,
               !isLandscape && { flexDirection: "row", gap: 4 },
             ]}
           >
-            {/* 🅰 Font Picker */}
+            {/* Font Picker */}
             <View style={styles.group}>
             <TouchableOpacity
               onPress={() => setShowFonts((s) => !s)}
@@ -242,7 +240,7 @@ export default function InlineTextEditor({
             </TouchableOpacity>
           </View>
 
-          {/* 🔠 Font size */}
+          {/* Font size */}
           <View style={styles.group}>
             <TouchableOpacity
               onPress={() => setFontSize((f) => Math.max(10, f - 1))}
@@ -338,14 +336,14 @@ export default function InlineTextEditor({
           </View>
           </View>
 
-          {/* 📏 Row 2: Color, Cancel, Done (Portrait mode) */}
+          {/* Row 2: Color, Cancel, Done (Portrait mode) */}
           <View
             style={[
               styles.toolbarRow,
               !isLandscape && { flexDirection: "row", gap: 4 },
             ]}
           >
-            {/* 🎨 Color picker */}
+            {/* Color picker */}
             <View style={[styles.group, { paddingHorizontal: 4 }]}>
               {COLORS.map((c) => (
                 <TouchableOpacity
@@ -366,7 +364,7 @@ export default function InlineTextEditor({
               ))}
             </View>
 
-            {/* ✅ Done / Cancel */}
+            {/* Done / Cancel */}
             <View style={styles.actions}>
             <TouchableOpacity onPress={onCancel} style={styles.cancelBtn}>
               <Text style={styles.cancelText}>Cancel</Text>
@@ -392,7 +390,7 @@ export default function InlineTextEditor({
           </View>
         </LinearGradient>
 
-        {/* ▼ Font Dropdown */}
+        {/* Font Dropdown */}
         {showFonts && (
           <Animated.View style={styles.dropdown}>
             {FONTS.map((item) => (
@@ -426,7 +424,7 @@ export default function InlineTextEditor({
         )}
       </Animated.View>
 
-      {/* 📝 Inline Text Box */}
+      {/* Inline Text Box */}
       <View
         style={[
           styles.textBoxWrapper,
@@ -438,16 +436,13 @@ export default function InlineTextEditor({
           },
         ]}
       >
-        {/* 🔹 Viền nét đứt giống TextSelectionBox */}
         <View style={styles.selectionBox}>
-          {/* 4 chấm góc */}
           <View style={[styles.dot, { top: -6, left: -6 }]} />
           <View style={[styles.dot, { top: -6, right: -6 }]} />
           <View style={[styles.dot, { bottom: -6, left: -6 }]} />
           <View style={[styles.dot, { bottom: -6, right: -6 }]} />
         </View>
 
-        {/* 📝 TextInput */}
         <TextInput
           key={`${fontFamily}-${bold}-${italic}-${underline}-${fontSize}-${color}`}
           value={text}

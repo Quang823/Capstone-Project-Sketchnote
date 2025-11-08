@@ -78,7 +78,7 @@ export default function StickerModal({ visible, onClose, onSelect }) {
           color: tab === type ? "#007AFF" : "#555",
         }}
       >
-        {icon} {label}
+        {label}
       </Text>
     </TouchableOpacity>
   );
@@ -120,7 +120,7 @@ export default function StickerModal({ visible, onClose, onSelect }) {
             }}
           >
             <Text style={{ fontSize: 16, fontWeight: "700", color: "#111" }}>
-              🩵 Choose Sticker
+              Choose Sticker
             </Text>
             <TouchableOpacity onPress={onClose}>
               <Text style={{ fontSize: 18, color: "#007AFF" }}>✕</Text>
@@ -129,8 +129,8 @@ export default function StickerModal({ visible, onClose, onSelect }) {
 
           {/* Tabs */}
           <View style={{ flexDirection: "row" }}>
-            <TabButton type="emoji" icon="😊" label="Emojis" />
-            <TabButton type="static" icon="🖼️" label="Stickers" />
+            <TabButton type="emoji" label="Emojis" />
+            <TabButton type="static" label="Stickers" />
           </View>
 
           {/* Content */}

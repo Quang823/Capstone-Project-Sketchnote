@@ -47,44 +47,50 @@ const DocumentOverviewModal = ({
 
             {/* Pages Grid */}
             <View style={styles.pagesGrid}>
-              {pages.map((page, index) => (
-                <Pressable
-                  key={page.id}
-                  style={[
-                    styles.pageCard,
-                    page.id === activePageId && styles.activePageCard,
-                  ]}
-                  onPress={() => {
-                    onPageSelect?.(page.id);
-                    onClose();
-                  }}
-                >
-                  {/* Page Thumbnail */}
-                  <View style={styles.pageThumbnail}>
-                    {page.thumbnail ? (
-                      <Image
-                        source={{ uri: page.thumbnail }}
-                        style={styles.thumbnailImage}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View style={styles.emptyThumbnail}>
-                        <Icon name="insert-drive-file" size={40} color="#D1D5DB" />
-                      </View>
-                    )}
-                  </View>
+              {pages.map((page, index) => {
+                // Dùng id làm key (id là unique từ MultiPageCanvas)
+                const pageId = page.id || page.pageId || `page-${index}`;
+                return (
+                  <Pressable
+                    key={pageId}
+                    style={[
+                      styles.pageCard,
+                      pageId === activePageId && styles.activePageCard,
+                    ]}
+                    onPress={() => {
+                      onPageSelect?.(pageId);
+                      onClose();
+                    }}
+                  >
+                    {/* Page Thumbnail */}
+                    <View style={styles.pageThumbnail}>
+                      {page.thumbnail ? (
+                        <Image
+                          source={{ uri: page.thumbnail }}
+                          style={styles.thumbnailImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.emptyThumbnail}>
+                          <Icon name="insert-drive-file" size={40} color="#D1D5DB" />
+                        </View>
+                      )}
+                    </View>
 
-                  {/* Page Number */}
-                  <View style={styles.pageInfo}>
-                    <Text style={styles.pageNumber}>Page {index + 1}</Text>
-                    {page.id === activePageId && (
-                      <View style={styles.activeBadge}>
-                        <Text style={styles.activeBadgeText}>Active</Text>
-                      </View>
-                    )}
-                  </View>
-                </Pressable>
-              ))}
+                    {/* Page Number */}
+                    <View style={styles.pageInfo}>
+                      <Text style={styles.pageNumber}>
+                        Page {page.pageNumber || index + 1}
+                      </Text>
+                      {pageId === activePageId && (
+                        <View style={styles.activeBadge}>
+                          <Text style={styles.activeBadgeText}>Active</Text>
+                        </View>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })}
             </View>
           </ScrollView>
         );

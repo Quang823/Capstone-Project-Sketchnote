@@ -14,7 +14,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 const CustomScrollbar = ({
   contentHeight,
   containerHeight,
-  scrollYShared, // ✅ Changed from scrollY to scrollYShared
+  scrollYShared, // Changed from scrollY to scrollYShared
   onScroll,
   isZooming = false,
 }) => {
@@ -29,7 +29,7 @@ const CustomScrollbar = ({
   // Animated values
   const opacity = useSharedValue(0.2);
 
-  // ✅ Derive thumb position from scrollYShared (runs on UI thread)
+  // Derive thumb position from scrollYShared (runs on UI thread)
   const thumbPosition = useDerivedValue(() => {
     if (!contentHeight || !containerHeight || contentHeight <= containerHeight) {
       return 0;

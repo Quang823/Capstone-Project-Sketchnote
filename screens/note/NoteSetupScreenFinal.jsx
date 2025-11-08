@@ -7,10 +7,13 @@ import {
   TextInput,
   ScrollView,
   Image,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { projectService } from "../../service/projectService";
 
 const COVER_TEMPLATES = {
   simple: [
@@ -462,7 +465,9 @@ export default function NoteSetupScreen({ navigation, route }) {
 
   const [selectedTab, setSelectedTab] = useState("cover");
   const [noteTitle, setNoteTitle] = useState("");
+  const [noteDescription, setNoteDescription] = useState("");
   const [hasCover, setHasCover] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
   const [orientation, setOrientation] = useState("portrait");
   const [paperSize, setPaperSize] = useState("A4");
   const [showFormatDropdown, setShowFormatDropdown] = useState(false);
@@ -493,36 +498,87 @@ export default function NoteSetupScreen({ navigation, route }) {
 
   const [selectedPaper, setSelectedPaper] = useState("blank");
 
-  const handleCreate = () => {
-    // Get the selected template to determine final imageUrl based on orientation
-    const selectedTemplate = Object.values(COVER_TEMPLATES)
-      .flat()
-      .find((t) => t.id === selectedCover);
-
-    let finalImageUrl = coverImageUrl;
-    if (
-      selectedTemplate?.imageUrl &&
-      typeof selectedTemplate.imageUrl === "object"
-    ) {
-      // If template has orientation-based imageUrl, use the current orientation
-      finalImageUrl = selectedTemplate.imageUrl[orientation] || null;
+  const handleCreate = async () => {
+    // Validate input
+    if (!noteTitle.trim()) {
+      Alert.alert("Error", "Please enter a note title");
+      return;
     }
 
-    const noteConfig = {
-      title: noteTitle || "Untitled Note",
-      hasCover,
-      orientation,
-      paperSize,
-      cover: hasCover
-        ? {
-            template: selectedCover,
-            color: coverColor,
-            imageUrl: finalImageUrl,
-          }
-        : null,
-      paper: { template: selectedPaper },
-    };
-    navigation.navigate("DrawingScreen", { noteConfig });
+    setIsCreating(true);
+
+    try {
+      // Get the selected template to determine final imageUrl based on orientation
+      const selectedTemplate = Object.values(COVER_TEMPLATES)
+        .flat()
+        .find((t) => t.id === selectedCover);
+
+      let finalImageUrl = coverImageUrl;
+      if (
+        selectedTemplate?.imageUrl &&
+        typeof selectedTemplate.imageUrl === "object"
+      ) {
+        // If template has orientation-based imageUrl, use the current orientation
+        finalImageUrl = selectedTemplate.imageUrl[orientation] || null;
+      }
+
+      // Create project via API
+      const projectData = {
+        name: noteTitle.trim(),
+        description: noteDescription.trim() || "",
+        imageUrl: finalImageUrl || "",
+      };
+
+      // console.log("📝 Creating project with data:", projectData);
+      const createdProject = await projectService.createProject(projectData);
+      //console.log("✅ Project created:", createdProject);
+
+      // Get the project ID (backend trả về projectId)
+      const projectId =
+        createdProject?.projectId || createdProject?.id || createdProject?._id;
+
+      if (!projectId) {
+        throw new Error("Không nhận được projectId từ server");
+      }
+
+      // Không gọi lại GET khi vừa tạo để tránh lỗi ID undefined; dùng dữ liệu trả về trực tiếp
+      const projectDetails = createdProject;
+
+      // Không tạo page ngay; để người dùng vào vẽ rồi bấm Save mới presign + tạo page
+      const initialPages = [];
+
+      // Prepare noteConfig for DrawingScreen with complete information
+      const noteConfig = {
+        projectId: projectId,
+        title: noteTitle || "Untitled Note",
+        description: noteDescription || "",
+        hasCover,
+        orientation,
+        paperSize,
+        cover: hasCover
+          ? {
+              template: selectedCover,
+              color: coverColor,
+              imageUrl: finalImageUrl,
+            }
+          : null,
+        paper: { template: selectedPaper },
+        pages: initialPages, // Chưa có page nào cho tới khi Save
+        projectDetails: projectDetails, // Include full project details (từ response tạo project)
+      };
+
+      setIsCreating(false);
+      //   console.log("🚀 Navigating to DrawingScreen with config:", noteConfig);
+      navigation.navigate("DrawingScreen", { noteConfig });
+    } catch (error) {
+      setIsCreating(false);
+      // console.error("❌ Failed to create project:", error);
+      Alert.alert(
+        "Error",
+        "Failed to create project. Please try again.\n" +
+          (error.message || "Unknown error")
+      );
+    }
   };
 
   const scrollToCategory = (category) => {
@@ -543,12 +599,18 @@ export default function NoteSetupScreen({ navigation, route }) {
           <Text style={styles.cancelButton}>Cancel</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create note</Text>
-        <TouchableOpacity onPress={handleCreate}>
+        <TouchableOpacity onPress={handleCreate} disabled={isCreating}>
           <LinearGradient
-            colors={["#3b82f6", "#2563eb"]}
+            colors={
+              isCreating ? ["#94a3b8", "#64748b"] : ["#3b82f6", "#2563eb"]
+            }
             style={styles.createButton}
           >
-            <Text style={styles.createButtonText}>Create</Text>
+            {isCreating ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.createButtonText}>Create</Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -644,15 +706,18 @@ export default function NoteSetupScreen({ navigation, route }) {
               onChangeText={setNoteTitle}
             />
 
-            <View style={styles.settingRow}>
-              <Text style={styles.settingLabel}>Tag</Text>
-              <TouchableOpacity style={styles.addButton}>
-                <MaterialCommunityIcons
-                  name="plus-circle-outline"
-                  size={20}
-                  color="#3b82f6"
-                />
-              </TouchableOpacity>
+            <View style={styles.settingColumn}>
+              <Text style={styles.settingLabel}>Description</Text>
+              <TextInput
+                style={styles.descriptionInput}
+                placeholder="Enter project description (optional)"
+                placeholderTextColor="#94a3b8"
+                value={noteDescription}
+                onChangeText={setNoteDescription}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
             </View>
 
             <View style={styles.settingRow}>
@@ -1061,6 +1126,16 @@ const styles = StyleSheet.create({
     color: "#0f172a",
     borderWidth: 1,
     borderColor: "#E2E8F0",
+  },
+  descriptionInput: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: "#0f172a",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    minHeight: 80,
   },
   settingRow: {
     flexDirection: "row",

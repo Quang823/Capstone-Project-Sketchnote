@@ -104,7 +104,7 @@ export default function ColorDropdownCompact({
   const lastSVRef = useRef({ s: 100, v: 100 });
   const framePendingRef = useRef(false);
 
-  // ref để đo vị trí tuyệt đối của gradient box
+  // ref to measure absolute position of gradient box
   const boxRef = useRef(null);
   // lưu vị trí tuyệt đối và kích thước
   const boxLayoutRef = useRef({ x: 0, y: 0, width: 250, height: 140 });
@@ -139,7 +139,7 @@ export default function ColorDropdownCompact({
     }
   }, [visible, selectedColor]);
 
-  // update cursor + state (throttle bằng requestAnimationFrame)
+  // update cursor + state (throttle by requestAnimationFrame)
   const updateCursor = (x, y) => {
     // clamp x,y
     const w = boxLayoutRef.current.width || boxSize.width;
@@ -153,7 +153,7 @@ export default function ColorDropdownCompact({
     const s = Math.round((cx / w) * 100);
     const v = Math.round(100 - (cy / h) * 100);
 
-    // ignore tiny fluctuations (<2) để tránh nhảy do rounding/frequency
+    // ignore tiny fluctuations (<2) to avoid jumping due to rounding/frequency
     const { s: ls, v: lv } = lastSVRef.current;
     if (Math.abs(s - ls) < 2 && Math.abs(v - lv) < 2) return;
     lastSVRef.current = { s, v };
@@ -174,7 +174,7 @@ export default function ColorDropdownCompact({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
     onPanResponderGrant: (e) => {
-      // đo lại vị trí view trên màn hình để bám chắc tọa độ tuyệt đối
+      // measure view position on screen to ensure accurate absolute coordinates
       if (boxRef.current && boxRef.current.measureInWindow) {
         boxRef.current.measureInWindow((px, py, w, h) => {
           boxLayoutRef.current = { x: px, y: py, width: w, height: h };
@@ -225,11 +225,11 @@ export default function ColorDropdownCompact({
         <View style={s.tabBar}>
           <TouchableOpacity onPress={() => setTab("palette")}>
             <Text style={[s.tab, tab === "palette" && s.tabActive]}>
-              🎨 Palette
+              Palette
             </Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setTab("set")}>
-            <Text style={[s.tab, tab === "set" && s.tabActive]}>🌈 Sets</Text>
+            <Text style={[s.tab, tab === "set" && s.tabActive]}>Sets</Text>
           </TouchableOpacity>
         </View>
 
@@ -397,7 +397,7 @@ export default function ColorDropdownCompact({
                       key={index}
                       style={[s.historyColor, { backgroundColor: color }]}
                       onPress={() => {
-                        // Parse color nếu là rgba
+                        // Parse color if rgba
                         let baseHex = color;
                         let initOpacity = 100;
                         if (color.startsWith("rgba")) {

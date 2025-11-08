@@ -96,7 +96,7 @@ export default function PenSettingsPanel({
       <View style={styles.header}>
         <View style={styles.dragZone}>
           {expanded ? (
-            <Text style={styles.title}>🖊 Pen Settings</Text>
+            <Text style={styles.title}>Pen Settings</Text>
           ) : (
             <MaterialIcons name="edit" size={ICON_SIZE} color="#fff" />
           )}

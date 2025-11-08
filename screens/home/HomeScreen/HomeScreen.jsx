@@ -10,6 +10,8 @@ import {
   Pressable,
   Platform,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -20,6 +22,7 @@ import Reanimated, {
 } from "react-native-reanimated";
 import { Shadow } from "react-native-shadow-2";
 import { useNavigation } from "@react-navigation/native";
+import { projectService } from "../../../service/projectService";
 
 const { width } = Dimensions.get("window");
 
@@ -37,30 +40,18 @@ const CARD_WIDTH = Math.floor(
     columns
 );
 
-// Demo data
-const demoProjects = [
-  {
-    id: "1",
-    title: "Untitled Notebook",
-    date: "Nov 2, 2025 at 6:58 PM",
-    preview: require("../../../assets/logo1.webp"),
-    isStarred: true,
-  },
-  {
-    id: "2",
-    title: "Idea Brainstorm",
-    date: "Oct 28, 2025",
-    preview: require("../../../assets/logo1.webp"),
-    isStarred: false,
-  },
-  {
-    id: "3",
-    title: "UX Notes",
-    date: "Oct 14, 2025",
-    preview: require("../../../assets/logo1.webp"),
-    isStarred: false,
-  },
-];
+// Format date helper
+const formatDate = (dateString) => {
+  if (!dateString) return "No date";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
 // --- Popover Component ---
 function CreatePopover({ visible, onClose, onSelect }) {
@@ -283,7 +274,9 @@ function NavigationDrawer({
 
 // --- Main HomeScreen ---
 export default function HomeScreen({ navigation }) {
-  const [projects] = useState(demoProjects);
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeNavItem] = useState("home");
@@ -295,6 +288,26 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     fade.value = withTiming(1, { duration: 400 });
+  }, []);
+
+  // Fetch projects from API
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await projectService.getUserProjects();
+      // console.log("✅ Projects fetched:", response);
+      setProjects(response);
+    } catch (err) {
+      console.error("❌ Error fetching projects:", err);
+      setError("Không thể tải danh sách dự án. Vui lòng thử lại sau.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
   }, []);
 
   useEffect(() => {
@@ -335,36 +348,73 @@ export default function HomeScreen({ navigation }) {
     lastTap = now;
   };
 
+  const handleProjectClick = async (project) => {
+    try {
+      //console.log("🔄 Fetching project details for:", project.projectId);
+      const projectDetails = await projectService.getProjectById(
+        project.projectId
+      );
+      // console.log("✅ Project details fetched:", projectDetails);
+
+      // Build noteConfig từ projectDetails để DrawingScreen hiểu
+      const noteConfig = {
+        projectId: projectDetails.projectId,
+        title: projectDetails.name || "Untitled Note",
+        description: projectDetails.description || "",
+        hasCover: !!projectDetails.imageUrl,
+        orientation: "portrait", // Default, có thể lưu trong DB sau
+        paperSize: "A4", // Default, có thể lưu trong DB sau
+        cover: projectDetails.imageUrl
+          ? {
+              template: "custom_image",
+              color: "#F8FAFC",
+              imageUrl: projectDetails.imageUrl,
+            }
+          : null,
+        paper: { template: "blank" }, // Default
+        pages: projectDetails.pages || [], // Mảng pages với pageNumber và strokeUrl
+        projectDetails: projectDetails, // Giữ nguyên để dùng sau
+      };
+
+      // Navigate to DrawingScreen với noteConfig
+      navigation?.navigate?.("DrawingScreen", { noteConfig });
+    } catch (error) {
+      console.error("❌ Error fetching project details:", error);
+      Alert.alert("Lỗi", "Không thể tải thông tin dự án. Vui lòng thử lại.");
+    }
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
       activeOpacity={0.88}
       style={styles.cardWrapper}
-      onPress={() =>
-        navigation?.navigate?.("DrawingScreen", { projectId: item.id })
-      }
+      onPress={() => handleProjectClick(item)}
     >
       <Shadow distance={6} startColor="#00000012" offset={[0, 3]}>
         <View style={styles.card}>
           <View style={styles.previewContainer}>
-            <Image
-              source={item.preview}
-              style={styles.previewImage}
-              resizeMode="cover"
-            />
-            {item.isStarred && (
-              <Icon
-                name="star"
-                size={18}
-                color="#FBBF24"
-                style={styles.starIcon}
+            {item.imageUrl ? (
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={styles.previewImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <Image
+                source={require("../../../assets/logo1.webp")}
+                style={styles.previewImage}
+                resizeMode="cover"
               />
             )}
           </View>
           <View style={styles.cardFooter}>
             <Text style={styles.cardTitle} numberOfLines={1}>
-              {item.title}
+              {item.name || "Untitled Project"}
             </Text>
-            <Text style={styles.cardDate}>{item.date}</Text>
+            <Text style={styles.cardDate}>
+              {item.description || "No description"}
+            </Text>
+            <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
           </View>
         </View>
       </Shadow>
@@ -452,24 +502,59 @@ export default function HomeScreen({ navigation }) {
             onSelect={handleCreate}
           />
 
+          {/* Loading State */}
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4F46E5" />
+              <Text style={styles.loadingText}>Đang tải dự án...</Text>
+            </View>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <View style={styles.errorContainer}>
+              <Icon name="error-outline" size={48} color="#EF4444" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => fetchProjects()}
+              >
+                <Text style={styles.retryButtonText}>Thử lại</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Empty State */}
+          {!loading && !error && projects.length === 0 && (
+            <View style={styles.emptyContainer}>
+              <Icon name="folder-open" size={64} color="#9CA3AF" />
+              <Text style={styles.emptyTitle}>Chưa có dự án nào</Text>
+              <Text style={styles.emptyText}>
+                Hãy tạo dự án đầu tiên của bạn!
+              </Text>
+            </View>
+          )}
+
           {/* Grid - sử dụng responsive columns */}
-          <FlatList
-            data={projects}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            numColumns={columns}
-            columnWrapperStyle={[
-              styles.gridRow,
-              { marginBottom: CARD_GAP, paddingHorizontal: 2 },
-            ]}
-            contentContainerStyle={[
-              styles.gridContainer,
-              { paddingBottom: 100 },
-            ]}
-            showsVerticalScrollIndicator={false}
-            // force re-render when columns change
-            key={`${columns}`}
-          />
+          {!loading && !error && projects.length > 0 && (
+            <FlatList
+              data={projects}
+              keyExtractor={(item) => item.projectId?.toString()}
+              renderItem={renderItem}
+              numColumns={columns}
+              columnWrapperStyle={[
+                styles.gridRow,
+                { marginBottom: CARD_GAP, paddingHorizontal: 2 },
+              ]}
+              contentContainerStyle={[
+                styles.gridContainer,
+                { paddingBottom: 100 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              // force re-render when columns change
+              key={`${columns}`}
+            />
+          )}
         </Reanimated.View>
       </View>
 
@@ -623,6 +708,64 @@ const styles = StyleSheet.create({
   cardFooter: { paddingHorizontal: 10, paddingVertical: 6 },
   cardTitle: { color: "#111827", fontSize: 12.5, fontWeight: "600" },
   cardDate: { color: "#6B7280", fontSize: 10, marginTop: 4 },
+
+  // Loading, Error, Empty States
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 32,
+  },
+  errorText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#EF4444",
+    textAlign: "center",
+    fontWeight: "500",
+  },
+  retryButton: {
+    marginTop: 20,
+    backgroundColor: "#4F46E5",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    marginTop: 16,
+    fontSize: 18,
+    color: "#374151",
+    fontWeight: "600",
+  },
+  emptyText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: "#9CA3AF",
+    textAlign: "center",
+  },
 
   // Drawer styles
   // (giữ giống cũ)
