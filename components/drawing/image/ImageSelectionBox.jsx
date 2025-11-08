@@ -26,7 +26,7 @@ export default function ImageSelectionBox({
     }).start();
   }, []);
 
-  const menuWidth = Math.max(180, width); // Giữ tối thiểu 180 cho cân đối
+  const menuWidth = Math.max(180, width); // Keep minimum 180 for balance
 
   return (
     <Animated.View

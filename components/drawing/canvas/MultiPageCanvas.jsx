@@ -27,6 +27,7 @@ import { calculatePageDimensions } from "../../../utils/pageDimensions";
 
 const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   {
+    noteConfig, // Add noteConfig to props
     tool,
     color,
     setColor,
@@ -53,7 +54,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     setPageLayers, // 👈 Changed from setLayers to setPageLayers
     rulerPosition,
     onColorPicked,
-    noteConfig,
   },
   ref
 ) {
@@ -67,9 +67,21 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     if (!noteConfig) return [{ id: 1 }];
 
     const pages = [];
+    const paperTemplate = noteConfig.paper?.template || "blank";
+    const paperBg = noteConfig.paper?.color || "#FFFFFF";
+
+    // Check if first page from API is a cover page (pageNumber === 1)
+    const firstPageFromAPI =
+      Array.isArray(noteConfig.pages) && noteConfig.pages.length > 0
+        ? noteConfig.pages[0]
+        : null;
+    const isFirstPageCover = firstPageFromAPI?.pageNumber === 1;
 
     // Add cover page if enabled
-    if (noteConfig.hasCover && noteConfig.cover) {
+    // ✅ Chỉ tạo cover page từ noteConfig.cover nếu:
+    //    - Có hasCover và cover config
+    //    - VÀ page đầu tiên từ API KHÔNG phải là cover (pageNumber !== 1)
+    if (noteConfig.hasCover && noteConfig.cover && !isFirstPageCover) {
       pages.push({
         id: 1,
         type: "cover",
@@ -79,13 +91,43 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       });
     }
 
-    // Add first paper page
-    pages.push({
-      id: pages.length + 1,
-      type: "paper",
-      backgroundColor: noteConfig.paper?.color || "#FFFFFF",
-      template: noteConfig.paper?.template || "blank",
-    });
+    // Add pages based on noteConfig.pages if provided
+    if (Array.isArray(noteConfig.pages) && noteConfig.pages.length > 0) {
+      noteConfig.pages.forEach((p, index) => {
+        // ✅ Nếu page đầu tiên có pageNumber === 1, đó là cover page
+        //    Dùng id = 1 và type = "cover" cho nó
+        if (index === 0 && p.pageNumber === 1) {
+          pages.push({
+            id: 1,
+            type: "cover",
+            backgroundColor: noteConfig.cover?.color || paperBg,
+            template: noteConfig.cover?.template || paperTemplate,
+            imageUrl: noteConfig.cover?.imageUrl,
+            pageNumber: p.pageNumber,
+            strokeUrl: p.strokeUrl,
+          });
+        } else {
+          // Paper pages: dùng pageId từ API hoặc pageNumber + offset
+          const id = p.pageId ? Number(p.pageId) : Number(p.pageNumber) + 10000;
+          pages.push({
+            id,
+            type: "paper",
+            backgroundColor: paperBg,
+            template: paperTemplate,
+            pageNumber: p.pageNumber,
+            strokeUrl: p.strokeUrl,
+          });
+        }
+      });
+    } else {
+      // Fallback to a single editable page
+      pages.push({
+        id: pages.length + 1,
+        type: "paper",
+        backgroundColor: paperBg,
+        template: paperTemplate,
+      });
+    }
 
     return pages;
   }, [noteConfig]);
@@ -93,7 +135,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const [pages, setPages] = useState(initialPages);
 
   // Initialize layers for initial pages
-  // ⚠️ IMPORTANT: Only run once when component mounts, NOT when setPageLayers changes
+  // IMPORTANT: Only run once when component mounts, NOT when setPageLayers changes
   useEffect(() => {
     if (initialPages.length > 0 && setPageLayers) {
       const initialLayers = {};
@@ -105,7 +147,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       setPageLayers((prev) => ({ ...prev, ...initialLayers }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialPages]); // ✅ Only depend on initialPages, NOT setPageLayers
+  }, [initialPages]); // Only depend on initialPages, NOT setPageLayers
   const [activeIndex, setActiveIndex] = useState(0);
   const [pageLayouts, setPageLayouts] = useState({});
   const [scrollY, setScrollY] = useState(0);
@@ -138,6 +180,40 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const zoomOverlayTimeoutRef = useRef(null);
   const scrollRafRef = useRef(null);
   const [isZoomedIn, setIsZoomedIn] = useState(false);
+
+  // Track unmount state + scheduled timeouts to avoid running callbacks after unmount
+  const isUnmountedRef = useRef(false);
+  const loadTimeoutsRef = useRef(new Set());
+
+  const scheduleSafeTimeout = useCallback((callback, delay = 0) => {
+    if (isUnmountedRef.current || typeof callback !== "function") return null;
+    const id = setTimeout(() => {
+      loadTimeoutsRef.current.delete(id);
+      if (isUnmountedRef.current) return;
+      try {
+        callback();
+      } catch (error) {
+        console.error("[MultiPageCanvas] Timeout callback error:", error);
+      }
+    }, delay);
+    loadTimeoutsRef.current.add(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      isUnmountedRef.current = true;
+      loadTimeoutsRef.current.forEach((id) => clearTimeout(id));
+      loadTimeoutsRef.current.clear();
+      if (zoomOverlayTimeoutRef.current) {
+        clearTimeout(zoomOverlayTimeoutRef.current);
+      }
+      if (scrollRafRef.current) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
+    };
+  }, []);
 
   // Auto-hide zoom overlay sau 2 giây sau khi buông tay
   useEffect(() => {
@@ -297,11 +373,11 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
       setScrollY(offset);
 
-      // ✅ Compute visible window
+      // Compute visible window
       const viewTop = offset;
       const viewBottom = offset + height;
 
-      // ✅ Find visible range (binary search-like approach)
+      // Find visible range (binary search-like approach)
       let firstVisible = 0;
       let lastVisible = pages.length - 1;
 
@@ -325,7 +401,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         }
       }
 
-      // ✅ Only update visible pages (optimized range)
+      // Only update visible pages (optimized range)
       for (let i = firstVisible; i <= lastVisible; i++) {
         const p = pages[i];
         const pageRef = pageRefs.current[p.id];
@@ -537,7 +613,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   useImperativeHandle(ref, () => ({
     scrollToPage,
     addPage,
-    
+
     // Get current zoom level for image size calculation
     getCurrentZoom: () => projectScale.value,
 
@@ -578,36 +654,63 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     },
 
     uploadAllPages: async () => {
-      try {
-        const results = [];
-        for (const pageId of Object.keys(pageRefs.current)) {
-          const strokes =
-            pageRefs.current[pageId]?.getStrokes?.() ||
-            drawingDataRef.current.pages[pageId] ||
-            [];
-          if (!strokes.length) continue;
+      const results = [];
+      for (let index = 0; index < pages.length; index++) {
+        const page = pages[index];
 
-          const pageData = {
-            id: pageId,
+        try {
+          // Thu thập strokes từ page hiện tại (theo layer)
+          const strokes =
+            pageRefs.current[page.id]?.getStrokes?.() ||
+            drawingDataRef.current.pages[page.id] ||
+            [];
+
+          // Tạo JSON để lưu (bao gồm metadata cover/background)
+          const jsonData = {
+            id: page.id,
             createdAt: new Date().toISOString(),
+            type: page.type || "paper",
+            backgroundColor: page.backgroundColor,
+            template: page.template,
+            imageUrl: page.imageUrl,
             strokes,
           };
 
-          const fileName = `Test-${pageId}`;
-          const url = await projectService.uploadProjectFile(
-            pageData,
-            fileName
+          // Xác định pageNumber để lưu xuống backend/S3
+          const fallbackNumber = index + 1; // 1-based index (cover = 1)
+          const pageNumber =
+            typeof page.pageNumber === "number"
+              ? page.pageNumber
+              : page.type === "cover"
+              ? 1
+              : fallbackNumber;
+
+          const fileName = `${
+            noteConfig?.projectId || "project"
+          }-page-${pageNumber}.json`;
+          const { uploadUrl, strokeUrl } = await projectService.getPresign(
+            fileName,
+            "JSON"
           );
-          results.push({ pageId, url });
+
+          // Upload JSON
+          const finalUrl = await projectService.uploadToPresignedUrl(
+            jsonData,
+            uploadUrl
+          );
+          results.push({
+            pageId: pageNumber,
+            url: finalUrl || strokeUrl,
+            type: page.type || "paper",
+          });
+        } catch (e) {
+          console.error(`Error uploading page ${page.id}:`, e);
         }
-        return results;
-      } catch (err) {
-        console.error("❌ Upload thất bại:", err);
-        throw err;
       }
+      return results;
     },
 
-    // 📊 Insert table vào active page
+    // Insert table vào active page
     insertTable: (rows, cols) => {
       const activePage = pages[activeIndex];
       if (activePage && pageRefs.current[activePage.id]) {
@@ -616,13 +719,71 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     },
 
     loadProjectData: (data) => {
-      if (!data) return;
-      if (Array.isArray(data.pages)) {
-        data.pages.forEach((p) =>
-          pageRefs.current[p.id]?.loadStrokes?.(p.strokes)
-        );
-      } else if (data.strokes) {
-        pageRefs.current[data.id || 1]?.loadStrokes?.(data.strokes);
+      if (!data || isUnmountedRef.current) return;
+      // Clear any pending retry callbacks before loading new data
+      loadTimeoutsRef.current.forEach((id) => clearTimeout(id));
+      loadTimeoutsRef.current.clear();
+      try {
+        if (Array.isArray(data.pages)) {
+          data.pages.forEach((p) => {
+            if (!p || !p.id) return;
+
+            // Retry logic: đợi pageRef sẵn sàng
+            const tryLoad = (retries = 5) => {
+              if (isUnmountedRef.current) return;
+              const pageRef = pageRefs.current[p.id];
+              if (pageRef?.loadStrokes) {
+                // Validate strokes trước khi load
+                const strokes = Array.isArray(p.strokes) ? p.strokes : [];
+                // Limit strokes để tránh crash
+                const safeStrokes = strokes.slice(0, 1000);
+                // console.log(
+                //   `[MultiPageCanvas] Loading ${safeStrokes.length} strokes into page id: ${p.id}`
+                // );
+                try {
+                  pageRef.loadStrokes(safeStrokes);
+                  // console.log(
+                  //   `[MultiPageCanvas] Successfully loaded strokes into page id: ${p.id}`
+                  // );
+                } catch (loadError) {
+                  // console.error(
+                  //   `[MultiPageCanvas] Error loading strokes into page id: ${p.id}:`,
+                  //   loadError
+                  // );
+                }
+              } else if (retries > 0) {
+                // Retry sau 200ms nếu pageRef chưa sẵn sàng
+                console.log(
+                  `[MultiPageCanvas] Page ref not ready for id: ${p.id}, retrying... (${retries} retries left)`
+                );
+                scheduleSafeTimeout(() => tryLoad(retries - 1), 200);
+              } else {
+                console.warn(
+                  `[MultiPageCanvas] Page ref not ready for id: ${p.id} after all retries. Available pageRefs:`,
+                  Object.keys(pageRefs.current)
+                );
+              }
+            };
+
+            tryLoad();
+          });
+        } else if (data.strokes && data.id) {
+          const tryLoad = (retries = 5) => {
+            if (isUnmountedRef.current) return;
+            const pageRef = pageRefs.current[data.id];
+            if (pageRef?.loadStrokes) {
+              const strokes = Array.isArray(data.strokes)
+                ? data.strokes.slice(0, 1000)
+                : [];
+              pageRef.loadStrokes(strokes);
+            } else if (retries > 0) {
+              scheduleSafeTimeout(() => tryLoad(retries - 1), 200);
+            }
+          };
+          tryLoad();
+        }
+      } catch (e) {
+        console.error("[MultiPageCanvas] loadProjectData error:", e);
       }
     },
   }));
@@ -633,7 +794,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       <DocumentSidebar
         visible={sidebarVisible}
         onToggle={() => setSidebarVisible(!sidebarVisible)}
-        pages={pages.map((p, i) => ({ ...p, id: p.id }))}
+        pages={pages}
         activePageId={pages[activeIndex]?.id}
         onPageSelect={(pageId) => {
           const index = pages.findIndex((p) => p.id === pageId);
@@ -694,9 +855,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                     ref={(ref) => {
                       // Always keep pageRefs in sync immediately (no setState)
                       pageRefs.current[p.id] = ref || null;
-                      // Defer calling registerPageRef to avoid setState during render
                       if (typeof registerPageRef === "function") {
-                        setTimeout(() => registerPageRef(p.id, ref || null), 0);
+                        registerPageRef(p.id, ref || null);
                       }
                     }}
                     {...{

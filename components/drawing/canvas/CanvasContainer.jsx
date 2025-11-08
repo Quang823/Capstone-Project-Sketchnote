@@ -420,11 +420,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         width,
         height,
         rotation: opts.rotation ?? 0,
-        layerId: opts.layerId ?? activeLayerId ?? "default", // ✅ fix chính
+        layerId: opts.layerId ?? activeLayerId ?? "default", // fix chính
       };
 
       addStrokeInternal(newStroke);
-      // console.log("🖼️ Image added:", newStroke);
+      // console.log("Image added:", newStroke);
     } catch (err) {
       console.error("Failed to add image:", err);
       Alert.alert("Lỗi ảnh", "Không thể đọc hoặc hiển thị ảnh này.");
@@ -494,7 +494,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   // ====== API EXPOSED ======
   useImperativeHandle(ref, () => ({
-    // 🔙 Hoàn tác
+    // Hoàn tác
     undo: () => {
       setUndoStack((prevUndo) => {
         if (prevUndo.length === 0) return prevUndo;
@@ -532,7 +532,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       });
     },
 
-    // 🔁 Làm lại
+    // Làm lại
     redo: () => {
       setRedoStack((prevRedo) => {
         if (prevRedo.length === 0) return prevRedo;
@@ -564,7 +564,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       });
     },
 
-    // 🧹 Xóa layer hiện tại
+    // Xóa layer hiện tại
     clear: () => {
       if (!activeLayerId) return;
       updateLayerById(activeLayerId, () => []);
@@ -573,13 +573,13 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       setCurrentPoints([]);
     },
 
-    // 🧾 Lấy strokes của layer đang active
+    // Lấy strokes của layer đang active
     getStrokes: () => {
       const activeLayer = layers.find((l) => l.id === activeLayerId);
       return activeLayer?.strokes || [];
     },
 
-    // ➕ Thêm stroke trực tiếp vào layer đang active
+    // Thêm stroke trực tiếp vào layer đang active
     addStrokeDirect: (stroke) => {
       if (!activeLayerId) return;
       const s = { ...stroke, id: stroke.id ?? nextId() };
@@ -588,10 +588,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     modifyStrokeAt,
 
-    // 🖼️ Thêm ảnh / sticker / text (giữ logic layer)
+    // Thêm ảnh / sticker / text (giữ logic layer)
     // CanvasContainer.jsx (thêm vào ref exposes)
     addImageStroke: (stroke) => {
-      const adjustedY = (stroke.y ?? 100) + (stroke.scrollOffsetY ?? 0); // ✅ Adjust y để visible
+      const adjustedY = (stroke.y ?? 100) + (stroke.scrollOffsetY ?? 0); // Adjust y để visible
       const s = {
         ...stroke,
         y: adjustedY,
@@ -654,12 +654,88 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       addStrokeInternal(s);
     },
 
-    // 📦 Load lại toàn bộ strokes cho layer hiện tại
+    // 📦 Load lại toàn bộ strokes, phân loại theo layerId
     loadStrokes: (strokesArray = []) => {
-      if (!Array.isArray(strokesArray) || !activeLayerId) return;
-      updateLayerById(activeLayerId, () => strokesArray);
-      setUndoStack([]);
-      setRedoStack([]);
+      if (!Array.isArray(strokesArray)) {
+        console.warn("[CanvasContainer] loadStrokes: invalid strokesArray");
+        return;
+      }
+
+      try {
+        // Validate và filter strokes
+        const validStrokes = strokesArray
+          .filter((s) => s && typeof s === "object")
+          .map((s) => ({
+            ...s,
+            // Đảm bảo mỗi stroke có layerId, fallback về layer1 nếu không có
+            layerId: s.layerId || "layer1",
+          }));
+
+        // Limit số lượng để tránh crash
+        const safeStrokes = validStrokes.slice(0, 1000);
+
+        // ✅ Phân loại strokes theo layerId
+        const strokesByLayer = {};
+        safeStrokes.forEach((stroke) => {
+          const layerId = stroke.layerId || "layer1";
+          if (!strokesByLayer[layerId]) {
+            strokesByLayer[layerId] = [];
+          }
+          strokesByLayer[layerId].push(stroke);
+        });
+
+        // ✅ Load strokes vào đúng layer
+        setLayers((prev) => {
+          if (!Array.isArray(prev)) {
+            // Nếu không có layers, tạo mới từ strokes
+            return Object.keys(strokesByLayer).map((layerId) => ({
+              id: layerId,
+              name: layerId === "layer1" ? "Layer 1" : `Layer ${layerId}`,
+              visible: true,
+              locked: false,
+              strokes: strokesByLayer[layerId],
+            }));
+          }
+
+          // Tạo map của layers hiện tại
+          const layerMap = new Map(prev.map((l) => [l.id, { ...l }]));
+
+          // Cập nhật hoặc tạo layers cho mỗi layerId có strokes
+          Object.keys(strokesByLayer).forEach((layerId) => {
+            if (layerMap.has(layerId)) {
+              // Layer đã tồn tại, thay thế strokes (load lại toàn bộ)
+              const layer = layerMap.get(layerId);
+              layerMap.set(layerId, {
+                ...layer,
+                strokes: strokesByLayer[layerId],
+              });
+            } else {
+              // Layer chưa tồn tại, tạo layer mới
+              layerMap.set(layerId, {
+                id: layerId,
+                name: layerId === "layer1" ? "Layer 1" : `Layer ${layerId}`,
+                visible: true,
+                locked: false,
+                strokes: strokesByLayer[layerId],
+              });
+            }
+          });
+
+          // ✅ Giữ lại tất cả layers (cả layers không có strokes mới)
+          return Array.from(layerMap.values());
+        });
+
+        setUndoStack([]);
+        setRedoStack([]);
+
+        // console.log(
+        //   `[CanvasContainer] Loaded ${safeStrokes.length} strokes into ${
+        //     Object.keys(strokesByLayer).length
+        //   } layer(s)`
+        // );
+      } catch (e) {
+        console.error("[CanvasContainer] loadStrokes error:", e);
+      }
     },
   }));
 

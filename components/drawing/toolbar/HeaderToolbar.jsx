@@ -7,6 +7,8 @@ export default function HeaderToolbar({
   onToggleToolbar,
   onPreview,
   onCamera,
+  onToggleLayerPanel,
+  isLayerPanelVisible = false,
 }) {
   const renderButton = (
     icon,
@@ -32,7 +34,7 @@ export default function HeaderToolbar({
         style={{
           transform: [{ scale }],
           borderRadius: 12,
-          backgroundColor: active ? "#E0F2FE" : "transparent", // highlight khi active
+          backgroundColor: active ? "#E0F2FE" : "transparent", // highlight when active
         }}
       >
         <TouchableOpacity
@@ -59,6 +61,7 @@ export default function HeaderToolbar({
         {/* Right */}
         <View style={[styles.row, { gap: 12 }]}>
           {renderButton("preview", onPreview, MaterialIcons)}
+          {renderButton("layers", onToggleLayerPanel, MaterialIcons, isLayerPanelVisible)}
           {renderButton("circle-with-cross", onToggleToolbar, Entypo)}
         </View>
       </View>

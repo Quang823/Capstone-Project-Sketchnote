@@ -243,7 +243,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   const canvasRef = useCanvasRef();
   const loadedFonts = usePreloadedFonts();
   
-  // ✅ Safe image loading with error handling
+  // Safe image loading with error handling
   let backgroundImage = null;
   try {
     // Only attempt to load if URL is valid

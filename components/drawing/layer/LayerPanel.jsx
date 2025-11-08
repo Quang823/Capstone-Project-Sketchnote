@@ -18,28 +18,33 @@ function LayerPanel({
   onToggleLock,
   onAdd,
   onDelete,
-  onRename, // ✅ thêm callback rename
+  onRename, // thêm callback rename
   onClose,
 }) {
   const [dropdownVisible, setDropdownVisible] = useState(null);
   const [renameVisible, setRenameVisible] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [renameTargetId, setRenameTargetId] = useState(null);
+  
+  // ✅ Safety check: Ensure layers is always an array
+  const safeLayers = Array.isArray(layers) ? layers : [];
+  
   // Use immutable id 'layer1' when present; fallback to first layer id
   const baseLayerId = (() => {
-    if (Array.isArray(layers) && layers.length > 0) {
-      const found = layers.find((l) => l.id === "layer1");
-      return found ? found.id : layers[0].id;
+    if (safeLayers.length > 0) {
+      const found = safeLayers.find((l) => l?.id === "layer1");
+      return found ? found.id : safeLayers[0]?.id || null;
     }
     return null;
   })();
 
   const handleDropdownSelect = (layerId, action) => {
+    if (!layerId) return;
     setDropdownVisible(null);
     if (action === "rename") {
       setRenameTargetId(layerId);
       const currentName =
-        layers.find((l) => l.id === layerId)?.name || `Layer ${layerId}`;
+        safeLayers.find((l) => l?.id === layerId)?.name || `Layer ${layerId}`;
       setRenameValue(currentName);
       setRenameVisible(true);
     }
@@ -47,13 +52,13 @@ function LayerPanel({
     if (action === "delete") {
       // Block deletion for base layer (Layer 1)
       if (layerId === baseLayerId) return;
-      onDelete(layerId);
+      onDelete?.(layerId);
     }
   };
 
   const handleRenameConfirm = () => {
     if (renameTargetId && renameValue.trim()) {
-      onRename(renameTargetId, renameValue.trim());
+      onRename?.(renameTargetId, renameValue.trim());
     }
     setRenameVisible(false);
     setRenameValue("");
@@ -62,17 +67,17 @@ function LayerPanel({
 
   return (
     <View style={styles.container}>
-      {/* 🔹 Header */}
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>LAYER</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+        <TouchableOpacity style={styles.closeButton} onPress={() => onClose?.()}>
           <Ionicons name="close" size={18} color="#3B82F6" />
         </TouchableOpacity>
       </View>
 
       <View style={styles.divider} />
 
-      {/* 🔹 Add Layer */}
+      {/* Add Layer */}
       <TouchableOpacity style={styles.addButton} onPress={() => {
         onAdd?.();
       }}>
@@ -80,62 +85,71 @@ function LayerPanel({
         <Text style={styles.addButtonText}>Add layer</Text>
       </TouchableOpacity>
 
-      {/* 🔹 Layer list */}
+      {/* Layer list */}
       <ScrollView style={styles.scrollView}>
-        {layers.map((layer) => (
-          <View key={layer.id} style={styles.layerWrapper}>
-            <TouchableOpacity
-              style={[
-                styles.layerItem,
-                activeLayerId === layer.id && styles.activeLayer,
-              ]}
-              onPress={() => onSelect(layer.id)}
-            >
-              <View style={styles.layerPreview}>
-                <View style={styles.previewThumbnail} />
-                <Text style={styles.layerId}>
-                  {layer.name || `Layer ${layer.id}`}
-                </Text>
-              </View>
-
-              <View style={styles.layerControls}>
-                <TouchableOpacity onPress={() => onToggleVisibility(layer.id)}>
-                  <Ionicons
-                    name={layer.visible ? "eye-outline" : "eye-off-outline"}
-                    size={18}
-                    color="#3B82F6"
-                  />
-                </TouchableOpacity>
-
-                <TouchableOpacity onPress={() => onToggleLock(layer.id)}>
-                  <Ionicons
-                    name={layer.locked ? "lock-closed" : "lock-open"}
-                    size={18}
-                    color="#3B82F6"
-                  />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.menuButton}
-                  onPress={() =>
-                    setDropdownVisible(
-                      dropdownVisible === layer.id ? null : layer.id
-                    )
-                  }
-                >
-                  <Ionicons
-                    name="ellipsis-vertical"
-                    size={18}
-                    color="#3B82F6"
-                  />
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
+        {safeLayers.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No layers available</Text>
           </View>
-        ))}
+        ) : (
+          safeLayers.map((layer) => {
+            if (!layer || !layer.id) return null;
+            return (
+              <View key={layer.id} style={styles.layerWrapper}>
+                <TouchableOpacity
+                  style={[
+                    styles.layerItem,
+                    activeLayerId === layer.id && styles.activeLayer,
+                  ]}
+                  onPress={() => onSelect?.(layer.id)}
+                >
+                  <View style={styles.layerPreview}>
+                    <View style={styles.previewThumbnail} />
+                    <Text style={styles.layerId}>
+                      {layer.name || `Layer ${layer.id}`}
+                    </Text>
+                  </View>
+
+                  <View style={styles.layerControls}>
+                    <TouchableOpacity onPress={() => onToggleVisibility?.(layer.id)}>
+                      <Ionicons
+                        name={layer.visible !== false ? "eye-outline" : "eye-off-outline"}
+                        size={18}
+                        color="#3B82F6"
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => onToggleLock?.(layer.id)}>
+                      <Ionicons
+                        name={layer.locked ? "lock-closed" : "lock-open"}
+                        size={18}
+                        color="#3B82F6"
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.menuButton}
+                      onPress={() =>
+                        setDropdownVisible(
+                          dropdownVisible === layer.id ? null : layer.id
+                        )
+                      }
+                    >
+                      <Ionicons
+                        name="ellipsis-vertical"
+                        size={18}
+                        color="#3B82F6"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        )}
       </ScrollView>
 
-      {/* ✅ Dropdown nổi ngoài cùng */}
+      {/* Dropdown nổi ngoài cùng */}
       {dropdownVisible && (
         <View style={StyleSheet.absoluteFill}>
           <TouchableOpacity
@@ -147,7 +161,7 @@ function LayerPanel({
               styles.dropdown,
               {
                 top:
-                  150 + layers.findIndex((l) => l.id === dropdownVisible) * 64,
+                  150 + (safeLayers.findIndex((l) => l?.id === dropdownVisible) * 64 || 0),
                 right: 24,
               },
             ]}
@@ -181,7 +195,7 @@ function LayerPanel({
         </View>
       )}
 
-      {/* ✅ Modal rename layer */}
+      {/* Modal rename layer */}
       <Modal transparent visible={renameVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -338,7 +352,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     flex: 1,
   },
-  // ✅ Rename modal
+  // Rename modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
@@ -392,6 +406,15 @@ const styles = StyleSheet.create({
   confirmText: {
     color: "#fff",
     fontWeight: "600",
+  },
+  emptyState: {
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyText: {
+    color: "#94A3B8",
+    fontSize: 14,
   },
 });
 

@@ -13,6 +13,35 @@ import * as SplashScreen from "expo-splash-screen";
 // Ngăn splash tự ẩn sớm
 SplashScreen.preventAutoHideAsync();
 
+// ✅ Global error handler để bắt unhandled promise rejections và errors
+// Giúp app không crash khi có lỗi không được xử lý
+if (typeof ErrorUtils !== "undefined") {
+  const originalHandler = ErrorUtils.getGlobalHandler();
+  ErrorUtils.setGlobalHandler((error, isFatal) => {
+    console.error("🚨 Global Error Handler:", error, "isFatal:", isFatal);
+    // Log error nhưng không crash app ngay lập tức
+    if (originalHandler) {
+      originalHandler(error, isFatal);
+    }
+  });
+}
+
+// ✅ Handle unhandled promise rejections
+// Tránh crash khi có promise rejection không được catch
+if (typeof global !== "undefined") {
+  const originalUnhandledRejection = global.onunhandledrejection;
+  global.onunhandledrejection = (event) => {
+    console.error("🚨 Unhandled Promise Rejection:", event?.reason || event);
+    // Prevent default crash behavior
+    if (event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+    if (originalUnhandledRejection) {
+      originalUnhandledRejection(event);
+    }
+  };
+}
+
 export default function App() {
   const fontsLoaded = useLoadFonts();
 
