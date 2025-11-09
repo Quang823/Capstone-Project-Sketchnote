@@ -17,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Shadow } from "react-native-shadow-2";
 import { blogStyles } from "./BlogScreen.styles";
 import { blogService } from "../../service/blogService";
+import SidebarToggleButton from "../../components/navigation/SidebarToggleButton";
 
 const { width } = Dimensions.get("window");
 
@@ -112,9 +113,8 @@ export default function BlogScreen() {
     >
       {/* 🔹 Header */}
       <View style={blogStyles.header}>
-        <Pressable style={blogStyles.backButton} onPress={handleBackPress}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
-        </Pressable>
+      <SidebarToggleButton iconSize={24}  />
+        
         <Text style={blogStyles.headerTitle}>Bài viết</Text>
         <View style={blogStyles.headerRight} />
       </View>

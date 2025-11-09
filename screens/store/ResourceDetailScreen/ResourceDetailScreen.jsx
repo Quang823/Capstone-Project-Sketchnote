@@ -258,44 +258,57 @@ export default function ResourceDetailScreen() {
               </View>
 
               {/* Product Info */}
-              <View style={[styles.sectionInner, (!resource.items || resource.items.length === 0) && styles.sectionInnerLast]}>
-                <Text style={styles.sectionTitle}>Thông tin sản phẩm</Text>
-                <View style={styles.infoGrid}>
-                   <View style={styles.infoItem}>
-                    <Icon name="event" size={18} color="#F59E0B" />
-                    <View style={styles.infoTextContainer}>
-                      <Text style={styles.infoLabel}>ExpiredTime</Text>
-                      <Text style={styles.infoValue}>
-                        {new Date(resource.expiredTime).toLocaleDateString("vi-VN")}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.infoItem}>
-                    <Icon name="event" size={18} color="#F59E0B" />
-                    <View style={styles.infoTextContainer}>
-                      <Text style={styles.infoLabel}>ReleaseDate</Text>
-                      <Text style={styles.infoValue}>
-                        {new Date(resource.releaseDate).toLocaleDateString("vi-VN")}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
+            <View style={[styles.sectionInner, styles.sectionInnerLast]}>
+  <Text style={styles.sectionTitle}>Thông tin sản phẩm</Text>
 
-              {/* Items List */}
-              {resource.items && resource.items.length > 0 && (
-                <View style={[styles.sectionInner, styles.sectionInnerLast]}>
-                  <Text style={styles.sectionTitle}>Nội dung bao gồm</Text>
-                  {resource.items.map((item) => (
-                    <View key={item.resourceItemId} style={styles.itemRow}>
-                      <View style={styles.itemBadge}>
-                        <Text style={styles.itemBadgeText}>{item.itemIndex}</Text>
-                      </View>
-                      <Text style={styles.itemText}>{item.itemUrl}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
+  <View style={styles.infoGrid}>
+    {/* Expired Time */}
+    <View style={styles.infoItem}>
+      <Icon name="event-busy" size={18} color="#F59E0B" />
+      <View style={styles.infoTextContainer}>
+        <Text style={styles.infoLabel}>Hết hạn</Text>
+        <Text style={styles.infoValue}>
+          {new Date(resource.expiredTime).toLocaleDateString("vi-VN")}
+        </Text>
+      </View>
+    </View>
+
+    {/* Release Date */}
+    <View style={styles.infoItem}>
+      <Icon name="event-available" size={18} color="#10B981" />
+      <View style={styles.infoTextContainer}>
+        <Text style={styles.infoLabel}>Phát hành</Text>
+        <Text style={styles.infoValue}>
+          {new Date(resource.releaseDate).toLocaleDateString("vi-VN")}
+        </Text>
+      </View>
+    </View>
+
+    {/* Download Count */}
+    <View style={styles.infoItem}>
+      <Icon name="file-download" size={18} color="#3B82F6" />
+      <View style={styles.infoTextContainer}>
+        <Text style={styles.infoLabel}>Lượt tải</Text>
+        <Text style={styles.infoValue}>
+          {resource.downloadCount ?? 120}
+        </Text>
+      </View>
+    </View>
+
+    {/* File Size */}
+    <View style={styles.infoItem}>
+      <Icon name="storage" size={18} color="#10B981" />
+      <View style={styles.infoTextContainer}>
+        <Text style={styles.infoLabel}>Dung lượng</Text>
+        <Text style={styles.infoValue}>
+          {resource.size ? `${resource.size} MB` : '15 MB'}
+        </Text>
+      </View>
+    </View>
+  </View>
+</View>
+
+
 
               <View style={styles.actionButtonsContainer}>
                 <Pressable

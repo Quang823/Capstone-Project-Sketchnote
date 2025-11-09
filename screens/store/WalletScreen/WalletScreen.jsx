@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { walletStyles } from "./WalletScreen.styles";
 import { paymentService } from "../../../service/paymentService";
 import Toast from "react-native-toast-message";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
@@ -125,6 +126,7 @@ console.log(url)
     <View style={walletStyles.container}>
       {/* Header */}
       <View style={walletStyles.header}>
+       <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
         <Pressable onPress={() => navigation.navigate("Home")}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
