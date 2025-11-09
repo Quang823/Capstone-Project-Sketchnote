@@ -11,6 +11,8 @@ import {
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
 import { orderService } from "../../../service/orderService";
+import { styles } from "./OrderHistoryScreen.styles";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
@@ -88,12 +90,7 @@ export default function OrderHistoryScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Pressable
-            onPress={() => navigation.goBack("Home")}
-            style={styles.backBtn}
-          >
-            <Icon name="arrow-back" size={24} color="#2D2D2D" />
-          </Pressable>
+            <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
           <Text style={styles.headerTitle}>Order History</Text>
           <View style={{ width: 40 }} />
         </View>
@@ -288,143 +285,3 @@ export default function OrderHistoryScreen() {
 }
 
 
-const styles = {
-  container: { flex: 1, backgroundColor: "#FFF9E6" },
-  header: {
-    paddingTop: 30,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#B3E5FC",
-    borderBottomWidth: 2,
-    borderBottomColor: "#2D2D2D",
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#2D2D2D",
-  },
-  headerTitle: { fontSize: 20, fontWeight: "900", color: "#2D2D2D" },
-  content: { flex: 1, padding: 16 },
-  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  emptyTitle: { fontSize: 22, fontWeight: "900", color: "#2D2D2D", marginTop: 16 },
-  emptyText: { fontSize: 14, color: "#546E7A", marginTop: 8, textAlign: "center" },
-  shopBtn: {
-    marginTop: 24,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    backgroundColor: "#81C784",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#2D2D2D",
-  },
-  shopBtnText: { color: "#1F2937", fontSize: 16, fontWeight: "800" },
-  orderCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: "#2D2D2D",
-    shadowColor: "#90CAF9",
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.25,
-    elevation: 2,
-  },
-  orderHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  orderHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
-  invoiceNumber: { fontSize: 16, fontWeight: "800", color: "#37474F" },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#2D2D2D",
-  },
-  statusText: { fontSize: 12, fontWeight: "800" },
-  orderInfo: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: "#B3E5FC",
-    borderStyle: "dashed",
-  },
-  infoRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  infoText: { fontSize: 13, color: "#607D8B", fontWeight: "600" },
-  itemsContainer: {
-    gap: 12,
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: "#B3E5FC",
-    borderStyle: "dashed",
-  },
-  itemRow: { flexDirection: "row", justifyContent: "space-between" },
-  itemInfo: { flex: 1, marginRight: 12 },
-  itemName: { fontSize: 14, fontWeight: "800", color: "#2E4053", marginBottom: 4 },
-  itemDesc: { fontSize: 12, color: "#546E7A", marginBottom: 6 },
-  typeBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#EDE7F6",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#2D2D2D",
-  },
-  typeBadgeText: { fontSize: 10, fontWeight: "700", color: "#9575CD" },
-  itemRight: { alignItems: "flex-end" },
-  itemPrice: { fontSize: 14, fontWeight: "800", color: "#2E4053" },
-  discountText: { fontSize: 12, color: "#81C784", marginTop: 2 },
-  orderFooter: { gap: 12 },
-  totalRow: { flexDirection: "row", justifyContent: "space-between" },
-  totalLabel: { fontSize: 14, fontWeight: "700", color: "#37474F" },
-  totalAmount: { fontSize: 18, fontWeight: "900", color: "#E65100" },
-  actionRow: { flexDirection: "row", justifyContent: "space-between" },
-  paymentBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#2D2D2D",
-  },
-  paymentText: { fontSize: 12, fontWeight: "800" },
-  checkoutBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#64B5F6",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: "#2D2D2D",
-  },
-  checkoutBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "800" },
-};

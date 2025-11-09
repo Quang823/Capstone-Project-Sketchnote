@@ -13,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect } from "@react-navigation/native";
 import { blogService } from "../../../service/blogService";
 import { myBlogStyles } from "./MyBlogScreen.styles";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 
 export default function MyBlogScreen({ navigation }) {
   const [blogs, setBlogs] = useState([]);
@@ -78,9 +79,7 @@ export default function MyBlogScreen({ navigation }) {
         end={{ x: 1, y: 1 }}
         style={myBlogStyles.header}
       >
-        <Pressable onPress={() => navigation.goBack()} style={myBlogStyles.headerButton}>
-          <Icon name="arrow-back" size={24} color="#fff" />
-        </Pressable>
+          <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
         <Text style={myBlogStyles.headerTitle}>Manage My Blogs</Text>
         <Pressable
           onPress={() => navigation.navigate("CreateBlog")}

@@ -28,6 +28,7 @@ import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerH
 import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/DesignerProductsScreen";
 import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
 import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
+import DesignerSubscription from "../screens/store/DesignerSubscription/DesignerSubscription";
 
 
 
@@ -55,7 +56,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="Wallet" component={WalletScreen} />
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
-      
+      <Stack.Screen name="DesignerSubscription" component={DesignerSubscription} />
       <Stack.Screen
         name="TransactionHistory"
         component={TransactionHistoryScreen}

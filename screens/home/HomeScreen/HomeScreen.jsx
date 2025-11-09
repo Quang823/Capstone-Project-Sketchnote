@@ -19,14 +19,11 @@ import Reanimated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
-  runOnJS,
 } from "react-native-reanimated";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Shadow } from "react-native-shadow-2";
 import { useNavigation } from "@react-navigation/native";
 import { projectService } from "../../../service/projectService";
-import NavigationDrawer, { SidebarNavigation } from "../../home/nav/NavigationDrawer";
-import { SIDEBAR_WIDTH } from "../../home/nav/NavigationDrawer.styles";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 
 const { width } = Dimensions.get("window");
 
@@ -39,7 +36,7 @@ const columns = width >= 1000 ? 3 : width >= 700 ? 3 : 2;
 
 // Tính CARD_WIDTH chính xác (floor để tránh sub-pixel rounding)
 const CARD_WIDTH = Math.floor(
-  (width - SIDEBAR_WIDTH - CONTENT_PADDING * 2 - CARD_GAP * (columns - 1)) /
+  (width - CONTENT_PADDING * 2 - CARD_GAP * (columns - 1)) /
     columns
 );
 
@@ -136,13 +133,9 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Mặc định mở
-  const [activeNavItem, setActiveNavItem] = useState("documents");
 
   // Animations
-  const sidebarAnim = useSharedValue(sidebarOpen ? 0 : -SIDEBAR_WIDTH); // 0 = mở, -SIDEBAR_WIDTH = đóng
   const fade = useSharedValue(0);
-  const translateX = useSharedValue(sidebarOpen ? 0 : -SIDEBAR_WIDTH);
 
   useEffect(() => {
     fade.value = withTiming(1, { duration: 400 });
@@ -168,55 +161,7 @@ export default function HomeScreen({ navigation }) {
     fetchProjects();
   }, []);
 
-  useEffect(() => {
-    translateX.value = withTiming(sidebarOpen ? 0 : -SIDEBAR_WIDTH, { duration: 300 });
-    sidebarAnim.value = translateX.value;
-  }, [sidebarOpen]);
-
-  const toggleSidebarWithState = (open) => {
-    setSidebarOpen(open);
-  };
-
-  // Gesture handler cho drag sidebar - sử dụng API mới
-  const startX = useSharedValue(0);
-  const panGesture = Gesture.Pan()
-    .activeOffsetX([-10, 10]) // Chỉ kích hoạt khi kéo ngang
-    .failOffsetY([-10, 10]) // Cho phép scroll dọc
-    .onStart(() => {
-      'worklet';
-      startX.value = translateX.value;
-    })
-    .onUpdate((event) => {
-      'worklet';
-      // Chỉ xử lý khi kéo ngang nhiều hơn kéo dọc
-      if (Math.abs(event.translationX) > Math.abs(event.translationY)) {
-        const newX = startX.value + event.translationX;
-        // Giới hạn drag trong khoảng [-SIDEBAR_WIDTH, 0]
-        translateX.value = Math.max(-SIDEBAR_WIDTH, Math.min(0, newX));
-        sidebarAnim.value = translateX.value;
-      }
-    })
-    .onEnd(() => {
-      'worklet';
-      const threshold = -SIDEBAR_WIDTH / 2;
-      const shouldOpen = translateX.value > threshold;
-      
-      translateX.value = withTiming(shouldOpen ? 0 : -SIDEBAR_WIDTH, { duration: 300 });
-      sidebarAnim.value = translateX.value;
-      
-      runOnJS(toggleSidebarWithState)(shouldOpen);
-    });
-
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
-  const sidebarStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
-  const toggleButtonStyle = useAnimatedStyle(() => {
-    const togglePosition = translateX.value + SIDEBAR_WIDTH;
-    return {
-      transform: [{ translateX: togglePosition }],
-    };
-  });
 
   const handleCreate = (type) => {
     setPopoverVisible(false);
@@ -233,11 +178,7 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const toggleSidebar = () => setSidebarOpen((v) => !v);
   const handleNavPress = (id) => {
-    setActiveNavItem(id);
-    
-    // Navigation logic
     switch (id) {
       case "documents":
         // Documents = Home screen (current screen)
@@ -378,45 +319,39 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      
-      <GestureDetector gesture={panGesture}>
-        <Reanimated.View style={[styles.sidebarContainer, sidebarStyle]}>
-          <SidebarNavigation 
-            activeNavItem={activeNavItem} 
-            onNavPress={handleNavPress} 
-          />
-        </Reanimated.View>
-      </GestureDetector>
-      
-      {/* Nút toggle sidebar - có thể drag */}
-      <GestureDetector gesture={panGesture}>
-        <Reanimated.View style={[styles.toggleButtonContainer, toggleButtonStyle]}>
-          <TouchableOpacity
-            style={styles.toggleButton}
-            onPress={toggleSidebar}
-            activeOpacity={0.7}
-          >
-            <Icon 
-              name={sidebarOpen ? "menu" : "menu"} 
-              size={26} 
-              color="#2563EB" 
-            />
-          </TouchableOpacity>
-        </Reanimated.View>
-      </GestureDetector>
-      
       {/* Main Content */}
       <View style={styles.main}>
         <Reanimated.View style={[styles.content, fadeStyle]}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Projects</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+              <SidebarToggleButton iconSize={28} iconColor="#4F46E5" />
+              <Text style={styles.headerTitle} numberOfLines={1}>Projects</Text>
+            </View>
             <View style={styles.headerRight}>
+              <TouchableOpacity 
+                style={styles.walletButton}
+                onPress={() => navigation.navigate("Wallet")}
+              >
+                <Icon name="account-balance-wallet" size={22} color="#4F46E5" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.cartButton}
+                onPress={() => navigation.navigate("Cart")}
+              >
+                <Icon name="shopping-cart" size={22} color="#10B981" />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.sortButton}>
                 <Text style={styles.sortText}>Date</Text>
                 <Icon name="arrow-drop-down" size={18} color="#64748B" />
               </TouchableOpacity>
-  
+   <TouchableOpacity
+    style={[styles.sortButton, { marginLeft: 8 }]} // cách nút Date 1 chút
+    onPress={() => navigation.navigate("DesignerSubscription")}
+  >
+    <Text style={styles.sortText}>Subscription</Text>
+    <Icon name="workspace-premium" size={18} color="#64748B" />
+  </TouchableOpacity>
               {/* Nút + New */}
               <TouchableOpacity
                 style={styles.newButton}
@@ -542,8 +477,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
   },
-  headerTitle: { fontSize: 28, fontWeight: "800", color: "#111827", flex: 1 },
+  headerTitle: { fontSize: 28, fontWeight: "800", color: "#111827" },
   headerRight: { flexDirection: "row", alignItems: "center" },
+  walletButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#EEF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+    shadowColor: "#4F46E5",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cartButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#ECFDF5",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   sortButton: {
     flexDirection: "row",
     alignItems: "center",
