@@ -38,7 +38,6 @@ export default function DesignerProductsScreen() {
     try {
       setLoading(true);
       const response = await resourceService.getResourceByUserId(page, size);
-      // console.log("API Response:", response);
 
       setProducts(response.content || []);
       setTotalPages(response.totalPages || 0);

@@ -29,6 +29,7 @@ export default function ToolbarContainer({
   onImportJSON,
   onSaveFile,
   onLoadCloudFile,
+  onSyncFile, // Added prop for manual sync
 
   eraserMode,
   setEraserMode,
@@ -645,6 +646,20 @@ export default function ToolbarContainer({
           }
           onPress={() => onSaveFile?.("json")} // Bấm phát là lưu luôn JSON
         />
+
+        {/* Sync Button */}
+        {onSyncFile && (
+          <ToolButton
+            icon={
+              <MaterialCommunityIcons
+                name="cloud-sync-outline"
+                size={ICON_SIZE}
+                color={ICON_COLOR}
+              />
+            }
+            onPress={onSyncFile}
+          />
+        )}
 
         <ToolButton
           icon={

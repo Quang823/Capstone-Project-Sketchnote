@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle } from "react";
+import React, { forwardRef, useImperativeHandle, useEffect } from "react";
 import {
   Canvas,
   Path,
@@ -19,125 +19,6 @@ import { applyPencilAlpha, makePathFromPoints } from "./utils";
 const DESK_BGCOLOR = "#e9ecef";
 const PAGE_BGCOLOR = "#ffffff";
 
-// Font imports (giữ nguyên)
-import RobotoRegular from "../../../assets/fonts/Roboto/Roboto_Condensed-Regular.ttf";
-import RobotoBold from "../../../assets/fonts/Roboto/Roboto_Condensed-Bold.ttf";
-import RobotoItalic from "../../../assets/fonts/Roboto/Roboto_Condensed-Italic.ttf";
-import RobotoBoldItalic from "../../../assets/fonts/Roboto/Roboto_Condensed-BoldItalic.ttf";
-import LatoRegular from "../../../assets/fonts/Lato/Lato-Regular.ttf";
-import LatoBold from "../../../assets/fonts/Lato/Lato-Bold.ttf";
-import LatoItalic from "../../../assets/fonts/Lato/Lato-Italic.ttf";
-import LatoBoldItalic from "../../../assets/fonts/Lato/Lato-BoldItalic.ttf";
-import MontserratRegular from "../../../assets/fonts/Montserrat/Montserrat-Regular.ttf";
-import MontserratBold from "../../../assets/fonts/Montserrat/Montserrat-Bold.ttf";
-import MontserratItalic from "../../../assets/fonts/Montserrat/Montserrat-Italic.ttf";
-import MontserratBoldItalic from "../../../assets/fonts/Montserrat/Montserrat-BoldItalic.ttf";
-import OpenSansCondensedRegular from "../../../assets/fonts/OpenSans/OpenSans_Condensed-Regular.ttf";
-import OpenSansCondensedBold from "../../../assets/fonts/OpenSans/OpenSans_Condensed-Bold.ttf";
-import OpenSansCondensedItalic from "../../../assets/fonts/OpenSans/OpenSans_Condensed-Italic.ttf";
-import OpenSansCondensedBoldItalic from "../../../assets/fonts/OpenSans/OpenSans_Condensed-BoldItalic.ttf";
-import InterRegular from "../../../assets/fonts/Inter/Inter_18pt-Regular.ttf";
-import InterBold from "../../../assets/fonts/Inter/Inter_18pt-Bold.ttf";
-import InterItalic from "../../../assets/fonts/Inter/Inter_18pt-Italic.ttf";
-import InterBoldItalic from "../../../assets/fonts/Inter/Inter_18pt-BoldItalic.ttf";
-import PoppinsRegular from "../../../assets/fonts/Poppins/Poppins-Regular.ttf";
-import PoppinsBold from "../../../assets/fonts/Poppins/Poppins-Bold.ttf";
-import PoppinsItalic from "../../../assets/fonts/Poppins/Poppins-Italic.ttf";
-import PoppinsBoldItalic from "../../../assets/fonts/Poppins/Poppins-BoldItalic.ttf";
-import PacificoRegular from "../../../assets/fonts/Pacifico/Pacifico-Regular.ttf";
-import NotoColorEmojiRegular from "../../../assets/fonts/NotoColorEmoji/NotoColorEmoji-Regular.ttf";
-
-const FONT_MAP = {
-  Roboto: {
-    Regular: RobotoRegular,
-    Bold: RobotoBold,
-    Italic: RobotoItalic,
-    BoldItalic: RobotoBoldItalic,
-  },
-  Lato: {
-    Regular: LatoRegular,
-    Bold: LatoBold,
-    Italic: LatoItalic,
-    BoldItalic: LatoBoldItalic,
-  },
-  Montserrat: {
-    Regular: MontserratRegular,
-    Bold: MontserratBold,
-    Italic: MontserratItalic,
-    BoldItalic: MontserratBoldItalic,
-  },
-  OpenSans: {
-    Regular: OpenSansCondensedRegular,
-    Bold: OpenSansCondensedBold,
-    Italic: OpenSansCondensedItalic,
-    BoldItalic: OpenSansCondensedBoldItalic,
-  },
-  Inter: {
-    Regular: InterRegular,
-    Bold: InterBold,
-    Italic: InterItalic,
-    BoldItalic: InterBoldItalic,
-  },
-  Poppins: {
-    Regular: PoppinsRegular,
-    Bold: PoppinsBold,
-    Italic: PoppinsItalic,
-    BoldItalic: PoppinsBoldItalic,
-  },
-  Pacifico: {
-    Regular: PacificoRegular,
-  },
-  NotoColorEmoji: {
-    Regular: NotoColorEmojiRegular,
-  },
-};
-
-const FONT_SIZES = [12, 16, 20, 24, 32, 40];
-
-function usePreloadedFonts() {
-  const loaded = {};
-  for (const family in FONT_MAP) {
-    loaded[family] = {};
-    for (const styleKey of Object.keys(FONT_MAP[family])) {
-      loaded[family][styleKey] = {};
-      for (const sz of FONT_SIZES) {
-        loaded[family][styleKey][sz] = useFont(FONT_MAP[family][styleKey], sz);
-      }
-    }
-  }
-  return loaded;
-}
-
-function getNearestFont(loadedFonts, family, bold, italic, size = 18) {
-  const baseFamily = (family || "Roboto").replace(
-    /(-Regular|-Bold|-Italic|-BoldItalic)+$/g,
-    ""
-  );
-
-  const fontSet = loadedFonts[baseFamily] || loadedFonts["Roboto"];
-  const style =
-    bold && italic
-      ? "BoldItalic"
-      : bold
-      ? "Bold"
-      : italic
-      ? "Italic"
-      : "Regular";
-
-  const nearest = FONT_SIZES.reduce((a, b) =>
-    Math.abs(b - size) < Math.abs(a - size) ? b : a
-  );
-
-  return {
-    font:
-      fontSet?.[style]?.[nearest] ||
-      fontSet?.["Regular"]?.[nearest] ||
-      loadedFonts["Roboto"]["Regular"][18] ||
-      null,
-    nearest,
-  };
-}
-
 function smoothPoints(points = [], stabilization = 0) {
   if (!Array.isArray(points) || points.length === 0 || stabilization <= 0) {
     return points;
@@ -156,7 +37,6 @@ function smoothPoints(points = [], stabilization = 0) {
   }
   return out;
 }
-
 function computeEffectiveWidth(baseWidth = 1, thickness = 1, pressure = 0.5) {
   const safeThickness = Math.max(0.1, thickness);
   const pressureFactor = 1 + (pressure - 0.5) * 1.2;
@@ -170,7 +50,7 @@ const makeRGBA = (input, alpha = 1) => {
     if (input.startsWith("rgba")) {
       return input.replace(
         /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/,
-        (_, r, g, b) => `rgba(${r},${g},${b},${alpha})`
+        (_, r, g, b) => `rgba(${r},${g},${b},${alpha})`,
       );
     }
     if (input.startsWith("#")) {
@@ -200,7 +80,7 @@ const makeRGBA = (input, alpha = 1) => {
       e.message,
       "Input:",
       input,
-      "Fallback to black"
+      "Fallback to black",
     );
     return `rgba(0,0,0,${alpha})`;
   }
@@ -237,23 +117,38 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     backgroundImageUrl = null, // 👈 Add backgroundImageUrl prop
     pageWidth = null, // 👈 Page width from noteConfig
     pageHeight = null, // 👈 Page height from noteConfig
+    loadedFonts, // 👈 Receive preloaded fonts
+    getNearestFont, // 👈 Receive font helper
   },
-  ref
+  ref,
 ) {
   const canvasRef = useCanvasRef();
-  const loadedFonts = usePreloadedFonts();
-  
+
   // Safe image loading with error handling
   let backgroundImage = null;
   try {
     // Only attempt to load if URL is valid
-    if (backgroundImageUrl && typeof backgroundImageUrl === 'string' && backgroundImageUrl.trim()) {
+    if (
+      backgroundImageUrl &&
+      typeof backgroundImageUrl === "string" &&
+      backgroundImageUrl.trim()
+    ) {
       backgroundImage = useImage(backgroundImageUrl);
     }
   } catch (err) {
-    console.warn('[CanvasRenderer] Failed to load background image:', err);
+    console.warn("[CanvasRenderer] Failed to load background image:", err);
     backgroundImage = null;
   }
+
+  // ✨ FIX: Add cleanup effect for Skia Image object
+  useEffect(() => {
+    return () => {
+      if (backgroundImage) {
+        // Dispose of the native Skia object to free up GPU memory
+        backgroundImage.dispose();
+      }
+    };
+  }, [backgroundImage]);
 
   // Use provided dimensions or fallback to page dimensions
   const safePage = {
@@ -264,12 +159,6 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   };
 
   const safeCanvasHeight = canvasHeight ?? 0;
-
-  // React.useEffect(() => {
-  //   if (__DEV__) {
-  //     console.log("[CanvasRenderer] hasRuler=", hasRuler, "tool=", tool);
-  //   }
-  // }, [hasRuler, tool]);
 
   useImperativeHandle(ref, () => ({
     getSnapshot: () => canvasRef.current?.makeImageSnapshot(),
@@ -318,14 +207,14 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     smoothedPoints = [],
     density = 0.5,
     spread = 1.0,
-    baseSize = 6
+    baseSize = 6,
   ) {
     const dots = [];
     if (!Array.isArray(smoothedPoints) || smoothedPoints.length === 0)
       return dots;
     const totalRaw = Math.max(
       6,
-      Math.round(smoothedPoints.length * (density * 6))
+      Math.round(smoothedPoints.length * (density * 6)),
     );
     const total = Math.min(140, totalRaw);
     for (let i = 0; i < total; i++) {
@@ -341,11 +230,11 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       const ry = (pseudoRandom(seed + 1) - 0.5) * baseSize * spread;
       const r = Math.max(
         1,
-        Math.round((pseudoRandom(seed + 2) * baseSize) / 2)
+        Math.round((pseudoRandom(seed + 2) * baseSize) / 2),
       );
       const alpha = Math.max(
         0.06,
-        Math.min(0.5, pseudoRandom(seed + 3) * 0.45)
+        Math.min(0.5, pseudoRandom(seed + 3) * 0.45),
       );
       dots.push({ x: x + rx, y: y + ry, r, a: alpha });
     }
@@ -368,7 +257,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           color={makeRGBA(strokeColor, 0.14)}
           style="fill"
           blendMode="srcOver"
-        />
+        />,
       );
     }
     if (high.length) {
@@ -381,7 +270,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           color={makeRGBA(strokeColor, 0.28)}
           style="fill"
           blendMode="srcOver"
-        />
+        />,
       );
     }
     return <Group key="air-dots-group">{nodes}</Group>;
@@ -438,7 +327,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         s.fontFamily,
         s.bold,
         s.italic,
-        fontSize
+        fontSize,
       );
       const fallback = getNearestFont(loadedFonts, "Roboto", false, false, 18);
       const safeFont = font || fallback.font;
@@ -472,7 +361,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               color={bgColor}
               rx={6}
               ry={6}
-            />
+            />,
           );
           const fold = Skia.Path.Make();
           fold.moveTo(left + tw - foldSize, top);
@@ -480,7 +369,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           fold.lineTo(left + tw, top + foldSize);
           fold.close();
           elements.push(
-            <Path key={`${s.id}-sticky-fold`} path={fold} color="#FFED77" />
+            <Path key={`${s.id}-sticky-fold`} path={fold} color="#FFED77" />,
           );
         } else {
           const tailH = 8;
@@ -497,7 +386,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           bubble.quadTo(left, top, left + 10, top);
           bubble.close();
           elements.push(
-            <Path key={`${s.id}-comment-bg`} path={bubble} color="#E3F2FD" />
+            <Path key={`${s.id}-comment-bg`} path={bubble} color="#E3F2FD" />,
           );
           elements.push(
             <Path
@@ -506,7 +395,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               color="rgba(0,0,0,0.18)"
               style="stroke"
               strokeWidth={1.2}
-            />
+            />,
           );
         }
       }
@@ -517,7 +406,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           "NotoColorEmoji",
           false,
           false,
-          s.fontSize || 36
+          s.fontSize || 36,
         ).font;
         if (emojiFont) {
           elements.push(
@@ -528,7 +417,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               text={s.text || ""}
               font={emojiFont}
               color={s.color || "#000"}
-            />
+            />,
           );
         }
         return <Group key={`${s.id}-emoji-group`}>{elements}</Group>;
@@ -544,7 +433,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             font={safeFont}
             color={s.color || "#000"}
             transform={[{ scale: scaleFactor }]}
-          />
+          />,
         );
       }
 
@@ -557,7 +446,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             width={textWidth * 0.95}
             height={1.5}
             color={s.color || "#000"}
-          />
+          />,
         );
       }
 
@@ -574,7 +463,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             strokeColor="#2563EB"
             style="stroke"
             dashEffect={[6, 4]}
-          />
+          />,
         );
       }
 
@@ -714,7 +603,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       const effWidth = computeEffectiveWidth(
         baseW,
         s.thickness ?? thickness,
-        s.pressure ?? pressure
+        s.pressure ?? pressure,
       );
 
       // === BRUSH (distinct) ===
@@ -800,7 +689,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           s.points,
           Math.max(0.1, (airbrushDensity ?? 0.55) * 0.6),
           airbrushSpread,
-          Math.max(3, effWidth * 0.8)
+          Math.max(3, effWidth * 0.8),
         );
         const dotGroup = makeDotPaths(dots, strokeColor);
         return (
@@ -822,7 +711,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         const dir = Math.sqrt(dx * dx + dy * dy) || 1;
         const tilt = Math.max(
           0.3,
-          Math.min(1.6, 1 + (dy / dir - 0.5) * calligraphyAngle)
+          Math.min(1.6, 1 + (dy / dir - 0.5) * calligraphyAngle),
         );
 
         const main = (
@@ -1141,7 +1030,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             fontFamily,
             bold,
             italic,
-            fontSize
+            fontSize,
           );
           const safeFont =
             font ||
@@ -1149,7 +1038,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           const scaleFactor = nearest ? fontSize / nearest : 1;
           const textWidth = Math.max(
             40,
-            (text.length || 1) * (fontSize * 0.6) + padding * 2
+            (text.length || 1) * (fontSize * 0.6) + padding * 2,
           );
           const textHeight = Math.max(28, fontSize + padding * 2);
           const left = x - padding;
@@ -1169,7 +1058,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 color={bgColor}
                 rx={6}
                 ry={6}
-              />
+              />,
             );
             const fold = Skia.Path.Make();
             fold.moveTo(left + textWidth - foldSize, top);
@@ -1190,21 +1079,21 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               left + textWidth,
               top + textHeight,
               left + textWidth - 10,
-              top + textHeight
+              top + textHeight,
             );
             bubble.lineTo(left + 18, top + textHeight);
             bubble.quadTo(
               left + 10,
               top + textHeight + tailH,
               left + 8,
-              top + textHeight
+              top + textHeight,
             );
             bubble.quadTo(left, top + textHeight, left, top + textHeight - 10);
             bubble.lineTo(left, top + 10);
             bubble.quadTo(left, top, left + 10, top);
             bubble.close();
             elements.push(
-              <Path key="rt-comment-bg" path={bubble} color="#E3F2FD" />
+              <Path key="rt-comment-bg" path={bubble} color="#E3F2FD" />,
             );
             elements.push(
               <Path
@@ -1213,7 +1102,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 color="rgba(0,0,0,0.15)"
                 style="stroke"
                 strokeWidth={1.2}
-              />
+              />,
             );
           }
 
@@ -1227,7 +1116,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 font={safeFont}
                 color={makeRGBA(color, 1)}
                 transform={[{ scale: scaleFactor }]}
-              />
+              />,
             );
           }
 
@@ -1240,7 +1129,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 width={textWidth * 0.95}
                 height={1.5}
                 color={makeRGBA(color, 1)}
-              />
+              />,
             );
           }
 
@@ -1285,7 +1174,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   strokeWidth={1.4}
                   style="stroke"
                   strokeCap="round"
-                />
+                />,
               );
 
               offset += dashLength + gapLength;
@@ -1307,7 +1196,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               path={polyPath}
               color="rgba(0,188,212,0.08)"
               style="fill"
-            />
+            />,
           );
 
           return paths;
@@ -1356,12 +1245,12 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
           const basePath = makePathFromPoints(
             // Khi có thước, bỏ smoothing để preview bám cạnh thước thẳng tuyệt đối
-            hasRuler ? currentPoints : smoothPoints(currentPoints, dynamicStab)
+            hasRuler ? currentPoints : smoothPoints(currentPoints, dynamicStab),
           );
           const effWidth = computeEffectiveWidth(
             toolWidth,
             dynamicThickness,
-            dynamicPressure
+            dynamicPressure,
           );
 
           if (tool === "brush") {
@@ -1408,7 +1297,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 : smoothPoints(currentPoints, dynamicStab),
               Math.min(1, airbrushDensity * 1.0),
               airbrushSpread,
-              Math.max(4, effWidth)
+              Math.max(4, effWidth),
             );
             const dotGroup = makeDotPaths(baseDots, previewColor);
             return (
@@ -1494,7 +1383,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           strokeWidth={computeEffectiveWidth(
             calligraphyWidth || 1,
             thickness,
-            pressure
+            pressure,
           )}
           style="stroke"
           strokeCap="round"
@@ -1542,7 +1431,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   strokeWidth={1.5}
                   style="stroke"
                   strokeCap="round"
-                />
+                />,
               );
 
               offset += dashLength + gapLength;

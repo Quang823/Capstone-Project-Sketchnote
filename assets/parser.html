@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON Parser</title>
+</head>
+<body>
+  <script>
+    // This function sends data back to the React Native app
+    const postMessageToReactNative = (payload) => {
+      if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+      }
+    };
+
+    // Listen for messages from the React Native app
+    document.addEventListener('message', (event) => {
+      try {
+        const jsonString = event.data;
+        if (typeof jsonString !== 'string') {
+          throw new Error('Invalid data type received. Expected a string.');
+        }
+
+        const parsedData = JSON.parse(jsonString);
+
+        // Send the parsed data back
+        postMessageToReactNative({
+          success: true,
+          data: parsedData,
+        });
+      } catch (error) {
+        // If parsing fails, send the error message back
+        postMessageToReactNative({
+          success: false,
+          error: error.message,
+        });
+      }
+    });
+
+    // Notify React Native that the WebView is ready to receive messages
+    postMessageToReactNative({ success: true, ready: true });
+  </script>
+</body>
+</html>

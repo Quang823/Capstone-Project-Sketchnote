@@ -40,7 +40,6 @@ export default function ResourceStoreScreen() {
       try {
         const resAll = await resourceService.getAllResource(0, 10);
         const allData = resAll?.content || [];
-        // console.log("✅ All Resources:", allData);
         setAllResources(allData);
 
         // 🔹 Sinh danh sách category từ type
@@ -55,7 +54,6 @@ export default function ResourceStoreScreen() {
       try {
         const resPopular = await resourceService.getAllResourcePopular(10);
         const popularData = resPopular || [];
-        //console.log("✅ Popular Resources:", popularData);
         setPopularResources(popularData);
       } catch (error) {
         console.error("❌ Fetch Popular Resources Failed:", error);
@@ -66,7 +64,6 @@ export default function ResourceStoreScreen() {
       try {
         const resLatest = await resourceService.getAllResourceLatest(10);
         const latestData = resLatest || [];
-        //  console.log("✅ Latest Resources:", latestData);
         setLatestResources(latestData);
       } catch (error) {
         console.error("❌ Fetch Latest Resources Failed:", error);

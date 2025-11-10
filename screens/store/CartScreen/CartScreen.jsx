@@ -56,15 +56,8 @@ export default function CartScreen() {
         })),
       };
 
-      // console.log(
-      //   "📤 Creating order with data:",
-      //   JSON.stringify(orderData, null, 2)
-      // );
-
       // Gọi API
       const response = await orderService.createOrder(orderData);
-
-      // console.log("✅ Order created successfully:", response);
 
       // Clear cart sau khi tạo order thành công
       cart.forEach((item) => removeFromCart(item.id));

@@ -37,7 +37,7 @@ const columns = width >= 1000 ? 3 : width >= 700 ? 3 : 2;
 // Tính CARD_WIDTH chính xác (floor để tránh sub-pixel rounding)
 const CARD_WIDTH = Math.floor(
   (width - SIDEBAR_WIDTH - CONTENT_PADDING * 2 - CARD_GAP * (columns - 1)) /
-    columns
+    columns,
 );
 
 // Format date helper
@@ -355,11 +355,9 @@ export default function HomeScreen({ navigation }) {
 
   const handleProjectClick = async (project) => {
     try {
-      //console.log("🔄 Fetching project details for:", project.projectId);
       const projectDetails = await projectService.getProjectById(
-        project.projectId
+        project.projectId,
       );
-      // console.log("✅ Project details fetched:", projectDetails);
 
       // Build noteConfig từ projectDetails để DrawingScreen hiểu
       const noteConfig = {

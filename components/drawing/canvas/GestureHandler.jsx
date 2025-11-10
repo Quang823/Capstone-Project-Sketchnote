@@ -317,6 +317,14 @@ export default function GestureHandler(
   const [selectedBox, setSelectedBox] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [editorVisible, setEditorVisible] = useState(false);
+
+  // [FIX] Sync local selectedId back to the parent (CanvasContainer)
+  useEffect(() => {
+    if (typeof onSelectStroke === "function") {
+      onSelectStroke(selectedId);
+    }
+  }, [selectedId, onSelectStroke]);
+
   const [editorProps, setEditorProps] = useState({
     x: 0,
     y: 0,
@@ -438,20 +446,6 @@ export default function GestureHandler(
       lastRulerPositionForLock.current = { ...rulerPosition };
     }
   }, [rulerPosition]);
-
-  // useEffect(() => {
-  //   console.log("📍 GestureHandler received rulerPosition:", rulerPosition);
-  //   if (rulerPosition) {
-  //     console.log("   -> Has ruler data:", {
-  //       x: rulerPosition.x,
-  //       y: rulerPosition.y,
-  //       rotation: rulerPosition.rotation,
-  //       scale: rulerPosition.scale,
-  //     });
-  //   } else {
-  //     console.log("   -> Ruler position is NULL");
-  //   }
-  // }, [rulerPosition]);
 
   // Cache canvas ruler to avoid recalculating every frame
   const canvasRulerCache = useRef(null);
@@ -886,10 +880,6 @@ export default function GestureHandler(
           // Set màu và lưu vào picked colors
           setColor?.(hit.color);
           onColorPicked?.(hit.color);
-
-          // if (typeof __DEV__ !== "undefined" && __DEV__) {
-          //   console.log("🎨 Eyedropper picked color:", hit.color);
-          // }
         } else {
           // Check other strokes (shapes, lines, etc.)
           const activeStrokes = visible;
@@ -943,12 +933,6 @@ export default function GestureHandler(
                   // Tap vào bên trong shape có fill → lấy fillColor
                   setColor?.(s.fillColor);
                   onColorPicked?.(s.fillColor);
-                  if (typeof __DEV__ !== "undefined" && __DEV__) {
-                    // console.log(
-                    //   "🎨 Eyedropper picked fill color:",
-                    //   s.fillColor
-                    // );
-                  }
                   return;
                 }
               }
@@ -965,9 +949,6 @@ export default function GestureHandler(
                 // Gần viền → lấy màu viền
                 setColor?.(s.color);
                 onColorPicked?.(s.color);
-                // if (typeof __DEV__ !== "undefined" && __DEV__) {
-                //   console.log("🎨 Eyedropper picked stroke color:", s.color);
-                // }
                 return;
               }
             }

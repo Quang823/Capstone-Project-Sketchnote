@@ -576,7 +576,7 @@ export default function NoteSetupScreen({ navigation, route }) {
       Alert.alert(
         "Error",
         "Failed to create project. Please try again.\n" +
-          (error.message || "Unknown error")
+          (error.message || "Unknown error"),
       );
     }
   };

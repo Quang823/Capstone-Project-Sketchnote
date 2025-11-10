@@ -21,8 +21,6 @@ export default function UpdateBlogScreen({ route, navigation }) {
   const [loading, setLoading] = useState(false);
 
   const handleUpdateBlog = async () => {
-    // console.log("🟣 Handle update start");
-
     if (!title || !content) {
       Toast.show({ type: "error", text1: "Please fill in all fields" });
       return;

@@ -14,8 +14,6 @@ export const CartProvider = ({ children }) => {
         const storedCart = await AsyncStorage.getItem("cart");
         if (storedCart) {
           setCart(JSON.parse(storedCart));
-          // console.log("✅ Cart loaded from storage");
-          // console.log(storedCart);
         }
       } catch (error) {
         console.error("❌ Error loading cart:", error);
@@ -28,8 +26,6 @@ export const CartProvider = ({ children }) => {
     (async () => {
       try {
         await AsyncStorage.setItem("cart", JSON.stringify(cart));
-        // console.log(cart);
-        // console.log("💾 Cart saved to storage");
       } catch (error) {
         console.error("❌ Error saving cart:", error);
       }
@@ -110,7 +106,6 @@ export const CartProvider = ({ children }) => {
   // ✅ Xóa toàn bộ giỏ hàng
   const clearCart = () => {
     setCart([]);
-    // console.log("🧹 Cart cleared");
   };
 
   // ✅ Tính tổng giá trị giỏ hàng
