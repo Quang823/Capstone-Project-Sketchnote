@@ -21,15 +21,16 @@ import PaymentWebViewScreen from "../screens/payment/PaymentWebViewScreen";
 import PaymentSuccessScreen from "../screens/payment/PaymentSuccessScreen";
 import PaymentFailedScreen from "../screens/payment/PaymentFailedScreen";
 import NoteSetupScreen from "../screens/note/NoteSetupScreenFinal";
-
-// Designer Screens
+import TransactionHistoryScreen from "../screens/store/Transaction/TransactionHistoryScreen";
+import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
+import OrderSuccessScreen from "../screens/store/Payment/OrderSuccessScreen";
 import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen";
 import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/DesignerProductsScreen";
 import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
 import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
-import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
-import OrderSuccessScreen from "../screens/store/Payment/OrderSuccessScreen";
-import TransactionHistoryScreen from "../screens/store/Transaction/TransactionHistoryScreen";
+import DesignerSubscription from "../screens/store/DesignerSubscription/DesignerSubscription";
+
+
 
 const Stack = createNativeStackNavigator();
 
@@ -54,6 +55,8 @@ export default function AppNavigator() {
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="Wallet" component={WalletScreen} />
+      <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+      <Stack.Screen name="DesignerSubscription" component={DesignerSubscription} />
       <Stack.Screen
         name="TransactionHistory"
         component={TransactionHistoryScreen}
@@ -70,7 +73,7 @@ export default function AppNavigator() {
         name="PaymentFailedScreen"
         component={PaymentFailedScreen}
       />
-      <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+     
       <Stack.Screen
         name="OrderSuccess"
         component={OrderSuccessScreen}

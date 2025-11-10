@@ -17,6 +17,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { resourceService } from "../../../service/resourceService";
 import { useCart } from "../../../context/CartContext";
 import Toast from "react-native-toast-message";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -187,7 +188,7 @@ export default function ResourceStoreScreen() {
                 }}
               >
                 <Icon name="shopping-cart" size={16} color="#fff" />
-                <Text style={resourceStoreStyles.actionButtonText}>
+                <Text style={resourceStoreStyles.actionButtonTextAddtocart}>
                   Add to Cart
                 </Text>
               </Pressable>
@@ -246,9 +247,12 @@ export default function ResourceStoreScreen() {
     <View style={resourceStoreStyles.container}>
       {/* Header */}
       <View style={resourceStoreStyles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
+          {/* <Pressable onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back" size={24} color="#1F2937" />
+          </Pressable> */}
+        </View>
         <Text style={resourceStoreStyles.headerTitle}>Cửa hàng Resource</Text>
         <Pressable
           style={resourceStoreStyles.cartButton}

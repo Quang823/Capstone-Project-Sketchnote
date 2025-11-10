@@ -21,7 +21,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 export default function DesignerProductsScreen() {
   const navigation = useNavigation();
   const [products, setProducts] = useState([]);
-  const [filter, setFilter] = useState("all"); // all, active, inactive
+  const [filter, setFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -66,26 +66,52 @@ export default function DesignerProductsScreen() {
     fetchProducts(0, newSize);
   };
 
-  const filteredProducts = products.filter((product) => {
-    const matchesFilter =
-      filter === "all" ||
-      (filter === "active" && product.isActive) ||
-      (filter === "inactive" && !product.isActive);
+ const filteredProducts = products.filter((product) => {
+  const matchesFilter =
+    filter === "ALL" || product.status === filter;
 
-    const matchesSearch =
-      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  const matchesSearch =
+    product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesFilter && matchesSearch;
-  });
+  return matchesFilter && matchesSearch;
+});
 
-  const getStatusColor = (isActive) => {
-    return isActive ? "#10B981" : "#F59E0B";
-  };
 
-  const getStatusText = (isActive) => {
-    return isActive ? "Đang hoạt động" : "Không hoạt động";
-  };
+  const getStatusColor = (status) => {
+  switch (status) {
+     case "PENDING_REVIEW":
+      return "#3B82F6";
+    case "PUBLISHED":
+      return "#10B981"; 
+    case "REJECTED":
+      return "#EF4444"; 
+    case "ARCHIVED":
+      return "#F59E0B"; 
+    case "DELETED":
+      return "#6B7280"; 
+    default:
+      return "#9CA3AF";
+  }
+};
+
+const getStatusText = (status) => {
+  switch (status) {
+     case "PENDING_REVIEW":
+      return "Pending Review";
+    case "PUBLISHED":
+      return "Published";
+    case "REJECTED":
+      return "Rejected";
+    case "ARCHIVED":
+      return "Archived";
+    case "DELETED":
+      return "Deleted";
+    default:
+      return "All";
+  }
+};
+
 
   const formatCurrency = (amount) => {
     return (amount ?? 0).toLocaleString("vi-VN") + " VND";
@@ -195,56 +221,27 @@ export default function DesignerProductsScreen() {
 
       {/* Filter Tabs */}
       <View style={designerProductsStyles.filterTabs}>
-        <Pressable
-          style={[
-            designerProductsStyles.filterTab,
-            filter === "all" && designerProductsStyles.filterTabActive,
-          ]}
-          onPress={() => setFilter("all")}
-        >
-          <Text
-            style={[
-              designerProductsStyles.filterTabText,
-              filter === "all" && designerProductsStyles.filterTabTextActive,
-            ]}
-          >
-            Tất cả
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[
-            designerProductsStyles.filterTab,
-            filter === "active" && designerProductsStyles.filterTabActive,
-          ]}
-          onPress={() => setFilter("active")}
-        >
-          <Text
-            style={[
-              designerProductsStyles.filterTabText,
-              filter === "active" && designerProductsStyles.filterTabTextActive,
-            ]}
-          >
-            Hoạt động
-          </Text>
-        </Pressable>
-        <Pressable
-          style={[
-            designerProductsStyles.filterTab,
-            filter === "inactive" && designerProductsStyles.filterTabActive,
-          ]}
-          onPress={() => setFilter("inactive")}
-        >
-          <Text
-            style={[
-              designerProductsStyles.filterTabText,
-              filter === "inactive" &&
-                designerProductsStyles.filterTabTextActive,
-            ]}
-          >
-            Không hoạt động
-          </Text>
-        </Pressable>
-      </View>
+  {["ALL", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED", "DELETED"].map((status) => (
+    <Pressable
+      key={status}
+      style={[
+        designerProductsStyles.filterTab,
+        filter === status && designerProductsStyles.filterTabActive,
+      ]}
+      onPress={() => setFilter(status)}
+    >
+      <Text
+        style={[
+          designerProductsStyles.filterTabText,
+          filter === status && designerProductsStyles.filterTabTextActive,
+        ]}
+      >
+        {getStatusText(status)}
+      </Text>
+    </Pressable>
+  ))}
+</View>
+
 
       {/* Products List */}
       <ScrollView
@@ -257,126 +254,103 @@ export default function DesignerProductsScreen() {
               Đang tải...
             </Text>
           </View>
-        ) : (
-          filteredProducts.map((product) => (
-            <Pressable
-              key={product.resourceTemplateId}
-              style={designerProductsStyles.productCard}
-              onPress={() => handleProductPress(product)}
-            >
-              {product.images && product.images.length > 0 ? (
-                <Image
-                  source={{
-                    uri: product.images[0].url || product.images[0].imageUrl,
-                  }}
-                  style={designerProductsStyles.productThumbnail}
-                />
-              ) : (
-                <View
-                  style={[
-                    designerProductsStyles.productThumbnail,
-                    {
-                      backgroundColor: "#E5E7EB",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    },
-                  ]}
-                >
-                  <Icon name="image" size={32} color="#9CA3AF" />
-                </View>
-              )}
-
-              <View style={designerProductsStyles.productInfo}>
-                <View style={designerProductsStyles.productHeader}>
-                  <Text
-                    style={designerProductsStyles.productTitle}
-                    numberOfLines={1}
-                  >
-                    {product.name}
-                  </Text>
-                  <View
-                    style={[
-                      designerProductsStyles.statusBadge,
-                      { backgroundColor: getStatusColor(product.isActive) },
-                    ]}
-                  >
-                    <Text style={designerProductsStyles.statusText}>
-                      {getStatusText(product.isActive)}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text
-                  style={designerProductsStyles.productDescription}
-                  numberOfLines={2}
-                >
-                  {product.description}
+        ) : filteredProducts.map((product) => (
+          <Pressable
+            key={product.resourceTemplateId}
+            style={designerProductsStyles.productCard}
+            onPress={() => handleProductPress(product)}
+          >
+            {product.images && product.images.length > 0 ? (
+              <Image 
+                source={{ uri: product.images[0].url || product.images[0].imageUrl }} 
+                style={designerProductsStyles.productThumbnail} 
+              />
+            ) : (
+              <View style={[designerProductsStyles.productThumbnail, { backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }]}>
+                <Icon name="image" size={32} color="#9CA3AF" />
+              </View>
+            )}
+            
+            <View style={designerProductsStyles.productInfo}>
+              <View style={designerProductsStyles.productHeader}>
+                <Text style={designerProductsStyles.productTitle} numberOfLines={1}>
+                  {product.name}
                 </Text>
-
-                <View style={designerProductsStyles.productStats}>
-                  <View style={designerProductsStyles.statItem}>
-                    <Icon name="attach-money" size={16} color="#6B7280" />
-                    <Text style={designerProductsStyles.statText}>
-                      {formatCurrency(product.price)}
-                    </Text>
-                  </View>
-                  <View style={designerProductsStyles.statItem}>
-                    <Icon name="category" size={16} color="#6B7280" />
-                    <Text style={designerProductsStyles.statText}>
-                      {product.type}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={designerProductsStyles.productStats}>
-                  <View style={designerProductsStyles.statItem}>
-                    <Icon name="calendar-today" size={14} color="#6B7280" />
-                    <Text style={designerProductsStyles.statText}>
-                      Phát hành: {formatDate(product.releaseDate)}
-                    </Text>
-                  </View>
+                <View style={[
+                  designerProductsStyles.statusBadge,
+                  { backgroundColor: getStatusColor(product.status) }
+                ]}>
+                  <Text style={designerProductsStyles.statusText}>
+                    {getStatusText(product.status)}
+                  </Text>
                 </View>
               </View>
-
-              <View style={designerProductsStyles.productActions}>
-                <Pressable
-                  style={designerProductsStyles.actionButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleEditProduct(product);
-                  }}
-                >
-                  <Icon name="edit" size={20} color="#3B82F6" />
-                </Pressable>
-
-                <Pressable
-                  style={designerProductsStyles.actionButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleToggleActive(product);
-                  }}
-                >
-                  <Icon
-                    name={product.isActive ? "toggle-on" : "toggle-off"}
-                    size={20}
-                    color={product.isActive ? "#10B981" : "#6B7280"}
-                  />
-                </Pressable>
-
-                <Pressable
-                  style={designerProductsStyles.actionButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    handleDeleteProduct(product);
-                  }}
-                >
-                  <Icon name="delete" size={20} color="#EF4444" />
-                </Pressable>
+              
+              <Text style={designerProductsStyles.productDescription} numberOfLines={2}>
+                {product.description}
+              </Text>
+              
+              <View style={designerProductsStyles.productStats}>
+                <View style={designerProductsStyles.statItem}>
+                  <Icon name="attach-money" size={16} color="#6B7280" />
+                  <Text style={designerProductsStyles.statText}>
+                    {formatCurrency(product.price)}
+                  </Text>
+                </View>
+                <View style={designerProductsStyles.statItem}>
+                  <Icon name="category" size={16} color="#6B7280" />
+                  <Text style={designerProductsStyles.statText}>{product.type}</Text>
+                </View>
               </View>
-            </Pressable>
-          ))
-        )}
-
+              
+              <View style={designerProductsStyles.productStats}>
+                <View style={designerProductsStyles.statItem}>
+                  <Icon name="calendar-today" size={14} color="#6B7280" />
+                  <Text style={designerProductsStyles.statText}>
+                    Phát hành: {formatDate(product.releaseDate)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+            
+            <View style={designerProductsStyles.productActions}>
+              <Pressable
+                style={designerProductsStyles.actionButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleEditProduct(product);
+                }}
+              >
+                <Icon name="edit" size={20} color="#3B82F6" />
+              </Pressable>
+              
+              <Pressable
+                style={designerProductsStyles.actionButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleToggleActive(product);
+                }}
+              >
+                <Icon 
+                  name={product.isActive ? "toggle-on" : "toggle-off"} 
+                  size={20} 
+                  color={product.isActive ? "#10B981" : "#6B7280"} 
+                />
+              </Pressable>
+              
+              <Pressable
+                style={designerProductsStyles.actionButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleDeleteProduct(product);
+                }}
+              >
+                <Icon name="delete" size={20} color="#EF4444" />
+              </Pressable>
+            </View>
+          </Pressable>
+        ))}
+        
         {!loading && filteredProducts.length === 0 && (
           <View style={designerProductsStyles.emptyState}>
             <Icon name="inventory" size={64} color="#D1D5DB" />
@@ -450,54 +424,26 @@ export default function DesignerProductsScreen() {
                 <Icon name="close" size={24} color="#6B7280" />
               </Pressable>
             </View>
+            
+           <View style={designerProductsStyles.modalBody}>
+  <Text style={designerProductsStyles.modalSectionTitle}>Trạng thái</Text>
+  {["ALL", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED", "DELETED"].map((status) => (
+    <Pressable
+      key={status}
+      style={designerProductsStyles.modalOption}
+      onPress={() => {
+        setFilter(status);
+        setShowFilterModal(false);
+      }}
+    >
+      <Text style={designerProductsStyles.modalOptionText}>
+        {getStatusText(status)}
+      </Text>
+      {filter === status && <Icon name="check" size={20} color="#3B82F6" />}
+    </Pressable>
+  ))}
+</View>
 
-            <View style={designerProductsStyles.modalBody}>
-              <Text style={designerProductsStyles.modalSectionTitle}>
-                Trạng thái
-              </Text>
-              <Pressable
-                style={designerProductsStyles.modalOption}
-                onPress={() => {
-                  setFilter("all");
-                  setShowFilterModal(false);
-                }}
-              >
-                <Text style={designerProductsStyles.modalOptionText}>
-                  Tất cả
-                </Text>
-                {filter === "all" && (
-                  <Icon name="check" size={20} color="#3B82F6" />
-                )}
-              </Pressable>
-              <Pressable
-                style={designerProductsStyles.modalOption}
-                onPress={() => {
-                  setFilter("active");
-                  setShowFilterModal(false);
-                }}
-              >
-                <Text style={designerProductsStyles.modalOptionText}>
-                  Hoạt động
-                </Text>
-                {filter === "active" && (
-                  <Icon name="check" size={20} color="#3B82F6" />
-                )}
-              </Pressable>
-              <Pressable
-                style={designerProductsStyles.modalOption}
-                onPress={() => {
-                  setFilter("inactive");
-                  setShowFilterModal(false);
-                }}
-              >
-                <Text style={designerProductsStyles.modalOptionText}>
-                  Không hoạt động
-                </Text>
-                {filter === "inactive" && (
-                  <Icon name="check" size={20} color="#3B82F6" />
-                )}
-              </Pressable>
-            </View>
           </View>
         </View>
       </Modal>

@@ -1,9 +1,9 @@
 import { blogApiController } from "../api/blogApiController";
 
 export const blogService = {
-    getAllBlogs : async () =>{
+    getAllBlogs : async (pageNo,pageSize) =>{
      try {
-      const res = await blogApiController.getBlogs();
+      const res = await blogApiController.getBlogs(pageNo,pageSize);
       return res.data;
      } catch (error) {
       const message =
@@ -51,4 +51,44 @@ export const blogService = {
         throw new Error(message);
       }
     },
+    getBlogById : async (id) =>{
+      try {
+        const res = await blogApiController.getBlogById(id);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Get blog by id failed.";
+        throw new Error(message);
+      }
+    },
+    updateContent : async (id,content) =>{
+      try {
+        const res = await blogApiController.updateContent(id,content);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Update content failed.";
+        throw new Error(message);
+      }
+    },
+    createContent : async (blogId,content) =>{
+      try {
+        const res = await blogApiController.createContent(blogId,content);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Create content failed.";
+        throw new Error(message);
+      }
+    },
+    deleteContent : async (id) =>{
+      try {
+        const res = await blogApiController.deleteContent(id);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Delete content failed.";
+        throw new Error(message);
+      }
+    }
 }

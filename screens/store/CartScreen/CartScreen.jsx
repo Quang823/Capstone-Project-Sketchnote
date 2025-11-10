@@ -7,6 +7,7 @@ import {
   Image,
   Pressable,
   TextInput,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
@@ -18,7 +19,7 @@ import { orderService } from "../../../service/orderService";
 export default function CartScreen() {
   const navigation = useNavigation();
   const { cart, updateQuantity, removeFromCart } = useCart();
-
+  const [loading, setLoading] = useState(false);
   const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const total = subtotal;
 
@@ -37,54 +38,50 @@ export default function CartScreen() {
     } else {
       setDiscount(0);
       setAppliedCoupon(null);
-      Alert.alert("Invalid Code", "Invalid discount code");
+      Alert.alert("Mã không hợp lệ", "Vui lòng nhập lại mã giảm giá");
     }
   };
 
   const createOrder = async () => {
-    if (isCreatingOrder) return;
-
     try {
-      setIsCreatingOrder(true);
-
-      // Chuẩn bị body theo format của BE
+      setLoading(true);
       const orderData = {
         subscriptionId: null,
         items: cart.map((item) => ({
           resourceTemplateId: item.id,
-          discount: 0, // Luôn gửi 0 theo yêu cầu
+          discount: 0,
         })),
       };
 
-      // Gọi API
-      const response = await orderService.createOrder(orderData);
+      const res = await orderService.createOrder(orderData);
+   
+      const orderId = res?.result?.orderId;
 
-      // Clear cart sau khi tạo order thành công
+      if (!orderId) throw new Error("Không lấy được orderId");
+
+      // Xóa giỏ hàng
       cart.forEach((item) => removeFromCart(item.id));
 
       Toast.show({
-        type: "success",
-        text1: "Order Created",
-        text2: "Your order has been placed successfully.",
+        type: "info",
+        text1: "Đang chuyển hướng đến trang thanh toán...",
       });
 
-      // Navigate to OrderSuccess
-      navigation.navigate("OrderSuccess", {
-        orderId: response.orderId,
-        invoiceNumber: response.invoiceNumber,
-        totalAmount: finalTotal,
-      });
-    } catch (error) {
-      console.error("❌ Create order error:", error);
+      // 👉 Chuyển qua màn OrderSuccess, truyền orderId
+      navigation.navigate("OrderSuccess", { orderId });
+
+    } catch (err) {
       Toast.show({
         type: "error",
-        text1: "Order Failed",
-        text2: error.message || "Failed to create order. Please try again.",
+        text1: "Tạo đơn hàng thất bại",
+        text2: err.message,
       });
     } finally {
-      setIsCreatingOrder(false);
+      setLoading(false);
     }
   };
+
+
 
   const finalTotal = total - discount;
 
@@ -92,27 +89,24 @@ export default function CartScreen() {
     return (
       <SafeAreaView style={cartStyles.container}>
         <View style={cartStyles.header}>
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={cartStyles.backBtn}
-          >
+          <Pressable onPress={() => navigation.goBack()} style={cartStyles.backBtn}>
             <Icon name="arrow-back" size={24} color="#1F2937" />
           </Pressable>
-          <Text style={cartStyles.headerTitle}>Your Cart</Text>
+          <Text style={cartStyles.headerTitle}>Giỏ hàng của bạn</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={cartStyles.emptyContainer}>
           <Icon name="shopping-cart" size={100} color="#D1D5DB" />
-          <Text style={cartStyles.emptyTitle}>Your cart is empty</Text>
+          <Text style={cartStyles.emptyTitle}>Giỏ hàng trống</Text>
           <Text style={cartStyles.emptyText}>
-            You haven't added any products yet
+            Bạn chưa thêm sản phẩm nào
           </Text>
           <Pressable
             style={cartStyles.shopNowBtn}
             onPress={() => navigation.navigate("ResourceStore")}
           >
-            <Text style={cartStyles.shopNowText}>Shop Now</Text>
+            <Text style={cartStyles.shopNowText}>Mua sắm ngay</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -121,22 +115,17 @@ export default function CartScreen() {
 
   return (
     <SafeAreaView style={cartStyles.container}>
-      {/* Header */}
       <View style={cartStyles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={cartStyles.backBtn}
-        >
+        <Pressable onPress={() => navigation.goBack()} style={cartStyles.backBtn}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={cartStyles.headerTitle}>Cart ({cart.length})</Text>
         <Pressable onPress={() => navigation.navigate("ResourceStore")}>
-          <Text style={cartStyles.continueText}>Continue Shopping</Text>
+          <Text style={cartStyles.continueText}>Tiếp tục mua sắm</Text>
         </Pressable>
       </View>
 
       <View style={cartStyles.mainRow}>
-        {/* Left Column: Product List */}
         <View style={cartStyles.leftColumn}>
           <ScrollView showsVerticalScrollIndicator={false}>
             {cart.map((item) => (
@@ -167,19 +156,13 @@ export default function CartScreen() {
 
                   <View style={cartStyles.itemBottom}>
                     <View style={cartStyles.qtyRow}>
-                      <Pressable
-                        onPress={() => updateQuantity(item.id, -1)}
-                        style={cartStyles.qtyBtn}
-                      >
+                      <Pressable onPress={() => updateQuantity(item.id, -1)} style={cartStyles.qtyBtn}>
                         <Icon name="remove" size={18} color="#6B7280" />
                       </Pressable>
 
                       <Text style={cartStyles.qtyText}>{item.quantity}</Text>
 
-                      <Pressable
-                        onPress={() => updateQuantity(item.id, 1)}
-                        style={cartStyles.qtyBtn}
-                      >
+                      <Pressable onPress={() => updateQuantity(item.id, 1)} style={cartStyles.qtyBtn}>
                         <Icon name="add" size={18} color="#6B7280" />
                       </Pressable>
                     </View>
@@ -190,10 +173,7 @@ export default function CartScreen() {
                   </View>
                 </View>
 
-                <Pressable
-                  onPress={() => removeFromCart(item.id)}
-                  style={cartStyles.removeBtn}
-                >
+                <Pressable onPress={() => removeFromCart(item.id)} style={cartStyles.removeBtn}>
                   <Icon name="delete-outline" size={20} color="#EF4444" />
                 </Pressable>
               </View>
@@ -201,18 +181,13 @@ export default function CartScreen() {
           </ScrollView>
         </View>
 
-        {/* Right Column: Order Summary */}
         <View style={cartStyles.rightColumn}>
-          <Text style={cartStyles.summaryTitle}>Order Summary</Text>
+          <Text style={cartStyles.summaryTitle}>Tóm tắt đơn hàng</Text>
 
           <View style={cartStyles.summaryCard}>
             <View style={cartStyles.summaryRow}>
-              <Text style={cartStyles.label}>
-                Subtotal ({cart.length} items)
-              </Text>
-              <Text style={cartStyles.value}>
-                {subtotal.toLocaleString()} đ
-              </Text>
+              <Text style={cartStyles.label}>Tạm tính</Text>
+              <Text style={cartStyles.value}>{subtotal.toLocaleString()} đ</Text>
             </View>
 
             {appliedCoupon && (
@@ -220,7 +195,7 @@ export default function CartScreen() {
                 <View style={cartStyles.discountLabelRow}>
                   <Icon name="local-offer" size={16} color="#10B981" />
                   <Text style={cartStyles.discountLabel}>
-                    Discount ({appliedCoupon})
+                    Giảm giá ({appliedCoupon})
                   </Text>
                 </View>
                 <Text style={cartStyles.discountValue}>
@@ -232,60 +207,38 @@ export default function CartScreen() {
             <View style={cartStyles.divider} />
 
             <View style={cartStyles.summaryRow}>
-              <Text style={cartStyles.totalLabel}>Total</Text>
-              <Text style={cartStyles.totalValue}>
-                {finalTotal.toLocaleString()} đ
-              </Text>
+              <Text style={cartStyles.totalLabel}>Tổng cộng</Text>
+              <Text style={cartStyles.totalValue}>{finalTotal.toLocaleString()} đ</Text>
             </View>
           </View>
 
-          {/* Coupon Section */}
           <View style={cartStyles.couponSection}>
-            <Text style={cartStyles.couponTitle}>
-              <Icon name="local-offer" size={16} color="#6B7280" /> Discount
-              Code
-            </Text>
+            <Text style={cartStyles.couponTitle}>Mã giảm giá</Text>
             <View style={cartStyles.couponRow}>
               <TextInput
-                placeholder="Enter coupon code"
+                placeholder="Nhập mã..."
                 style={cartStyles.couponInput}
                 value={coupon}
                 onChangeText={setCoupon}
                 placeholderTextColor="#9CA3AF"
               />
               <Pressable style={cartStyles.applyBtn} onPress={applyCoupon}>
-                <Text style={cartStyles.applyText}>Apply</Text>
+                <Text style={cartStyles.applyText}>Áp dụng</Text>
               </Pressable>
             </View>
-            <Text style={cartStyles.couponHint}>
-              💡 Try: SALE10 (10% off) or VIP20 (20% off)
-            </Text>
           </View>
 
-          {/* Checkout Button */}
           <Pressable
-            style={[
-              cartStyles.checkoutBtn,
-              isCreatingOrder && { opacity: 0.6 },
-            ]}
+            style={[cartStyles.checkoutBtn, isCreatingOrder && { opacity: 0.6 }]}
             onPress={createOrder}
             disabled={isCreatingOrder}
           >
             <Icon name="lock" size={20} color="#FFFFFF" />
             <Text style={cartStyles.checkoutText}>
-              {isCreatingOrder ? "Creating Order..." : "Checkout Now"}
+              {isCreatingOrder ? "Đang tạo đơn..." : "Thanh toán ngay"}
             </Text>
             <Icon name="arrow-forward" size={20} color="#FFFFFF" />
           </Pressable>
-
-          {/* Payment Methods */}
-          <View style={cartStyles.paymentMethods}>
-            <Text style={cartStyles.paymentTitle}>Payment Methods</Text>
-            <View style={cartStyles.paymentIcons}>
-              <Icon name="account-balance-wallet" size={24} color="#6B7280" />
-              <Icon name="credit-card" size={24} color="#6B7280" />
-            </View>
-          </View>
         </View>
       </View>
     </SafeAreaView>

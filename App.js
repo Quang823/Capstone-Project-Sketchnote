@@ -8,6 +8,8 @@ import { FontProvider } from "./context/FontContext";
 import AppNavigator from "./navigation/AppNavigator";
 import useLoadFonts from "./hooks/useLoadFonts";
 import { CartProvider } from "./context/CartContext";
+import { NavigationProvider } from "./context/NavigationContext";
+import GlobalSidebar from "./components/navigation/GlobalSidebar";
 import * as SplashScreen from "expo-splash-screen";
 import { BackgroundJsonParser } from "./utils/jsonUtils";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -67,9 +69,12 @@ export default function App() {
         <CartProvider>
           <FontProvider fontsLoaded={fontsLoaded}>
             <ToastProvider>
-              <NavigationContainer>
-                <AppNavigator />
-              </NavigationContainer>
+              <NavigationProvider>
+                <NavigationContainer>
+                  <AppNavigator />
+                  <GlobalSidebar />
+                </NavigationContainer>
+              </NavigationProvider>
             </ToastProvider>
           </FontProvider>
         </CartProvider>
