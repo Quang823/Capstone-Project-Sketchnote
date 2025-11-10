@@ -25,7 +25,7 @@ import Animated, {
   useDerivedValue,
   useAnimatedReaction,
 } from "react-native-reanimated";
-import * as FileSystem from "expo-file-system";
+import { File } from "expo-file-system";
 import { Dimensions } from "react-native";
 
 const PAGE_MARGIN_H = 24;
@@ -63,8 +63,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     backgroundImageUrl = null, // 👈 Add backgroundImageUrl prop
     pageWidth = null, // 👈 Page width from noteConfig
     pageHeight = null, // 👈 Page height from noteConfig
+    loadedFonts, // 👈 Pass down preloaded fonts
+    getNearestFont, // 👈 Pass down font helper
   },
-  ref
+  ref,
 ) {
   const imageRefs = useRef(new Map());
   const liveUpdateStroke = (strokeId, partial) => {
@@ -144,7 +146,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     // ✅ Validate layers trước khi tìm
     const validLayers = layers.filter(
-      (l) => l && typeof l === "object" && l.id
+      (l) => l && typeof l === "object" && l.id,
     );
 
     if (validLayers.length === 0) return null;
@@ -178,7 +180,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         });
       });
     },
-    [activeLayerId]
+    [activeLayerId],
   );
 
   const updateLayerById = (layerId, updateFn) => {
@@ -190,7 +192,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     if (typeof updateFn !== "function") {
       console.warn(
-        "[CanvasContainer] updateLayerById: updateFn is not a function"
+        "[CanvasContainer] updateLayerById: updateFn is not a function",
       );
       return;
     }
@@ -283,7 +285,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   // Compose gestures: pinch riêng, pan và doubleTap có thể cùng lúc
   const composedGesture = Gesture.Exclusive(
     pinch,
-    Gesture.Simultaneous(pan, doubleTap)
+    Gesture.Simultaneous(pan, doubleTap),
   );
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -300,7 +302,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     () => derivedZoom.value,
     (val, prev) => {
       if (val !== prev) runOnJS(setZoomPercent)(val);
-    }
+    },
   );
 
   // ====== Helpers ======
@@ -328,7 +330,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     if (!activeLayerId) {
       console.warn(
-        "[CanvasContainer] addStrokeInternal: No activeLayerId, cannot add stroke"
+        "[CanvasContainer] addStrokeInternal: No activeLayerId, cannot add stroke",
       );
       return;
     }
@@ -336,6 +338,13 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     try {
       updateActiveLayer((strokes) => [...strokes, stroke]);
       pushUndo({ type: "add", stroke, layerId: activeLayerId });
+
+      // [FIX] Automatically select the new stroke if it's a selectable object
+      if (
+        ["image", "sticker", "table", "text", "emoji"].includes(stroke.tool)
+      ) {
+        setSelectedId(stroke.id);
+      }
     } catch (e) {
       console.error("[CanvasContainer] addStrokeInternal error:", e);
     }
@@ -419,7 +428,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     w = 100,
     h = 100,
     scrollOffsetX = 0,
-    scrollOffsetY = 0
+    scrollOffsetY = 0,
   ) => {
     "worklet";
     const screenCenterX = width / 2;
@@ -437,11 +446,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     const finalX = Math.max(
       page.x,
-      Math.min(canvasCenterX, page.x + page.w - w)
+      Math.min(canvasCenterX, page.x + page.w - w),
     );
     const finalY = Math.max(
       page.y,
-      Math.min(canvasCenterY, page.y + page.h - h)
+      Math.min(canvasCenterY, page.y + page.h - h),
     );
 
     return { x: finalX, y: finalY };
@@ -463,11 +472,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     // Clamp trong page bounds
     const finalX = Math.max(
       page.x,
-      Math.min(canvasCenterX, page.x + page.w - w)
+      Math.min(canvasCenterX, page.x + page.w - w),
     );
     const finalY = Math.max(
       page.y,
-      Math.min(canvasCenterY, page.y + page.h - h)
+      Math.min(canvasCenterY, page.y + page.h - h),
     );
 
     return { x: finalX, y: finalY };
@@ -479,8 +488,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     let safeUri = uri;
     try {
       if (uri.startsWith("content://")) {
-        const base64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
+        const base64 = await File.readAsStringAsync(uri, {
+          encoding: File.EncodingType.Base64,
         });
         safeUri = `data:image/png;base64,${base64}`;
       } else if (!uri.startsWith("file://") && !uri.startsWith("data:image")) {
@@ -505,7 +514,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       };
 
       addStrokeInternal(newStroke);
-      // console.log("Image added:", newStroke);
+      console.log("Image added:", newStroke);
     } catch (err) {
       console.error("Failed to add image:", err);
       Alert.alert("Lỗi ảnh", "Không thể đọc hoặc hiển thị ảnh này.");
@@ -524,7 +533,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       strokeData.width ?? 120,
       strokeData.height ?? 120,
       strokeData.scrollOffsetX ?? 0,
-      strokeData.scrollOffsetY ?? 0
+      strokeData.scrollOffsetY ?? 0,
     );
 
     const newStroke = {
@@ -552,7 +561,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       0,
       0,
       strokeData.scrollOffsetX ?? 0,
-      strokeData.scrollOffsetY ?? 0
+      strokeData.scrollOffsetY ?? 0,
     );
     const newStroke = {
       id: nextId(),
@@ -649,6 +658,17 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     clear: () => {
       if (!activeLayerId) return;
       updateLayerById(activeLayerId, () => []);
+      setUndoStack([]);
+      setRedoStack([]);
+      setCurrentPoints([]);
+    },
+
+    // [NEW] Clears all strokes from all layers on this canvas.
+    clearAllStrokes: () => {
+      setLayers((prev) => {
+        if (!Array.isArray(prev)) return [];
+        return prev.map((l) => ({ ...l, strokes: [] }));
+      });
       setUndoStack([]);
       setRedoStack([]);
       setCurrentPoints([]);
@@ -879,28 +899,74 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
         setUndoStack([]);
         setRedoStack([]);
-
-        // console.log(
-        //   `[CanvasContainer] Loaded ${safeStrokes.length} strokes into ${
-        //     Object.keys(strokesByLayer).length
-        //   } layer(s)`
-        // );
       } catch (e) {
         console.error("[CanvasContainer] loadStrokes error:", e);
       }
     },
-  }));
 
-  // useEffect(() => {
-  //   if (__DEV__) {
-  //     console.log(
-  //       "[CanvasContainer] rulerPosition=",
-  //       rulerPosition,
-  //       "page=",
-  //       page
-  //     );
-  //   }
-  // }, [rulerPosition, page.x, page.y, page.w, page.h]);
+    // [NEW] Append strokes incrementally without clearing existing ones
+    appendStrokes: (strokesToAppend = []) => {
+      if (!Array.isArray(strokesToAppend) || strokesToAppend.length === 0) {
+        return;
+      }
+
+      try {
+        // Group new strokes by layerId
+        const newStrokesByLayer = {};
+        strokesToAppend.forEach((stroke) => {
+          if (!stroke || typeof stroke !== "object") return;
+          const layerId = stroke.layerId || "layer1";
+          if (!newStrokesByLayer[layerId]) {
+            newStrokesByLayer[layerId] = [];
+          }
+          newStrokesByLayer[layerId].push(stroke);
+        });
+
+        // Update layers by appending new strokes
+        setLayers((prevLayers) => {
+          if (!Array.isArray(prevLayers)) {
+            // If no layers exist, create them from the new strokes
+            return Object.keys(newStrokesByLayer).map((layerId) => ({
+              id: layerId,
+              name: `Layer ${layerId}`,
+              visible: true,
+              locked: false,
+              strokes: newStrokesByLayer[layerId],
+            }));
+          }
+
+          const layerMap = new Map(
+            prevLayers.map((l) => [
+              l.id,
+              { ...l, strokes: [...(l.strokes || [])] },
+            ]),
+          );
+
+          Object.keys(newStrokesByLayer).forEach((layerId) => {
+            const newStrokes = newStrokesByLayer[layerId];
+            if (layerMap.has(layerId)) {
+              // Layer exists, append strokes
+              const existingLayer = layerMap.get(layerId);
+              existingLayer.strokes.push(...newStrokes);
+            } else {
+              // New layer from the chunk, create it
+              layerMap.set(layerId, {
+                id: layerId,
+                name: `Layer ${layerId}`,
+                visible: true,
+                locked: false,
+                strokes: newStrokes,
+              });
+            }
+          });
+
+          return Array.from(layerMap.values());
+        });
+      } catch (e) {
+        console.error("[CanvasContainer] appendStrokes error:", e);
+      }
+    },
+  }));
 
   // ====== Khi kết thúc stroke ======
   const handleAddStroke = useCallback(
@@ -918,7 +984,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       if (["text", "sticky", "comment"].includes(strokeSnapshot.tool))
         setRealtimeText(null);
     },
-    [tool, color, activeConfig]
+    [tool, color, activeConfig],
   );
 
   return (
@@ -980,6 +1046,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               ref={rendererRef}
               // ✅ Render tất cả layer visible thay vì 1 mảng strokes
               layers={visibleLayers}
+              loadedFonts={loadedFonts}
+              getNearestFont={getNearestFont}
               activeLayerId={activeLayerId}
               selectedId={selectedId}
               imageRefs={imageRefs}

@@ -246,11 +246,9 @@ export default function HomeScreen({ navigation }) {
 
   const handleProjectClick = async (project) => {
     try {
-      //console.log("🔄 Fetching project details for:", project.projectId);
       const projectDetails = await projectService.getProjectById(
-        project.projectId
+        project.projectId,
       );
-      // console.log("✅ Project details fetched:", projectDetails);
 
       // Build noteConfig từ projectDetails để DrawingScreen hiểu
       const noteConfig = {

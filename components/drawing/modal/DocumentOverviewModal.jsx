@@ -5,11 +5,11 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Image,
   Dimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { StyleSheet } from "react-native";
+import LazyImage from "../../common/LazyImage.jsx"; // Import LazyImage
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -100,8 +100,6 @@ const DocumentOverviewModal = ({
                       // Debounce 200ms để tránh rapid clicks
                       pageSelectTimeoutRef.current = setTimeout(() => {
                         try {
-                          //  console.log(`[DocumentOverviewModal] onPageSelect called with pageId: ${pageId}`);
-
                           // ✅ Gọi onPageSelect trước
                           onPageSelect?.(pageId);
 
@@ -126,7 +124,7 @@ const DocumentOverviewModal = ({
                     {/* Page Thumbnail */}
                     <View style={styles.pageThumbnail}>
                       {page.thumbnail ? (
-                        <Image
+                        <LazyImage
                           source={{ uri: page.thumbnail }}
                           style={styles.thumbnailImage}
                           resizeMode="cover"
@@ -178,7 +176,7 @@ const DocumentOverviewModal = ({
               ) : (
                 resourceItems.map((item, index) => (
                   <View key={index} style={styles.resourceCard}>
-                    <Image
+                    <LazyImage
                       source={{ uri: item.url }}
                       style={styles.resourceImage}
                       resizeMode="cover"

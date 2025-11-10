@@ -4,12 +4,12 @@ import {
   Text,
   Pressable,
   ScrollView,
-  Image,
   Animated,
   Dimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { StyleSheet } from "react-native";
+import LazyImage from "../../../common/LazyImage"; // Import LazyImage
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -75,14 +75,13 @@ const DocumentSidebar = ({
                       pageId === safeActivePageId && styles.activePageCard,
                     ]}
                     onPress={() => {
-                      // console.log(`[DocumentSidebar] onPageSelect called with pageId: ${pageId}`);
                       onPageSelect?.(pageId);
                     }}
                   >
                     {/* Page Thumbnail */}
                     <View style={styles.pageThumbnail}>
                       {page.thumbnail ? (
-                        <Image
+                        <LazyImage
                           source={{ uri: page.thumbnail }}
                           style={styles.thumbnailImage}
                           resizeMode="cover"
@@ -131,7 +130,7 @@ const DocumentSidebar = ({
               ) : (
                 resourceItems.map((item, index) => (
                   <View key={index} style={styles.resourceCard}>
-                    <Image
+                    <LazyImage
                       source={{ uri: item.url }}
                       style={styles.resourceImage}
                       resizeMode="cover"

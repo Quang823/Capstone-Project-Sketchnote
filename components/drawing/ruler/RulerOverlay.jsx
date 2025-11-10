@@ -40,17 +40,6 @@ export default function RulerOverlay({ visible, position, onChange }) {
       height: height.value,
       scale: 1,
     };
-
-    // Log ruler position and size
-    // console.log("[Ruler] Position:", {
-    //   x: Math.round(payload.x) + "px",
-    //   y: Math.round(payload.y) + "px",
-    //   rotation: Math.round(payload.rotation * 10) / 10 + "°",
-    //   width: Math.round(payload.width) + "px",
-    //   height: Math.round(payload.height) + "px",
-    // });
-
-    // console.log("[Ruler] Emitting new position:", JSON.stringify(payload));
     if (typeof onChange === "function") runOnJS(onChange)(payload);
   };
 
