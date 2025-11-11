@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, ScrollView, TouchableOpacity, Image } from "react-native";
+import { View, Text, Pressable, ScrollView, Image } from "react-native";
 import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { drawerStyles } from "../../screens/home/nav/NavigationDrawer.styles";
@@ -8,7 +8,7 @@ import { useNavigation } from "../../context/NavigationContext";
 import { getUserFromToken } from "../../utils/AuthUtils";
 import { authService } from "../../service/authService";
 
-// Global Sidebar Component - có thể gọi từ bất kỳ trang nào
+// Global Sidebar Component - can be called from any page
 export default function GlobalSidebar() {
   const {
     sidebarOpen,
@@ -90,7 +90,7 @@ export default function GlobalSidebar() {
 
   return (
     <>
-      {/* Overlay khi drawer mở */}
+      {/* Overlay when drawer is open */}
       {sidebarOpen && (
         <Reanimated.View
           style={[drawerStyles.overlay, overlayStyle]}
@@ -107,22 +107,22 @@ export default function GlobalSidebar() {
               source={{
                 uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
               }}
-              style={{ width: 28, height: 28, resizeMode: "contain" }}
+              style={{ width: 32, height: 32, resizeMode: "contain" }}
             />
             <Text style={drawerStyles.drawerTitle}>SketchNote</Text>
           </View>
           <Pressable onPress={toggleSidebar} style={drawerStyles.closeButton}>
-            <Icon name="close" size={24} color="#6B7280" />
+            <Icon name="close" size={22} color="#64748B" />
           </Pressable>
         </View>
 
         {/* User Info */}
         <View style={drawerStyles.userInfo}>
           <View style={drawerStyles.avatar}>
-            <Icon name="account-circle" size={48} color="#4F46E5" />
+            <Icon name="account-circle" size={60} color="#3B82F6" />
           </View>
           <Text style={drawerStyles.userName}>
-            {user?.name || "Người dùng"}
+            {user?.name || "User"}
           </Text>
           <Text style={drawerStyles.userEmail}>
             {user?.email || "user@example.com"}
@@ -130,20 +130,24 @@ export default function GlobalSidebar() {
         </View>
 
         {/* Navigation Items */}
-        <ScrollView style={drawerStyles.drawerItems}>
-          {/* Sidebar Menu Items */}
+        <ScrollView 
+          style={drawerStyles.drawerItems}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Quick Access Menu */}
           {[
             { icon: "description", label: "Documents", id: "documents" },
             { icon: "star", label: "Favorites", id: "favorites" },
             { icon: "share", label: "Shared", id: "shared" },
-            { icon: "store", label: "Marketplace", id: "marketplace" },
-            { icon: "delete", label: "Trash", id: "trash" },
+            { icon: "shopping-bag", label: "Marketplace", id: "marketplace" },
+            { icon: "delete-outline", label: "Trash", id: "trash" },
           ].map((item) => (
             <Pressable
               key={item.id}
-              style={[
+              style={({ pressed }) => [
                 drawerStyles.drawerItem,
                 activeNavItem === item.id && drawerStyles.drawerItemActive,
+                pressed && { opacity: 0.7 },
               ]}
               onPress={() => handleNavPress(item.id)}
             >
@@ -155,8 +159,8 @@ export default function GlobalSidebar() {
               >
                 <Icon
                   name={item.icon}
-                  size={20}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#6B7280"}
+                  size={22}
+                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
                 />
               </View>
               <Text
@@ -172,22 +176,23 @@ export default function GlobalSidebar() {
 
           <View style={drawerStyles.divider} />
 
-          {/* Main Navigation Items */}
+          {/* Main Navigation */}
           {[
-            { icon: "home", label: "Trang chủ", id: "home" },
-            { icon: "school", label: "Khóa học", id: "courses" },
-            { icon: "add-circle", label: "Tạo mới", id: "create" },
-            { icon: "photo-library", label: "Thư viện", id: "gallery" },
-            { icon: "store", label: "Cửa hàng Resource", id: "store" },
-            { icon: "receipt-long", label: "Lịch sử đơn hàng", id: "orderHistory" },
-            { icon: "dynamic-feed", label: "Xem tất cả blog", id: "blogAll" },
-            { icon: "person-outline", label: "Blog của tôi", id: "blogMine" },
+            { icon: "home", label: "Home", id: "home" },
+            { icon: "school", label: "Courses", id: "courses" },
+            { icon: "add-circle-outline", label: "Create New", id: "create" },
+            { icon: "collections", label: "Gallery", id: "gallery" },
+            { icon: "store", label: "Resource Store", id: "store" },
+            { icon: "receipt-long", label: "Order History", id: "orderHistory" },
+            { icon: "article", label: "All Blogs", id: "blogAll" },
+            { icon: "person-outline", label: "My Blogs", id: "blogMine" },
           ].map((item) => (
             <Pressable
               key={item.id}
-              style={[
+              style={({ pressed }) => [
                 drawerStyles.drawerItem,
                 activeNavItem === item.id && drawerStyles.drawerItemActive,
+                pressed && { opacity: 0.7 },
               ]}
               onPress={() => handleNavPress(item.id)}
             >
@@ -199,8 +204,8 @@ export default function GlobalSidebar() {
               >
                 <Icon
                   name={item.icon}
-                  size={20}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#6B7280"}
+                  size={22}
+                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
                 />
               </View>
               <Text
@@ -216,16 +221,17 @@ export default function GlobalSidebar() {
 
           <View style={drawerStyles.divider} />
 
-          {/* Profile & Settings */}
+          {/* Account Settings */}
           {[
-            { icon: "person", label: "Hồ sơ", id: "profile" },
-            { icon: "settings", label: "Cài đặt", id: "settings" },
+            { icon: "person", label: "Profile", id: "profile" },
+            { icon: "settings", label: "Settings", id: "settings" },
           ].map((item) => (
             <Pressable
               key={item.id}
-              style={[
+              style={({ pressed }) => [
                 drawerStyles.drawerItem,
                 activeNavItem === item.id && drawerStyles.drawerItemActive,
+                pressed && { opacity: 0.7 },
               ]}
               onPress={() => handleNavPress(item.id)}
             >
@@ -237,8 +243,8 @@ export default function GlobalSidebar() {
               >
                 <Icon
                   name={item.icon}
-                  size={20}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#6B7280"}
+                  size={22}
+                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
                 />
               </View>
               <Text
@@ -255,11 +261,17 @@ export default function GlobalSidebar() {
 
         {/* Footer */}
         <View style={drawerStyles.drawerFooter}>
-          <Pressable style={drawerStyles.logoutButton} onPress={handleLogout}>
-            <Icon name="logout" size={20} color="#EF4444" />
-            <Text style={drawerStyles.logoutText}>Đăng xuất</Text>
+          <Pressable 
+            style={({ pressed }) => [
+              drawerStyles.logoutButton,
+              pressed && { opacity: 0.7 }
+            ]} 
+            onPress={handleLogout}
+          >
+            <Icon name="logout" size={20} color="#DC2626" />
+            <Text style={drawerStyles.logoutText}>Sign Out</Text>
           </Pressable>
-          <Text style={drawerStyles.versionText}>Phiên bản 1.0.0</Text>
+          <Text style={drawerStyles.versionText}>Version 1.0.0</Text>
         </View>
       </Reanimated.View>
     </>

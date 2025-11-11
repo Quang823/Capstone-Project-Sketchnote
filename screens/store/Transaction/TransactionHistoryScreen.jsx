@@ -1,6 +1,5 @@
 import React, { useState, useRef } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   Animated,
@@ -9,6 +8,7 @@ import {
   Modal,
   Dimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 

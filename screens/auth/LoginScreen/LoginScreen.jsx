@@ -63,7 +63,7 @@ export default function LoginScreen({ onBack }) {
   const handleLogin = async () => {
     if (!email || !password) {
       toast({
-        title: "Vui lòng nhập email và mật khẩu",
+        title: "Please enter email and password",
         variant: "destructive",
       });
       return;
@@ -73,7 +73,7 @@ export default function LoginScreen({ onBack }) {
     try {
       const { roles } = await authService.login(email, password);
       toast({
-        title: "Đăng nhập thành công! 🎉",
+        title: "Login successfully! 🎉",
         variant: "success",
       });
 
@@ -83,7 +83,7 @@ export default function LoginScreen({ onBack }) {
       else if (roles.includes("CUSTOMER")) navigation.navigate("Home");
     } catch (error) {
       toast({
-        title: "Đăng nhập thất bại",
+        title: "Login failed",
         description: error.message,
         variant: "destructive",
       });
@@ -94,8 +94,8 @@ export default function LoginScreen({ onBack }) {
 
   const handleSocialLogin = (provider) => {
     toast({
-      title: `Đăng nhập với ${provider}`,
-      description: `Tính năng sẽ sớm được cập nhật`,
+      title: `Login with ${provider}`,
+      description: `This feature will be updated soon`,
     });
   };
 

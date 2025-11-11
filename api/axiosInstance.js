@@ -2,8 +2,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 // import { authService } from "./authService"; // Nếu bạn có file này
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-const API_URL2 = process.env.EXPO_PUBLIC_API_URL2;
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
+// const API_URL2 = process.env.EXPO_PUBLIC_API_URL2;
+
+const API_URL = "http://139.59.119.65:8888/";
+const API_URL2 = "http://146.190.90.222:8087/";
+
 
 // 🟢 API 1 (server chính)
 export const publicApi = axios.create({
@@ -44,7 +48,7 @@ const attachAuthInterceptor = (instance) => {
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
         try {
-          const newToken = await authService.refreshToken(); // tùy bạn implement
+          const newToken = await authService.refreshToken(); 
           if (newToken) {
             await AsyncStorage.setItem("accessToken", newToken);
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
