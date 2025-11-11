@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import Reanimated, {
 } from "react-native-reanimated";
 import { loginStyles } from "./LoginScreen.styles";
 import { useNavigation } from "@react-navigation/native";
-import { authService } from "../../../service/authService";
+import { AuthContext } from "../../../context/AuthContext";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 
@@ -34,6 +34,7 @@ export default function LoginScreen({ onBack }) {
   const { toast } = useToast();
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
+  const { login } = useContext(AuthContext);
 
   // chỉ giữ animation cho button và icon (không đụng layout)
   const buttonScale = useSharedValue(1);
@@ -61,29 +62,26 @@ export default function LoginScreen({ onBack }) {
   };
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      toast({
-        title: "Vui lòng nhập email và mật khẩu",
+    if (!email || !password)
+      return toast({
+        title: "Please enter email and password",
         variant: "destructive",
       });
-      return;
-    }
 
     setIsLoading(true);
     try {
-      const { roles } = await authService.login(email, password);
-      toast({
-        title: "Đăng nhập thành công! 🎉",
-        variant: "success",
-      });
+      const loginResult = await login(email, password); // Use context login
 
+      toast({ title: "Login successfully! 🎉", variant: "success" });
+
+      const { roles } = loginResult;
       if (roles.includes("ADMIN")) navigation.navigate("AdminDashboard");
       else if (roles.includes("DESIGNER"))
         navigation.navigate("DesignerDashboard");
       else if (roles.includes("CUSTOMER")) navigation.navigate("Home");
     } catch (error) {
       toast({
-        title: "Đăng nhập thất bại",
+        title: "Login failed",
         description: error.message,
         variant: "destructive",
       });
@@ -94,8 +92,8 @@ export default function LoginScreen({ onBack }) {
 
   const handleSocialLogin = (provider) => {
     toast({
-      title: `Đăng nhập với ${provider}`,
-      description: `Tính năng sẽ sớm được cập nhật`,
+      title: `Login with ${provider}`,
+      description: `This feature will be updated soon`,
     });
   };
 

@@ -34,6 +34,8 @@ import styles from "./DrawingScreen.styles";
 import * as offlineStorage from "../../../utils/offlineStorage";
 import { manipulateAsync, FlipType, SaveFormat } from "expo-image-manipulator";
 import { uploadToCloudinary } from "../../../service/cloudinary";
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 // Hàm helper để lấy kích thước hình ảnh
 const getImageSize = (uri) => {
   return new Promise((resolve, reject) => {
@@ -54,7 +56,7 @@ const getImageSize = (uri) => {
       (error) => {
         clearTimeout(timeout);
         reject(error);
-      },
+      }
     );
   });
 };
@@ -75,7 +77,7 @@ export default function DrawingScreen({ route }) {
             text: "OK",
             onPress: () => navigation.goBack(),
           },
-        ],
+        ]
       );
     }
   }, [noteConfig, navigation]);
@@ -342,12 +344,12 @@ export default function DrawingScreen({ route }) {
             ? updater(
                 prev[activePageId] || [
                   { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
-                ],
+                ]
               )
             : updater,
       }));
     },
-    [activePageId],
+    [activePageId]
   );
 
   // Handler for adding new layer
@@ -374,7 +376,7 @@ export default function DrawingScreen({ route }) {
         };
       });
     },
-    [layerCounter],
+    [layerCounter]
   );
 
   // Layer panel callbacks - memoized to prevent re-renders
@@ -399,7 +401,7 @@ export default function DrawingScreen({ route }) {
 
       if (!layerExists) {
         console.warn(
-          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`,
+          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`
         );
         // Fallback về layer đầu tiên nếu layer không tồn tại
         if (currentLayers.length > 0) {
@@ -415,25 +417,25 @@ export default function DrawingScreen({ route }) {
         layerSelectTimeoutRef.current = null;
       }, 50); // 50ms debounce
     },
-    [pageLayers, activePageId],
+    [pageLayers, activePageId]
   );
 
   const handleToggleVisibility = useCallback(
     (id) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)),
+        prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
       );
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleToggleLock = useCallback(
     (id) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l)),
+        prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l))
       );
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleLayerAdd = useCallback(() => {
@@ -444,16 +446,16 @@ export default function DrawingScreen({ route }) {
     (id) => {
       updateCurrentPageLayers((prev) => prev.filter((l) => l.id !== id));
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleLayerRename = useCallback(
     (id, newName) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, name: newName } : l)),
+        prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
       );
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleCloseLayerPanel = useCallback(() => setShowLayerPanel(false), []);
@@ -550,7 +552,7 @@ export default function DrawingScreen({ route }) {
         thickness: 1.0,
         stabilization: 0.2,
       },
-    [tool, toolConfigs],
+    [tool, toolConfigs]
   );
 
   const handleSettingChange = useCallback((toolName, key, value) => {
@@ -576,11 +578,11 @@ export default function DrawingScreen({ route }) {
       "airbrush",
       "crayon",
     ],
-    [],
+    []
   );
   const shapeTools = useMemo(
     () => ["line", "arrow", "rect", "circle", "triangle", "star", "polygon"],
-    [],
+    []
   );
   const [penColors, setPenColors] = useState({
     pen: "#111827",
@@ -618,11 +620,11 @@ export default function DrawingScreen({ route }) {
     if (typeof color !== "string") return;
     if (penTools.includes(tool)) {
       setPenColors((prev) =>
-        prev[tool] === color ? prev : { ...prev, [tool]: color },
+        prev[tool] === color ? prev : { ...prev, [tool]: color }
       );
     } else if (shapeTools.includes(tool)) {
       setShapeColors((prev) =>
-        prev[tool] === color ? prev : { ...prev, [tool]: color },
+        prev[tool] === color ? prev : { ...prev, [tool]: color }
       );
     }
   }, [tool, color]);
@@ -681,7 +683,7 @@ export default function DrawingScreen({ route }) {
       setStrokeWidth(size);
       setPenBaseWidths((prev) => ({ ...prev, [tool]: size }));
     },
-    [tool],
+    [tool]
   );
 
   const multiPageCanvasRef = useRef();
@@ -731,7 +733,7 @@ export default function DrawingScreen({ route }) {
           if (sanitizedChunk.length > 0) {
             multiPageCanvasRef.current?.appendStrokesToPage(
               pageId,
-              sanitizedChunk,
+              sanitizedChunk
             );
           }
 
@@ -786,7 +788,7 @@ export default function DrawingScreen({ route }) {
               projectId,
               p.pageNumber,
               p.strokeUrl,
-              { signal: controller.signal },
+              { signal: controller.signal }
             );
 
             if (controller.signal.aborted || !data) continue;
@@ -806,7 +808,7 @@ export default function DrawingScreen({ route }) {
                 const existingLayers = prev[pageId] || [];
                 const mergedLayers = data.layers.map((savedLayer) => {
                   const existingLayer = existingLayers.find(
-                    (l) => l?.id === savedLayer.id,
+                    (l) => l?.id === savedLayer.id
                   );
                   return {
                     id: savedLayer.id,
@@ -837,7 +839,7 @@ export default function DrawingScreen({ route }) {
             if (e.name !== "AbortError") {
               console.error(
                 `❌ Load page ${p.pageNumber} failed:`,
-                e?.message || e,
+                e?.message || e
               );
             }
           }
@@ -848,7 +850,7 @@ export default function DrawingScreen({ route }) {
           if (!controller.signal.aborted) {
             Alert.alert(
               "Lỗi",
-              "Không thể tải dữ liệu project. Vui lòng thử lại.",
+              "Không thể tải dữ liệu project. Vui lòng thử lại."
             );
           }
         }
@@ -870,86 +872,92 @@ export default function DrawingScreen({ route }) {
   // [REWRITTEN] 💾 SAVE with offline support
   const handleSaveFile = async () => {
     if (isSaving) {
-      Alert.alert("Đang lưu...", "Quá trình lưu đang diễn ra. Vui lòng đợi.");
+      Toast.show({
+        type: "info",
+        text1: "Saving...",
+        text2: "The saving process is in progress. Please wait.",
+      });
       return;
     }
+
     if (!multiPageCanvasRef.current?.getAllPagesData) {
-      Alert.alert("Lỗi", "Không thể lấy dữ liệu bản vẽ. Vui lòng thử lại.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Unable to retrieve drawing data. Please try again.",
+      });
       return;
     }
+
     if (!noteConfig?.projectId) {
-      Alert.alert("Lỗi", "Không tìm thấy ID của project. Không thể lưu.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Project ID not found. Unable to save.",
+      });
       return;
     }
 
     setIsSaving(true);
-    //console.log("💾 [DrawingScreen] Starting save process...");
 
-    // 1. Get all pages data from the canvas component
     const pagesData = multiPageCanvasRef.current.getAllPagesData();
-    // console.log(
-    //   "📄 [DrawingScreen] Data from getAllPagesData:",
-    //   JSON.stringify(pagesData, null, 2),
-    // );
-
     if (!pagesData || pagesData.length === 0) {
-      Alert.alert("Thông báo", "Không có dữ liệu để lưu.");
+      Toast.show({
+        type: "info",
+        text1: "Notice",
+        text2: "No data available to save.",
+      });
       setIsSaving(false);
       return;
     }
 
-    // 2. Save all pages to local storage first
     try {
-      // console.log("🗄️ [DrawingScreen] Saving all pages to local storage...");
+      // Save all pages locally
       for (const page of pagesData) {
         const localKey = `${noteConfig.projectId}_page_${page.pageNumber}`;
         await offlineStorage.saveProjectLocally(localKey, page.dataObject);
       }
-      //console.log("✅ [DrawingScreen] All pages saved locally.");
+
+      Toast.show({
+        type: "success",
+        text1: "Saved Locally",
+        text2: "All pages have been saved to your device.",
+      });
     } catch (localSaveError) {
       console.error("❌ [DrawingScreen] Error saving locally:", localSaveError);
-      Alert.alert(
-        "Lỗi lưu trữ",
-        "Không thể lưu dữ liệu vào bộ nhớ của thiết bị.",
-      );
+      Toast.show({
+        type: "error",
+        text1: "Storage Error",
+        text2: "Unable to save data to the device storage.",
+      });
       setIsSaving(false);
       return;
     }
 
-    // 3. Check network status
+    // Check network status
     const netState = await NetInfo.fetch();
     if (!netState.isConnected || !netState.isInternetReachable) {
-      Alert.alert(
-        "Đã lưu trên máy",
-        "Dữ liệu của bạn đã được lưu vào thiết bị. Quá trình đồng bộ sẽ được thực hiện sau khi có kết nối mạng.",
-      );
+      Toast.show({
+        type: "info",
+        text1: "Saved Offline",
+        text2:
+          "Your data has been saved locally. Synchronization will occur when you are online.",
+      });
       setIsSaving(false);
       // TODO: Add pages to a persistent sync queue if needed
       return;
     }
-
     // 4. If online, proceed with sync
     try {
-      // console.log(
-      //   "☁️ [DrawingScreen] Network is online. Starting sync process..."
-      // );
-
       const uploadPromises = pagesData.map((page) =>
         projectService.uploadPageToS3(
           noteConfig.projectId,
           page.pageNumber,
-          page.dataObject,
-        ),
+          page.dataObject
+        )
       );
 
-      // console.log(
-      //   `⏳ [DrawingScreen] Uploading ${uploadPromises.length} pages to S3...`
-      // );
       const uploadedPagesResults = await Promise.all(uploadPromises);
-      // console.log(
-      //   "✅ [DrawingScreen] All pages uploaded to S3:",
-      //   uploadedPagesResults
-      // );
 
       const finalPayload = {
         projectId: noteConfig.projectId,
@@ -961,16 +969,19 @@ export default function DrawingScreen({ route }) {
 
       await projectService.createPage(finalPayload);
 
-      Alert.alert(
-        "Thành công!",
-        "Project của bạn đã được lưu và đồng bộ thành công.",
-      );
+      Toast.show({
+        type: "success",
+        text1: "Success!",
+        text2: "Your project has been saved and synchronized successfully.",
+      });
     } catch (syncError) {
       console.error("❌ [DrawingScreen] Sync failed:", syncError);
-      Alert.alert(
-        "Lỗi đồng bộ",
-        "Đã có lỗi xảy ra khi đồng bộ. Dữ liệu của bạn vẫn được lưu an toàn trên thiết bị này.",
-      );
+      Toast.show({
+        type: "error",
+        text1: "Sync Error",
+        text2:
+          "An error occurred during synchronization. Your data is still safely saved on this device.",
+      });
       // TODO: Add pages to a persistent sync queue if sync fails
     } finally {
       setIsSaving(false);
@@ -981,7 +992,7 @@ export default function DrawingScreen({ route }) {
   const handleExportAndSave = useCallback(async (format) => {
     try {
       const allPages = Object.values(pageRefs.current).map(
-        (ref) => ref?.getStrokes?.() || [],
+        (ref) => ref?.getStrokes?.() || []
       );
       const projectName = `Drawing_${format}_${
         new Date().toISOString().split("T")[0]
@@ -991,7 +1002,7 @@ export default function DrawingScreen({ route }) {
         allPages,
         canvasRef,
         format,
-        projectName,
+        projectName
       );
 
       Alert.alert("✅ Export success", `File saved: ${uri}`);
@@ -1009,7 +1020,7 @@ export default function DrawingScreen({ route }) {
         quality: 1,
         exif: true,
       });
-      console.log("result", result);
+      // console.log("result", result);
       if (result.canceled) return;
 
       let localUri = result.assets?.[0]?.uri;
@@ -1027,21 +1038,21 @@ export default function DrawingScreen({ route }) {
         const manipResult = await manipulateAsync(
           localUri,
           [{ rotate: 0 }], // No-op to just get orientation fixed
-          { compress: 0.9, format: SaveFormat.JPEG },
+          { compress: 0.9, format: SaveFormat.JPEG }
         );
         localUri = manipResult.uri;
         size = { width: manipResult.width, height: manipResult.height };
       }
 
       // Upload the corrected image
-      console.log(`☁️ Uploading ${localUri} to Cloudinary...`);
+      // console.log(`☁️ Uploading ${localUri} to Cloudinary...`);
       const cloudinaryResponse = await uploadToCloudinary(localUri);
       const cloudUrl = cloudinaryResponse.secure_url;
-      console.log("✅ Uploaded to Cloudinary, URL:", cloudUrl);
+      //  console.log("✅ Uploaded to Cloudinary, URL:", cloudUrl);
 
       if (!cloudUrl) {
         throw new Error(
-          "Upload to Cloudinary succeeded but no secure_url was returned.",
+          "Upload to Cloudinary succeeded but no secure_url was returned."
         );
       }
 
@@ -1085,7 +1096,7 @@ export default function DrawingScreen({ route }) {
         setIsUploadingAsset(true);
         const cloudUrl = await projectService.uploadAsset(
           localUri,
-          "image/jpeg",
+          "image/jpeg"
         );
         if (!cloudUrl) {
           throw new Error("Failed to upload image from camera.");
@@ -1211,18 +1222,23 @@ export default function DrawingScreen({ route }) {
           <View
             style={{
               backgroundColor: "#FFFFFF",
-              padding: 24,
-              borderRadius: 12,
+              borderRadius: 16,
+              padding: 14,
               alignItems: "center",
             }}
           >
-            <ActivityIndicator size="large" color="#3B82F6" />
-            <Text style={{ marginTop: 12, fontSize: 16, color: "#374151" }}>
+            <LottieView
+              source={loadingAnimation}
+              autoPlay
+              loop
+              style={{ width: 150, height: 100 }}
+            />
+            <Text style={{ fontSize: 16, color: "#374151" }}>
               {isSaving
-                ? "Đang lưu..."
+                ? "Saving..."
                 : isUploadingAsset
-                  ? "Đang tải lên..."
-                  : "Đang tải project..."}
+                ? "Uploading asset..."
+                : "Loading project..."}
             </Text>
           </View>
         </View>

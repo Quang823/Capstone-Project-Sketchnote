@@ -22,7 +22,7 @@ export const authService = {
     } catch (err) {
       const message =
         err.response?.data?.message || err.message || "Login failed.";
-      
+
       throw new Error(message);
     }
   },
@@ -49,18 +49,27 @@ export const authService = {
 
       return null;
     } catch (err) {
-      
       return null;
     }
   },
 
-  logout: async () => {
+  getCurrentUser: async (sub) => {
     try {
-      await AsyncStorage.multiRemove(["accessToken", "refreshToken", "roles"]);
-      return true;
-    } catch (e) {
-      console.error("Error logging out:", e);
-      return false;
+      if (!sub) throw new Error("Missing sub when fetching current user");
+
+      const res = await authApiController.getCurrentUser(sub);
+
+      if (res?.data?.result) {
+        return res.data.result;
+      }
+
+      throw new Error("User data not found.");
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to fetch current user.";
+      throw new Error(message);
     }
   },
 };

@@ -13,7 +13,7 @@ import GlobalSidebar from "./components/navigation/GlobalSidebar";
 import * as SplashScreen from "expo-splash-screen";
 import { BackgroundJsonParser } from "./utils/jsonUtils";
 import ErrorBoundary from "./components/ErrorBoundary";
-
+import { AuthProvider } from "./context/AuthContext";
 // Ngăn splash tự ẩn sớm
 SplashScreen.preventAutoHideAsync();
 
@@ -62,23 +62,25 @@ export default function App() {
   }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ErrorBoundary fallbackText="The background parser has crashed. Please restart the app.">
-        <BackgroundJsonParser />
-      </ErrorBoundary>
-      <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-        <CartProvider>
-          <FontProvider fontsLoaded={fontsLoaded}>
-            <ToastProvider>
-              <NavigationProvider>
-                <NavigationContainer>
-                  <AppNavigator />
-                  <GlobalSidebar />
-                </NavigationContainer>
-              </NavigationProvider>
-            </ToastProvider>
-          </FontProvider>
-        </CartProvider>
-      </View>
+      <AuthProvider>
+        <ErrorBoundary fallbackText="The background parser has crashed. Please restart the app.">
+          <BackgroundJsonParser />
+        </ErrorBoundary>
+        <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+          <CartProvider>
+            <FontProvider fontsLoaded={fontsLoaded}>
+              <ToastProvider>
+                <NavigationProvider>
+                  <NavigationContainer>
+                    <AppNavigator />
+                    <GlobalSidebar />
+                  </NavigationContainer>
+                </NavigationProvider>
+              </ToastProvider>
+            </FontProvider>
+          </CartProvider>
+        </View>
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 }

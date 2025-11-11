@@ -8,24 +8,24 @@ export default function PaymentWebViewScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { paymentUrl } = route.params;
-  
+
   const webViewRef = useRef(null);
   const isMounted = useRef(true);
   const [hasError, setHasError] = useState(false);
-  
+
   // ✅ Cleanup khi unmount
   useEffect(() => {
     isMounted.current = true;
-    
+
     return () => {
       isMounted.current = false;
-      
+
       // Stop loading nếu WebView đang load
       if (webViewRef.current) {
         try {
           webViewRef.current.stopLoading();
         } catch (err) {
-          console.warn('[PaymentWebView] Failed to stop loading:', err);
+          console.warn("[PaymentWebView] Failed to stop loading:", err);
         }
       }
     };
@@ -33,7 +33,7 @@ export default function PaymentWebViewScreen() {
 
   const handleShouldStartLoadWithRequest = (request) => {
     if (!isMounted.current) return false;
-    
+
     const url = request?.url ?? "";
 
     // ✅ Check nếu URL chứa "wallet-success"
@@ -54,70 +54,66 @@ export default function PaymentWebViewScreen() {
 
     return true; // Cho phép WebView load các URL khác
   };
-  
+
   const handleError = (syntheticEvent) => {
     const { nativeEvent } = syntheticEvent;
-    console.error('[PaymentWebView] Error:', nativeEvent);
-    
+    console.error("[PaymentWebView] Error:", nativeEvent);
+
     if (!isMounted.current) return;
-    
+
     setHasError(true);
-    
+
     Alert.alert(
-      'Lỗi tải trang',
-      'Không thể tải trang thanh toán. Vui lòng thử lại.',
+      "Lỗi tải trang",
+      "Không thể tải trang thanh toán. Vui lòng thử lại.",
       [
         {
-          text: 'Thử lại',
+          text: "Thử lại",
           onPress: () => {
             setHasError(false);
             if (webViewRef.current) {
               webViewRef.current.reload();
             }
-          }
+          },
         },
         {
-          text: 'Quay lại',
+          text: "Quay lại",
           onPress: () => navigation.goBack(),
-          style: 'cancel'
-        }
+          style: "cancel",
+        },
       ]
     );
   };
-  
+
   const handleHttpError = (syntheticEvent) => {
     const { nativeEvent } = syntheticEvent;
-    console.warn('[PaymentWebView] HTTP Error:', nativeEvent.statusCode);
-    
+    console.warn("[PaymentWebView] HTTP Error:", nativeEvent.statusCode);
+
     if (nativeEvent.statusCode >= 400) {
       handleError(syntheticEvent);
     }
   };
-  
+
   const handleLoadEnd = () => {
     if (!isMounted.current) return;
-    console.log('[PaymentWebView] Load ended');
+    // console.log('[PaymentWebView] Load ended');
   };
 
   const handleErrorBoundary = (error, errorInfo) => {
-    console.error('[PaymentWebView] ErrorBoundary caught:', error, errorInfo);
-    
+    console.error("[PaymentWebView] ErrorBoundary caught:", error, errorInfo);
+
     if (isMounted.current) {
-      Alert.alert(
-        'Lỗi',
-        'Trang thanh toán gặp sự cố. Vui lòng thử lại.',
-        [
-          {
-            text: 'Quay lại',
-            onPress: () => navigation.goBack()
-          }
-        ]
-      );
+      Alert.alert("Lỗi", "Trang thanh toán gặp sự cố. Vui lòng thử lại.", [
+        {
+          text: "Quay lại",
+          onPress: () => navigation.goBack(),
+        },
+      ]);
     }
   };
 
   return (
-    <ErrorBoundary 
+    <ErrorBoundary
       onError={handleErrorBoundary}
       message="Không thể hiển thị trang thanh toán"
     >

@@ -23,8 +23,7 @@ const { width } = Dimensions.get("window");
 
 const NUM_COLUMNS = 4;
 const CARD_MARGIN = 8;
-const CARD_WIDTH =
-  (width - (NUM_COLUMNS + 1) * CARD_MARGIN - 32) / NUM_COLUMNS;
+const CARD_WIDTH = (width - (NUM_COLUMNS + 1) * CARD_MARGIN - 32) / NUM_COLUMNS;
 
 export default function BlogScreen() {
   const navigation = useNavigation();
@@ -42,7 +41,7 @@ export default function BlogScreen() {
       // response có cấu trúc: { data: { code, message, result: { content: [...] } } }
       const data = response.result?.content || [];
 
-      console.log("Fetched blogs:", data);
+      //console.log("Fetched blogs:", data);
       setBlogs(data);
       setFilteredBlogs(data);
     } catch (error) {
@@ -113,8 +112,8 @@ export default function BlogScreen() {
     >
       {/* 🔹 Header */}
       <View style={blogStyles.header}>
-      <SidebarToggleButton iconSize={24}  />
-        
+        <SidebarToggleButton iconSize={24} />
+
         <Text style={blogStyles.headerTitle}>Bài viết</Text>
         <View style={blogStyles.headerRight} />
       </View>
@@ -177,11 +176,15 @@ export default function BlogScreen() {
                 ]}
                 onPress={() => handleViewBlog(item.id)}
               >
-                <Shadow distance={5} startColor="#00000010" finalColor="#00000005">
+                <Shadow
+                  distance={5}
+                  startColor="#00000010"
+                  finalColor="#00000005"
+                >
                   <View style={blogStyles.blogCardInner}>
                     <Image
-                      source={{ 
-                        uri: item.imageUrl || 'https://via.placeholder.com/150' 
+                      source={{
+                        uri: item.imageUrl || "https://via.placeholder.com/150",
                       }}
                       style={blogStyles.blogImage}
                       resizeMode="cover"

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { StyleSheet } from "react-native";
 import LazyImage from "../../../common/LazyImage"; // Import LazyImage
+import { orderService } from "../../../service/orderService";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -20,12 +22,31 @@ const DocumentSidebar = ({
   activePageId,
   onPageSelect,
   onAddPage,
-  resourceItems = [],
+  onResourceSelect,
 }) => {
   // ✅ Đảm bảo activePageId luôn là string hợp lệ
   const safeActivePageId = activePageId != null ? String(activePageId) : null;
   const [activeTab, setActiveTab] = useState("pages");
   const [slideAnim] = useState(new Animated.Value(visible ? 0 : -280));
+  const [purchasedTemplates, setPurchasedTemplates] = useState([]);
+  const [isLoadingResources, setIsLoadingResources] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "resources" && visible) {
+      const fetchTemplates = async () => {
+        setIsLoadingResources(true);
+        try {
+          const templates = await orderService.getPurchasedTemplates();
+          setPurchasedTemplates(templates);
+        } catch (error) {
+          console.error("Failed to fetch purchased templates:", error);
+        } finally {
+          setIsLoadingResources(false);
+        }
+      };
+      fetchTemplates();
+    }
+  }, [activeTab, visible]);
 
   React.useEffect(() => {
     Animated.spring(slideAnim, {
@@ -65,8 +86,8 @@ const DocumentSidebar = ({
                   typeof page.id !== "undefined" && page.id !== null
                     ? String(page.id)
                     : typeof page.pageId !== "undefined" && page.pageId !== null
-                    ? String(page.pageId)
-                    : `page-${index}`;
+                      ? String(page.pageId)
+                      : `page-${index}`;
                 return (
                   <Pressable
                     key={pageId}
@@ -116,29 +137,50 @@ const DocumentSidebar = ({
         );
 
       case "resources":
+        if (isLoadingResources) {
+          return (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color="#3B82F6" />
+            </View>
+          );
+        }
         return (
           <ScrollView
             style={styles.tabContent}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.resourcesGrid}>
-              {resourceItems.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Icon name="collections" size={48} color="#D1D5DB" />
-                  <Text style={styles.emptyStateText}>No resources</Text>
-                </View>
-              ) : (
-                resourceItems.map((item, index) => (
-                  <View key={index} style={styles.resourceCard}>
-                    <LazyImage
-                      source={{ uri: item.url }}
-                      style={styles.resourceImage}
-                      resizeMode="cover"
-                    />
+            {purchasedTemplates.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Icon name="collections" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyStateText}>
+                  No purchased resources
+                </Text>
+              </View>
+            ) : (
+              purchasedTemplates.map((template) => (
+                <View
+                  key={template.resourceTemplateId}
+                  style={styles.templateSection}
+                >
+                  <Text style={styles.templateName}>{template.name}</Text>
+                  <View style={styles.resourcesGrid}>
+                    {template.items.map((item) => (
+                      <Pressable
+                        key={item.resourceItemId}
+                        style={styles.resourceCard}
+                        onPress={() => onResourceSelect?.(item.itemUrl)}
+                      >
+                        <LazyImage
+                          source={{ uri: item.itemUrl }}
+                          style={styles.resourceImage}
+                          resizeMode="cover"
+                        />
+                      </Pressable>
+                    ))}
                   </View>
-                ))
-              )}
-            </View>
+                </View>
+              ))
+            )}
           </ScrollView>
         );
 
@@ -381,6 +423,15 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#9CA3AF",
     marginTop: 8,
+  },
+  templateSection: {
+    marginBottom: 16,
+  },
+  templateName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 8,
   },
 });
 
