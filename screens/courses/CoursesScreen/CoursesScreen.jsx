@@ -6,32 +6,23 @@ import {
   Pressable,
   Image,
   TextInput,
-  FlatList,
   ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { LinearGradient } from "expo-linear-gradient";
 import { Shadow } from "react-native-shadow-2";
-import Reanimated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
 import { coursesStyles } from "./CoursesScreen.styles";
 import { courseService } from "../../../service/courseService";
-
-
-const ReanimatedView = Reanimated.createAnimatedComponent(View);
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 
 // Danh mục khóa học
 const courseCategories = [
   { id: "all", name: "Tất cả" },
-  { id: "design", name: "Thiết kế" },
-  { id: "business", name: "Kinh doanh" },
-  { id: "education", name: "Giáo dục" },
+  { id: "Icons", name: "Icons" },
+  { id: "Illustrations", name: "Illustrations" },
+  { id: "Typography", name: "Typography" },
 ];
+
 
 export default function CoursesScreen() {
   const navigation = useNavigation();
@@ -41,10 +32,6 @@ export default function CoursesScreen() {
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // Animation cho các phần tử
-  const opacity = useSharedValue(0);
-  const translateY = useSharedValue(50);
 
   // Fetch courses từ API
   useEffect(() => {
@@ -53,36 +40,32 @@ export default function CoursesScreen() {
 
   // Filter courses khi search hoặc category thay đổi
   useEffect(() => {
-    opacity.value = withTiming(1, { duration: 800, easing: Easing.ease });
-    translateY.value = withTiming(0, { duration: 800, easing: Easing.ease });
-    
     filterCourses();
   }, [searchQuery, selectedCategory, allCourses]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ translateY: translateY.value }],
-  }));
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await courseService.getAllCourse();
-      
+
       // Transform API data để phù hợp với UI
-      const transformedCourses = data.map(course => ({
+      const transformedCourses = data.result.map((course) => ({
         id: course.courseId.toString(),
         title: course.title,
-        instructor: "Giảng viên", // API không có thông tin này
-        image: require("../../../assets/logo1.webp"), // Placeholder image
-        price: `${course.price.toLocaleString('vi-VN')}đ`,
-        rating: 4.5, // API không có thông tin này
-        students: course.student_count,
-        level: "Cơ bản", // API không có thông tin này
-        category: course.category?.toLowerCase() || "all",
+        subtitle: course.subtitle,
+        description: course.description,
+        instructor: "Instructor",
+        imageUrl: course.imageUrl && course.imageUrl.trim() !== "​" ? course.imageUrl : null,
+        price: course.price,
+        rating: 4.5,
+        students: course.studentCount,
+        totalDuration: course.totalDuration,
+        lessonsCount: course.lessons?.length || 0,
+        level: course.lessons?.length > 5 ? "Nâng cao" : "Cơ bản",
+        category: course.category || "all",
       }));
-      
+
       setAllCourses(transformedCourses);
       setFilteredCourses(transformedCourses);
     } catch (err) {
@@ -95,22 +78,22 @@ export default function CoursesScreen() {
 
   const filterCourses = () => {
     let filtered = allCourses;
-    
+
     // Lọc theo danh mục
     if (selectedCategory !== "all") {
-      filtered = filtered.filter(course => course.category === selectedCategory);
+      filtered = filtered.filter((course) => course.category === selectedCategory);
     }
-    
+
     // Lọc theo từ khóa tìm kiếm
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        course => 
-          course.title.toLowerCase().includes(query) || 
+        (course) =>
+          course.title.toLowerCase().includes(query) ||
           course.instructor.toLowerCase().includes(query)
       );
     }
-    
+
     setFilteredCourses(filtered);
   };
 
@@ -122,61 +105,151 @@ export default function CoursesScreen() {
     navigation.navigate("CourseDetailScreen", { courseId });
   };
 
-  const handleBackPress = () => {
-    navigation.goBack();
-  };
-
   const handleRetry = () => {
     fetchCourses();
   };
 
-  return (
-    <LinearGradient
-      colors={["#E0F2FE", "#FEF3C7"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={coursesStyles.container}
-    >
-      <View style={coursesStyles.header}>
-        <Pressable style={coursesStyles.backButton} onPress={handleBackPress}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
+  // Render course card
+  const renderCourseItem = (item) => {
+    const imageUrl = item.imageUrl || "https://via.placeholder.com/280x160?text=No+Image";
+
+    return (
+      <Shadow
+        distance={8}
+        startColor="#00000015"
+        finalColor="#00000005"
+        key={item.id}
+        style={{ marginRight: 16, borderRadius: 16 }}
+      >
+        <Pressable
+          onPress={() => handleViewCourse(item.id)}
+          style={coursesStyles.courseCard}
+        >
+          {/* Image Container */}
+          <View style={coursesStyles.imageContainer}>
+            <Image
+              source={{ uri: imageUrl }}
+              style={coursesStyles.courseImage}
+              resizeMode="cover"
+            />
+            {/* Level Badge */}
+            <View style={coursesStyles.levelBadge}>
+              <Text style={coursesStyles.levelBadgeText}>
+                {item.level}
+              </Text>
+            </View>
+          </View>
+
+          {/* Info Container */}
+          <View style={coursesStyles.courseInfo}>
+            <Text style={coursesStyles.courseTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
+
+            <Text style={coursesStyles.courseSubtitle} numberOfLines={2}>
+              {item.subtitle}
+            </Text>
+
+            {/* Meta Info */}
+            <View style={coursesStyles.metaRow}>
+              <View style={coursesStyles.metaItem}>
+                <Icon name="star" size={14} color="#FFA726" />
+                <Text style={coursesStyles.metaText}>{item.rating}</Text>
+              </View>
+              <View style={coursesStyles.metaItem}>
+                <Icon name="play-circle-outline" size={14} color="#4F46E5" />
+                <Text style={coursesStyles.metaText}>{item.lessonsCount} bài</Text>
+              </View>
+              <View style={coursesStyles.metaItem}>
+                <Icon name="people" size={14} color="#10B981" />
+                <Text style={coursesStyles.metaText}>{item.students}</Text>
+              </View>
+            </View>
+
+            <Text style={coursesStyles.price}>
+              {item.price?.toLocaleString("vi-VN") || "0"} VNĐ
+            </Text>
+
+            {/* Action Button */}
+            {/* <Pressable
+              style={coursesStyles.enrollButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleViewCourse(item.id);
+              }}
+            >
+         
+              <Text style={coursesStyles.enrollButtonText}>Xem chi tiết</Text>
+            </Pressable> */}
+          </View>
         </Pressable>
+      </Shadow>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={coursesStyles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={coursesStyles.loadingText}>Đang tải khóa học...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={coursesStyles.container}>
+      {/* Header */}
+      <View style={coursesStyles.header}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
+        </View>
         <Text style={coursesStyles.headerTitle}>Khóa học</Text>
-        <View style={coursesStyles.headerRight} />
+        <View style={{ width: 44 }} />
       </View>
 
-      <View style={coursesStyles.searchContainer}>
-        <View style={coursesStyles.searchInputContainer}>
-          <Icon name="search" size={20} color="#6B7280" style={coursesStyles.searchIcon} />
+      <ScrollView
+        style={coursesStyles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Search */}
+        <View style={coursesStyles.searchContainer}>
+          <Icon
+            name="search"
+            size={20}
+            color="#9CA3AF"
+            style={coursesStyles.searchIcon}
+          />
           <TextInput
             style={coursesStyles.searchInput}
             placeholder="Tìm kiếm khóa học..."
             value={searchQuery}
             onChangeText={setSearchQuery}
+            placeholderTextColor="#9CA3AF"
           />
-          {searchQuery ? (
-            <Pressable onPress={() => setSearchQuery("")}>
-              <Icon name="close" size={20} color="#6B7280" />
-            </Pressable>
-          ) : null}
         </View>
-      </View>
 
-      <View style={coursesStyles.categoriesContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        {/* Category Filter */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={coursesStyles.categoryContainer}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
+        >
           {courseCategories.map((category) => (
             <Pressable
               key={category.id}
               style={[
                 coursesStyles.categoryButton,
-                selectedCategory === category.id && coursesStyles.categoryButtonActive,
+                selectedCategory === category.id &&
+                  coursesStyles.selectedCategoryButton,
               ]}
               onPress={() => handleCategoryPress(category.id)}
             >
               <Text
                 style={[
-                  coursesStyles.categoryButtonText,
-                  selectedCategory === category.id && coursesStyles.categoryButtonTextActive,
+                  coursesStyles.categoryText,
+                  selectedCategory === category.id &&
+                    coursesStyles.selectedCategoryText,
                 ]}
               >
                 {category.name}
@@ -184,15 +257,33 @@ export default function CoursesScreen() {
             </Pressable>
           ))}
         </ScrollView>
-      </View>
 
-      <ReanimatedView style={[coursesStyles.coursesContainer, animatedStyle]}>
-        {loading ? (
-          <View style={coursesStyles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3B82F6" />
-            <Text style={coursesStyles.loadingText}>Đang tải khóa học...</Text>
+        {/* All Courses Section */}
+        {filteredCourses.length > 0 ? (
+          <View style={coursesStyles.sectionContainer}>
+            <View style={coursesStyles.sectionHeader}>
+             
+              <Text style={coursesStyles.sectionTitle}>Tất cả khóa học</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {filteredCourses.map(renderCourseItem)}
+            </ScrollView>
           </View>
-        ) : error ? (
+        ) : (
+          <View style={coursesStyles.emptyState}>
+            <Icon name="inbox" size={80} color="#D1D5DB" />
+            <Text style={coursesStyles.emptyStateText}>
+              Không tìm thấy khóa học nào
+            </Text>
+          </View>
+        )}
+
+        {/* Error State */}
+        {error && (
           <View style={coursesStyles.errorContainer}>
             <Icon name="error-outline" size={64} color="#EF4444" />
             <Text style={coursesStyles.errorText}>{error}</Text>
@@ -200,52 +291,8 @@ export default function CoursesScreen() {
               <Text style={coursesStyles.retryButtonText}>Thử lại</Text>
             </Pressable>
           </View>
-        ) : (
-          <FlatList
-            data={filteredCourses}
-            keyExtractor={(item) => item.id}
-            numColumns={5} 
-            columnWrapperStyle={coursesStyles.courseRow}
-            showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <Pressable
-                style={coursesStyles.courseCard}
-                onPress={() => handleViewCourse(item.id)}
-              >
-                <Shadow distance={5} startColor="#00000010" finalColor="#00000005">
-                  <View style={coursesStyles.courseCardInner}>
-                    <Image source={item.image} style={coursesStyles.courseImage} />
-                    <View style={coursesStyles.courseContent}>
-                      <Text style={coursesStyles.courseTitle} numberOfLines={2}>
-                        {item.title}
-                      </Text>
-                      <Text style={coursesStyles.courseInstructor}>
-                        {item.instructor}
-                      </Text>
-                      <View style={coursesStyles.courseMetaContainer}>
-                        <View style={coursesStyles.courseRating}>
-                          <Icon name="star" size={14} color="#F59E0B" />
-                          <Text style={coursesStyles.courseRatingText}>{item.rating}</Text>
-                        </View>
-                        <Text style={coursesStyles.courseLevel}>{item.level}</Text>
-                      </View>
-                      <View style={coursesStyles.coursePriceContainer}>
-                        <Text style={coursesStyles.coursePrice}>{item.price}</Text>
-                      </View>
-                    </View>
-                  </View>
-                </Shadow>
-              </Pressable>
-            )}
-            ListEmptyComponent={
-              <View style={coursesStyles.emptyContainer}>
-                <Icon name="search-off" size={64} color="#9CA3AF" />
-                <Text style={coursesStyles.emptyText}>Không tìm thấy khóa học nào</Text>
-              </View>
-            }
-          />
         )}
-      </ReanimatedView>
-    </LinearGradient>
+      </ScrollView>
+    </View>
   );
 }

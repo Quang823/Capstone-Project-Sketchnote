@@ -31,9 +31,17 @@ export default function GlobalSidebar() {
   }, []);
 
   const handleLogout = async () => {
-    const ok = await authService.logout();
-    if (ok) {
-      navigation.replace("Login");
+    console.log("Logout button pressed!"); // Debug
+    try {
+      const success = await authService.logout();
+      console.log("Logout success:", success);
+      if (success) {
+        navigation.navigate('Login');
+      } else {
+        console.error("Logout failed");
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
     }
   };
 
@@ -46,7 +54,10 @@ export default function GlobalSidebar() {
         navigation.navigate("Home");
         break;
       case "courses":
-        navigation.navigate("Courses");
+        navigation.navigate("CoursesScreen");
+        break;
+      case "myCourses":
+        navigation.navigate("MyCourses");
         break;
       case "create":
         navigation.navigate("DrawingScreen");
@@ -176,6 +187,7 @@ export default function GlobalSidebar() {
           {[
             { icon: "home", label: "Trang chủ", id: "home" },
             { icon: "school", label: "Khóa học", id: "courses" },
+            { icon: "menu-book", label: "Khóa học của tôi", id: "myCourses" },
             { icon: "add-circle", label: "Tạo mới", id: "create" },
             { icon: "photo-library", label: "Thư viện", id: "gallery" },
             { icon: "store", label: "Cửa hàng Resource", id: "store" },
@@ -255,11 +267,15 @@ export default function GlobalSidebar() {
 
         {/* Footer */}
         <View style={drawerStyles.drawerFooter}>
-          <Pressable style={drawerStyles.logoutButton} onPress={handleLogout}>
+          <TouchableOpacity 
+            style={drawerStyles.logoutButton} 
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
             <Icon name="logout" size={20} color="#EF4444" />
-            <Text style={drawerStyles.logoutText}>Đăng xuất</Text>
-          </Pressable>
-          <Text style={drawerStyles.versionText}>Phiên bản 1.0.0</Text>
+            <Text style={drawerStyles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+          <Text style={drawerStyles.versionText}>Version 1.0.0</Text>
         </View>
       </Reanimated.View>
     </>

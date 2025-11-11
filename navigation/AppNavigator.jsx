@@ -6,6 +6,7 @@ import HomeScreen from "../screens/home/HomeScreen/HomeScreen";
 import CourseDetailScreen from "../screens/courses/CourseDetailScreen/CourseDetailScreen";
 import CoursesScreen from "../screens/courses/CoursesScreen/CoursesScreen";
 import LessonScreen from "../screens/courses/LessonScreen/LessonScreen";
+import MyCoursesScreen from "../screens/courses/MyCoursesScreen/MyCoursesScreen";
 
 import BlogScreen from "../screens/blog/BlogScreen";
 import BlogDetailScreen from "../screens/blog/BlogDetailScreen";
@@ -48,6 +49,7 @@ export default function AppNavigator() {
       <Stack.Screen name="CourseDetailScreen" component={CourseDetailScreen} />
       <Stack.Screen name="CoursesScreen" component={CoursesScreen} />
       <Stack.Screen name="LessonScreen" component={LessonScreen} />
+      <Stack.Screen name="MyCourses" component={MyCoursesScreen} />
       <Stack.Screen name="BlogList" component={BlogScreen} />
       <Stack.Screen name="BlogDetail" component={BlogDetailScreen} />
       <Stack.Screen name="ResourceStore" component={ResourceStoreScreen} />

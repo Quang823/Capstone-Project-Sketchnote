@@ -5,7 +5,7 @@ import {
   ScrollView,
   Pressable,
   Image,
-  FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -18,88 +18,42 @@ import Reanimated, {
   Easing,
 } from "react-native-reanimated";
 import { courseDetailStyles } from "./CourseDetailScreen.styles";
+import { courseService } from "../../../service/courseService";
+import Toast from "react-native-toast-message";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 
-// Dữ liệu mẫu cho khóa học
-const courseData = {
-  id: "1",
-  title: "Nghệ thuật Sketchnote cơ bản",
-  instructor: "Nguyễn Văn A",
-  image: require("../../../assets/logo1.webp"),
-  price: "299.000đ",
-  rating: 4.8,
-  students: 1240,
-  level: "Cơ bản",
-  category: "design",
-  description: "Khóa học này sẽ giúp bạn nắm vững các kỹ thuật cơ bản của Sketchnote, từ cách tạo các yếu tố hình ảnh đơn giản đến việc tổ chức thông tin một cách trực quan và hấp dẫn. Phù hợp cho người mới bắt đầu muốn cải thiện kỹ năng ghi chú và tư duy trực quan.",
-  duration: "4 giờ 30 phút",
-  lastUpdated: "Tháng 6, 2023",
-  includes: [
-    "12 bài học video",
-    "5 bài tập thực hành",
-    "3 tài liệu tải về",
-    "Truy cập trọn đời",
-    "Chứng chỉ hoàn thành",
-  ],
-  modules: [
-    {
-      id: "m1",
-      title: "Giới thiệu về Sketchnote",
-      lessons: [
-        { id: "l1", title: "Sketchnote là gì?", duration: "10:15", isPreview: true },
-        { id: "l2", title: "Lợi ích của Sketchnote", duration: "12:30", isPreview: false },
-        { id: "l3", title: "Các công cụ cần thiết", duration: "15:45", isPreview: false },
-      ],
-    },
-    {
-      id: "m2",
-      title: "Các yếu tố cơ bản",
-      lessons: [
-        { id: "l4", title: "Chữ và phông chữ", duration: "20:10", isPreview: false },
-        { id: "l5", title: "Biểu tượng đơn giản", duration: "18:25", isPreview: false },
-        { id: "l6", title: "Khung và đường viền", duration: "14:50", isPreview: false },
-      ],
-    },
-    {
-      id: "m3",
-      title: "Tổ chức thông tin",
-      lessons: [
-        { id: "l7", title: "Cấu trúc trang", duration: "22:15", isPreview: false },
-        { id: "l8", title: "Sử dụng màu sắc", duration: "16:40", isPreview: false },
-        { id: "l9", title: "Kỹ thuật nhấn mạnh", duration: "19:30", isPreview: false },
-      ],
-    },
-    {
-      id: "m4",
-      title: "Thực hành và ứng dụng",
-      lessons: [
-        { id: "l10", title: "Sketchnote cho cuộc họp", duration: "25:20", isPreview: false },
-        { id: "l11", title: "Sketchnote cho học tập", duration: "23:15", isPreview: false },
-        { id: "l12", title: "Dự án cuối khóa", duration: "30:00", isPreview: false },
-      ],
-    },
-  ],
+
+const formatDuration = (seconds) => {
+  if (!seconds) return "0 phút";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours > 0) {
+    return `${hours} giờ ${minutes > 0 ? minutes + ' phút' : ''}`;
+  }
+  return `${minutes} phút`;
 };
 
 export default function CourseDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { courseId } = route.params || { courseId: "1" };
-  
-  const [course, setCourse] = useState(courseData);
+  const { courseId } = route.params || { courseId: 1 };
+
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [expandedModules, setExpandedModules] = useState({});
+
   
-  // Animation cho các phần tử
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
 
   useEffect(() => {
     opacity.value = withTiming(1, { duration: 800, easing: Easing.ease });
     translateY.value = withTiming(0, { duration: 800, easing: Easing.ease });
-    
-    // Trong thực tế, bạn sẽ fetch dữ liệu khóa học dựa trên courseId
-    // fetchCourseData(courseId).then(data => setCourse(data));
+
+    fetchCourseDetail(courseId);
   }, [courseId]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -111,163 +65,273 @@ export default function CourseDetailScreen() {
     navigation.goBack();
   };
 
-  const toggleModule = (moduleId) => {
-    setExpandedModules(prev => ({
-      ...prev,
-      [moduleId]: !prev[moduleId]
-    }));
-  };
-
   const handleStartLearning = () => {
-    // Điều hướng đến màn hình học
-    navigation.navigate("LessonScreen", { 
-      courseId: course.id, 
-      lessonId: course.modules[0].lessons[0].id 
-    });
+    if (course && course.lessons && course.lessons.length > 0) {
+      navigation.navigate("LessonScreen", {
+        courseId: course.id,
+        lessonId: course.lessons[0].lessonId,
+      });
+    }
   };
 
   const handlePreviewLesson = (lessonId) => {
-    // Điều hướng đến màn hình xem trước bài học
-    navigation.navigate("LessonScreen", { 
-      courseId: course.id, 
+    navigation.navigate("LessonScreen", {
+      courseId: course.id,
       lessonId: lessonId,
-      isPreview: true
+      isPreview: true,
     });
   };
+const handleBuyCourse = async () => {
+  try {
+    console.log("Buying course:", course.price);
+    const res = await courseService.buyCourse(course.price);
+    console.log("Buy course response:", res);
+
+    if (res.result.status === "SUCCESS") {
+      console.log("Enrolling course:", course.id);
+      const enrollRes = await courseService.enrollCourse(course.id);
+      console.log("Enroll response:", enrollRes);
+
+      Toast.show({
+        type: "success",
+        text1: "Buy Success",
+      });
+      handleStartLearning();
+    } else {
+      Toast.show({
+        type: "error",
+        text1: "Buy Failed",
+        text2: "Deposit not enough",
+      });
+      navigation.navigate("Wallet");
+    }
+  } catch (error) {
+    console.error("Buy course error:", error);
+    Toast.show({
+      type: "error",
+      text1: "Buy Failed",
+      text2: error.message,
+    });
+  }
+};
+
+  const toggleLesson = (lessonId) => {
+    setExpandedModules((prev) => ({
+      ...prev,
+      [lessonId]: !prev[lessonId],
+    }));
+  };
+
+  const fetchCourseDetail = async (courseId) => {
+  try {
+    setLoading(true);
+    setError(null);
+
+    const response = await courseService.getCourseById(courseId);
+    const enrolledRes = await courseService.getAllCourseEnrollments2();
+
+    if (response && response.result) {
+      const data = response.result;
+
+      // ✅ Check xem khóa học hiện tại đã mua chưa
+      const enrolledCourses = enrolledRes.result || [];
+      const isEnrolled = enrolledCourses.some(
+        (item) => item.courseId === data.courseId
+      );
+
+      const transformedCourse = {
+        id: data.courseId,
+        title: data.title,
+        subtitle: data.subtitle,
+        description: data.description,
+        instructor: "Instructor",
+        imageUrl: data.imageUrl?.trim() || null,
+        price: data.price,
+        rating: 4.5,
+        students: data.studentCount,
+        level: data.lessons?.length > 5 ? "Nâng cao" : "Cơ bản",
+        category: data.category,
+        duration: formatDuration(data.totalDuration),
+        totalLessons: data.lessons?.length || 0,
+        includes: [
+          `${data.lessons?.length || 0}  video lessions`,
+          "Study materials",
+          "Full access to all lessons",
+         
+        ],
+        lessons: data.lessons || [],
+        isEnrolled, 
+      };
+
+      setCourse(transformedCourse);
+    }
+  } catch (error) {
+    console.error("Error fetching course detail:", error.message);
+    setError("Không thể tải thông tin khóa học");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+  if (loading) {
+    return (
+      <View style={courseDetailStyles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={courseDetailStyles.loadingText}>Đang tải khóa học...</Text>
+      </View>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <View style={courseDetailStyles.errorContainer}>
+        <Icon name="error-outline" size={64} color="#EF4444" />
+        <Text style={courseDetailStyles.errorText}>{error || "Không tìm thấy khóa học"}</Text>
+        <Pressable style={courseDetailStyles.retryButton} onPress={() => fetchCourseDetail(courseId)}>
+          <Text style={courseDetailStyles.retryButtonText}>Thử lại</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  const imageUrl = course.imageUrl || "https://via.placeholder.com/400x200?text=Course+Image";
 
   return (
-    <LinearGradient
-      colors={["#E0F2FE", "#FEF3C7"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={courseDetailStyles.container}
-    >
+    <View style={courseDetailStyles.container}>
       <View style={courseDetailStyles.header}>
         <Pressable style={courseDetailStyles.backButton} onPress={handleBackPress}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
-        <Text style={courseDetailStyles.headerTitle}>Chi tiết khóa học</Text>
+        <Text style={courseDetailStyles.headerTitle}>Course Details</Text>
         <View style={courseDetailStyles.headerRight} />
       </View>
 
       <ScrollView style={courseDetailStyles.scrollView}>
-        <Image source={course.image} style={courseDetailStyles.courseImage} />
-        
-        <ReanimatedView style={[courseDetailStyles.courseInfoContainer, animatedStyle]}>
-          <Text style={courseDetailStyles.courseTitle}>{course.title}</Text>
-          
-          <View style={courseDetailStyles.instructorContainer}>
-            <Icon name="person" size={16} color="#6B7280" />
-            <Text style={courseDetailStyles.instructorText}>
-              Giảng viên: {course.instructor}
-            </Text>
-          </View>
-          
-          <View style={courseDetailStyles.metaContainer}>
-            <View style={courseDetailStyles.metaItem}>
-              <Icon name="star" size={16} color="#F59E0B" />
-              <Text style={courseDetailStyles.metaText}>{course.rating} (120 đánh giá)</Text>
-            </View>
-            <View style={courseDetailStyles.metaItem}>
-              <Icon name="people" size={16} color="#6B7280" />
-              <Text style={courseDetailStyles.metaText}>{course.students} học viên</Text>
-            </View>
-            <View style={courseDetailStyles.metaItem}>
-              <Icon name="school" size={16} color="#6B7280" />
-              <Text style={courseDetailStyles.metaText}>{course.level}</Text>
-            </View>
-          </View>
-          
-          <View style={courseDetailStyles.priceContainer}>
-            <Text style={courseDetailStyles.priceText}>{course.price}</Text>
-          </View>
-          
-          <Pressable
-            style={courseDetailStyles.enrollButton}
-            onPress={handleStartLearning}
-          >
-            <LinearGradient
-              colors={["#4F46E5", "#6366F1"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={courseDetailStyles.enrollButtonGradient}
-            >
-              <Text style={courseDetailStyles.enrollButtonText}>Đăng ký học ngay</Text>
-            </LinearGradient>
-          </Pressable>
-          
-          <View style={courseDetailStyles.section}>
-            <Text style={courseDetailStyles.sectionTitle}>Mô tả khóa học</Text>
-            <Text style={courseDetailStyles.descriptionText}>{course.description}</Text>
-          </View>
-          
-          <View style={courseDetailStyles.section}>
-            <Text style={courseDetailStyles.sectionTitle}>Khóa học bao gồm</Text>
-            {course.includes.map((item, index) => (
-              <View key={index} style={courseDetailStyles.includeItem}>
-                <Icon name="check-circle" size={16} color="#4F46E5" />
-                <Text style={courseDetailStyles.includeText}>{item}</Text>
-              </View>
-            ))}
-          </View>
-          
-          <View style={courseDetailStyles.section}>
-            <Text style={courseDetailStyles.sectionTitle}>Nội dung khóa học</Text>
-            <Text style={courseDetailStyles.contentMeta}>
-              {course.modules.length} phần • {course.modules.reduce((total, module) => total + module.lessons.length, 0)} bài học • {course.duration} thời lượng
-            </Text>
-            
-            {course.modules.map((module) => (
-              <View key={module.id} style={courseDetailStyles.moduleContainer}>
-                <Pressable
-                  style={courseDetailStyles.moduleHeader}
-                  onPress={() => toggleModule(module.id)}
-                >
-                  <View style={courseDetailStyles.moduleHeaderLeft}>
-                    <Text style={courseDetailStyles.moduleTitle}>{module.title}</Text>
-                    <Text style={courseDetailStyles.moduleMeta}>
-                      {module.lessons.length} bài học
-                    </Text>
-                  </View>
-                  <Icon
-                    name={expandedModules[module.id] ? "keyboard-arrow-up" : "keyboard-arrow-down"}
-                    size={24}
-                    color="#4B5563"
-                  />
-                </Pressable>
+        <ReanimatedView style={[courseDetailStyles.twoColumnContainer, animatedStyle]}>
+          {/* LEFT COLUMN - Info & Content */}
+          <View style={courseDetailStyles.leftColumn}>
+            <View style={courseDetailStyles.mainCard}>
+              <Image source={{ uri: imageUrl }} style={courseDetailStyles.courseImage} />
+              
+              <View style={courseDetailStyles.courseInfo}>
+                <Text style={courseDetailStyles.courseTitle}>{course.title}</Text>
+                <Text style={courseDetailStyles.subtitle}>{course.subtitle || course.description}</Text>
                 
-                {expandedModules[module.id] && (
-                  <View style={courseDetailStyles.lessonsContainer}>
-                    {module.lessons.map((lesson) => (
-                      <View key={lesson.id} style={courseDetailStyles.lessonItem}>
-                        <View style={courseDetailStyles.lessonInfo}>
-                          <Icon
-                            name={lesson.isPreview ? "play-circle-filled" : "lock"}
-                            size={20}
-                            color={lesson.isPreview ? "#4F46E5" : "#9CA3AF"}
-                          />
-                          <Text style={courseDetailStyles.lessonTitle}>{lesson.title}</Text>
-                        </View>
-                        <View style={courseDetailStyles.lessonMeta}>
-                          {lesson.isPreview && (
-                            <Pressable
-                              style={courseDetailStyles.previewButton}
-                              onPress={() => handlePreviewLesson(lesson.id)}
-                            >
-                              <Text style={courseDetailStyles.previewButtonText}>Xem trước</Text>
-                            </Pressable>
-                          )}
-                          <Text style={courseDetailStyles.lessonDuration}>{lesson.duration}</Text>
-                        </View>
-                      </View>
-                    ))}
+                <View style={courseDetailStyles.metaRow}>
+                  <View style={courseDetailStyles.metaItem}>
+                    <Icon name="person-outline" size={16} color="#6B7280" />
+                    <Text style={courseDetailStyles.metaText}>{course.instructor}</Text>
                   </View>
+                  <View style={courseDetailStyles.metaItem}>
+                    <Icon name="star" size={16} color="#F59E0B" />
+                    <Text style={courseDetailStyles.metaText}>{course.rating}</Text>
+                  </View>
+                  <View style={courseDetailStyles.metaItem}>
+                    <Icon name="people-outline" size={16} color="#6B7280" />
+                    <Text style={courseDetailStyles.metaText}>{course.students}</Text>
+                  </View>
+                  <View style={courseDetailStyles.metaItem}>
+                    <Text style={courseDetailStyles.levelBadge}>{course.level}</Text>
+                  </View>
+                </View>
+
+                <View style={courseDetailStyles.descriptionText}>
+                  <Text style={courseDetailStyles.descriptionContent}>{course.description}</Text>
+                </View>
+
+                <View style={courseDetailStyles.includesSection}>
+                  <Text style={courseDetailStyles.includesTitle}>What you'll learn:</Text>
+                  {course.includes.map((item, index) => (
+                    <View key={index} style={courseDetailStyles.includeItem}>
+                      <Icon name="check" size={18} color="#10B981" />
+                      <Text style={courseDetailStyles.includeText}>{item}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* RIGHT COLUMN - Price & Curriculum */}
+          <View style={courseDetailStyles.rightColumn}>
+            <View style={courseDetailStyles.stickyCard}>
+              <View style={courseDetailStyles.priceSection}>
+                <Text style={courseDetailStyles.priceText}>
+                  {course.price?.toLocaleString("vi-VN") || "0"} đ
+                </Text>
+                
+                {course.isEnrolled ? (
+                  <Pressable style={courseDetailStyles.primaryButton} onPress={handleStartLearning}>
+                    <LinearGradient
+                      colors={["#10B981", "#059669"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={courseDetailStyles.buttonGradient}
+                    >
+                      <Icon name="play-arrow" size={22} color="white" />
+                      <Text style={courseDetailStyles.buttonText}>Start Learning</Text>
+                    </LinearGradient>
+                  </Pressable>
+                ) : (
+                  <Pressable style={courseDetailStyles.primaryButton} onPress={handleBuyCourse}>
+                    <LinearGradient
+                      colors={["#3B82F6", "#2563EB"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={courseDetailStyles.buttonGradient}
+                    >
+                      <Icon name="shopping-cart" size={20} color="white" />
+                      <Text style={courseDetailStyles.buttonText}>Buy Now</Text>
+                    </LinearGradient>
+                  </Pressable>
                 )}
               </View>
-            ))}
+
+              <View style={courseDetailStyles.curriculumSection}>
+                <View style={courseDetailStyles.curriculumHeader}>
+                  <Icon name="format-list-bulleted" size={24} color="#3B82F6" />
+                  <Text style={courseDetailStyles.curriculumTitle}>Course Curriculum</Text>
+                </View>
+                <Text style={courseDetailStyles.curriculumMeta}>
+                  {course.totalLessons} lessons • {course.duration}
+                </Text>
+
+                {course.lessons.map((lesson, index) => (
+                  <View key={lesson.lessonId} style={courseDetailStyles.lessonItem}>
+                    <Pressable
+                      style={courseDetailStyles.lessonHeader}
+                      onPress={() => toggleLesson(lesson.lessonId)}
+                    >
+                      <View style={courseDetailStyles.lessonHeaderLeft}>
+                        <Text style={courseDetailStyles.lessonIndex}>{index + 1}</Text>
+                        <View style={courseDetailStyles.lessonInfo}>
+                          <Text style={courseDetailStyles.lessonTitle}>{lesson.title}</Text>
+                          <Text style={courseDetailStyles.lessonDuration}>
+                            {formatDuration(lesson.duration)}
+                          </Text>
+                        </View>
+                      </View>
+                      <Icon
+                        name={expandedModules[lesson.lessonId] ? "expand-less" : "expand-more"}
+                        size={24}
+                        color="#9CA3AF"
+                      />
+                    </Pressable>
+
+                    {expandedModules[lesson.lessonId] && lesson.content && (
+                      <View style={courseDetailStyles.lessonContent}>
+                        <Text style={courseDetailStyles.lessonContentText}>{lesson.content}</Text>
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
           </View>
         </ReanimatedView>
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 }
+

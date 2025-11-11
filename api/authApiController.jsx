@@ -23,11 +23,10 @@ refeshToken : async (refreshToken) => {
 },
 logout: async () => {
     try {
-      await AsyncStorage.removeItem("accessToken");
-      return true;
+      return await publicApi.post(`/api/auth/logout`);
     } catch (e) {
-      console.error("Error logging out:", e);
-      return false;
+      console.error("Error calling logout API:", e);
+      throw e;
     }
   },
 }

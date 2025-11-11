@@ -1,159 +1,263 @@
-import { StyleSheet, Dimensions } from "react-native";
-
-const { width, height } = Dimensions.get("window");
-const PADDING = 16;
-const NUM_COLUMNS = 5;
-const CARD_WIDTH = (width - PADDING * (NUM_COLUMNS + 1)) / NUM_COLUMNS;
+import { StyleSheet } from 'react-native';
 
 export const coursesStyles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
   },
+  scrollContainer: {
+    flex: 1,
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#1E293B',
+    fontWeight: '600',
+  },
+
+  // Header
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
     paddingTop: 60,
-    paddingBottom: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    justifyContent: "center",
-    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#1F2937",
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1E293B',
+    letterSpacing: -0.5,
   },
-  headerRight: {
-    width: 40,
-  },
+
+  // Search
   searchContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  searchInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "white",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   searchIcon: {
-    marginRight: 8,
+    position: 'absolute',
+    left: 32,
+    zIndex: 1,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: "#1F2937",
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingLeft: 44,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#1E293B',
+    fontWeight: '500',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  categoriesContainer: {
-    paddingLeft: 16,
-    marginBottom: 16,
+
+  // Category
+  categoryContainer: {
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   categoryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-    marginRight: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginRight: 12,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  categoryButtonActive: {
-    backgroundColor: "#4F46E5",
+  selectedCategoryButton: {
+    backgroundColor: '#1D4ED8',
+    borderColor: '#4F46E5',
   },
-  categoryButtonText: {
+  categoryText: {
     fontSize: 14,
-    color: "#4B5563",
+    color: 'black',
+    fontWeight: '600',
   },
-  categoryButtonTextActive: {
-    color: "white",
-    fontWeight: "500",
+  selectedCategoryText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
-  coursesContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
+
+  // Section
+  sectionContainer: {
+    marginBottom: 24,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 20,
   },
-  courseRow: {
-    justifyContent: "space-between",
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
     marginBottom: 16,
+    gap: 8,
   },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    letterSpacing: -0.5,
+  },
+
+  // Course Card
   courseCard: {
-    flex: 1,
-  margin: 8,
-  maxWidth: "45%",
-  },
-  courseCardInner: {
+    width: 280,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    backgroundColor: "white",
-    overflow: "hidden",
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  imageContainer: {
+    position: 'relative',
+    width: '100%',
+    height: 160,
+    backgroundColor: '#F1F5F9',
   },
   courseImage: {
-    width: "100%",
-    height: 120,
-    resizeMode: "cover",
+    width: '100%',
+    height: '100%',
   },
-  courseContent: {
-    padding: 12,
+  levelBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#FDBA74',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  levelBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  courseInfo: {
+    padding: 16,
   },
   courseTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1F2937",
-    marginBottom: 4,
-    height: 40,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 6,
+    lineHeight: 22,
   },
-  courseInstructor: {
+  courseSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: 12,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+
+  // Meta Info
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
     fontSize: 12,
-    color: "#6B7280",
-    marginBottom: 8,
+    color: '#64748B',
+    fontWeight: '600',
   },
-  courseMetaContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
+
+  price: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 12,
   },
-  courseRating: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  courseRatingText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#4B5563",
-    marginLeft: 4,
-  },
-  courseLevel: {
-    fontSize: 10,
-    color: "#6B7280",
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+
+  // Enroll Button
+  enrollButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 10,
+    backgroundColor: '#60A5FA',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
-  coursePriceContainer: {
-    marginTop: 4,
+  enrollButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
-  coursePrice: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#4F46E5",
-  },
-  emptyContainer: {
+
+  // Empty State
+  emptyState: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80,
+  },
+  emptyStateText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+
+  // Error State
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingVertical: 60,
   },
-  emptyText: {
+  errorText: {
     fontSize: 16,
-    color: "#6B7280",
+    color: '#EF4444',
     marginTop: 16,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  retryButton: {
+    marginTop: 20,
+    backgroundColor: '#4F46E5',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
