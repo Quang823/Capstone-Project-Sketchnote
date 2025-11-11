@@ -66,7 +66,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     loadedFonts, // 👈 Pass down preloaded fonts
     getNearestFont, // 👈 Pass down font helper
   },
-  ref,
+  ref
 ) {
   const imageRefs = useRef(new Map());
   const liveUpdateStroke = (strokeId, partial) => {
@@ -146,7 +146,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     // ✅ Validate layers trước khi tìm
     const validLayers = layers.filter(
-      (l) => l && typeof l === "object" && l.id,
+      (l) => l && typeof l === "object" && l.id
     );
 
     if (validLayers.length === 0) return null;
@@ -180,7 +180,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         });
       });
     },
-    [activeLayerId],
+    [activeLayerId]
   );
 
   const updateLayerById = (layerId, updateFn) => {
@@ -192,7 +192,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     if (typeof updateFn !== "function") {
       console.warn(
-        "[CanvasContainer] updateLayerById: updateFn is not a function",
+        "[CanvasContainer] updateLayerById: updateFn is not a function"
       );
       return;
     }
@@ -285,7 +285,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   // Compose gestures: pinch riêng, pan và doubleTap có thể cùng lúc
   const composedGesture = Gesture.Exclusive(
     pinch,
-    Gesture.Simultaneous(pan, doubleTap),
+    Gesture.Simultaneous(pan, doubleTap)
   );
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -302,7 +302,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     () => derivedZoom.value,
     (val, prev) => {
       if (val !== prev) runOnJS(setZoomPercent)(val);
-    },
+    }
   );
 
   // ====== Helpers ======
@@ -330,7 +330,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     if (!activeLayerId) {
       console.warn(
-        "[CanvasContainer] addStrokeInternal: No activeLayerId, cannot add stroke",
+        "[CanvasContainer] addStrokeInternal: No activeLayerId, cannot add stroke"
       );
       return;
     }
@@ -428,7 +428,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     w = 100,
     h = 100,
     scrollOffsetX = 0,
-    scrollOffsetY = 0,
+    scrollOffsetY = 0
   ) => {
     "worklet";
     const screenCenterX = width / 2;
@@ -446,11 +446,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     const finalX = Math.max(
       page.x,
-      Math.min(canvasCenterX, page.x + page.w - w),
+      Math.min(canvasCenterX, page.x + page.w - w)
     );
     const finalY = Math.max(
       page.y,
-      Math.min(canvasCenterY, page.y + page.h - h),
+      Math.min(canvasCenterY, page.y + page.h - h)
     );
 
     return { x: finalX, y: finalY };
@@ -472,11 +472,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     // Clamp trong page bounds
     const finalX = Math.max(
       page.x,
-      Math.min(canvasCenterX, page.x + page.w - w),
+      Math.min(canvasCenterX, page.x + page.w - w)
     );
     const finalY = Math.max(
       page.y,
-      Math.min(canvasCenterY, page.y + page.h - h),
+      Math.min(canvasCenterY, page.y + page.h - h)
     );
 
     return { x: finalX, y: finalY };
@@ -514,7 +514,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       };
 
       addStrokeInternal(newStroke);
-      console.log("Image added:", newStroke);
+      // console.log("Image added:", newStroke);
     } catch (err) {
       console.error("Failed to add image:", err);
       Alert.alert("Lỗi ảnh", "Không thể đọc hoặc hiển thị ảnh này.");
@@ -533,7 +533,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       strokeData.width ?? 120,
       strokeData.height ?? 120,
       strokeData.scrollOffsetX ?? 0,
-      strokeData.scrollOffsetY ?? 0,
+      strokeData.scrollOffsetY ?? 0
     );
 
     const newStroke = {
@@ -561,7 +561,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       0,
       0,
       strokeData.scrollOffsetX ?? 0,
-      strokeData.scrollOffsetY ?? 0,
+      strokeData.scrollOffsetY ?? 0
     );
     const newStroke = {
       id: nextId(),
@@ -939,7 +939,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             prevLayers.map((l) => [
               l.id,
               { ...l, strokes: [...(l.strokes || [])] },
-            ]),
+            ])
           );
 
           Object.keys(newStrokesByLayer).forEach((layerId) => {
@@ -984,7 +984,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       if (["text", "sticky", "comment"].includes(strokeSnapshot.tool))
         setRealtimeText(null);
     },
-    [tool, color, activeConfig],
+    [tool, color, activeConfig]
   );
 
   return (
@@ -992,7 +992,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       <GestureDetector gesture={composedGesture}>
         <Animated.View
           key={activeLayerId}
-          style={[animatedStyle, { width: page.w, height: page.h }]}
+          style={[
+            animatedStyle,
+            { width: page.w, height: page.h, position: "relative" },
+          ]}
         >
           <GestureHandler
             key={activeLayerId}

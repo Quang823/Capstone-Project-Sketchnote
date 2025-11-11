@@ -258,7 +258,7 @@ export const projectService = {
       return await parseJsonInBackground(text);
     } catch (err) {
       if (err.name === "AbortError") {
-        console.log(`[Service] Fetch aborted for URL: ${url}`);
+        //  console.log(`[Service] Fetch aborted for URL: ${url}`);
       } else {
         console.error("❌ Error loading JSON:", err);
       }

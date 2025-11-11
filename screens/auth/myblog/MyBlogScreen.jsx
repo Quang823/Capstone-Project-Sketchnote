@@ -23,7 +23,7 @@ export default function MyBlogScreen({ navigation }) {
     try {
       setLoading(true);
       const res = await blogService.getBlogByUserId();
-      console.log("📚 Fetched blogs:", res);
+      // console.log("📚 Fetched blogs:", res);
       setBlogs(res.result || []);
     } catch (error) {
       console.error("❌ Error fetching blogs:", error);
@@ -79,7 +79,7 @@ export default function MyBlogScreen({ navigation }) {
         end={{ x: 1, y: 1 }}
         style={myBlogStyles.header}
       >
-          <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
+        <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
         <Text style={myBlogStyles.headerTitle}>Manage My Blogs</Text>
         <Pressable
           onPress={() => navigation.navigate("CreateBlog")}
@@ -140,7 +140,8 @@ export default function MyBlogScreen({ navigation }) {
                   </Text>
                   {item.contents && item.contents.length > 0 && (
                     <Text style={myBlogStyles.blogSections}>
-                      📄 {item.contents.length} section{item.contents.length > 1 ? 's' : ''}
+                      📄 {item.contents.length} section
+                      {item.contents.length > 1 ? "s" : ""}
                     </Text>
                   )}
                 </View>

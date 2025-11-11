@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   Pressable,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { StyleSheet } from "react-native";
 import LazyImage from "../../common/LazyImage.jsx"; // Import LazyImage
+import { orderService } from "../../../service/orderService.js";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -20,14 +22,33 @@ const DocumentOverviewModal = ({
   activePageId,
   onPageSelect,
   onAddPage,
-  resourceItems = [],
+  onResourceSelect,
 }) => {
   // ✅ Đảm bảo activePageId luôn là string hợp lệ
   const safeActivePageId = activePageId != null ? String(activePageId) : null;
   const [activeTab, setActiveTab] = useState("pages"); // pages, resources, layers, history
+  const [purchasedTemplates, setPurchasedTemplates] = useState([]);
+  const [isLoadingResources, setIsLoadingResources] = useState(false);
   // ✅ Debounce để tránh multiple clicks gây crash
   const pageSelectTimeoutRef = useRef(null);
   const isProcessingRef = useRef(false);
+
+  useEffect(() => {
+    if (activeTab === "resources" && visible) {
+      const fetchTemplates = async () => {
+        setIsLoadingResources(true);
+        try {
+          const templates = await orderService.getPurchasedTemplates();
+          setPurchasedTemplates(templates);
+        } catch (error) {
+          console.error("Failed to fetch purchased templates:", error);
+        } finally {
+          setIsLoadingResources(false);
+        }
+      };
+      fetchTemplates();
+    }
+  }, [activeTab, visible]);
 
   const tabs = [
     { id: "pages", label: "Pages", icon: "insert-drive-file" },
@@ -77,8 +98,8 @@ const DocumentOverviewModal = ({
                   typeof page.id !== "undefined" && page.id !== null
                     ? String(page.id)
                     : typeof page.pageId !== "undefined" && page.pageId !== null
-                    ? String(page.pageId)
-                    : `page-${index}`;
+                      ? String(page.pageId)
+                      : `page-${index}`;
                 return (
                   <Pressable
                     key={pageId}
@@ -112,7 +133,7 @@ const DocumentOverviewModal = ({
                         } catch (error) {
                           console.error(
                             `[DocumentOverviewModal] Error in pageSelect:`,
-                            error
+                            error,
                           );
                           isProcessingRef.current = false;
                           pageSelectTimeoutRef.current = null;
@@ -162,34 +183,51 @@ const DocumentOverviewModal = ({
         );
 
       case "resources":
+        if (isLoadingResources) {
+          return (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color="#3B82F6" />
+              <Text style={styles.emptyStateText}>Loading resources...</Text>
+            </View>
+          );
+        }
         return (
           <ScrollView
             style={styles.tabContent}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.resourcesGrid}>
-              {resourceItems.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Icon name="collections" size={64} color="#D1D5DB" />
-                  <Text style={styles.emptyStateText}>No resources yet</Text>
-                </View>
-              ) : (
-                resourceItems.map((item, index) => (
-                  <View key={index} style={styles.resourceCard}>
-                    <LazyImage
-                      source={{ uri: item.url }}
-                      style={styles.resourceImage}
-                      resizeMode="cover"
-                    />
-                    <Text style={styles.resourceName} numberOfLines={1}>
-                      {typeof item.name === "string" && item.name.trim()
-                        ? item.name
-                        : `Resource ${index + 1}`}
-                    </Text>
+            {purchasedTemplates.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Icon name="collections" size={64} color="#D1D5DB" />
+                <Text style={styles.emptyStateText}>
+                  No purchased resources yet
+                </Text>
+              </View>
+            ) : (
+              purchasedTemplates.map((template) => (
+                <View
+                  key={template.resourceTemplateId}
+                  style={styles.templateSection}
+                >
+                  <Text style={styles.templateName}>{template.name}</Text>
+                  <View style={styles.resourcesGrid}>
+                    {template.items.map((item) => (
+                      <Pressable
+                        key={item.resourceItemId}
+                        style={styles.resourceCard}
+                        onPress={() => onResourceSelect?.(item.itemUrl)}
+                      >
+                        <LazyImage
+                          source={{ uri: item.itemUrl }}
+                          style={styles.resourceImage}
+                          resizeMode="cover"
+                        />
+                      </Pressable>
+                    ))}
                   </View>
-                ))
-              )}
-            </View>
+                </View>
+              ))
+            )}
           </ScrollView>
         );
 
@@ -443,6 +481,15 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#9CA3AF",
     marginTop: 12,
+  },
+  templateSection: {
+    marginBottom: 16,
+  },
+  templateName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 8,
   },
 });
 

@@ -7,7 +7,8 @@ export const CONTENT_PADDING = 28;
 export const CARD_GAP = 16;
 
 // Responsive columns - 5 columns for better layout
-export const columns = width >= 1400 ? 5 : width >= 1000 ? 4 : width >= 700 ? 3 : 2;
+export const columns =
+  width >= 1400 ? 5 : width >= 1000 ? 4 : width >= 700 ? 3 : 2;
 
 // Tính CARD_WIDTH
 export const CARD_WIDTH = Math.floor(
@@ -274,10 +275,8 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 32,
   },
   loadingText: {
-    marginTop: 16,
     fontSize: 16,
     color: "#64748B",
     fontWeight: "500",

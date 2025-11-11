@@ -20,7 +20,8 @@ import Animated, {
 import { projectService } from "../../../service/projectService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { styles, columns } from "./HomeScreen.styles";
-
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 //
 // 🔹 Helper: format date
 //
@@ -71,7 +72,10 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
             key={opt.id}
             style={[
               styles.popoverItem,
-              idx === 0 && { borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+              idx === 0 && {
+                borderTopLeftRadius: 12,
+                borderTopRightRadius: 12,
+              },
               idx === options.length - 1 && {
                 borderBottomLeftRadius: 12,
                 borderBottomRightRadius: 12,
@@ -118,7 +122,10 @@ export default function HomeScreen({ navigation }) {
   // Fade-in animation khi mở
   const fade = useSharedValue(0);
   useEffect(() => {
-    fade.value = withTiming(1, { duration: 400, easing: Easing.out(Easing.cubic) });
+    fade.value = withTiming(1, {
+      duration: 400,
+      easing: Easing.out(Easing.cubic),
+    });
   }, []);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
 
@@ -185,7 +192,9 @@ export default function HomeScreen({ navigation }) {
   const handleProjectClick = useCallback(
     async (project) => {
       try {
-        const projectDetails = await projectService.getProjectById(project.projectId);
+        const projectDetails = await projectService.getProjectById(
+          project.projectId
+        );
         const noteConfig = {
           projectId: projectDetails.projectId,
           title: projectDetails.name || "Untitled Note",
@@ -267,7 +276,9 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.cardFooter}>
               <View style={styles.dateContainer}>
                 <Icon name="schedule" size={14} color="#60A5FA" />
-                <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
+                <Text style={styles.dateText}>
+                  {formatDate(item.createdAt)}
+                </Text>
               </View>
               <Icon name="arrow-forward" size={18} color="#3B82F6" />
             </View>
@@ -293,11 +304,17 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             <View style={styles.headerRight}>
-              <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate("Wallet")}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => navigation.navigate("Wallet")}
+              >
                 <Icon name="account-balance-wallet" size={22} color="#1E40AF" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.iconButton} onPress={() => navigation.navigate("Cart")}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => navigation.navigate("Cart")}
+              >
                 <Icon name="shopping-cart" size={22} color="#1E40AF" />
               </TouchableOpacity>
 
@@ -342,7 +359,12 @@ export default function HomeScreen({ navigation }) {
           {/* Loading / Error / Empty / List */}
           {loading ? (
             <View style={styles.centerContainer}>
-              <ActivityIndicator size="large" color="#3B82F6" />
+              <LottieView
+                source={loadingAnimation}
+                autoPlay
+                loop
+                style={{ width: 300, height: 300 }}
+              />
               <Text style={styles.loadingText}>Loading projects...</Text>
             </View>
           ) : error ? (
@@ -350,7 +372,10 @@ export default function HomeScreen({ navigation }) {
               <Icon name="error-outline" size={48} color="#EF4444" />
               <Text style={styles.errorTitle}>Oops!</Text>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={fetchProjects}>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={fetchProjects}
+              >
                 <Text style={styles.retryButtonText}>Try Again</Text>
               </TouchableOpacity>
             </View>
@@ -358,12 +383,16 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.centerContainer}>
               <Icon name="folder-open" size={64} color="#BFDBFE" />
               <Text style={styles.emptyTitle}>No Projects Yet</Text>
-              <Text style={styles.emptyText}>Start creating amazing projects!</Text>
+              <Text style={styles.emptyText}>
+                Start creating amazing projects!
+              </Text>
               <TouchableOpacity
                 style={styles.createFirstButton}
                 onPress={() => setPopoverVisible(true)}
               >
-                <Text style={styles.createFirstButtonText}>Create First Project</Text>
+                <Text style={styles.createFirstButtonText}>
+                  Create First Project
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -381,7 +410,10 @@ export default function HomeScreen({ navigation }) {
               {totalPages > 1 && (
                 <View style={styles.paginationContainer}>
                   <TouchableOpacity
-                    style={[styles.paginationButton, currentPage === 1 && styles.paginationButtonDisabled]}
+                    style={[
+                      styles.paginationButton,
+                      currentPage === 1 && styles.paginationButtonDisabled,
+                    ]}
                     onPress={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                   >
@@ -393,31 +425,36 @@ export default function HomeScreen({ navigation }) {
                   </TouchableOpacity>
 
                   <View style={styles.paginationNumbers}>
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <TouchableOpacity
-                        key={page}
-                        style={[
-                          styles.paginationNumber,
-                          currentPage === page && styles.paginationNumberActive,
-                        ]}
-                        onPress={() => handlePageChange(page)}
-                      >
-                        <Text
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                      (page) => (
+                        <TouchableOpacity
+                          key={page}
                           style={[
-                            styles.paginationNumberText,
-                            currentPage === page && styles.paginationNumberTextActive,
+                            styles.paginationNumber,
+                            currentPage === page &&
+                              styles.paginationNumberActive,
                           ]}
+                          onPress={() => handlePageChange(page)}
                         >
-                          {page}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                          <Text
+                            style={[
+                              styles.paginationNumberText,
+                              currentPage === page &&
+                                styles.paginationNumberTextActive,
+                            ]}
+                          >
+                            {page}
+                          </Text>
+                        </TouchableOpacity>
+                      )
+                    )}
                   </View>
 
                   <TouchableOpacity
                     style={[
                       styles.paginationButton,
-                      currentPage === totalPages && styles.paginationButtonDisabled,
+                      currentPage === totalPages &&
+                        styles.paginationButtonDisabled,
                     ]}
                     onPress={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}

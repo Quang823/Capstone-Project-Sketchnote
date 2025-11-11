@@ -81,7 +81,7 @@ export default function GestureHandler(
     pageOffsetY = 0, // ✅ Page offset trong project
     onColorPicked, // 👈 Thêm prop
   },
-  ref
+  ref,
 ) {
   // Expose resetRulerLock function to parent components
   useImperativeHandle(ref, () => ({
@@ -256,7 +256,7 @@ export default function GestureHandler(
           eSegs[s][0],
           eSegs[s][1],
           eSegs[s][2],
-          eSegs[s][3]
+          eSegs[s][3],
         );
         if (d <= radius + (stroke.width || 6) * 0.5) {
           cutEdge[i] = true;
@@ -341,7 +341,7 @@ export default function GestureHandler(
       (s) =>
         s &&
         (!activeLayerId || s.layerId === activeLayerId) &&
-        (s.visible ?? true)
+        (s.visible ?? true),
     );
   }, [strokes, activeLayerId]);
 
@@ -488,7 +488,7 @@ export default function GestureHandler(
     const rawW = Number.isFinite(r.width) ? r.width : undefined;
     const rawH = Number.isFinite(r.height) ? r.height : undefined;
 
-    let useWidth = Number.isFinite(rawW) && rawW > 0 ? rawW : page?.w ?? 600;
+    let useWidth = Number.isFinite(rawW) && rawW > 0 ? rawW : (page?.w ?? 600);
     let useHeight = Number.isFinite(rawH) && rawH > 0 ? rawH : 60;
 
     const s = zoomMirror?.scale || 1;
@@ -544,7 +544,7 @@ export default function GestureHandler(
     (vals) => {
       runOnJS(setZoomMirror)({ scale: vals.s, x: vals.x, y: vals.y });
       runOnJS(invalidateRulerCache)();
-    }
+    },
   );
 
   useEffect(() => {
@@ -560,7 +560,7 @@ export default function GestureHandler(
   const selectedStroke = useMemo(
     () =>
       Array.isArray(strokes) ? strokes.find((s) => s?.id === selectedId) : null,
-    [strokes, selectedId]
+    [strokes, selectedId],
   );
 
   const { handleMoveCommit } = useLassoTransform({
@@ -668,7 +668,7 @@ export default function GestureHandler(
       setRealtimeText,
       editorProps.x,
       editorProps.y,
-    ]
+    ],
   );
 
   const hitTestText = (x, y, strokesOrLayers) => {
@@ -891,7 +891,7 @@ export default function GestureHandler(
             const isShape =
               s.tool &&
               ["rectangle", "circle", "triangle", "star", "polygon"].includes(
-                s.tool
+                s.tool,
               );
             const hasFill = s.fill && s.fillColor;
 
@@ -1015,7 +1015,7 @@ export default function GestureHandler(
             const pad = snap.padding || 0;
             const newFont = Math.max(
               8,
-              Math.round((selectedBox.height || 0) - pad * 2)
+              Math.round((selectedBox.height || 0) - pad * 2),
             );
             const tx = (selectedBox.x || 0) + pad;
             const ty = (selectedBox.y || 0) + newFont + pad;
@@ -1051,8 +1051,8 @@ export default function GestureHandler(
                 tool === "sticky"
                   ? "#FFEB3B"
                   : tool === "comment"
-                  ? "#E3F2FD"
-                  : "transparent",
+                    ? "#E3F2FD"
+                    : "transparent",
               padding: tool === "sticky" || tool === "comment" ? 8 : 0,
               layerId: activeLayerId,
             });
@@ -1141,7 +1141,7 @@ export default function GestureHandler(
                 edges.topEdge.x1,
                 edges.topEdge.y1,
                 edges.topEdge.x2,
-                edges.topEdge.y2
+                edges.topEdge.y2,
               );
               const dBottom = distanceToSegment(
                 px,
@@ -1149,7 +1149,7 @@ export default function GestureHandler(
                 edges.bottomEdge.x1,
                 edges.bottomEdge.y1,
                 edges.bottomEdge.x2,
-                edges.bottomEdge.y2
+                edges.bottomEdge.y2,
               );
 
               const minD = Math.min(dTop, dBottom);
@@ -1183,12 +1183,12 @@ export default function GestureHandler(
                 // Luôn lấy vị trí ruler mới nhất, không sử dụng cache
                 const latestCanvasRuler = screenRulerToCanvasRuler(
                   rulerPosition,
-                  false
+                  false,
                 );
                 const constrained = constrainToRulerBarrier(
                   { x: px, y: py },
                   null,
-                  latestCanvasRuler || canvasRuler
+                  latestCanvasRuler || canvasRuler,
                 );
                 if (
                   constrained &&
@@ -1230,7 +1230,7 @@ export default function GestureHandler(
             const isShape =
               s.tool &&
               ["rectangle", "circle", "triangle", "star", "polygon"].includes(
-                s.tool
+                s.tool,
               );
             const hasFill = s.fill && s.fillColor;
 
@@ -1328,7 +1328,7 @@ export default function GestureHandler(
       // Các logic text/drag init (giữ nguyên) - nhưng dùng px/py thay vì e.x/e.y
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true),
           )
         : [];
       if (selectedId && draggingText) {
@@ -1409,7 +1409,7 @@ export default function GestureHandler(
       // Các xử lý khác giữ nguyên (text dragging, eraser, normal drawing...)
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true),
           )
         : [];
 
@@ -1439,7 +1439,7 @@ export default function GestureHandler(
                     0) -
                   1,
               }
-            : box
+            : box,
         );
 
         setEditorProps((prev) => ({ ...prev, x: newX, y: newY }));
@@ -1483,7 +1483,7 @@ export default function GestureHandler(
 
                 if (hit && typeof onDeleteStroke === "function") {
                   const globalIndex = strokes.findIndex(
-                    (s) => s.id === validStrokes[i].id
+                    (s) => s.id === validStrokes[i].id,
                   );
                   if (globalIndex !== -1) {
                     // Reset ruler lock khi xóa nét vẽ
@@ -1566,7 +1566,7 @@ export default function GestureHandler(
               edgeSeg.x1,
               edgeSeg.y1,
               edgeSeg.x2,
-              edgeSeg.y2
+              edgeSeg.y2,
             );
           }
         } catch (err) {
@@ -1580,7 +1580,7 @@ export default function GestureHandler(
             const constrainedPoint = constrainToRulerBarrier(
               point,
               prevPoint,
-              canvasRuler
+              canvasRuler,
             );
             if (
               constrainedPoint &&
@@ -1627,7 +1627,7 @@ export default function GestureHandler(
                 (s) =>
                   s &&
                   (!activeLayerId || s.layerId === activeLayerId) &&
-                  (s.points || s.x)
+                  (s.points || s.x),
               )
               .filter((s) => {
                 const bbox = getBoundingBoxForStroke(s);
@@ -1644,7 +1644,7 @@ export default function GestureHandler(
             insideIds.map((id) => {
               const s = strokes.find((st) => st.id === id);
               return { id, x: s?.x ?? 0, y: s?.y ?? 0 };
-            })
+            }),
           );
           setLassoSelection(insideIds);
           // set base box once when selection is created
@@ -1771,7 +1771,7 @@ export default function GestureHandler(
 
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true),
           )
         : [];
       if (!activeLayerId) return;
@@ -1787,7 +1787,7 @@ export default function GestureHandler(
           if (pointInPolygon(poly, cx, cy)) {
             try {
               const globalIndex = strokes.findIndex(
-                (s) => s.id === validStrokes[i].id
+                (s) => s.id === validStrokes[i].id,
               );
               if (globalIndex !== -1) onDeleteStroke(globalIndex);
             } catch (err) {
@@ -1903,8 +1903,8 @@ export default function GestureHandler(
           tool === "brush"
             ? brushOpacity
             : tool === "calligraphy"
-            ? calligraphyOpacity
-            : 1,
+              ? calligraphyOpacity
+              : 1,
         ...toolConfig,
         layerId: activeLayerId,
         rotation: 0,
@@ -2107,7 +2107,7 @@ export default function GestureHandler(
         selectedId &&
         !editorVisible &&
         ["text", "sticky", "comment", "emoji"].includes(
-          selectedStroke?.tool
+          selectedStroke?.tool,
         ) && (
           <TextSelectionBox
             x={selectedBox.x}
@@ -2128,7 +2128,7 @@ export default function GestureHandler(
             }}
             onMove={(dx, dy) => {
               setSelectedBox((box) =>
-                box ? { ...box, x: box.x + dx, y: box.y + dy } : box
+                box ? { ...box, x: box.x + dx, y: box.y + dy } : box,
               );
 
               if (typeof setRealtimeText === "function") {
@@ -2136,7 +2136,7 @@ export default function GestureHandler(
                   setRealtimeText((prev) =>
                     prev && prev.id === selectedId
                       ? { ...prev, x: prev.x + dx, y: prev.y + dy }
-                      : prev
+                      : prev,
                   );
                 });
               }
@@ -2172,12 +2172,12 @@ export default function GestureHandler(
               const scaleY = h / baseH;
               const scale = Math.max(
                 0.3,
-                Math.min(6, Math.min(scaleX, scaleY))
+                Math.min(6, Math.min(scaleX, scaleY)),
               );
               const pad = snap.padding;
               const newFont = Math.max(
                 8,
-                Math.round((snap.fontSize || 18) * scale)
+                Math.round((snap.fontSize || 18) * scale),
               );
               textResizeRef.current.lastNewFont = newFont;
               // Derive new text position from box: left/top -> x,y
@@ -2187,7 +2187,7 @@ export default function GestureHandler(
               // Recompute box from text metrics to stay consistent with renderer
               const tw = Math.max(
                 20,
-                approxTextWidthLocal(snap.text, newFont) + pad * 2
+                approxTextWidthLocal(snap.text, newFont) + pad * 2,
               );
               const th = Math.max(20, newFont + pad * 2);
 
@@ -2217,8 +2217,8 @@ export default function GestureHandler(
                   : Math.max(
                       8,
                       Math.round(
-                        selectedBox?.height - pad * 2 || snap.fontSize || 18
-                      )
+                        selectedBox?.height - pad * 2 || snap.fontSize || 18,
+                      ),
                     );
 
               const newFont = Math.max(8, Math.round(preferredFont));
@@ -2365,7 +2365,7 @@ export default function GestureHandler(
                 width={screenW}
                 height={screenH}
                 rotation={selectedBox.rotation ?? 0}
-                scale={1}
+                scale={s}
                 pan={{ x: 0, y: 0 }}
                 onMoveStart={() => {
                   const sItem = strokes.find((it) => it.id === selectedId);
@@ -2391,7 +2391,7 @@ export default function GestureHandler(
                 onMove={(dx, dy) => {
                   if (!selectedId) return;
                   setSelectedBox((b) =>
-                    b ? { ...b, x: b.x + dx, y: b.y + dy } : b
+                    b ? { ...b, x: b.x + dx, y: b.y + dy } : b,
                   );
                   liveTransformRef.current.dx =
                     (liveTransformRef.current.dx || 0) + dx;
@@ -2505,7 +2505,7 @@ export default function GestureHandler(
                           width: newWidth,
                           height: newHeight,
                         }
-                      : box
+                      : box,
                   );
 
                   if (typeof onLiveUpdateStroke === "function" && selectedId) {
@@ -2587,7 +2587,10 @@ export default function GestureHandler(
               />
 
               <ImageSelectionBox
-                {...selectedBox}
+                x={screenX}
+                y={screenY}
+                width={screenW}
+                height={screenH}
                 onCopy={() => {
                   const target = strokes.find((s) => s.id === selectedId);
                   if (!target) return;

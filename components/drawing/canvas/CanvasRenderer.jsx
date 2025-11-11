@@ -842,9 +842,12 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       {/* Per-layer compositing groups so eraser affects only that layer */}
       {visibleLayers.map((layer) => (
         <Group key={`layer-${layer.id}`} layer>
-          {/* Fills within this layer */}
-          {layer.strokes?.map((s) => {
+          {/* Combined Fill and Stroke Rendering */}
+          {layer.strokes?.map((s, index) => {
             if (!s) return null;
+
+            // --- Part 1: Get Fill Node ---
+            let fillNode = null;
             if (
               s.shape &&
               s.fill &&
@@ -891,7 +894,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   path.close();
                 }
               }
-              const fillNode = (
+              fillNode = (
                 <Path
                   key={`${s.id}-fill`}
                   path={path}
@@ -899,26 +902,12 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   style="fill"
                 />
               );
-              const vo = visualOffsets?.[s.id];
-              const dx = (vo?.dx ?? s?.tempOffset?.dx) || 0;
-              const dy = (vo?.dy ?? s?.tempOffset?.dy) || 0;
-              return dx || dy ? (
-                <Group
-                  key={`${s.id}-fill-wrap`}
-                  transform={[{ translateX: dx }, { translateY: dy }]}
-                >
-                  {fillNode}
-                </Group>
-              ) : (
-                fillNode
-              );
-            }
-            if (s.fill && s.points?.length > 0) {
+            } else if (s.fill && s.points?.length > 0) {
               const path = makePathFromPoints(s.points);
               try {
                 path.close();
               } catch {}
-              const fillNode = (
+              fillNode = (
                 <Path
                   key={`${layer.id}-${s.id}-fill`}
                   path={path}
@@ -926,45 +915,37 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   style="fill"
                 />
               );
-              const dx = s?.tempOffset?.dx || 0;
-              const dy = s?.tempOffset?.dy || 0;
-              return dx || dy ? (
-                <Group
-                  key={`${layer.id}-${s.id}-fill-wrap`}
-                  transform={[{ translateX: dx }, { translateY: dy }]}
-                >
-                  {fillNode}
-                </Group>
-              ) : (
-                fillNode
-              );
             }
-            return null;
-          })}
 
-          {/* Strokes for this layer */}
-          {layer.strokes?.map((s, index) => {
-            if (
-              !s ||
-              (realtimeText?.id &&
-                s.id === realtimeText.id &&
-                ["sticky", "comment", "text"].includes(s.tool))
-            )
+            // --- Part 2: Get Stroke Node ---
+            const strokeNode =
+              realtimeText?.id &&
+              s.id === realtimeText.id &&
+              ["sticky", "comment", "text"].includes(s.tool)
+                ? null
+                : renderStroke(s, index);
+
+            // --- Part 3: Combine and Apply Transform ---
+            if (!fillNode && !strokeNode) {
               return null;
-            const node = renderStroke(s, index);
-            if (!node) return null;
+            }
+
             const vo = visualOffsets?.[s.id];
             const dx = (vo?.dx ?? s?.tempOffset?.dx) || 0;
             const dy = (vo?.dy ?? s?.tempOffset?.dy) || 0;
-            return dx || dy ? (
+
+            return (
               <Group
-                key={`${s.id}-wrap`}
-                transform={[{ translateX: dx }, { translateY: dy }]}
+                key={s.id}
+                transform={
+                  dx || dy
+                    ? [{ translateX: dx }, { translateY: dy }]
+                    : undefined
+                }
               >
-                {node}
+                {fillNode}
+                {strokeNode}
               </Group>
-            ) : (
-              node
             );
           })}
 

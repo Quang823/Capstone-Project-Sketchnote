@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import Reanimated, {
 } from "react-native-reanimated";
 import { loginStyles } from "./LoginScreen.styles";
 import { useNavigation } from "@react-navigation/native";
-import { authService } from "../../../service/authService";
+import { AuthContext } from "../../../context/AuthContext";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 
@@ -34,6 +34,7 @@ export default function LoginScreen({ onBack }) {
   const { toast } = useToast();
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
+  const { login } = useContext(AuthContext);
 
   // chỉ giữ animation cho button và icon (không đụng layout)
   const buttonScale = useSharedValue(1);
@@ -61,22 +62,19 @@ export default function LoginScreen({ onBack }) {
   };
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      toast({
+    if (!email || !password)
+      return toast({
         title: "Please enter email and password",
         variant: "destructive",
       });
-      return;
-    }
 
     setIsLoading(true);
     try {
-      const { roles } = await authService.login(email, password);
-      toast({
-        title: "Login successfully! 🎉",
-        variant: "success",
-      });
+      const loginResult = await login(email, password); // Use context login
 
+      toast({ title: "Login successfully! 🎉", variant: "success" });
+
+      const { roles } = loginResult;
       if (roles.includes("ADMIN")) navigation.navigate("AdminDashboard");
       else if (roles.includes("DESIGNER"))
         navigation.navigate("DesignerDashboard");
