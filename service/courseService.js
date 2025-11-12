@@ -101,4 +101,14 @@ export const courseService = {
       throw new Error(message);
     }
   },
+  getCourseByIdEnrolled : async (id) =>{
+    try {
+      const res = await courseApiController.getCourseByIdEnrolled(id);
+      return res.data;
+    } catch (error) {
+      const message =
+        error.response?.data?.message || error.message || "Get course by id enrolled failed.";
+      throw new Error(message);
+    }
+  },
 }

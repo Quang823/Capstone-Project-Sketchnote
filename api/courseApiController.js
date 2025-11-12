@@ -57,5 +57,9 @@ saveLessonProgress: async (courseId, lessonId, progressData) => {
         baseURL: "http://146.190.90.222:8085"
       });
     },
-   
+   getCourseByIdEnrolled : async (id) =>{
+      return await privateApi.get(`/api/learning/enrollments/course/${id}/me`, {
+        baseURL: "http://146.190.90.222:8085"
+      });
+    }
   }

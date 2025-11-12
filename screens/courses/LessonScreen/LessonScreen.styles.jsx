@@ -70,6 +70,13 @@ export const lessonStyles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
+  sidebarItemLocked: {
+    backgroundColor: '#F9FAFB',
+    opacity: 0.6,
+  },
+  sidebarItemTextLocked: {
+    color: '#9CA3AF',
+  },
   sidebarItemContainer: {
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
@@ -148,6 +155,14 @@ export const lessonStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  sidebarPlayButtonLocked: {
+    backgroundColor: '#E5E7EB',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  sidebarPlayTextLocked: {
+    color: '#9CA3AF',
   },
 
   // Main Content
