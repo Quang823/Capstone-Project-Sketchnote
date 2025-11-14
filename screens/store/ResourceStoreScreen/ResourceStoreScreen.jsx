@@ -31,9 +31,24 @@ export default function ResourceStoreScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const { cart, addToCart } = useCart();
-
+const [userResources, setUserResources] = useState([]);
   // ✅ Fetch data riêng biệt - nếu 1 API lỗi thì các API khác vẫn chạy
   const fetchAllData = async () => {
+    try {
+      // Fetch Resource By User Id
+      try {
+        const resUser = await resourceService.getResourceByUserId();
+        const userData = resUser || [];
+        // console.log("✅ Resource By User Id:", userData);
+        setUserResources(userData);
+       
+      } catch (error) {
+        console.error("❌ Fetch Resource By User Id Failed:", error);
+        setAllResources([]);
+      }
+    } catch (error) {
+      
+    }
     try {
       setLoading(true);
 
@@ -91,6 +106,18 @@ export default function ResourceStoreScreen() {
 
   // ✅ Add to Cart
   const handleAddToCart = (resource, navigateToCart = false) => {
+    const alreadyOwned = userResources.some(
+    (r) => r.resourceTemplateId === resource.resourceTemplateId
+  );
+
+  if (alreadyOwned) {
+    Toast.show({
+      type: "info",
+      text1: "Bạn đã sở hữu resource này rồi",
+      text2: "Không thể mua lại.",
+    });
+    return; 
+  }
     const designerName = resource.designerInfo
       ? `${resource.designerInfo.firstName || ""} ${
           resource.designerInfo.lastName || ""

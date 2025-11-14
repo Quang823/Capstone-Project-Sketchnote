@@ -104,22 +104,40 @@ console.log(url)
     .slice(0, 5);
 
   // Get transaction icon and color
+  // Get transaction icon and color
   const getTransactionStyle = (transaction) => {
-    if (transaction.type === "DEPOSIT") {
-      return {
+    const typeConfig = {
+      DEPOSIT: {
         icon: "account-balance-wallet",
-        color: transaction.status === "SUCCESS" ? "#10B981" : "#F59E0B",
+        color: transaction.status === "SUCCESS" ? "#10B981" : transaction.status === "PENDING" ? "#F59E0B" : "#EF4444",
         sign: "+",
-        label: transaction.status === "SUCCESS" ? "Deposit" : "Pending Deposit",
-      };
-    } else {
-      return {
+        label: transaction.status === "SUCCESS" ? "Deposit Success" : transaction.status === "PENDING" ? "Pending Deposit" : "Deposit Failed",
+        description: `Deposit to wallet${transaction.orderCode ? ` • #${transaction.orderCode}` : ""}`
+      },
+      COURSE_FEE: {
+        icon: "school",
+        color: "#8B5CF6",
+        sign: "-",
+        label: "Course Fee",
+        description: "Course enrollment payment"
+      },
+      PAYMENT: {
+        icon: "payment",
+        color: "#EF4444",
+        sign: "-",
+        label: "Payment",
+        description: "Payment transaction"
+      },
+      PURCHASE: {
         icon: "shopping-cart",
         color: "#EF4444",
         sign: "-",
         label: "Purchase",
-      };
-    }
+        description: "Product purchase"
+      }
+    };
+
+    return typeConfig[transaction.type] || typeConfig.PURCHASE;
   };
 
   return (
@@ -185,12 +203,26 @@ console.log(url)
         {/* 🧾 Transaction History */}
         <View style={walletStyles.historySection}>
           <View style={walletStyles.historySectionHeader}>
-            <Text style={walletStyles.sectionTitle}>Recent Transactions</Text>
-            <Text style={walletStyles.transactionCount}>
-              {recentTransactions.length} of {walletData.transactions.length}
-            </Text>
+            <View>
+              <Text style={walletStyles.sectionTitle}>Recent Transactions</Text>
+              <Text style={walletStyles.transactionCount}>
+                {recentTransactions.length} of {walletData.transactions.length}
+              </Text>
+            </View>
+            {walletData.transactions.length > 5 && (
+              <Pressable
+                style={walletStyles.viewAllButton}
+                onPress={() =>
+                  navigation.navigate("TransactionHistory", {
+                    transactions: walletData.transactions,
+                  })
+                }
+              >
+                <Text style={walletStyles.viewAllText}>View All</Text>
+                <Icon name="arrow-forward" size={16} color="#3B82F6" />
+              </Pressable>
+            )}
           </View>
-
           {recentTransactions.length > 0 ? (
             <>
               {recentTransactions.map((transaction) => {
@@ -267,20 +299,6 @@ console.log(url)
                 );
               })}
 
-              {/* View All Button */}
-              {walletData.transactions.length > 5 && (
-                <Pressable
-                  style={styles.viewAllButton}
-                  onPress={() =>
-                    navigation.navigate("TransactionHistory", {
-                      transactions: walletData.transactions,
-                    })
-                  }
-                >
-                  <Text style={styles.viewAllText}>View All Transactions</Text>
-                  <Icon name="arrow-forward" size={18} color="#3B82F6" />
-                </Pressable>
-              )}
             </>
           ) : (
             <View style={styles.emptyState}>

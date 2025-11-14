@@ -134,16 +134,23 @@ export const coursesStyles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    height: 380, // Fixed height for all cards
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
-    height: 160,
+    height: 180, // Slightly larger image area
     backgroundColor: '#F1F5F9',
   },
   courseImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
   levelBadge: {
     position: 'absolute',
@@ -162,6 +169,8 @@ export const coursesStyles = StyleSheet.create({
   },
   courseInfo: {
     padding: 16,
+    flex: 1,
+    justifyContent: 'space-between',
   },
   courseTitle: {
     fontSize: 16,
@@ -169,6 +178,7 @@ export const coursesStyles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: 6,
     lineHeight: 22,
+    minHeight: 44, // Fixed height for title (2 lines)
   },
   courseSubtitle: {
     fontSize: 13,
@@ -176,6 +186,8 @@ export const coursesStyles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 18,
     fontWeight: '500',
+    minHeight: 36, // Fixed height for subtitle (2 lines)
+    overflow: 'hidden',
   },
 
   // Meta Info

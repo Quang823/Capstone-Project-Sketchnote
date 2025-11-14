@@ -30,6 +30,7 @@ import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/D
 import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
 import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
 import DesignerSubscription from "../screens/store/DesignerSubscription/DesignerSubscription";
+import DesignerWalletScreen from "../screens/designer/DesignerWalletScreen/DesignerWalletScreen";
 
 
 
@@ -96,6 +97,7 @@ export default function AppNavigator() {
         name="DesignerQuickUpload"
         component={DesignerQuickUploadScreen}
       />
+      <Stack.Screen name="DesignerWallet" component={DesignerWalletScreen} />
     </Stack.Navigator>
   );
 }

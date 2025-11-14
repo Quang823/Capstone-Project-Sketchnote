@@ -18,9 +18,9 @@ import { orderService } from "../../../service/orderService";
 
 export default function CartScreen() {
   const navigation = useNavigation();
-  const { cart, updateQuantity, removeFromCart } = useCart();
+  const { cart, removeFromCart } = useCart();
   const [loading, setLoading] = useState(false);
-  const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const subtotal = cart.reduce((sum, i) => sum + i.price, 0);
   const total = subtotal;
 
   const [coupon, setCoupon] = useState("");
@@ -155,20 +155,8 @@ export default function CartScreen() {
                   )}
 
                   <View style={cartStyles.itemBottom}>
-                    <View style={cartStyles.qtyRow}>
-                      <Pressable onPress={() => updateQuantity(item.id, -1)} style={cartStyles.qtyBtn}>
-                        <Icon name="remove" size={18} color="#6B7280" />
-                      </Pressable>
-
-                      <Text style={cartStyles.qtyText}>{item.quantity}</Text>
-
-                      <Pressable onPress={() => updateQuantity(item.id, 1)} style={cartStyles.qtyBtn}>
-                        <Icon name="add" size={18} color="#6B7280" />
-                      </Pressable>
-                    </View>
-
                     <Text style={cartStyles.itemPrice}>
-                      {(item.price * item.quantity).toLocaleString()} đ
+                      {item.price.toLocaleString()} đ
                     </Text>
                   </View>
                 </View>

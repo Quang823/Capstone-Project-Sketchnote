@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native";
 export const myCoursesStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#F8FAFC",
   },
 
   // Header
@@ -14,7 +14,7 @@ export const myCoursesStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 16,
-    backgroundColor: "#4F46E5",
+    backgroundColor: "#",
     borderBottomWidth: 0,
   },
   backButton: {
@@ -28,7 +28,7 @@ export const myCoursesStyles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "black",
   },
   placeholder: {
     width: 40,

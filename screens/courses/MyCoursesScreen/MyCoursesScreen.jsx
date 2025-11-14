@@ -11,6 +11,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { myCoursesStyles } from "./MyCoursesScreen.styles";
 import { courseService } from "../../../service/courseService";
 import { useNavigation as useReactNavigation } from "@react-navigation/native";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 
 export default function MyCoursesScreen() {
   const [enrollments, setEnrollments] = useState([]);
@@ -135,12 +136,7 @@ export default function MyCoursesScreen() {
     <View style={myCoursesStyles.container}>
       {/* Header */}
       <View style={myCoursesStyles.header}>
-        <TouchableOpacity
-          style={myCoursesStyles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        <SidebarToggleButton  iconSize={24} iconColor="#1F2937"  />
         <Text style={myCoursesStyles.headerTitle}>My Courses</Text>
         <View style={myCoursesStyles.placeholder} />
       </View>

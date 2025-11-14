@@ -31,4 +31,19 @@ export const resourceController = {
         baseURL:"http://146.190.90.222:8083"
     })
    },
+   getProjectByUserId : async ()=>{
+    return await privateApi.get(`api/projects/me`,{
+        baseURL:"http://146.190.90.222:8087"
+    })
+   },
+   uploadTemplate: async (projectId,data)=>{
+    return await privateApi.post(`/api/orders/template/sell/${projectId}`,data,{
+        baseURL:"http://146.190.90.222:8083"
+    })
+   },
+   getResourceByUserId : async ()=>{
+    return await privateApi.get(`/api/orders/user_resources/user/me`,{
+        baseURL:"http://146.190.90.222:8083"
+    })
+   }
 }

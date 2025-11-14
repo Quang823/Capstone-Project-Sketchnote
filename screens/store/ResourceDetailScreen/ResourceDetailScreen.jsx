@@ -25,6 +25,7 @@ export default function ResourceDetailScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedOption, setSelectedOption] = useState("Blindbox");
+  const [userResources, setUserResources] = useState([]);
 
   useEffect(() => {
     const fetchResource = async () => {
@@ -45,11 +46,37 @@ export default function ResourceDetailScreen() {
     fetchResource();
   }, [resourceId]);
 
+  // Fetch Resource By User Id
+  useEffect(() => {
+    const fetchUserResources = async () => {
+      try {
+        const resUser = await resourceService.getResourceByUserId();
+        const userData = resUser || [];
+        // console.log("✅ Resource By User Id:", userData);
+        setUserResources(userData);
+      } catch (error) {
+        console.error("❌ Fetch Resource By User Id Failed:", error);
+        setUserResources([]);
+      }
+    };
+    fetchUserResources();
+  }, []);
 
   // ✅ Thêm vào giỏ hàng
   const handleAddToCart = () => {
     if (!resource) return;
+const alreadyOwned = userResources.some(
+    (r) => r.resourceTemplateId === resource.resourceTemplateId
+  );
 
+  if (alreadyOwned) {
+    Toast.show({
+      type: "info",
+      text1: "Bạn đã sở hữu resource này rồi",
+      text2: "Không thể mua lại.",
+    });
+    return; 
+  }
     const newItem = {
       id: resource.resourceTemplateId,
       name: resource.name,
@@ -75,23 +102,51 @@ export default function ResourceDetailScreen() {
     });
   };
 
-  // 🟡 Mua ngay
+  // 🟡 Mua ngay - Add to cart and navigate to cart screen
   const handleBuyNow = () => {
+    // Check if user already owns the resource
+    const alreadyOwned = userResources.some(
+      (r) => r.resourceTemplateId === resource.resourceTemplateId
+    );
+
+    if (alreadyOwned) {
+      Toast.show({
+        type: "info",
+        text1: "Bạn đã sở hữu resource này rồi",
+        text2: "Không thể mua lại.",
+      });
+      return; 
+    }
+    
     if (!resource) return;
-    navigation.navigate("Checkout", {
-      cartItems: [
-        {
-          id: resource.resourceTemplateId,
-          name: resource.name,
-          price: resource.price,
-          quantity: quantity,
-          image:
-            resource.images?.find((img) => img.isThumbnail)?.imageUrl ||
-            resource.images?.[0]?.imageUrl,
-          option: selectedOption,
-        },
-      ],
-      totalAmount: resource.price * quantity,
+    
+    const designerName = resource.designerInfo
+      ? `${resource.designerInfo.firstName || ""} ${
+          resource.designerInfo.lastName || ""
+        }`.trim()
+      : "Unknown Designer";
+
+    const item = {
+      id: resource.resourceTemplateId,
+      name: resource.name,
+      description: resource.description,
+      price: resource.price,
+      image: resource.images?.find((img) => img.isThumbnail)?.imageUrl || resource.images?.[0]?.imageUrl,
+      designer: designerName,
+      releaseDate: resource.releaseDate,
+      isActive: resource.isActive,
+      quantity: quantity,
+      option: selectedOption,
+    };
+
+    // Add to cart and navigate to cart screen
+    addToCart(item);
+    navigation.navigate("Cart");
+    
+    Toast.show({
+      type: "success",
+      text1: "🛒 Đang chuyển đến giỏ hàng",
+      text2: `${resource.name} đã được thêm vào giỏ hàng!`,
     });
   };
 
@@ -322,6 +377,7 @@ export default function ResourceDetailScreen() {
                   style={[styles.actionButton, styles.buyNowButton]}
                   onPress={handleBuyNow}
                 >
+                  <Icon name="flash-on" size={16} color="#FFFFFF" />
                   <Text style={[styles.actionButtonText, styles.buyNowButtonText]}>
                     Mua ngay
                   </Text>

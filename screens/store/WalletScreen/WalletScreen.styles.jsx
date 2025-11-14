@@ -147,6 +147,22 @@ export const walletStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  viewAllText: {
+    color: '#3B82F6',
+    fontSize: 13,
+    fontWeight: '600',
+    marginRight: 4,
+  },
   sectionTitle: {
     fontSize: 19,
     fontWeight: '700',

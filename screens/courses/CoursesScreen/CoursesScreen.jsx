@@ -15,14 +15,13 @@ import { coursesStyles } from "./CoursesScreen.styles";
 import { courseService } from "../../../service/courseService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 
-// Danh mục khóa học
+// Course Categories
 const courseCategories = [
-  { id: "all", name: "Tất cả" },
+  { id: "all", name: "All" },
   { id: "Icons", name: "Icons" },
   { id: "Illustrations", name: "Illustrations" },
   { id: "Typography", name: "Typography" },
 ];
-
 
 export default function CoursesScreen() {
   const navigation = useNavigation();
@@ -33,12 +32,12 @@ export default function CoursesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch courses từ API
+  // Fetch courses from API
   useEffect(() => {
     fetchCourses();
   }, []);
 
-  // Filter courses khi search hoặc category thay đổi
+  // Filter courses when search or category changes
   useEffect(() => {
     filterCourses();
   }, [searchQuery, selectedCategory, allCourses]);
@@ -49,20 +48,22 @@ export default function CoursesScreen() {
       setError(null);
       const data = await courseService.getAllCourse();
 
-      // Transform API data để phù hợp với UI
       const transformedCourses = data.result.map((course) => ({
         id: course.courseId.toString(),
         title: course.title,
         subtitle: course.subtitle,
         description: course.description,
         instructor: "Instructor",
-        imageUrl: course.imageUrl && course.imageUrl.trim() !== "​" ? course.imageUrl : null,
+        imageUrl:
+          course.imageUrl && course.imageUrl.trim() !== "​"
+            ? course.imageUrl
+            : null,
         price: course.price,
         rating: 4.5,
         students: course.studentCount,
         totalDuration: course.totalDuration,
         lessonsCount: course.lessons?.length || 0,
-        level: course.lessons?.length > 5 ? "Nâng cao" : "Cơ bản",
+        level: course.lessons?.length > 5 ? "Advanced" : "Beginner",
         category: course.category || "all",
       }));
 
@@ -79,12 +80,10 @@ export default function CoursesScreen() {
   const filterCourses = () => {
     let filtered = allCourses;
 
-    // Lọc theo danh mục
     if (selectedCategory !== "all") {
       filtered = filtered.filter((course) => course.category === selectedCategory);
     }
 
-    // Lọc theo từ khóa tìm kiếm
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -111,7 +110,8 @@ export default function CoursesScreen() {
 
   // Render course card
   const renderCourseItem = (item) => {
-    const imageUrl = item.imageUrl || "https://via.placeholder.com/280x160?text=No+Image";
+    const imageUrl =
+      item.imageUrl || "https://via.placeholder.com/280x160?text=No+Image";
 
     return (
       <Shadow
@@ -125,7 +125,7 @@ export default function CoursesScreen() {
           onPress={() => handleViewCourse(item.id)}
           style={coursesStyles.courseCard}
         >
-          {/* Image Container */}
+          {/* Image */}
           <View style={coursesStyles.imageContainer}>
             <Image
               source={{ uri: imageUrl }}
@@ -134,13 +134,11 @@ export default function CoursesScreen() {
             />
             {/* Level Badge */}
             <View style={coursesStyles.levelBadge}>
-              <Text style={coursesStyles.levelBadgeText}>
-                {item.level}
-              </Text>
+              <Text style={coursesStyles.levelBadgeText}>{item.level}</Text>
             </View>
           </View>
 
-          {/* Info Container */}
+          {/* Info */}
           <View style={coursesStyles.courseInfo}>
             <Text style={coursesStyles.courseTitle} numberOfLines={2}>
               {item.title}
@@ -150,16 +148,17 @@ export default function CoursesScreen() {
               {item.subtitle}
             </Text>
 
-            {/* Meta Info */}
             <View style={coursesStyles.metaRow}>
               <View style={coursesStyles.metaItem}>
                 <Icon name="star" size={14} color="#FFA726" />
                 <Text style={coursesStyles.metaText}>{item.rating}</Text>
               </View>
+
               <View style={coursesStyles.metaItem}>
                 <Icon name="play-circle-outline" size={14} color="#4F46E5" />
-                <Text style={coursesStyles.metaText}>{item.lessonsCount} bài</Text>
+                <Text style={coursesStyles.metaText}>{item.lessonsCount} lessons</Text>
               </View>
+
               <View style={coursesStyles.metaItem}>
                 <Icon name="people" size={14} color="#10B981" />
                 <Text style={coursesStyles.metaText}>{item.students}</Text>
@@ -167,20 +166,8 @@ export default function CoursesScreen() {
             </View>
 
             <Text style={coursesStyles.price}>
-              {item.price?.toLocaleString("vi-VN") || "0"} VNĐ
+              {item.price?.toLocaleString("vi-VN") || "0"} VND
             </Text>
-
-            {/* Action Button */}
-            {/* <Pressable
-              style={coursesStyles.enrollButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                handleViewCourse(item.id);
-              }}
-            >
-         
-              <Text style={coursesStyles.enrollButtonText}>Xem chi tiết</Text>
-            </Pressable> */}
           </View>
         </Pressable>
       </Shadow>
@@ -191,7 +178,7 @@ export default function CoursesScreen() {
     return (
       <View style={coursesStyles.loadingContainer}>
         <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={coursesStyles.loadingText}>Đang tải khóa học...</Text>
+        <Text style={coursesStyles.loadingText}>Loading courses...</Text>
       </View>
     );
   }
@@ -200,10 +187,10 @@ export default function CoursesScreen() {
     <View style={coursesStyles.container}>
       {/* Header */}
       <View style={coursesStyles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
         </View>
-        <Text style={coursesStyles.headerTitle}>Khóa học</Text>
+        <Text style={coursesStyles.headerTitle}>Courses</Text>
         <View style={{ width: 44 }} />
       </View>
 
@@ -221,7 +208,7 @@ export default function CoursesScreen() {
           />
           <TextInput
             style={coursesStyles.searchInput}
-            placeholder="Tìm kiếm khóa học..."
+            placeholder="Search courses..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#9CA3AF"
@@ -258,12 +245,11 @@ export default function CoursesScreen() {
           ))}
         </ScrollView>
 
-        {/* All Courses Section */}
+        {/* Courses List */}
         {filteredCourses.length > 0 ? (
           <View style={coursesStyles.sectionContainer}>
             <View style={coursesStyles.sectionHeader}>
-             
-              <Text style={coursesStyles.sectionTitle}>Tất cả khóa học</Text>
+              <Text style={coursesStyles.sectionTitle}>All Courses</Text>
             </View>
             <ScrollView
               horizontal
@@ -277,18 +263,17 @@ export default function CoursesScreen() {
           <View style={coursesStyles.emptyState}>
             <Icon name="inbox" size={80} color="#D1D5DB" />
             <Text style={coursesStyles.emptyStateText}>
-              Không tìm thấy khóa học nào
+              No courses found
             </Text>
           </View>
         )}
 
-        {/* Error State */}
         {error && (
           <View style={coursesStyles.errorContainer}>
             <Icon name="error-outline" size={64} color="#EF4444" />
             <Text style={coursesStyles.errorText}>{error}</Text>
             <Pressable style={coursesStyles.retryButton} onPress={handleRetry}>
-              <Text style={coursesStyles.retryButtonText}>Thử lại</Text>
+              <Text style={coursesStyles.retryButtonText}>Try again</Text>
             </Pressable>
           </View>
         )}

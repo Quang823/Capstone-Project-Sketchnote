@@ -143,7 +143,7 @@ export const lessonStyles = StyleSheet.create({
     gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: '#7C3AED',
+    backgroundColor: '#FFB347',
     borderRadius: 8,
     shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 2 },
