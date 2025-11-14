@@ -9,8 +9,24 @@ import React, {
   memo,
 } from "react";
 import { useFont } from "@shopify/react-native-skia";
-
-// Font imports
+import { View, Text, TouchableOpacity, Dimensions, Alert } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+  useDerivedValue,
+  useAnimatedReaction,
+  useAnimatedScrollHandler,
+} from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import CanvasContainer from "./CanvasContainer";
+import CustomScrollbar from "./CustomScrollbar";
+import DocumentSidebar from "../document/DocumentSidebar";
+import DocumentOverviewModal from "../document/DocumentOverviewModal";
+import { projectService } from "../../../service/projectService";
+import { calculatePageDimensions } from "../../../utils/pageDimensions";
+import Icon from "react-native-vector-icons/MaterialIcons";
 import RobotoRegular from "../../../assets/fonts/Roboto/Roboto_Condensed-Regular.ttf";
 import RobotoBold from "../../../assets/fonts/Roboto/Roboto_Condensed-Bold.ttf";
 import RobotoItalic from "../../../assets/fonts/Roboto/Roboto_Condensed-Italic.ttf";
@@ -83,7 +99,7 @@ const FONT_MAP = {
   },
 };
 
-const FONT_SIZES = [12, 16, 20, 24, 32, 40];
+const FONT_SIZES = [12, 18, 24];
 
 function usePreloadedFonts() {
   const loaded = {};
@@ -128,23 +144,6 @@ function getNearestFont(loadedFonts, family, bold, italic, size = 18) {
     nearest,
   };
 }
-
-import { View, Text, TouchableOpacity, Dimensions, Alert } from "react-native";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  runOnJS,
-  useDerivedValue,
-  useAnimatedReaction,
-  useAnimatedScrollHandler,
-} from "react-native-reanimated";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import CanvasContainer from "./CanvasContainer";
-import CustomScrollbar from "./CustomScrollbar";
-import DocumentSidebar from "../sidebar/DocumentSidebar";
-import { projectService } from "../../../service/projectService";
-import { calculatePageDimensions } from "../../../utils/pageDimensions";
 
 const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   {
@@ -202,6 +201,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
   // Sidebar state
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [overviewVisible, setOverviewVisible] = useState(false);
 
   // Initialize pages based on noteConfig
   const initialPages = useMemo(() => {
@@ -1111,6 +1111,18 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         }}
         onAddPage={addPage}
         resourceItems={[]}
+        onOpenOverview={() => setOverviewVisible(true)}
+      />
+      <DocumentOverviewModal
+        visible={overviewVisible}
+        onClose={() => setOverviewVisible(false)}
+        pages={pages}
+        activePageId={pages[activeIndex]?.id}
+        onPageSelect={(pageId) => {
+          scrollToPageById(pageId);
+        }}
+        onAddPage={addPage}
+        onResourceSelect={(uri) => {}}
       />
 
       {/* Pages - Wrapped with Gesture Detector for project-wide zoom */}

@@ -99,7 +99,6 @@ export default function GlobalSidebar() {
   const accountNavItems = [
     { icon: "person", label: "Profile", id: "profile" },
     { icon: "settings", label: "Settings", id: "settings" },
-    { icon: "logout", label: "Sign Out", id: "signout" },
   ];
 
   return (

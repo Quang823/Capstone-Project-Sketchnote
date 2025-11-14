@@ -29,9 +29,7 @@ import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/D
 import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
 import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
 import DesignerSubscription from "../screens/store/DesignerSubscription/DesignerSubscription";
-
-
-
+import ProfileScreen from "../screens/auth/ProfileScreen/ProfileScreen";
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -43,6 +41,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="NoteSetupScreen" component={NoteSetupScreen} />
       <Stack.Screen name="DrawingScreen" component={DrawingScreen} />
       <Stack.Screen name="CourseDetailScreen" component={CourseDetailScreen} />
@@ -56,7 +55,10 @@ export default function AppNavigator() {
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="Wallet" component={WalletScreen} />
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
-      <Stack.Screen name="DesignerSubscription" component={DesignerSubscription} />
+      <Stack.Screen
+        name="DesignerSubscription"
+        component={DesignerSubscription}
+      />
       <Stack.Screen
         name="TransactionHistory"
         component={TransactionHistoryScreen}
@@ -73,7 +75,7 @@ export default function AppNavigator() {
         name="PaymentFailedScreen"
         component={PaymentFailedScreen}
       />
-     
+
       <Stack.Screen
         name="OrderSuccess"
         component={OrderSuccessScreen}

@@ -7,11 +7,17 @@ export const authApiController = {
   register: async (userData) => {
     return await publicApi.post(`/api/auth/register`, userData);
   },
-  refeshToken: async (refreshToken) => {
+  refreshToken: async (refreshToken) => {
     return await publicApi.post(`/api/auth/refresh-token`, { refreshToken });
   },
 
   getCurrentUser: async (sub) => {
     return await privateApi.get(`/api/users/keycloak/${sub}`);
+  },
+  getUserById: async (id) => {
+    return await privateApi.get(`/api/users/${id}`);
+  },
+  updateUser: async (id, data) => {
+    return await privateApi.put(`/api/users/${id}`, data);
   },
 };

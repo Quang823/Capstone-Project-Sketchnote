@@ -66,9 +66,17 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     loadedFonts, // 👈 Pass down preloaded fonts
     getNearestFont, // 👈 Pass down font helper
   },
-  ref
+  ref,
 ) {
   const imageRefs = useRef(new Map());
+  // Cleanup imageRefs to avoid retaining component references
+  useEffect(() => {
+    return () => {
+      try {
+        imageRefs.current.clear();
+      } catch {}
+    };
+  }, []);
   const liveUpdateStroke = (strokeId, partial) => {
     const ref = imageRefs.current.get(strokeId);
     if (ref && typeof ref.setLiveTransform === "function") {
@@ -93,6 +101,38 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   const [showZoomOverlay, setShowZoomOverlay] = useState(false);
   const [zoomLocked, setZoomLocked] = useState(false);
   const [zoomPercent, setZoomPercent] = useState(100);
+  // JS snapshot của các giá trị zoom để tránh đọc .value trong render
+  const [zoomSnapshot, setZoomSnapshot] = useState({
+    scale: 1,
+    translateX: 0,
+    translateY: 0,
+  });
+  // 🔒 Gate updates to React state at most once per frame
+  const zoomUpdateLockRef = useRef(false);
+  const snapshotUpdateLockRef = useRef(false);
+  const updateZoomPercentJS = useCallback((val) => {
+    if (zoomUpdateLockRef.current) return;
+    zoomUpdateLockRef.current = true;
+    setZoomPercent(val);
+    // Track RAF to cancel if unmounts quickly
+    const id = requestAnimationFrame(() => {
+      zoomUpdateLockRef.current = false;
+    });
+    zoomUpdateLockRef.rafId = id;
+  }, []);
+  const updateZoomSnapshotJS = useCallback((vals) => {
+    if (snapshotUpdateLockRef.current) return;
+    snapshotUpdateLockRef.current = true;
+    setZoomSnapshot({
+      scale: vals.s,
+      translateX: vals.tx,
+      translateY: vals.ty,
+    });
+    const id = requestAnimationFrame(() => {
+      snapshotUpdateLockRef.current = false;
+    });
+    snapshotUpdateLockRef.rafId = id;
+  }, []);
 
   const idCounter = useRef(1);
   const rendererRef = useRef(null);
@@ -101,11 +141,54 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   const pinchStartDistance = useRef(0);
   const isPinchZoom = useRef(false);
 
+  // Cancel any pending RAF on unmount for lock releases
+  useEffect(() => {
+    return () => {
+      try {
+        if (typeof zoomUpdateLockRef.rafId === "number") {
+          cancelAnimationFrame(zoomUpdateLockRef.rafId);
+          zoomUpdateLockRef.rafId = null;
+        }
+        if (typeof snapshotUpdateLockRef.rafId === "number") {
+          cancelAnimationFrame(snapshotUpdateLockRef.rafId);
+          snapshotUpdateLockRef.rafId = null;
+        }
+      } catch {}
+    };
+  }, []);
+
   const activeConfig = toolConfigs?.[tool] || {
     pressure: 0.5,
     thickness: 1.5,
     stabilization: 0.2,
   };
+
+  useEffect(() => {
+    let maxIdNum = 0;
+    const layersArray = Array.isArray(layers) ? layers : [];
+    for (let i = 0; i < layersArray.length; i++) {
+      const strokes = Array.isArray(layersArray[i]?.strokes)
+        ? layersArray[i].strokes
+        : [];
+      for (let j = 0; j < strokes.length; j++) {
+        const s = strokes[j];
+        if (
+          s &&
+          typeof s.id === "string" &&
+          s.id.startsWith("s_")
+        ) {
+          const num = parseInt(s.id.slice(2), 10);
+          if (!isNaN(num) && num > maxIdNum) {
+            maxIdNum = num;
+          }
+        }
+      }
+    }
+    const next = maxIdNum + 1;
+    if (next > idCounter.current) {
+      idCounter.current = next;
+    }
+  }, [layers]);
 
   const modifyStrokesBulk = (updates = [], options = {}) => {
     const isTransient = !!options.transient;
@@ -146,7 +229,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     // ✅ Validate layers trước khi tìm
     const validLayers = layers.filter(
-      (l) => l && typeof l === "object" && l.id
+      (l) => l && typeof l === "object" && l.id,
     );
 
     if (validLayers.length === 0) return null;
@@ -180,7 +263,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         });
       });
     },
-    [activeLayerId]
+    [activeLayerId],
   );
 
   const updateLayerById = (layerId, updateFn) => {
@@ -192,7 +275,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     if (typeof updateFn !== "function") {
       console.warn(
-        "[CanvasContainer] updateLayerById: updateFn is not a function"
+        "[CanvasContainer] updateLayerById: updateFn is not a function",
       );
       return;
     }
@@ -210,9 +293,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     });
   };
   // ✅ Safe filter with validation
-  const visibleLayers = Array.isArray(layers)
-    ? layers.filter((l) => l?.visible)
-    : [];
+  const visibleLayers = React.useMemo(
+    () => (Array.isArray(layers) ? layers.filter((l) => l?.visible) : []),
+    [layers],
+  );
 
   // ====== ZOOM / PAN ======
   const scale = useSharedValue(1);
@@ -221,6 +305,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   const translateY = useSharedValue(0);
   const baseTranslateX = useSharedValue(0);
   const baseTranslateY = useSharedValue(0);
+
+  // Stable zoom state object to pass to children without causing re-renders
+  const zoomStateMemo = React.useMemo(
+    () => ({ scale, translateX, translateY }),
+    [],
+  );
 
   const clampPan = () => {
     "worklet";
@@ -285,7 +375,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   // Compose gestures: pinch riêng, pan và doubleTap có thể cùng lúc
   const composedGesture = Gesture.Exclusive(
     pinch,
-    Gesture.Simultaneous(pan, doubleTap)
+    Gesture.Simultaneous(pan, doubleTap),
   );
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -301,8 +391,23 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   useAnimatedReaction(
     () => derivedZoom.value,
     (val, prev) => {
-      if (val !== prev) runOnJS(setZoomPercent)(val);
-    }
+      if (val !== prev) runOnJS(updateZoomPercentJS)(val);
+    },
+  );
+
+  // Cập nhật zoomSnapshot (JS numbers) mỗi khi shared values thay đổi
+  useAnimatedReaction(
+    () => ({ s: scale.value, tx: translateX.value, ty: translateY.value }),
+    (vals, prev) => {
+      if (
+        !prev ||
+        vals.s !== prev.s ||
+        vals.tx !== prev.tx ||
+        vals.ty !== prev.ty
+      ) {
+        runOnJS(updateZoomSnapshotJS)({ s: vals.s, tx: vals.tx, ty: vals.ty });
+      }
+    },
   );
 
   // ====== Helpers ======
@@ -330,7 +435,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     if (!activeLayerId) {
       console.warn(
-        "[CanvasContainer] addStrokeInternal: No activeLayerId, cannot add stroke"
+        "[CanvasContainer] addStrokeInternal: No activeLayerId, cannot add stroke",
       );
       return;
     }
@@ -428,7 +533,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     w = 100,
     h = 100,
     scrollOffsetX = 0,
-    scrollOffsetY = 0
+    scrollOffsetY = 0,
   ) => {
     "worklet";
     const screenCenterX = width / 2;
@@ -446,11 +551,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     const finalX = Math.max(
       page.x,
-      Math.min(canvasCenterX, page.x + page.w - w)
+      Math.min(canvasCenterX, page.x + page.w - w),
     );
     const finalY = Math.max(
       page.y,
-      Math.min(canvasCenterY, page.y + page.h - h)
+      Math.min(canvasCenterY, page.y + page.h - h),
     );
 
     return { x: finalX, y: finalY };
@@ -472,11 +577,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     // Clamp trong page bounds
     const finalX = Math.max(
       page.x,
-      Math.min(canvasCenterX, page.x + page.w - w)
+      Math.min(canvasCenterX, page.x + page.w - w),
     );
     const finalY = Math.max(
       page.y,
-      Math.min(canvasCenterY, page.y + page.h - h)
+      Math.min(canvasCenterY, page.y + page.h - h),
     );
 
     return { x: finalX, y: finalY };
@@ -533,7 +638,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       strokeData.width ?? 120,
       strokeData.height ?? 120,
       strokeData.scrollOffsetX ?? 0,
-      strokeData.scrollOffsetY ?? 0
+      strokeData.scrollOffsetY ?? 0,
     );
 
     const newStroke = {
@@ -561,7 +666,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       0,
       0,
       strokeData.scrollOffsetX ?? 0,
-      strokeData.scrollOffsetY ?? 0
+      strokeData.scrollOffsetY ?? 0,
     );
     const newStroke = {
       id: nextId(),
@@ -584,6 +689,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   // ====== API EXPOSED ======
   useImperativeHandle(ref, () => ({
+    getSnapshot: () => {
+      if (rendererRef.current) {
+        return rendererRef.current.getSnapshot();
+      }
+      return null;
+    },
     // Hoàn tác
     undo: () => {
       setUndoStack((prevUndo) => {
@@ -591,7 +702,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         const last = prevUndo[prevUndo.length - 1];
         const { type, stroke, index, before, after, layerId } = last;
 
-        setRedoStack((r) => [...r, last]);
+        setRedoStack((r) => {
+          const next = [...r, last];
+          return next.length > MAX_UNDO_STACK
+            ? next.slice(next.length - MAX_UNDO_STACK)
+            : next;
+        });
 
         updateLayerById(layerId || activeLayerId, (strokes = []) => {
           if (!Array.isArray(strokes)) return [];
@@ -650,7 +766,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           }
         });
 
-        return prevRedo.slice(0, -1);
+        const trimmed = prevRedo.slice(0, -1);
+        return trimmed.length > MAX_UNDO_STACK
+          ? trimmed.slice(trimmed.length - MAX_UNDO_STACK)
+          : trimmed;
       });
     },
 
@@ -806,6 +925,18 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       }
 
       try {
+        // Find the max ID from loaded strokes to prevent key collision
+        let maxIdNum = 0;
+        strokesArray.forEach((s) => {
+          if (s && s.id && typeof s.id === "string" && s.id.startsWith("s_")) {
+            const num = parseInt(s.id.substring(2), 10);
+            if (!isNaN(num) && num > maxIdNum) {
+              maxIdNum = num;
+            }
+          }
+        });
+        idCounter.current = maxIdNum + 1;
+
         // ✅ Tạo map của layer metadata để lookup nhanh
         const layerMetadataMap = new Map();
         if (Array.isArray(layersMetadata)) {
@@ -939,7 +1070,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             prevLayers.map((l) => [
               l.id,
               { ...l, strokes: [...(l.strokes || [])] },
-            ])
+            ]),
           );
 
           Object.keys(newStrokesByLayer).forEach((layerId) => {
@@ -984,7 +1115,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       if (["text", "sticky", "comment"].includes(strokeSnapshot.tool))
         setRealtimeText(null);
     },
-    [tool, color, activeConfig]
+    [tool, color, activeConfig],
   );
 
   return (
@@ -1013,6 +1144,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             onModifyStrokesBulk={modifyStrokesBulk}
             onDeleteStroke={deleteStrokeAt}
             onSelectStroke={(id) => setSelectedId(id)}
+            selectedId={selectedId}
             // ⬇️ chỉ truyền strokes của layer đang active
             strokes={getActiveLayer()?.strokes || []}
             // ⬇️ truyền tất cả strokes của các layer đang visible để eyedropper có thể lấy màu bất kể layer đang active
@@ -1037,11 +1169,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             scrollYShared={scrollYShared}
             pageOffsetY={pageOffsetY}
             onColorPicked={onColorPicked}
-            zoomState={{
-              scale,
-              translateX,
-              translateY,
-            }}
+            zoomState={zoomStateMemo}
             // ⬇️ truyền ref renderer để có thể nâng cấp eyedropper lấy pixel snapshot sau này
             canvasRef={rendererRef}
           >
@@ -1076,6 +1204,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               backgroundImageUrl={backgroundImageUrl}
               pageWidth={PAGE_WIDTH}
               pageHeight={PAGE_HEIGHT}
+              // ⬇️ Virtual rendering props
+              zoomState={zoomStateMemo}
+              // Dùng số thuần để tránh đọc .value trong render của CanvasRenderer
+              zoomSnapshot={zoomSnapshot}
+              scrollOffsetY={scrollOffsetY}
             />
           </GestureHandler>
         </Animated.View>

@@ -1,237 +1,364 @@
+// screens/auth/RegisterScreen.styles.jsx
 import { StyleSheet, Dimensions } from "react-native";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
 export const registerStyles = StyleSheet.create({
-  // Main Container
   container: {
     flex: 1,
   },
 
-  // Background
-  heroBackground: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    resizeMode: "cover",
-    opacity: 0.6,
-  },
-  heroOverlay: {
+  // === BACKGROUND (giữ nguyên) ===
+  backgroundContainer: {
     ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  gradientOrb: {
+    position: "absolute",
+    borderRadius: 9999,
+    opacity: 0.12,
+  },
+  orbTop: {
+    width: 500,
+    height: 500,
+    top: -200,
+    right: -100,
+    backgroundColor: "#3B82F6",
+  },
+  orbBottom: {
+    width: 400,
+    height: 400,
+    bottom: -150,
+    left: -100,
+    backgroundColor: "#93C5FD",
+  },
+  orbRight: {
+    width: 300,
+    height: 300,
+    top: "50%",
+    right: -100,
+    backgroundColor: "#60A5FA",
+  },
+  floatingElement: {
+    position: "absolute",
+    borderRadius: 9999,
+    opacity: 0.1,
+  },
+  float1: {
+    width: 100,
+    height: 100,
+    top: "20%",
+    left: "10%",
+    backgroundColor: "#3B82F6",
+  },
+  float2: {
+    width: 150,
+    height: 150,
+    top: "60%",
+    right: "20%",
+    backgroundColor: "#93C5FD",
+  },
+  float3: {
+    width: 80,
+    height: 80,
+    bottom: "20%",
+    left: "30%",
+    backgroundColor: "#60A5FA",
   },
 
-  // Content Layout
+  // === CONTENT WRAPPER ===
   contentWrapper: {
     flex: 1,
     paddingHorizontal: 24,
+    paddingVertical: 16,
     flexDirection: width > 768 ? "row" : "column",
     alignItems: "center",
-    justifyContent: "space-between",
-    maxWidth: 1152,
-    marginHorizontal: "auto",
+    justifyContent: width > 768 ? "center" : "flex-start",
+    gap: width > 768 ? 24 : 16,
+    zIndex: 5,
   },
 
-  // Left Side - Branding
   brandingSection: {
-    flex: 1,
+    flex: 1, // tăng nhẹ tỉ lệ để to hơn
     justifyContent: "center",
-    padding: 32,
+    alignItems: "flex-start",
+    marginLeft: width > 768 ? 20 : 0,
   },
   brandContent: {
-    gap: 24,
-    backgroundColor: "rgba(255,255,255,0.8)",
-    borderRadius: 16,
-    padding: 24,
+    gap: 47,
+    maxWidth: 600,
   },
-
-  // Logo
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 20,
+    justifyContent: width > 768 ? "flex-start" : "center",
   },
-  logoIcon: {
-    
+  logoImage: {
+    width: 66,
+    height: 66,
+    borderRadius: 12,
+    resizeMode: "contain",
+    backgroundColor: "white",
+    shadowColor: "#1E40AF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   logoText: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#4F46E5",
+    fontSize: 40,
+    fontFamily: "Pacifico-Regular",
+    color: "#1E3A8A",
   },
-
-  // Hero Content
+  logoSubtext: {
+    fontSize: 22,
+    color: "#64748B",
+    fontFamily: "Pacifico-Regular",
+  },
+  heroContent: {
+    gap: 20,
+    alignSelf: "stretch",
+    width: "100%",
+  },
   heroTitle: {
-    fontSize: width > 768 ? 48 : 32,
-    fontWeight: "bold",
-    color: "#1F2937",
+    fontSize: width > 1024 ? 50 : 40,
+    fontFamily: "Pacifico-Regular",
+    color: "#0F172A",
+    lineHeight: width > 1024 ? 50 : 40,
   },
   heroHighlight: {
-    color: "#F59E0B",
+    color: "#3B5BA0",
   },
   heroDescription: {
-    fontSize: 18,
-    color: "#6B7280",
-    maxWidth: 480,
+    fontSize: 20,
+    color: "#475569",
+    lineHeight: 20,
+    letterSpacing: 0.2,
+    maxWidth: "100%",
+    opacity: 0.9,
   },
-
-  // Features
-  featuresGrid: {
-    flexDirection: "row",
-    gap: 16,
-    flexWrap: "wrap",
+  featuresContainer: {
+    gap: 20,
+    width: '100%',
+    maxWidth: '100%',
   },
-  featureItem: {
+  featureCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "rgba(148,163,184,0.15)",
+    shadowColor: "#93C5FD",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 3,
+    width: '100%',
   },
-  featureText: {
-    fontSize: 16,
-    fontWeight: "500",
+  featureIconBg: {
+    width: 50,
+    height: 50,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
   },
-
-  // Right Side - Form
+  featureTitle: {
+    fontSize: 18,
+    fontFamily: "Poppins-Bold",
+    color: "#1E293B",
+    flexShrink: 1,
+    maxWidth: '100%',
+  },
+  featureDesc: {
+    fontSize: 14,
+    fontFamily: "Poppins-Regular",
+    color: "#64748B",
+    flexShrink: 1,
+    maxWidth: '100%',
+    flexWrap: 'wrap',
+  },
+  // === FORM (phải) ===
   formSection: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 32,
+    width: width > 768 ? "50%" : "100%",
+    maxWidth: 550,
+    marginRight: width > 768 ? 10 : 0,
+  },
+  formContainer: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(59, 130, 246, 0.1)",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  formDecorator: {
+    height: 3,
+    backgroundColor: "#3B82F6",
   },
 
-  // Register Card
-  registerCard: {
-    backgroundColor: "rgba(255,255,255,0.95)",
-    borderRadius: 24,
-    padding: 32,
-    width: width > 768 ? 400 : "100%",
-  },
+  // Header
   cardHeader: {
     alignItems: "center",
-    gap: 8,
-    marginBottom: 24,
-  },
-  cardTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#4F46E5",
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 12,
   },
   cardDescription: {
-    fontSize: 16,
-    color: "#6B7280",
-  },
-  cardContent: {
-    gap: 24,
+    fontSize: 18,
+    color: "#64748B",
+    marginTop: 4,
+    fontWeight: "500",
   },
 
-  // Form Elements
+  // Form
   form: {
-    gap: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 10,
   },
   inputGroup: {
-    gap: 6,
+    gap: 5,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#374151",
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#1E293B",
   },
-  input: {
-    height: 50,
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 44,
+    paddingHorizontal: 10,
+    gap: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+  },
+  inputContainerFocused: {
+    borderColor: "#3B82F6",
     backgroundColor: "#FFFFFF",
   },
-
-  // Password Field
-  passwordContainer: {
-    position: "relative",
-  },
-  passwordInput: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingRight: 48,
-    backgroundColor: "#FFFFFF",
-  },
-  passwordToggle: {
-    position: "absolute",
-    right: 16,
-    top: 15,
-  },
-
-  // Buttons
-  registerButton: {
-    width: "100%",
-    height: 50,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  buttonGradient: {
+  textInput: {
     flex: 1,
+    color: "#1E293B",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  passwordField: {
+    paddingRight: 6,
+  },
+  eyeButton: {
+    padding: 6,
+    marginRight: -6,
+  },
+
+  // Button
+  registerButtonWrapper: {
+    marginTop: 4,
+  },
+  registerButton: {
+    height: 44,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#3B82F6",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
   },
   buttonText: {
     color: "#FFFFFF",
     fontSize: 16,
+    fontWeight: "700",
+  },
+
+  // Divider
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginVertical: 4,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#E2E8F0",
+  },
+  dividerText: {
+    fontSize: 13,
+    color: "#94A3B8",
     fontWeight: "600",
   },
 
-  // Social Login
-  separatorContainer: {
+  // Social
+  socialContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    gap: 8,
   },
-  separator: {
+  socialBtn: {
     flex: 1,
-    height: 1,
-    backgroundColor: "#D1D5DB",
+    borderRadius: 10,
+    overflow: "hidden",
   },
-  separatorText: {
-    fontSize: 14,
-    color: "#6B7280",
+  socialBtnPressed: {
+    opacity: 0.7,
   },
-  socialButtons: {
+  socialBtnGradient: {
+    height: 40,
     flexDirection: "row",
-    gap: 12,
-  },
-  socialButton: {
-    flex: 1,
-    height: 50,
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
     borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    backgroundColor: "#F8FAFC",
   },
-  socialButtonText: {
-    color: "#4F46E5",
+  socialBtnText: {
+    color: "#1E293B",
     fontSize: 16,
     fontWeight: "600",
   },
 
-  // Login Prompt
-  loginPrompt: {
+  // Links
+  signupContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
   },
-  loginLink: {
-    color: "#4F46E5",
+  signupText: {
+    fontSize: 15,
+    color: "#64748B",
+  },
+  signupLink: {
+    fontSize: 15,
+    color: "#3B82F6",
+    fontWeight: "700",
+  },
+  backBtn: {
+    alignItems: "center",
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  backBtnText: {
+    fontSize: 13,
+    color: "#3B82F6",
     fontWeight: "600",
   },
 });

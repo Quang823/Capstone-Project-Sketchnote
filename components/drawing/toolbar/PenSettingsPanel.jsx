@@ -24,7 +24,7 @@ export default function PenSettingsPanel({
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  const position = useRef(new Animated.ValueXY({ x: 50, y: 200 })).current;
+  const position = useRef(new Animated.ValueXY({ x: 300, y: 200 })).current;
   const widthAnim = useRef(new Animated.Value(PANEL_WIDTH_COLLAPSED)).current;
   const tapStartTime = useRef(0);
 
@@ -223,7 +223,11 @@ export default function PenSettingsPanel({
             {tool === "calligraphy" && (
               <View style={styles.sliderBlock}>
                 <View style={styles.sliderHeader}>
-                  <MaterialCommunityIcons name="alpha-a" size={16} color="#111" />
+                  <MaterialCommunityIcons
+                    name="alpha-a"
+                    size={16}
+                    color="#111"
+                  />
                   <Text style={styles.label}> Calligraphy tilt</Text>
                   <Text style={styles.valueText}>{`${Math.round(
                     (config.calligraphyAngle ?? 0.6) * 100
@@ -231,7 +235,9 @@ export default function PenSettingsPanel({
                 </View>
                 <Slider
                   value={config.calligraphyAngle ?? 0.6}
-                  onValueChange={(v) => handleValueChange("calligraphyAngle", v)}
+                  onValueChange={(v) =>
+                    handleValueChange("calligraphyAngle", v)
+                  }
                   minimumValue={0}
                   maximumValue={1}
                   step={0.01}
@@ -246,7 +252,11 @@ export default function PenSettingsPanel({
               <>
                 <View style={styles.sliderBlock}>
                   <View style={styles.sliderHeader}>
-                    <MaterialCommunityIcons name="spray" size={16} color="#111" />
+                    <MaterialCommunityIcons
+                      name="spray"
+                      size={16}
+                      color="#111"
+                    />
                     <Text style={styles.label}> Airbrush spread</Text>
                     <Text style={styles.valueText}>{`${(
                       config.airbrushSpread ?? 1.6
@@ -254,7 +264,9 @@ export default function PenSettingsPanel({
                   </View>
                   <Slider
                     value={config.airbrushSpread ?? 1.6}
-                    onValueChange={(v) => handleValueChange("airbrushSpread", v)}
+                    onValueChange={(v) =>
+                      handleValueChange("airbrushSpread", v)
+                    }
                     minimumValue={0.6}
                     maximumValue={3}
                     step={0.02}
@@ -278,7 +290,9 @@ export default function PenSettingsPanel({
                   </View>
                   <Slider
                     value={config.airbrushDensity ?? 0.55}
-                    onValueChange={(v) => handleValueChange("airbrushDensity", v)}
+                    onValueChange={(v) =>
+                      handleValueChange("airbrushDensity", v)
+                    }
                     minimumValue={0.08}
                     maximumValue={1}
                     step={0.01}

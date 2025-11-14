@@ -19,7 +19,7 @@ export const loginStyles = StyleSheet.create({
   gradientOrb: {
     position: "absolute",
     borderRadius: 9999,
-    opacity: 0.08,
+    opacity: 0.12,
   },
   orbTop: {
     width: 500,
@@ -47,7 +47,7 @@ export const loginStyles = StyleSheet.create({
   floatingElement: {
     position: "absolute",
     borderRadius: 9999,
-    opacity: 0.06,
+    opacity: 0.1,
   },
   float1: {
     width: 100,
@@ -86,96 +86,113 @@ export const loginStyles = StyleSheet.create({
   brandingSection: {
     flex: 1,
     justifyContent: "center",
-    paddingRight: width > 768 ? 60 : 0,
-    paddingBottom: width > 768 ? 0 : 40,
+    alignItems: "flex-start",
+    paddingHorizontal: 60,
+    paddingVertical: 60,
   },
 
   brandContent: {
-    gap: 40,
+    gap: 47,
+    maxWidth: 600,
   },
 
   logoContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 12,
   },
 
-  logoBg: {
-    width: 60,
-    height: 60,
+  logoImage: {
+    width: 72,
+    height: 72,
     borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#3B82F6",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
+    resizeMode: "contain",
+    backgroundColor: "white",
+    shadowColor: "#1E40AF",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
     elevation: 8,
   },
 
   logoText: {
-    fontSize: 32,
-    fontWeight: "900",
-    color: "#1E293B",
-    letterSpacing: -1,
+    fontSize: 38,
+    fontFamily: "Pacifico-Regular",
+    color: "#1E3A8A",
+    letterSpacing: 0.5,
   },
   logoSubtext: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#64748B",
-    fontWeight: "600",
-    marginTop: 2,
+    fontFamily: "Pacifico-Regular",
   },
 
   heroContent: {
-    gap: 16,
+    gap: 12,
+    alignSelf: "stretch",
+    width: "100%",
   },
   heroTitle: {
-    fontSize: width > 768 ? 52 : 36,
-    fontWeight: "900",
+    fontSize: width > 1024 ? 56 : 44,
+    fontFamily: "Pacifico-Regular",
     color: "#0F172A",
-    lineHeight: width > 768 ? 62 : 44,
+    lineHeight: width > 1024 ? 64 : 50,
   },
   heroHighlight: {
-    color: "#1D4ED8",
+    color: "#3B5BA0",
   },
   heroDescription: {
-    fontSize: 16,
+    fontSize: 15,
+    fontFamily: "Poppins-Regular",
     color: "#475569",
     lineHeight: 26,
-    maxWidth: 500,
+    maxWidth: 520,
+    opacity: 0.9,
   },
 
   featuresContainer: {
-    gap: 16,
+    gap: 20,
+    width: '100%',
+    maxWidth: '100%',
   },
   featureCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
-    paddingHorizontal: 16,
+    gap: 12,
+    paddingHorizontal: 18,
     paddingVertical: 12,
-    backgroundColor: "rgba(59, 130, 246, 0.08)",
-    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.7)",
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: "rgba(59, 130, 246, 0.15)",
+    borderColor: "rgba(148,163,184,0.15)",
+    shadowColor: "#93C5FD",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 3,
+    width: '100%',
   },
   featureIconBg: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: "rgba(59, 130, 246, 0.15)",
+    width: 50,
+    height: 50,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
   },
   featureTitle: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 18,
+    fontFamily: "Poppins-Bold",
     color: "#1E293B",
+    flexShrink: 1,
+    maxWidth: '100%',
   },
   featureDesc: {
-    fontSize: 12,
+    fontSize: 14,
+    fontFamily: "Poppins-Regular",
     color: "#64748B",
-    marginTop: 2,
+    flexShrink: 1,
+    maxWidth: '100%',
+    flexWrap: 'wrap',
   },
 
   // Form Section
@@ -189,7 +206,7 @@ export const loginStyles = StyleSheet.create({
 
   formContainer: {
     width: "100%",
-    maxWidth: 440,
+    maxWidth: 550,
     backgroundColor: "#FFFFFF",
     borderRadius: 28,
     borderWidth: 1,
@@ -240,7 +257,6 @@ export const loginStyles = StyleSheet.create({
   cardDescription: {
     fontSize: 14,
     color: "#64748B",
-    marginTop: 8,
     fontWeight: "500",
   },
 
@@ -265,7 +281,7 @@ export const loginStyles = StyleSheet.create({
   },
   forgotLink: {
     fontSize: 12,
-    color: "#3B82F6",
+    color: "#3B5BA0",
     fontWeight: "700",
   },
 

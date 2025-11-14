@@ -13,7 +13,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import LazyImage from "../../common/LazyImage";
 import { projectService } from "../../service/projectService";
+import * as offlineStorage from "../../utils/offlineStorage";
 
 const COVER_TEMPLATES = {
   simple: [
@@ -567,6 +569,11 @@ export default function NoteSetupScreen({ navigation, route }) {
         projectDetails: projectDetails, // Include full project details (từ response tạo project)
       };
 
+      await offlineStorage.saveProjectLocally(`${projectId}_meta`, {
+        orientation,
+        paperSize,
+      });
+
       setIsCreating(false);
       //   console.log("🚀 Navigating to DrawingScreen with config:", noteConfig);
       navigation.navigate("DrawingScreen", { noteConfig });
@@ -897,10 +904,9 @@ export default function NoteSetupScreen({ navigation, route }) {
 
                         if (imageUrlToShow) {
                           return (
-                            <Image
+                            <LazyImage
                               source={{ uri: imageUrlToShow }}
                               style={styles.coverTemplatePreview}
-                              resizeMode="cover"
                             />
                           );
                         }

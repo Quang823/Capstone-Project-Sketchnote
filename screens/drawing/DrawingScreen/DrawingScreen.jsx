@@ -15,6 +15,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Text,
+  findNodeHandle,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import HeaderToolbar from "../../../components/drawing/toolbar/HeaderToolbar";
@@ -28,7 +29,8 @@ import EraserDropdown from "../../../components/drawing/toolbar/EraserDropdown";
 import NetInfo from "@react-native-community/netinfo";
 import useOrientation from "../../../hooks/useOrientation";
 import { useNavigation } from "@react-navigation/native";
-import * as ExportUtils from "../../../utils/ExportUtils";
+import { exportPagesToPdf } from "../../../utils/ExportUtils";
+import ExportModal from "../../../components/drawing/modal/ExportModal";
 import { projectService } from "../../../service/projectService";
 import styles from "./DrawingScreen.styles";
 import * as offlineStorage from "../../../utils/offlineStorage";
@@ -36,6 +38,11 @@ import { manipulateAsync, FlipType, SaveFormat } from "expo-image-manipulator";
 import { uploadToCloudinary } from "../../../service/cloudinary";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
+import { useToast } from "../../../hooks/use-toast";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Print from "expo-print";
 // Hàm helper để lấy kích thước hình ảnh
 const getImageSize = (uri) => {
   return new Promise((resolve, reject) => {
@@ -56,7 +63,7 @@ const getImageSize = (uri) => {
       (error) => {
         clearTimeout(timeout);
         reject(error);
-      }
+      },
     );
   });
 };
@@ -64,7 +71,9 @@ const getImageSize = (uri) => {
 export default function DrawingScreen({ route }) {
   const navigation = useNavigation();
   const noteConfig = route?.params?.noteConfig;
-
+  const [isExportModalVisible, setExportModalVisible] = useState(false);
+  const { toast } = useToast();
+  const multiPageCanvasContainerRef = useRef(null);
   // ✅ Validate noteConfig to prevent crash
   useEffect(() => {
     if (!noteConfig) {
@@ -77,7 +86,7 @@ export default function DrawingScreen({ route }) {
             text: "OK",
             onPress: () => navigation.goBack(),
           },
-        ]
+        ],
       );
     }
   }, [noteConfig, navigation]);
@@ -344,12 +353,12 @@ export default function DrawingScreen({ route }) {
             ? updater(
                 prev[activePageId] || [
                   { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
-                ]
+                ],
               )
             : updater,
       }));
     },
-    [activePageId]
+    [activePageId],
   );
 
   // Handler for adding new layer
@@ -376,7 +385,7 @@ export default function DrawingScreen({ route }) {
         };
       });
     },
-    [layerCounter]
+    [layerCounter],
   );
 
   // Layer panel callbacks - memoized to prevent re-renders
@@ -401,7 +410,7 @@ export default function DrawingScreen({ route }) {
 
       if (!layerExists) {
         console.warn(
-          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`
+          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`,
         );
         // Fallback về layer đầu tiên nếu layer không tồn tại
         if (currentLayers.length > 0) {
@@ -417,25 +426,25 @@ export default function DrawingScreen({ route }) {
         layerSelectTimeoutRef.current = null;
       }, 50); // 50ms debounce
     },
-    [pageLayers, activePageId]
+    [pageLayers, activePageId],
   );
 
   const handleToggleVisibility = useCallback(
     (id) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
+        prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)),
       );
     },
-    [updateCurrentPageLayers]
+    [updateCurrentPageLayers],
   );
 
   const handleToggleLock = useCallback(
     (id) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l))
+        prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l)),
       );
     },
-    [updateCurrentPageLayers]
+    [updateCurrentPageLayers],
   );
 
   const handleLayerAdd = useCallback(() => {
@@ -446,16 +455,16 @@ export default function DrawingScreen({ route }) {
     (id) => {
       updateCurrentPageLayers((prev) => prev.filter((l) => l.id !== id));
     },
-    [updateCurrentPageLayers]
+    [updateCurrentPageLayers],
   );
 
   const handleLayerRename = useCallback(
     (id, newName) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
+        prev.map((l) => (l.id === id ? { ...l, name: newName } : l)),
       );
     },
-    [updateCurrentPageLayers]
+    [updateCurrentPageLayers],
   );
 
   const handleCloseLayerPanel = useCallback(() => setShowLayerPanel(false), []);
@@ -552,7 +561,7 @@ export default function DrawingScreen({ route }) {
         thickness: 1.0,
         stabilization: 0.2,
       },
-    [tool, toolConfigs]
+    [tool, toolConfigs],
   );
 
   const handleSettingChange = useCallback((toolName, key, value) => {
@@ -578,11 +587,11 @@ export default function DrawingScreen({ route }) {
       "airbrush",
       "crayon",
     ],
-    []
+    [],
   );
   const shapeTools = useMemo(
     () => ["line", "arrow", "rect", "circle", "triangle", "star", "polygon"],
-    []
+    [],
   );
   const [penColors, setPenColors] = useState({
     pen: "#111827",
@@ -620,11 +629,11 @@ export default function DrawingScreen({ route }) {
     if (typeof color !== "string") return;
     if (penTools.includes(tool)) {
       setPenColors((prev) =>
-        prev[tool] === color ? prev : { ...prev, [tool]: color }
+        prev[tool] === color ? prev : { ...prev, [tool]: color },
       );
     } else if (shapeTools.includes(tool)) {
       setShapeColors((prev) =>
-        prev[tool] === color ? prev : { ...prev, [tool]: color }
+        prev[tool] === color ? prev : { ...prev, [tool]: color },
       );
     }
   }, [tool, color]);
@@ -683,7 +692,7 @@ export default function DrawingScreen({ route }) {
       setStrokeWidth(size);
       setPenBaseWidths((prev) => ({ ...prev, [tool]: size }));
     },
-    [tool]
+    [tool],
   );
 
   const multiPageCanvasRef = useRef();
@@ -733,7 +742,7 @@ export default function DrawingScreen({ route }) {
           if (sanitizedChunk.length > 0) {
             multiPageCanvasRef.current?.appendStrokesToPage(
               pageId,
-              sanitizedChunk
+              sanitizedChunk,
             );
           }
 
@@ -788,7 +797,7 @@ export default function DrawingScreen({ route }) {
               projectId,
               p.pageNumber,
               p.strokeUrl,
-              { signal: controller.signal }
+              { signal: controller.signal },
             );
 
             if (controller.signal.aborted || !data) continue;
@@ -808,7 +817,7 @@ export default function DrawingScreen({ route }) {
                 const existingLayers = prev[pageId] || [];
                 const mergedLayers = data.layers.map((savedLayer) => {
                   const existingLayer = existingLayers.find(
-                    (l) => l?.id === savedLayer.id
+                    (l) => l?.id === savedLayer.id,
                   );
                   return {
                     id: savedLayer.id,
@@ -839,7 +848,7 @@ export default function DrawingScreen({ route }) {
             if (e.name !== "AbortError") {
               console.error(
                 `❌ Load page ${p.pageNumber} failed:`,
-                e?.message || e
+                e?.message || e,
               );
             }
           }
@@ -850,7 +859,7 @@ export default function DrawingScreen({ route }) {
           if (!controller.signal.aborted) {
             Alert.alert(
               "Lỗi",
-              "Không thể tải dữ liệu project. Vui lòng thử lại."
+              "Không thể tải dữ liệu project. Vui lòng thử lại.",
             );
           }
         }
@@ -872,28 +881,29 @@ export default function DrawingScreen({ route }) {
   // [REWRITTEN] 💾 SAVE with offline support
   const handleSaveFile = async () => {
     if (isSaving) {
-      Toast.show({
-        type: "info",
-        text1: "Saving...",
-        text2: "The saving process is in progress. Please wait.",
+      toast({
+        title: "Saving...",
+        description: "The saving process is in progress. Please wait.",
+        variant: "default",
       });
+
       return;
     }
 
     if (!multiPageCanvasRef.current?.getAllPagesData) {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Unable to retrieve drawing data. Please try again.",
+      toast({
+        title: "Error",
+        description: "Unable to retrieve drawing data. Please try again.",
+        variant: "destructive",
       });
       return;
     }
 
     if (!noteConfig?.projectId) {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Project ID not found. Unable to save.",
+      toast({
+        title: "Error",
+        description: "Project ID not found. Unable to save.",
+        variant: "destructive",
       });
       return;
     }
@@ -902,10 +912,10 @@ export default function DrawingScreen({ route }) {
 
     const pagesData = multiPageCanvasRef.current.getAllPagesData();
     if (!pagesData || pagesData.length === 0) {
-      Toast.show({
-        type: "info",
-        text1: "Notice",
-        text2: "No data available to save.",
+      toast({
+        title: "Notice",
+        description: "No data available to save.",
+        variant: "default", // hoặc "info" nếu component hỗ trợ
       });
       setIsSaving(false);
       return;
@@ -918,17 +928,17 @@ export default function DrawingScreen({ route }) {
         await offlineStorage.saveProjectLocally(localKey, page.dataObject);
       }
 
-      Toast.show({
-        type: "success",
-        text1: "Saved Locally",
-        text2: "All pages have been saved to your device.",
+      toast({
+        title: "Saved Locally",
+        description: "All pages have been saved to your device.",
+        variant: "default",
       });
     } catch (localSaveError) {
       console.error("❌ [DrawingScreen] Error saving locally:", localSaveError);
-      Toast.show({
-        type: "error",
-        text1: "Storage Error",
-        text2: "Unable to save data to the device storage.",
+      toast({
+        title: "Storage Error",
+        description: "Unable to save data to the device storage.",
+        variant: "destructive",
       });
       setIsSaving(false);
       return;
@@ -937,11 +947,11 @@ export default function DrawingScreen({ route }) {
     // Check network status
     const netState = await NetInfo.fetch();
     if (!netState.isConnected || !netState.isInternetReachable) {
-      Toast.show({
-        type: "info",
-        text1: "Saved Offline",
-        text2:
-          "Your data has been saved locally. Synchronization will occur when you are online.",
+      toast({
+        title: "Saved Offline",
+        description:
+          "Your data has been saved locally. It will sync when you're online.",
+        variant: "default",
       });
       setIsSaving(false);
       // TODO: Add pages to a persistent sync queue if needed
@@ -953,8 +963,8 @@ export default function DrawingScreen({ route }) {
         projectService.uploadPageToS3(
           noteConfig.projectId,
           page.pageNumber,
-          page.dataObject
-        )
+          page.dataObject,
+        ),
       );
 
       const uploadedPagesResults = await Promise.all(uploadPromises);
@@ -969,18 +979,19 @@ export default function DrawingScreen({ route }) {
 
       await projectService.createPage(finalPayload);
 
-      Toast.show({
-        type: "success",
-        text1: "Success!",
-        text2: "Your project has been saved and synchronized successfully.",
+      toast({
+        title: "Success!",
+        description:
+          "Your project has been saved and synchronized successfully.",
+        variant: "default",
       });
     } catch (syncError) {
       console.error("❌ [DrawingScreen] Sync failed:", syncError);
-      Toast.show({
-        type: "error",
-        text1: "Sync Error",
-        text2:
-          "An error occurred during synchronization. Your data is still safely saved on this device.",
+      toast({
+        title: "Sync Failed",
+        description:
+          "Your data is safe locally. We'll try syncing again later.",
+        variant: "destructive",
       });
       // TODO: Add pages to a persistent sync queue if sync fails
     } finally {
@@ -989,28 +1000,151 @@ export default function DrawingScreen({ route }) {
   };
 
   // 📤 EXPORT (local PDF/PNG)
-  const handleExportAndSave = useCallback(async (format) => {
-    try {
-      const allPages = Object.values(pageRefs.current).map(
-        (ref) => ref?.getStrokes?.() || []
-      );
-      const projectName = `Drawing_${format}_${
-        new Date().toISOString().split("T")[0]
-      }`;
+  const handleExportFile = async (options) => {
+    setExportModalVisible(false);
 
-      const { uri, type } = await projectService.exportFile(
-        allPages,
-        canvasRef,
-        format,
-        projectName
-      );
-
-      Alert.alert("✅ Export success", `File saved: ${uri}`);
-    } catch (err) {
-      console.error("❌ [DrawingScreen] Export error:", err);
-      Alert.alert("Export Error", err.message || "Export failed");
+    // --- PICTURE EXPORT ---
+    if (options.selected === "picture") {
+      if (!multiPageCanvasContainerRef.current) {
+        toast.show({
+          title: "Lỗi",
+          description: "Không thể xuất file. Không tìm thấy canvas.",
+          variant: "error",
+        });
+        return;
+      }
+      try {
+        const uri = await captureRef(multiPageCanvasContainerRef.current, {
+          format: "png",
+          quality: 1,
+        });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: "image/png",
+            dialogTitle: "Chia sẻ bản vẽ",
+          });
+        } else {
+          toast.show({
+            title: "Không thể chia sẻ",
+            description: "Chức năng chia sẻ không có sẵn trên thiết bị này.",
+            variant: "error",
+          });
+        }
+      } catch (error) {
+        console.error("Lỗi xuất file ảnh:", error);
+        toast.show({
+          title: "Xuất Ảnh Thất Bại",
+          description: "Đã có lỗi xảy ra khi xuất file ảnh.",
+          variant: "error",
+        });
+      }
     }
-  }, []);
+    // --- STARNOTE (JSON) EXPORT ---
+    else if (options.selected === "starnote") {
+      try {
+        const pagesData = await multiPageCanvasRef.current.getAllPagesData();
+        if (!pagesData || pagesData.length === 0) {
+          toast.show({
+            title: "Không có dữ liệu",
+            description: "Không có nội dung để xuất file.",
+            variant: "info",
+          });
+          return;
+        }
+
+        const projectData = {
+          version: "1.0.0",
+          createdAt: new Date().toISOString(),
+          noteConfig: noteConfig,
+          pages: pagesData.map((p) => p.dataObject),
+        };
+
+        const jsonString = JSON.stringify(projectData, null, 2);
+        const fileName = `${options.fileName || "Untitled"}.starnote`;
+        const uri = FileSystem.documentDirectory + fileName.replace(/\s/g, "_");
+
+        await FileSystem.writeAsStringAsync(uri, jsonString, {
+          encoding: "utf8",
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: "application/json",
+            dialogTitle: "Chia sẻ file StarNote",
+          });
+        } else {
+          toast.show({
+            title: "Không thể chia sẻ",
+            description: "Chức năng chia sẻ không có sẵn trên thiết bị này.",
+            variant: "error",
+          });
+        }
+      } catch (error) {
+        console.error("Lỗi xuất file StarNote:", error);
+        toast.show({
+          title: "Xuất StarNote Thất Bại",
+          description: "Đã có lỗi xảy ra khi xuất file.",
+          variant: "error",
+        });
+      }
+    }
+    // --- PDF EXPORT (using expo-print) ---
+    else if (
+      options.selected === "noneditable" ||
+      options.selected === "editable"
+    ) {
+      if (options.selected === "editable") {
+        toast.show({
+          title: "Thông báo",
+          description:
+            "Xuất file PDF có thể chỉnh sửa hiện chưa được hỗ trợ. Một file PDF đa trang dạng ảnh sẽ được tạo.",
+          variant: "info",
+        });
+      }
+
+      setIsSaving(true);
+      try {
+        const pagesData = multiPageCanvasRef.current?.getAllPagesData?.();
+        if (!pagesData || pagesData.length === 0) {
+          toast.show({
+            title: "Không có dữ liệu",
+            description: "Không có trang nào để xuất file.",
+            variant: "info",
+          });
+          setIsSaving(false);
+          return;
+        }
+        // Use Skia snapshots for reliable per-page capture
+        const pdfPath = await exportPagesToPdf(
+          pagesData,
+          pageRefs.current,
+          options.fileName,
+        );
+
+        await Sharing.shareAsync(pdfPath, {
+          mimeType: "application/pdf",
+          dialogTitle: "Chia sẻ file PDF",
+        });
+      } catch (error) {
+        console.error("Lỗi xuất file PDF đa trang:", error);
+        toast.show({
+          title: "Xuất PDF Thất Bại",
+          description: "Đã có lỗi xảy ra khi xuất file PDF.",
+          variant: "error",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    }
+    // --- OTHER/DEFAULT ---
+    else {
+      toast.show({
+        title: "Chức năng chưa được hỗ trợ",
+        description: `Chức năng xuất file sang định dạng ${options.selected} hiện chưa được hỗ trợ.`,
+        variant: "info",
+      });
+    }
+  };
 
   // [REWRITTEN] 🖼 ===== INSERT IMAGE FROM GALLERY (with upload) =====
   const handleInsertImage = async () => {
@@ -1038,7 +1172,7 @@ export default function DrawingScreen({ route }) {
         const manipResult = await manipulateAsync(
           localUri,
           [{ rotate: 0 }], // No-op to just get orientation fixed
-          { compress: 0.9, format: SaveFormat.JPEG }
+          { compress: 0.9, format: SaveFormat.JPEG },
         );
         localUri = manipResult.uri;
         size = { width: manipResult.width, height: manipResult.height };
@@ -1052,7 +1186,7 @@ export default function DrawingScreen({ route }) {
 
       if (!cloudUrl) {
         throw new Error(
-          "Upload to Cloudinary succeeded but no secure_url was returned."
+          "Upload to Cloudinary succeeded but no secure_url was returned.",
         );
       }
 
@@ -1096,7 +1230,7 @@ export default function DrawingScreen({ route }) {
         setIsUploadingAsset(true);
         const cloudUrl = await projectService.uploadAsset(
           localUri,
-          "image/jpeg"
+          "image/jpeg",
         );
         if (!cloudUrl) {
           throw new Error("Failed to upload image from camera.");
@@ -1237,8 +1371,8 @@ export default function DrawingScreen({ route }) {
               {isSaving
                 ? "Saving..."
                 : isUploadingAsset
-                ? "Uploading asset..."
-                : "Loading project..."}
+                  ? "Uploading asset..."
+                  : "Loading project..."}
             </Text>
           </View>
         </View>
@@ -1251,6 +1385,12 @@ export default function DrawingScreen({ route }) {
         onCamera={handleOpenCamera}
         onToggleLayerPanel={() => setShowLayerPanel((v) => !v)}
         isLayerPanelVisible={showLayerPanel}
+        onExportPress={() => setExportModalVisible(true)}
+      />
+      <ExportModal
+        visible={isExportModalVisible}
+        onClose={() => setExportModalVisible(false)}
+        onExport={handleExportFile}
       />
       {showLayerPanel && (
         <LayerPanel
@@ -1307,7 +1447,7 @@ export default function DrawingScreen({ route }) {
           onClear={() => handleClear(activePageId)}
           onSaveFile={handleSaveFile}
           onSyncFile={() => projectService.syncPendingPages()} // Pass the sync function
-          onExportPDF={() => handleExportAndSave("pdf")} // Thêm nút export PDF
+          onExportPDF={() => handleExportFile("pdf")} // Thêm nút export PDF
           eraserMode={eraserMode}
           setEraserMode={setEraserMode}
           eraserSize={eraserSize}
@@ -1360,7 +1500,11 @@ export default function DrawingScreen({ route }) {
       )}
 
       {/* 🧾 Canvas */}
-      <View style={{ flex: 1 }}>
+      <View
+        style={{ flex: 1 }}
+        ref={multiPageCanvasContainerRef}
+        collapsable={false}
+      >
         <MultiPageCanvas
           ref={multiPageCanvasRef}
           noteConfig={noteConfig}
