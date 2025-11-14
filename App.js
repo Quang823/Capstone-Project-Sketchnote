@@ -1,6 +1,7 @@
 // App.js
 import React, { useEffect, useCallback } from "react";
 import { View } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "./context/ToastContext";
@@ -62,25 +63,27 @@ export default function App() {
   }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <ErrorBoundary fallbackText="The background parser has crashed. Please restart the app.">
-          <BackgroundJsonParser />
-        </ErrorBoundary>
-        <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-          <CartProvider>
-            <FontProvider fontsLoaded={fontsLoaded}>
-              <ToastProvider>
-                <NavigationProvider>
-                  <NavigationContainer>
-                    <AppNavigator />
-                    <GlobalSidebar />
-                  </NavigationContainer>
-                </NavigationProvider>
-              </ToastProvider>
-            </FontProvider>
-          </CartProvider>
-        </View>
-      </AuthProvider>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <ErrorBoundary fallbackText="The background parser has crashed. Please restart the app.">
+            <BackgroundJsonParser />
+          </ErrorBoundary>
+          <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+            <CartProvider>
+              <FontProvider fontsLoaded={fontsLoaded}>
+                <ToastProvider>
+                  <NavigationProvider>
+                    <NavigationContainer>
+                      <AppNavigator />
+                      <GlobalSidebar />
+                    </NavigationContainer>
+                  </NavigationProvider>
+                </ToastProvider>
+              </FontProvider>
+            </CartProvider>
+          </View>
+        </AuthProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

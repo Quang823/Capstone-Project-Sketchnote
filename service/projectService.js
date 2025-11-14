@@ -18,9 +18,12 @@ export const projectService = {
         .toString(36)
         .substring(2)}.${fileExtension}`;
 
+      // Lấy URL upload tạm từ backend
       const { uploadUrl } = await projectService.getPresign(fileName, mimeType);
 
-      const response = await FileSystem.uploadAsync(uploadUrl, fileUri, {
+      // ✅ Dùng API mới: FileSystem.File().upload()
+      const file = FileSystem.File(fileUri);
+      const response = await file.upload(uploadUrl, {
         httpMethod: "PUT",
         headers: { "Content-Type": mimeType },
       });
@@ -31,6 +34,7 @@ export const projectService = {
         );
       }
 
+      // Trả về URL thật (bỏ phần query)
       return uploadUrl.split("?")[0];
     } catch (error) {
       console.error("❌ Failed to upload asset:", error);

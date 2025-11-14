@@ -80,6 +80,7 @@ export default function GestureHandler(
     scrollYShared, // ✅ Animated scroll value
     pageOffsetY = 0, // ✅ Page offset trong project
     onColorPicked, // 👈 Thêm prop
+    selectedId: selectedIdProp,
   },
   ref,
 ) {
@@ -89,6 +90,58 @@ export default function GestureHandler(
       rulerLockRef.current = null;
     },
   }));
+
+  // Track last scheduled requestAnimationFrame ID to cancel on unmount
+  const rafIdRef = useRef(null);
+
+  // Cleanup: cancel any pending RAF to prevent leaks when unmounting
+  useEffect(() => {
+    return () => {
+      try {
+        if (typeof rafIdRef.current === "number") {
+          cancelAnimationFrame(rafIdRef.current);
+        }
+      } catch {}
+      rafIdRef.current = null;
+      // Reset transient refs to release memory
+      rafScheduled.current = false;
+      liveRef.current = [];
+    };
+  }, []);
+
+  // Helper: dynamic minimum distance squared for point sampling
+  const getMinDistSq = useCallback(() => {
+    try {
+      const scale = zoomState?.scale?.value ?? 1;
+      const basePx = 3; // base minimum step in pixels
+      const effWidth =
+        tool === "pencil"
+          ? (pencilWidth ?? strokeWidth ?? 1)
+          : tool === "brush"
+            ? (brushWidth ?? strokeWidth ?? 1)
+            : tool === "calligraphy"
+              ? (calligraphyWidth ?? strokeWidth ?? 1)
+              : tool === "eraser"
+                ? (eraserSize ?? strokeWidth ?? 1)
+                : (strokeWidth ?? 1);
+      // When zoomed out (scale < 1), increase min distance; when zoomed in, allow denser points
+      const minDist = Math.max(
+        2,
+        basePx / Math.max(0.6, scale) + Math.min(6, effWidth * 0.15),
+      );
+      return minDist * minDist;
+    } catch {
+      return 9; // fallback
+    }
+  }, [
+    zoomState,
+    tool,
+    pencilWidth,
+    brushWidth,
+    calligraphyWidth,
+    eraserSize,
+    strokeWidth,
+  ]);
   const distPointToSegment = (px, py, x1, y1, x2, y2) => {
     const vx = x2 - x1;
     const vy = y2 - y1;
@@ -334,6 +387,15 @@ export default function GestureHandler(
 
   const [draggingText, setDraggingText] = useState(null);
   const [tempStrokeId, setTempStrokeId] = useState(null);
+
+  useEffect(() => {
+    if (
+      typeof selectedIdProp === "string" &&
+      selectedIdProp !== selectedId
+    ) {
+      setSelectedId(selectedIdProp);
+    }
+  }, [selectedIdProp]);
   const getActiveStrokes = useCallback(() => {
     // Validate strokes is array before filtering
     if (!Array.isArray(strokes)) return [];
@@ -572,16 +634,21 @@ export default function GestureHandler(
   });
 
   useEffect(() => {
-    if (!selectedStroke) return;
-    if (!["image", "sticker"].includes(selectedStroke.tool)) return;
-
-    setSelectedBox({
-      x: selectedStroke.x ?? 0,
-      y: selectedStroke.y ?? 0,
-      width: selectedStroke.width ?? 100,
-      height: selectedStroke.height ?? 100,
-      rotation: selectedStroke.rotation ?? 0,
-    });
+    if (
+      selectedStroke &&
+      ["image", "sticker", "table"].includes(selectedStroke.tool)
+    ) {
+      setSelectedBox({
+        x: selectedStroke.x ?? 0,
+        y: selectedStroke.y ?? 0,
+        width: selectedStroke.width ?? 100,
+        height: selectedStroke.height ?? 100,
+        rotation: selectedStroke.rotation ?? 0,
+      });
+    } else {
+      // If no stroke is selected, or it's not a selectable object, clear the box.
+      setSelectedBox(null);
+    }
   }, [selectedStroke]);
   const liveTransformRef = useRef({
     dx: 0,
@@ -825,16 +892,18 @@ export default function GestureHandler(
     .numberOfTaps(2)
     .maxDuration(300)
     .maxDistance(15)
+    .runOnJS(true)
     .onStart((e) => {
       const validStrokes = getActiveStrokes?.() || [];
       const hit = hitTestText(e.x, e.y, validStrokes);
       if (!hit) return;
 
       if (hit.tool === "emoji") {
-        setSelectedId(hit.id);
-        onSelectStroke?.(hit.id);
+        runOnJS(setSelectedId)(hit.id);
+        if (typeof onSelectStroke === "function")
+          runOnJS(onSelectStroke)(hit.id);
 
-        setSelectedBox({
+        const box = {
           x: hit.x - (hit.padding || 0) - 1,
           y: hit.y - (hit.fontSize || 18) / 2 - (hit.padding || 0) - 1,
           width:
@@ -842,32 +911,87 @@ export default function GestureHandler(
             (hit.padding || 0) * 2 +
             2,
           height: (hit.fontSize || 18) + (hit.padding || 0) * 2 + 2,
-        });
+        };
+        runOnJS(setSelectedBox)(box);
         return;
       }
 
       if (hit.tool === "text") {
-        setSelectedId(hit.id);
-        onSelectStroke?.(hit.id);
-        setSelectedBox(null);
+        runOnJS(setSelectedId)(hit.id);
+        if (typeof onSelectStroke === "function")
+          runOnJS(onSelectStroke)(hit.id);
+        runOnJS(setSelectedBox)(null);
 
         if (typeof setRealtimeText === "function") {
-          setRealtimeText({ id: hit.id, ...hit });
+          runOnJS(setRealtimeText)({ id: hit.id, ...hit });
         }
 
-        setEditorProps({
+        runOnJS(setEditorProps)({
           x: hit.x,
           y: hit.y,
           tool: hit.tool,
           data: hit,
         });
-        setEditorVisible(true);
+        runOnJS(setEditorVisible)(true);
       }
     });
 
   const tap = Gesture.Tap()
     .runOnJS(true)
     .onStart((e) => {
+      // Nếu đang dùng các tool vẽ tự do, tạo chấm ngay tại vị trí tap
+      const isFreehandTool = [
+        "pen",
+        "pencil",
+        "brush",
+        "calligraphy",
+        "highlighter",
+        "marker",
+        "airbrush",
+        "crayon",
+      ].includes(tool);
+      if (isFreehandTool && isInsidePage(e.x, e.y, page)) {
+        const w =
+          {
+            pen: strokeWidth,
+            pencil: pencilWidth,
+            brush: brushWidth,
+            calligraphy: calligraphyWidth,
+            highlighter: strokeWidth * 2,
+            eraser: eraserSize,
+          }[tool] ?? strokeWidth;
+
+        const toolConfig = configByTool[tool] || {
+          pressure: 0.5,
+          thickness: 1,
+          stabilization: 0.2,
+        };
+
+        const newStroke = {
+          id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          tool,
+          color,
+          width: w,
+          points: [{ x: e.x, y: e.y }],
+          opacity:
+            tool === "brush"
+              ? brushOpacity
+              : tool === "calligraphy"
+                ? calligraphyOpacity
+                : 1,
+          ...toolConfig,
+          layerId: activeLayerId,
+          rotation: 0,
+        };
+
+        try {
+          onAddStroke?.(newStroke);
+        } catch (err) {
+          console.error("Error adding dot stroke:", err);
+        }
+        return;
+      }
+
       // 🎨 Eyedropper tool - pick color from stroke
       if (tool === "eyedropper") {
         // Try to find a stroke at tap position across ALL visible strokes
@@ -967,13 +1091,6 @@ export default function GestureHandler(
       const hitImage = hitTestImage(e.x, e.y, strokes);
       if (hitImage) {
         setSelectedId(hitImage.id);
-        setSelectedBox({
-          x: hitImage.x,
-          y: hitImage.y,
-          width: hitImage.width,
-          height: hitImage.height,
-          rotation: hitImage.rotation ?? 0,
-        });
         setEditorVisible(false);
         return;
       }
@@ -1351,7 +1468,7 @@ export default function GestureHandler(
       const last = liveRef.current.at(-1) || { x: 0, y: 0 };
       const dx = px - last.x;
       const dy = py - last.y;
-      if (dx * dx + dy * dy < 9) return;
+      if (dx * dx + dy * dy < getMinDistSq()) return;
 
       const toolConfig = configByTool[tool] || {
         pressure: 0.5,
@@ -1371,10 +1488,11 @@ export default function GestureHandler(
 
       if (!rafScheduled.current) {
         rafScheduled.current = true;
-        requestAnimationFrame(() => {
+        const id = requestAnimationFrame(() => {
           rafScheduled.current = false;
           setCurrentPoints([...liveRef.current]);
         });
+        rafIdRef.current = id;
       }
     })
 
@@ -1402,7 +1520,14 @@ export default function GestureHandler(
       // --- Nếu đang vẽ vùng lasso mới ---
       if (tool === "lasso" && !isMovingLasso) {
         setLassoPoints((prev) => [...prev, { x: e.x, y: e.y }]);
-        setCurrentPoints((prev) => [...(prev ?? []), { x: e.x, y: e.y }]);
+        if (!rafScheduled.current) {
+          rafScheduled.current = true;
+          const id = requestAnimationFrame(() => {
+            rafScheduled.current = false;
+            setCurrentPoints((prev) => [...(prev ?? []), { x: e.x, y: e.y }]);
+          });
+          rafIdRef.current = id;
+        }
         return;
       }
 
@@ -1471,7 +1596,7 @@ export default function GestureHandler(
         if (eraserMode === "stroke") {
           if (!rafScheduled.current) {
             rafScheduled.current = true;
-            requestAnimationFrame(() => {
+            const id = requestAnimationFrame(() => {
               rafScheduled.current = false;
               validStrokes.forEach((s, i) => {
                 if (!s.points) return;
@@ -1495,6 +1620,7 @@ export default function GestureHandler(
                 }
               });
             });
+            rafIdRef.current = id;
           }
           return;
         }
@@ -1503,15 +1629,29 @@ export default function GestureHandler(
           // Always record the first point so preview appears immediately
           if (liveRef.current.length === 0) {
             liveRef.current.push({ x: e.x, y: e.y });
-            setCurrentPoints([...liveRef.current]);
+            if (!rafScheduled.current) {
+              rafScheduled.current = true;
+              const id = requestAnimationFrame(() => {
+                rafScheduled.current = false;
+                setCurrentPoints([...liveRef.current]);
+              });
+              rafIdRef.current = id;
+            }
             return;
           }
           const last = liveRef.current.at(-1);
           const dx = e.x - (last?.x ?? e.x);
           const dy = e.y - (last?.y ?? e.y);
-          if (dx * dx + dy * dy < 9) return;
+          if (dx * dx + dy * dy < getMinDistSq()) return;
           liveRef.current.push({ x: e.x, y: e.y });
-          setCurrentPoints([...liveRef.current]);
+          if (!rafScheduled.current) {
+            rafScheduled.current = true;
+            const id = requestAnimationFrame(() => {
+              rafScheduled.current = false;
+              setCurrentPoints([...liveRef.current]);
+            });
+            rafIdRef.current = id;
+          }
           return;
         }
 
@@ -1519,14 +1659,15 @@ export default function GestureHandler(
           const last = liveRef.current.at(-1) || { x: 0, y: 0 };
           const dx = e.x - last.x;
           const dy = e.y - last.y;
-          if (dx * dx + dy * dy < 9) return;
+          if (dx * dx + dy * dy < getMinDistSq()) return;
           liveRef.current.push({ x: e.x, y: e.y });
           if (!rafScheduled.current) {
             rafScheduled.current = true;
-            requestAnimationFrame(() => {
+            const id = requestAnimationFrame(() => {
               rafScheduled.current = false;
               setCurrentPoints([...liveRef.current]);
             });
+            rafIdRef.current = id;
             const livePath = canvasRef?.current?.livePath;
             if (livePath) livePath.lineTo(e.x, e.y);
           }
@@ -1538,7 +1679,7 @@ export default function GestureHandler(
       const last = liveRef.current.at(-1) || { x: 0, y: 0 };
       const dx = e.x - last.x;
       const dy = e.y - last.y;
-      if (dx * dx + dy * dy < 9) return;
+      if (dx * dx + dy * dy < getMinDistSq()) return;
 
       const toolConfig = configByTool[tool] || {
         pressure: 0.5,
@@ -1605,10 +1746,11 @@ export default function GestureHandler(
 
       if (!rafScheduled.current) {
         rafScheduled.current = true;
-        requestAnimationFrame(() => {
+        const id = requestAnimationFrame(() => {
           rafScheduled.current = false;
           setCurrentPoints([...liveRef.current]);
         });
+        rafIdRef.current = id;
       }
     })
     .onFinalize(() => {
@@ -1893,12 +2035,45 @@ export default function GestureHandler(
         stabilization: 0.2,
       };
 
+      // 🛠️ Giảm số điểm để tránh lag khi stroke quá dài
+      const shouldDecimate = [
+        "pen",
+        "pencil",
+        "brush",
+        "calligraphy",
+        "highlighter",
+        "marker",
+        "airbrush",
+        "crayon",
+      ].includes(tool);
+
+      const decimatePoints = (pts, minDist) => {
+        if (!Array.isArray(pts) || pts.length < 3) return pts;
+        const out = [pts[0]];
+        const minDistSq = Math.max(0.25, (minDist || 0.5) * (minDist || 0.5));
+        for (let i = 1; i < pts.length; i++) {
+          const prev = out[out.length - 1];
+          const p = pts[i];
+          const dx = (p.x || 0) - (prev.x || 0);
+          const dy = (p.y || 0) - (prev.y || 0);
+          if (dx * dx + dy * dy >= minDistSq) out.push(p);
+        }
+        const last = pts[pts.length - 1];
+        const tail = out[out.length - 1];
+        if (last && (last.x !== tail.x || last.y !== tail.y)) out.push(last);
+        return out;
+      };
+
+      const simplifiedPoints = shouldDecimate
+        ? decimatePoints(finalPoints, Math.max(0.5, (w || 2) * 0.15))
+        : finalPoints;
+
       const newStroke = {
         id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
         tool,
         color,
         width: w,
-        points: finalPoints,
+        points: simplifiedPoints,
         opacity:
           tool === "brush"
             ? brushOpacity
@@ -1938,6 +2113,21 @@ export default function GestureHandler(
         }
       }
     });
+
+  // Cleanup on unmount: clear live points and reset currentPoints to avoid leaks
+  useEffect(() => {
+    return () => {
+      try {
+        rafScheduled.current = false;
+        if (typeof rafIdRef.current === "number") {
+          cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
+        }
+        liveRef.current = [];
+        setCurrentPoints([]);
+      } catch {}
+    };
+  }, []);
 
   const lassoBox = useMemo(() => {
     // While moving (either via canvas or box), render box as base + visual offset

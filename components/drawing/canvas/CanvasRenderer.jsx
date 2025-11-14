@@ -1,4 +1,11 @@
-import React, { forwardRef, useImperativeHandle, useEffect } from "react";
+import React, {
+  forwardRef,
+  useImperativeHandle,
+  useEffect,
+  useMemo,
+  useRef,
+  memo,
+} from "react";
 import {
   Canvas,
   Path,
@@ -12,9 +19,16 @@ import {
   Image as SkiaImage,
   useImage,
 } from "@shopify/react-native-skia";
+import { Dimensions } from "react-native";
 import CanvasImage from "../image/CanvasImage";
 import PaperGuides from "./PaperGuidesNew";
 import { applyPencilAlpha, makePathFromPoints } from "./utils";
+import {
+  calculateViewport,
+  estimateRenderingComplexity,
+  shouldUseVirtualRendering,
+  getVisibleStrokes,
+} from "./virtualRenderingUtils";
 
 const DESK_BGCOLOR = "#e9ecef";
 const PAGE_BGCOLOR = "#ffffff";
@@ -119,9 +133,21 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     pageHeight = null, // 👈 Page height from noteConfig
     loadedFonts, // 👈 Receive preloaded fonts
     getNearestFont, // 👈 Receive font helper
+    // ⬇️ Virtual rendering inputs
+    zoomState,
+    zoomSnapshot,
+    scrollOffsetY = 0,
   },
   ref,
 ) {
+  // Cache Skia.Path objects per stroke to avoid recomputing paths on each render
+  const pathCacheRef = useRef(new Map());
+  // Clear cache when switching active layer to avoid stale memory growth
+  useEffect(() => {
+    try {
+      pathCacheRef.current.clear();
+    } catch {}
+  }, [activeLayerId]);
   const canvasRef = useCanvasRef();
 
   // Safe image loading with error handling
@@ -178,6 +204,41 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   const visibleLayers = Array.isArray(layers)
     ? layers.filter((l) => l.visible)
     : [];
+
+  // ⬇️ Tính viewport theo zoom/scroll để lọc strokes ngoài màn hình
+  const screen = Dimensions.get("window");
+  const viewport = useMemo(() => {
+    try {
+      return calculateViewport(
+        safePage,
+        {
+          scale: zoomSnapshot?.scale ?? 1,
+          translateX: zoomSnapshot?.translateX ?? 0,
+          translateY: zoomSnapshot?.translateY ?? 0,
+        },
+        scrollOffsetY,
+        { width: screen.width, height: screen.height },
+      );
+    } catch (e) {
+      return {
+        x: safePage.x,
+        y: safePage.y,
+        width: safePage.w,
+        height: safePage.h,
+      };
+    }
+  }, [
+    safePage.x,
+    safePage.y,
+    safePage.w,
+    safePage.h,
+    zoomSnapshot?.scale,
+    zoomSnapshot?.translateX,
+    zoomSnapshot?.translateY,
+    scrollOffsetY,
+    screen.width,
+    screen.height,
+  ]);
 
   // read tool config with sensible defaults
   const brushSoftness =
@@ -560,8 +621,78 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
     // strokes (pen-like)
     if (s.points && s.points.length > 0) {
+      // Special-case: single-point stroke should render as a dot
+      if (s.points.length === 1) {
+        const p0 = s.points[0];
+        let strokeColor = s.color || "#000000";
+        let baseOpacity = 1;
+
+        if (s.tool === "pencil") {
+          strokeColor = applyPencilAlpha(strokeColor);
+        } else if (s.tool === "brush") {
+          baseOpacity = 0.95;
+        } else if (s.tool === "calligraphy") {
+          baseOpacity = 1.0;
+        } else if (s.tool === "highlighter") {
+          baseOpacity = 0.32;
+        } else if (s.tool === "marker") {
+          baseOpacity = 1.0;
+        } else if (s.tool === "airbrush") {
+          baseOpacity = 0.18;
+        } else if (s.tool === "crayon") {
+          baseOpacity = 0.68;
+        } else if (s.tool === "eraser") {
+          // Render eraser dot via dstOut
+          const baseW = s.width || eraserSize || 8;
+          const effW = computeEffectiveWidth(
+            baseW,
+            s.thickness ?? thickness,
+            s.pressure ?? pressure,
+          );
+          return (
+            <Circle
+              key={`${s.id}-dot`}
+              cx={p0.x || 0}
+              cy={p0.y || 0}
+              r={Math.max(1, effW / 2)}
+              color={PAGE_BGCOLOR}
+              blendMode="dstOut"
+            />
+          );
+        }
+
+        let baseW = s.width;
+        if (!baseW) {
+          if (s.tool === "pencil") baseW = pencilWidth || 1;
+          else if (s.tool === "brush") baseW = brushWidth || 1;
+          else if (s.tool === "calligraphy") baseW = calligraphyWidth || 1;
+          else if (s.tool === "eraser") baseW = eraserSize || 1;
+          else baseW = strokeWidth || 1;
+        }
+        const effW = computeEffectiveWidth(
+          baseW,
+          s.thickness ?? thickness,
+          s.pressure ?? pressure,
+        );
+        return (
+          <Circle
+            key={`${s.id}-dot`}
+            cx={p0.x || 0}
+            cy={p0.y || 0}
+            r={Math.max(1, effW / 2)}
+            color={makeRGBA(strokeColor, Math.min(1, baseOpacity))}
+          />
+        );
+      }
+
       // Do NOT smooth stored strokes; smoothing can bridge small gaps from pixel eraser splits
-      const path = makePathFromPoints(s.points);
+      // Cache path by a lightweight key derived from stroke id, point count, width, and tool
+      const cacheKey = `${s.id}:${s.points?.length || 0}:${s.width || strokeWidth || 0}:${s.tool || "pen"}`;
+      let path = pathCacheRef.current.get(cacheKey);
+      if (!path) {
+        path = makePathFromPoints(s.points);
+        pathCacheRef.current.set(cacheKey, path);
+      }
       let strokeColor = s.color || "#000000";
       let blendMode = "srcOver";
       let baseOpacity = 1;
@@ -842,112 +973,122 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       {/* Per-layer compositing groups so eraser affects only that layer */}
       {visibleLayers.map((layer) => (
         <Group key={`layer-${layer.id}`} layer>
-          {/* Combined Fill and Stroke Rendering */}
-          {layer.strokes?.map((s, index) => {
-            if (!s) return null;
+          {/* Combined Fill and Stroke Rendering with virtual filtering */}
+          {(() => {
+            const strokes = Array.isArray(layer.strokes) ? layer.strokes : [];
+            const strokeCount = strokes.length;
+            const complexity = estimateRenderingComplexity(strokes);
+            const useVR = shouldUseVirtualRendering(strokeCount, complexity);
+            const strokesToRender = useVR
+              ? getVisibleStrokes(strokes, viewport, { padding: 120 })
+              : strokes;
 
-            // --- Part 1: Get Fill Node ---
-            let fillNode = null;
-            if (
-              s.shape &&
-              s.fill &&
-              !["line", "arrow"].includes(s.tool) &&
-              [
-                "square",
-                "rect",
-                "circle",
-                "triangle",
-                "oval",
-                "polygon",
-                "star",
-              ].includes(s.tool)
-            ) {
-              const path = Skia.Path.Make();
-              if (s.tool === "circle") {
-                const { cx = 0, cy = 0, r = 0 } = s.shape;
-                path.addCircle(cx, cy, r);
-              } else if (s.tool === "rect" || s.tool === "square") {
-                const { x = 0, y = 0, w = 0, h = 0 } = s.shape;
-                path.addRect({ x, y, width: w, height: h });
-              } else if (s.tool === "triangle") {
-                const {
-                  x1 = 0,
-                  y1 = 0,
-                  x2 = 0,
-                  y2 = 0,
-                  x3 = 0,
-                  y3 = 0,
-                } = s.shape;
-                path.moveTo(x1, y1);
-                path.lineTo(x2, y2);
-                path.lineTo(x3, y3);
-                path.close();
-              } else if (s.tool === "oval") {
-                const { cx = 0, cy = 0, rx = 0, ry = 0 } = s.shape;
-                path.addOval({ cx, cy, rx, ry });
-              } else if (s.tool === "polygon" || s.tool === "star") {
-                const pts = s.shape.points || [];
-                if (pts.length > 0) {
-                  path.moveTo(pts[0]?.x ?? 0, pts[0]?.y ?? 0);
-                  for (let i = 1; i < pts.length; i++)
-                    path.lineTo(pts[i]?.x ?? 0, pts[i]?.y ?? 0);
+            return strokesToRender.map((s, index) => {
+              if (!s) return null;
+
+              // --- Part 1: Get Fill Node ---
+              let fillNode = null;
+              if (
+                s.shape &&
+                s.fill &&
+                !["line", "arrow"].includes(s.tool) &&
+                [
+                  "square",
+                  "rect",
+                  "circle",
+                  "triangle",
+                  "oval",
+                  "polygon",
+                  "star",
+                ].includes(s.tool)
+              ) {
+                const path = Skia.Path.Make();
+                if (s.tool === "circle") {
+                  const { cx = 0, cy = 0, r = 0 } = s.shape;
+                  path.addCircle(cx, cy, r);
+                } else if (s.tool === "rect" || s.tool === "square") {
+                  const { x = 0, y = 0, w = 0, h = 0 } = s.shape;
+                  path.addRect({ x, y, width: w, height: h });
+                } else if (s.tool === "triangle") {
+                  const {
+                    x1 = 0,
+                    y1 = 0,
+                    x2 = 0,
+                    y2 = 0,
+                    x3 = 0,
+                    y3 = 0,
+                  } = s.shape;
+                  path.moveTo(x1, y1);
+                  path.lineTo(x2, y2);
+                  path.lineTo(x3, y3);
                   path.close();
+                } else if (s.tool === "oval") {
+                  const { cx = 0, cy = 0, rx = 0, ry = 0 } = s.shape;
+                  path.addOval({ cx, cy, rx, ry });
+                } else if (s.tool === "polygon" || s.tool === "star") {
+                  const pts = s.shape.points || [];
+                  if (pts.length > 0) {
+                    path.moveTo(pts[0]?.x ?? 0, pts[0]?.y ?? 0);
+                    for (let i = 1; i < pts.length; i++)
+                      path.lineTo(pts[i]?.x ?? 0, pts[i]?.y ?? 0);
+                    path.close();
+                  }
                 }
+                fillNode = (
+                  <Path
+                    key={`${s.id}-fill`}
+                    path={path}
+                    color={makeRGBA(s.fillColor || "#ffffff", 1)}
+                    style="fill"
+                  />
+                );
+              } else if (s.fill && s.points?.length > 0) {
+                const path = makePathFromPoints(s.points);
+                try {
+                  path.close();
+                } catch {}
+                fillNode = (
+                  <Path
+                    key={`${layer.id}-${s.id}-fill`}
+                    path={path}
+                    color={makeRGBA(s.fillColor || "#ffffff", 1)}
+                    style="fill"
+                  />
+                );
               }
-              fillNode = (
-                <Path
-                  key={`${s.id}-fill`}
-                  path={path}
-                  color={makeRGBA(s.fillColor || "#ffffff", 1)}
-                  style="fill"
-                />
+
+              // --- Part 2: Get Stroke Node ---
+              const strokeNode =
+                realtimeText?.id &&
+                s.id === realtimeText.id &&
+                ["sticky", "comment", "text"].includes(s.tool)
+                  ? null
+                  : renderStroke(s, index);
+
+              // --- Part 3: Combine and Apply Transform ---
+              if (!fillNode && !strokeNode) {
+                return null;
+              }
+
+              const vo = visualOffsets?.[s.id];
+              const dx = (vo?.dx ?? s?.tempOffset?.dx) || 0;
+              const dy = (vo?.dy ?? s?.tempOffset?.dy) || 0;
+
+              return (
+                <Group
+                  key={s.id}
+                  transform={
+                    dx || dy
+                      ? [{ translateX: dx }, { translateY: dy }]
+                      : undefined
+                  }
+                >
+                  {fillNode}
+                  {strokeNode}
+                </Group>
               );
-            } else if (s.fill && s.points?.length > 0) {
-              const path = makePathFromPoints(s.points);
-              try {
-                path.close();
-              } catch {}
-              fillNode = (
-                <Path
-                  key={`${layer.id}-${s.id}-fill`}
-                  path={path}
-                  color={makeRGBA(s.fillColor || "#ffffff", 1)}
-                  style="fill"
-                />
-              );
-            }
-
-            // --- Part 2: Get Stroke Node ---
-            const strokeNode =
-              realtimeText?.id &&
-              s.id === realtimeText.id &&
-              ["sticky", "comment", "text"].includes(s.tool)
-                ? null
-                : renderStroke(s, index);
-
-            // --- Part 3: Combine and Apply Transform ---
-            if (!fillNode && !strokeNode) {
-              return null;
-            }
-
-            const vo = visualOffsets?.[s.id];
-            const dx = (vo?.dx ?? s?.tempOffset?.dx) || 0;
-            const dy = (vo?.dy ?? s?.tempOffset?.dy) || 0;
-
-            return (
-              <Group
-                key={s.id}
-                transform={
-                  dx || dy
-                    ? [{ translateX: dx }, { translateY: dy }]
-                    : undefined
-                }
-              >
-                {fillNode}
-                {strokeNode}
-              </Group>
-            );
-          })}
+            });
+          })()}
 
           {/* Realtime pixel eraser preview ONLY for active layer */}
           {tool === "eraser" &&
@@ -1445,4 +1586,4 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   );
 });
 
-export default CanvasRenderer;
+export default memo(CanvasRenderer);

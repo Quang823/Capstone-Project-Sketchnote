@@ -9,12 +9,13 @@ export default function HeaderToolbar({
   onCamera,
   onToggleLayerPanel,
   isLayerPanelVisible = false,
+  onExportPress,
 }) {
   const renderButton = (
     icon,
     onPress,
     IconComponent = Ionicons,
-    active = false
+    active = false,
   ) => {
     const scale = new Animated.Value(1);
 
@@ -60,8 +61,14 @@ export default function HeaderToolbar({
 
         {/* Right */}
         <View style={[styles.row, { gap: 12 }]}>
+          {renderButton("share-outline", onExportPress, Ionicons)}
           {renderButton("preview", onPreview, MaterialIcons)}
-          {renderButton("layers", onToggleLayerPanel, MaterialIcons, isLayerPanelVisible)}
+          {renderButton(
+            "layers",
+            onToggleLayerPanel,
+            MaterialIcons,
+            isLayerPanelVisible,
+          )}
           {renderButton("circle-with-cross", onToggleToolbar, Entypo)}
         </View>
       </View>

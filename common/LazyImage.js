@@ -1,34 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import React, { useState } from "react";
+import { View, StyleSheet } from "react-native";
+import { Image } from "expo-image";
 
-const LazyImage = (props) => {
-  const [shouldRender, setShouldRender] = useState(false);
+const LazyImage = ({ style, preview, ...rest }) => {
+  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    // Use requestAnimationFrame to delay rendering until the next paint cycle.
-    // This helps prevent blocking the UI thread during initial render.
-    const frameId = requestAnimationFrame(() => {
-      setShouldRender(true);
-    });
+  return (
+    <View style={[style, styles.container]}>
+      {/* Placeholder (hiện trước khi ảnh load) */}
+      {!loaded && <View style={[styles.placeholder, style]} />}
 
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, []);
-
-  const { style, ...rest } = props;
-
-  if (!shouldRender) {
-    // Render a placeholder with the same dimensions as the image
-    return <View style={[styles.placeholder, style]} />;
-  }
-
-  return <Image style={style} {...rest} />;
+      {/* Ảnh chính với fade-in + caching */}
+      <Image
+        {...rest}
+        style={[style, loaded ? styles.imageVisible : styles.imageHidden]}
+        onLoad={() => setLoaded(true)}
+        contentFit="cover"
+        transition={300} // fade-in 300ms
+        placeholder={preview ? [preview] : null} // blur preview optional
+        cachePolicy="disk" // full cache
+      />
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    overflow: "hidden",
+  },
   placeholder: {
-    backgroundColor: '#F3F4F6', // A light gray color similar to the empty thumbnail
+    backgroundColor: "#E5E7EB",
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  imageHidden: {
+    opacity: 0,
+  },
+  imageVisible: {
+    opacity: 1,
   },
 });
 

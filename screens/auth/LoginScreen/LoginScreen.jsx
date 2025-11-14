@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,21 +8,29 @@ import {
   ActivityIndicator,
   ScrollView,
   Platform,
+  Image,
+  StyleSheet,
 } from "react-native";
 import { useToast } from "../../../hooks/use-toast";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
-import Reanimated, {
+import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
   withSpring,
+  withRepeat,
+  withSequence,
+  withDelay,
+  createAnimatedComponent,
 } from "react-native-reanimated";
+
 import { loginStyles } from "./LoginScreen.styles";
 import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../../../context/AuthContext";
-
-const ReanimatedView = Reanimated.createAnimatedComponent(View);
+import { MotiView, MotiImage } from "moti";
+import LottieView from "lottie-react-native";
+import AnimatedBackground from "./AnimatedBackground";
 
 export default function LoginScreen({ onBack }) {
   const [showPassword, setShowPassword] = useState(false);
@@ -103,20 +111,13 @@ export default function LoginScreen({ onBack }) {
       keyboardShouldPersistTaps="handled"
     >
       <LinearGradient
-        colors={["#F8FAFC", "#EFF6FF", "#F5F3FF"]}
+        colors={["#CFF4FF", "#DCEEFF", "#E6EBFF"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={loginStyles.container}
       >
         {/* ✅ Background không chặn touch */}
-        <View pointerEvents="none" style={loginStyles.backgroundContainer}>
-          <View style={[loginStyles.gradientOrb, loginStyles.orbTop]} />
-          <View style={[loginStyles.gradientOrb, loginStyles.orbBottom]} />
-          <View style={[loginStyles.gradientOrb, loginStyles.orbRight]} />
-          <View style={[loginStyles.floatingElement, loginStyles.float1]} />
-          <View style={[loginStyles.floatingElement, loginStyles.float2]} />
-          <View style={[loginStyles.floatingElement, loginStyles.float3]} />
-        </View>
+        <AnimatedBackground />
 
         {/* Main Content */}
         <View style={loginStyles.contentWrapper}>
@@ -124,72 +125,107 @@ export default function LoginScreen({ onBack }) {
           {width > 768 && (
             <View style={loginStyles.brandingSection}>
               <View style={loginStyles.brandContent}>
+                {/* Logo + Title */}
                 <View style={loginStyles.logoContainer}>
-                  <LinearGradient
-                    colors={["#1D4ED8", "#3B82F6", "#60A5FA"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={loginStyles.logoBg}
-                  >
-                    <Icon name="palette" size={48} color="#FFFFFF" />
-                  </LinearGradient>
+                  <Image
+                    source={{
+                      uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
+                    }}
+                    style={loginStyles.logoImage}
+                  />
                   <View>
                     <Text style={loginStyles.logoText}>SketchNote</Text>
-                    <Text style={loginStyles.logoSubtext}>Creative Studio</Text>
+                    <Text style={loginStyles.logoSubtext}>
+                      Visual Note Taking App
+                    </Text>
                   </View>
                 </View>
 
+                {/* Hero Section */}
                 <View style={loginStyles.heroContent}>
                   <Text style={loginStyles.heroTitle}>
                     Sketch Your{"\n"}
                     <Text style={loginStyles.heroHighlight}>Ideas to Life</Text>
                   </Text>
-                  <Text style={loginStyles.heroDescription}>
-                    Transform your thoughts into beautiful sketches, notes, and
-                    designs in seconds
-                  </Text>
+                  {/* <Text style={loginStyles.heroDescription}>
+                    Turn your imagination into visual notes, concept designs,
+                    and creative sketches — fast, beautiful, and effortless.
+                  </Text> */}
                 </View>
 
+                {/* Features Section */}
                 <View style={loginStyles.featuresContainer}>
-                  <View style={loginStyles.featureCard}>
-                    <View style={loginStyles.featureIconBg}>
-                      <Icon name="bolt" size={24} color="#FCD34D" />
+                  <MotiView
+                    from={{ opacity: 0, translateY: 20 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ type: "timing", duration: 600, delay: 100 }}
+                    style={loginStyles.featureCard}
+                  >
+                    <View
+                      style={[
+                        loginStyles.featureIconBg,
+                        { backgroundColor: "rgba(250, 204, 21, 0.15)" },
+                      ]}
+                    >
+                      <Icon name="brush" size={35} color="#FACC15" />
                     </View>
                     <View>
                       <Text style={loginStyles.featureTitle}>
-                        Lightning Fast
+                        Draw. Create. Express
                       </Text>
                       <Text style={loginStyles.featureDesc}>
-                        Instant sync across devices
+                        Natural sketching with smooth, pressure sensitive tools.
                       </Text>
                     </View>
-                  </View>
+                  </MotiView>
 
-                  <View style={loginStyles.featureCard}>
-                    <View style={loginStyles.featureIconBg}>
-                      <Icon name="palette" size={24} color="#34D399" />
+                  <MotiView
+                    from={{ opacity: 0, translateY: 20 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ type: "timing", duration: 600, delay: 250 }}
+                    style={loginStyles.featureCard}
+                  >
+                    <View
+                      style={[
+                        loginStyles.featureIconBg,
+                        { backgroundColor: "rgba(34,197,94,0.15)" },
+                      ]}
+                    >
+                      <Icon name="groups" size={35} color="#22C55E" />
                     </View>
                     <View>
                       <Text style={loginStyles.featureTitle}>
-                        Creative Tools
+                        Share & Inspire
                       </Text>
                       <Text style={loginStyles.featureDesc}>
-                        Professional drawing tools
+                        Post sketches, follow other creators, and get inspired {"!!"}.  
                       </Text>
                     </View>
-                  </View>
+                  </MotiView>
 
-                  <View style={loginStyles.featureCard}>
-                    <View style={loginStyles.featureIconBg}>
-                      <Icon name="shield" size={24} color="#60A5FA" />
+                  <MotiView
+                    from={{ opacity: 0, translateY: 20 }}
+                    animate={{ opacity: 1, translateY: 0 }}
+                    transition={{ type: "timing", duration: 600, delay: 400 }}
+                    style={loginStyles.featureCard}
+                  >
+                    <View
+                      style={[
+                        loginStyles.featureIconBg,
+                        { backgroundColor: "rgba(59,130,246,0.15)" },
+                      ]}
+                    >
+                      <Icon name="shopping-bag" size={35} color="#3B82F6" />
                     </View>
                     <View>
-                      <Text style={loginStyles.featureTitle}>Fully Secure</Text>
+                      <Text style={loginStyles.featureTitle}>
+                        Sell Your Art
+                      </Text>
                       <Text style={loginStyles.featureDesc}>
-                        End-to-end encryption
+                        Turn sketches into digital collectibles and earn money.
                       </Text>
                     </View>
-                  </View>
+                  </MotiView>
                 </View>
               </View>
             </View>
@@ -200,12 +236,20 @@ export default function LoginScreen({ onBack }) {
             <View style={loginStyles.formContainer}>
               <View style={loginStyles.formDecorator} />
 
-              {/* Header */}
+              {/* Header with Lottie */}
               <View style={loginStyles.cardHeader}>
-                <View style={loginStyles.headerGradient}>
-                  <Icon name="login" size={32} color="#FFFFFF" />
-                </View>
-                <Text style={loginStyles.cardTitle}>Welcome Back</Text>
+                <Image
+                  source={{
+                    uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
+                  }}
+                  style={loginStyles.logoImage}
+                />
+                <LottieView
+                  source={require("../../../assets/Welcome.json")}
+                  autoPlay
+                  loop
+                  style={{ width: 200, height: 60 }}
+                />
                 <Text style={loginStyles.cardDescription}>
                   Sign in to continue creating magic
                 </Text>
@@ -222,10 +266,10 @@ export default function LoginScreen({ onBack }) {
                       emailFocused && loginStyles.inputContainerFocused,
                     ]}
                   >
-                    <Icon name="mail" size={20} color="#6366F1" />
+                    <Icon name="mail" size={20} color="#3B5BA0" />
                     <TextInput
                       style={loginStyles.textInput}
-                      placeholder="your@email.com"
+                      placeholder="Enter your email (ex: sketchnote@gmail.com)"
                       placeholderTextColor="#CBD5E1"
                       value={email}
                       onChangeText={setEmail}
@@ -238,7 +282,6 @@ export default function LoginScreen({ onBack }) {
                     />
                   </View>
                 </View>
-
                 {/* Password */}
                 <View style={loginStyles.inputGroup}>
                   <View style={loginStyles.labelRow}>
@@ -253,10 +296,10 @@ export default function LoginScreen({ onBack }) {
                       passwordFocused && loginStyles.inputContainerFocused,
                     ]}
                   >
-                    <Icon name="lock" size={20} color="#6366F1" />
+                    <Icon name="lock" size={20} color="#3B5BA0" />
                     <TextInput
                       style={[loginStyles.textInput, loginStyles.passwordField]}
-                      placeholder="••••••••"
+                      placeholder="Enter your password"
                       placeholderTextColor="#CBD5E1"
                       value={password}
                       onChangeText={setPassword}
@@ -269,19 +312,18 @@ export default function LoginScreen({ onBack }) {
                       onPress={handlePasswordToggle}
                       style={loginStyles.eyeButton}
                     >
-                      <ReanimatedView style={animatedIconStyle}>
+                      <Animated.View style={animatedIconStyle}>
                         <Icon
                           name={showPassword ? "visibility-off" : "visibility"}
                           size={20}
-                          color="#6366F1"
+                          color="#3B5BA0"
                         />
-                      </ReanimatedView>
+                      </Animated.View>
                     </Pressable>
                   </View>
                 </View>
-
                 {/* Login Button */}
-                <ReanimatedView style={animatedButtonStyle}>
+                <Animated.View style={animatedButtonStyle}>
                   <Pressable
                     onPressIn={handleButtonPressIn}
                     onPressOut={handleButtonPressOut}
@@ -290,7 +332,7 @@ export default function LoginScreen({ onBack }) {
                     style={loginStyles.loginButtonWrapper}
                   >
                     <LinearGradient
-                      colors={["#1D4ED8", "#3B82F6", "#60A5FA"]}
+                      colors={["#3B5BA0", "#2563EB", "#3B5BA0"]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={loginStyles.loginButton}
@@ -298,22 +340,17 @@ export default function LoginScreen({ onBack }) {
                       {isLoading ? (
                         <ActivityIndicator color="#FFFFFF" size="small" />
                       ) : (
-                        <>
-                          <Icon name="arrow-forward" size={20} color="#fff" />
-                          <Text style={loginStyles.buttonText}>Sign In</Text>
-                        </>
+                        <Text style={loginStyles.buttonText}>Sign In</Text>
                       )}
                     </LinearGradient>
                   </Pressable>
-                </ReanimatedView>
-
+                </Animated.View>
                 {/* Divider */}
                 <View style={loginStyles.divider}>
                   <View style={loginStyles.dividerLine} />
                   <Text style={loginStyles.dividerText}>or continue with</Text>
                   <View style={loginStyles.dividerLine} />
                 </View>
-
                 {/* Social Buttons */}
                 <View style={loginStyles.socialContainer}>
                   <Pressable
@@ -325,11 +362,10 @@ export default function LoginScreen({ onBack }) {
                     ]}
                   >
                     <View style={loginStyles.socialBtnGradient}>
-                      <Icon name="language" size={20} color="#6366F1" />
+                      <Icon name="language" size={20} color="#3B5BA0" />
                       <Text style={loginStyles.socialBtnText}>Google</Text>
                     </View>
                   </Pressable>
-
                   <Pressable
                     onPress={() => handleSocialLogin("Apple")}
                     disabled={isLoading}
@@ -339,16 +375,15 @@ export default function LoginScreen({ onBack }) {
                     ]}
                   >
                     <View style={loginStyles.socialBtnGradient}>
-                      <Icon name="phone-iphone" size={20} color="#6366F1" />
+                      <Icon name="phone-iphone" size={20} color="#3B5BA0" />
                       <Text style={loginStyles.socialBtnText}>Apple</Text>
                     </View>
                   </Pressable>
                 </View>
-
                 {/* Signup */}
                 <View style={loginStyles.signupContainer}>
                   <Text style={loginStyles.signupText}>
-                    Don't have an account?{" "}
+                    Don't have an account?
                   </Text>
                   <Pressable
                     onPress={() => navigation.navigate("Register")}
@@ -357,11 +392,9 @@ export default function LoginScreen({ onBack }) {
                     <Text style={loginStyles.signupLink}>Create account</Text>
                   </Pressable>
                 </View>
-
                 {/* Back Button */}
                 {onBack && (
                   <Pressable onPress={onBack} style={loginStyles.backBtn}>
-                    <Icon name="arrow-back" size={20} color="#6366F1" />
                     <Text style={loginStyles.backBtnText}>Back</Text>
                   </Pressable>
                 )}

@@ -5,7 +5,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   Alert,
 } from "react-native";
@@ -22,6 +21,8 @@ import SidebarToggleButton from "../../../components/navigation/SidebarToggleBut
 import { styles, columns } from "./HomeScreen.styles";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
+import LazyImage from "../../../common/LazyImage";
+import * as offlineStorage from "../../../utils/offlineStorage";
 //
 // 🔹 Helper: format date
 //
@@ -170,7 +171,7 @@ export default function HomeScreen({ navigation }) {
           break;
       }
     },
-    [navigation]
+    [navigation],
   );
 
   // Double tap handler
@@ -193,21 +194,28 @@ export default function HomeScreen({ navigation }) {
     async (project) => {
       try {
         const projectDetails = await projectService.getProjectById(
-          project.projectId
+          project.projectId,
         );
+        const meta = await offlineStorage.loadProjectLocally(
+          `${projectDetails.projectId}_meta`
+        );
+        const restoredOrientation =
+          projectDetails?.orientation || meta?.orientation || "portrait";
+        const restoredPaperSize =
+          projectDetails?.paperSize || meta?.paperSize || "A4";
         const noteConfig = {
           projectId: projectDetails.projectId,
           title: projectDetails.name || "Untitled Note",
           description: projectDetails.description || "",
           hasCover: !!projectDetails.imageUrl,
-          orientation: "portrait",
-          paperSize: "A4",
+          orientation: restoredOrientation,
+          paperSize: restoredPaperSize,
           cover: projectDetails.imageUrl
             ? {
-                template: "custom_image",
-                color: "#F8FAFC",
-                imageUrl: projectDetails.imageUrl,
-              }
+              template: "custom_image",
+              color: "#F8FAFC",
+              imageUrl: projectDetails.imageUrl,
+            }
             : null,
           paper: { template: "blank" },
           pages: projectDetails.pages || [],
@@ -219,7 +227,7 @@ export default function HomeScreen({ navigation }) {
         Alert.alert("Lỗi", "Không thể tải thông tin dự án. Vui lòng thử lại.");
       }
     },
-    [navigation]
+    [navigation],
   );
 
   //
@@ -248,11 +256,9 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.card}>
           <View style={styles.imageContainer}>
             {item.imageUrl ? (
-              <Image
+              <LazyImage
                 source={{ uri: item.imageUrl }}
                 style={styles.projectImage}
-                resizeMode="cover"
-                defaultSource={require("../../../assets/logo.png")}
               />
             ) : (
               <View style={styles.placeholderImage}>
@@ -286,7 +292,7 @@ export default function HomeScreen({ navigation }) {
         </View>
       </TouchableOpacity>
     ),
-    [handleProjectClick]
+    [handleProjectClick],
   );
 
   //
@@ -446,7 +452,7 @@ export default function HomeScreen({ navigation }) {
                             {page}
                           </Text>
                         </TouchableOpacity>
-                      )
+                      ),
                     )}
                   </View>
 
