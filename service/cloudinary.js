@@ -3,12 +3,12 @@ export const uploadToCloudinary = async (fileUri) => {
   const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
   
   if (!CLOUD_NAME || !UPLOAD_PRESET) {
-    throw new Error("Thiếu cấu hình Cloudinary. Vui lòng kiểm tra file .env");
+    throw new Error("Missing Cloudinary configuration. Please check .env file");
   }
 
   const formData = new FormData();
   
-  // Xác định loại file từ URI
+  // Determine file type from URI
   const fileType = fileUri.match(/\.(jpg|jpeg|png|gif)$/i);
   const mimeType = fileType 
     ? `image/${fileType[1].toLowerCase()}` 
@@ -21,7 +21,7 @@ export const uploadToCloudinary = async (fileUri) => {
   });
   formData.append("upload_preset", UPLOAD_PRESET);
   
-  // Thêm folder để tổ chức ảnh (tùy chọn)
+  // Add folder to organize images (optional)
   formData.append("folder", "sketchnote_avatars");
 
   try {
@@ -44,18 +44,18 @@ export const uploadToCloudinary = async (fileUri) => {
     if (data.secure_url) {
       return data;
     } else {
-      throw new Error("Không nhận được URL từ Cloudinary");
+      throw new Error("Failed to get URL from Cloudinary");
     }
   } catch (err) {
     console.error("Upload error:", err);
     
-    // Cung cấp thông báo lỗi chi tiết hơn
+    // Provide more detailed error messages
     if (err.message.includes("Network")) {
-      throw new Error("Lỗi kết nối mạng. Vui lòng kiểm tra internet");
+      throw new Error("Network error. Please check your internet connection");
     } else if (err.message.includes("Upload preset")) {
-      throw new Error("Cấu hình Cloudinary không đúng. Kiểm tra UPLOAD_PRESET");
+      throw new Error("Invalid Cloudinary configuration. Check UPLOAD_PRESET");
     } else {
-      throw new Error(err.message || "Lỗi khi upload ảnh");
+      throw new Error(err.message || "Error uploading image");
     }
   }
 };

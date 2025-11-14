@@ -54,7 +54,7 @@ export default function WalletScreen() {
 
     try {
       const url = await paymentService.depositWallet(amount);
-console.log(url)
+      //console.log(url)
       setShowDepositModal(false);
       navigation.navigate("PaymentWebView", { paymentUrl: url.result });
     } catch (error) {
@@ -63,15 +63,13 @@ console.log(url)
         text1: "Failed",
         text2: "Deposit failed. Please try again.",
         type: "error",
-      }); 
+      });
     }
   };
-
 
   const fetchWallet = async () => {
     try {
       const data = await paymentService.getWallet();
-      console.log(data)
       setWalletData(data.result);
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
@@ -79,7 +77,7 @@ console.log(url)
         text1: "Error",
         text2: "Failed to load wallet information. Please try again.",
         type: "error",
-      }); 
+      });
     }
   };
 
@@ -89,7 +87,6 @@ console.log(url)
     return unsubscribe;
   }, [navigation]);
 
-
   const totalDeposit = walletData.transactions
     .filter((t) => t.type === "DEPOSIT" && t.status === "SUCCESS")
     .reduce((sum, t) => sum + t.amount, 0);
@@ -98,7 +95,6 @@ console.log(url)
     .filter((t) => t.type === "PURCHASE")
     .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
- 
   const recentTransactions = [...walletData.transactions]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5);
@@ -144,7 +140,7 @@ console.log(url)
     <View style={walletStyles.container}>
       {/* Header */}
       <View style={walletStyles.header}>
-       <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
+        <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
         <Pressable onPress={() => navigation.navigate("Home")}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>

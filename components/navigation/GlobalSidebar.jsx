@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, ScrollView, TouchableOpacity, Image } from "react-native";
+import { useContext } from "react";
+import { View, Text, Pressable, ScrollView, Image } from "react-native";
 import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { drawerStyles } from "../../screens/home/nav/NavigationDrawer.styles";
-import { useNavigation as useReactNavigation } from "@react-navigation/native";
+import { drawerStyles } from "./GlobalSidebar.styles";
+import {
+  useNavigation as useReactNavigation,
+  CommonActions,
+} from "@react-navigation/native";
 import { useNavigation } from "../../context/NavigationContext";
-import { getUserFromToken } from "../../utils/AuthUtils";
-import { authService } from "../../service/authService";
+import { AuthContext } from "../../context/AuthContext";
 
-// Global Sidebar Component - có thể gọi từ bất kỳ trang nào
 export default function GlobalSidebar() {
   const {
     sidebarOpen,
@@ -18,37 +19,20 @@ export default function GlobalSidebar() {
     sidebarAnimation,
     overlayAnimation,
   } = useNavigation();
-
-  const [user, setUser] = useState(null);
+  const { user, logout } = useContext(AuthContext);
   const navigation = useReactNavigation();
 
-  useEffect(() => {
-    const getUser = async () => {
-      const user = await getUserFromToken();
-      setUser(user);
-    };
-    getUser();
-  }, []);
-
   const handleLogout = async () => {
-    console.log("Logout button pressed!"); // Debug
-    try {
-      const success = await authService.logout();
-      console.log("Logout success:", success);
-      if (success) {
-        navigation.navigate('Login');
-      } else {
-        console.error("Logout failed");
-      }
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+    await logout(); // reset user + remove token
+    toggleSidebar(false); // đóng sidebar nếu đang mở
+    navigation.dispatch(
+      CommonActions.reset({ index: 0, routes: [{ name: "Login" }] })
+    );
   };
 
   const handleNavPress = (itemId) => {
     setActiveNavItem(itemId);
-    
-    // Navigate to different screens based on itemId
+
     switch (itemId) {
       case "home":
         navigation.navigate("Home");
@@ -86,9 +70,8 @@ export default function GlobalSidebar() {
       default:
         break;
     }
-    
-    // Close sidebar after navigation
-    toggleSidebar();
+
+    toggleSidebar(); // đóng sidebar sau navigation
   };
 
   const drawerStyle = useAnimatedStyle(() => ({
@@ -99,9 +82,30 @@ export default function GlobalSidebar() {
     opacity: overlayAnimation.value,
   }));
 
+  const mainNavItems = [
+    { icon: "home", label: "Home", id: "home" },
+    { icon: "school", label: "Courses", id: "courses" },
+    { icon: "add-circle-outline", label: "Create New", id: "create" },
+    { icon: "collections", label: "Gallery", id: "gallery" },
+  ];
+
+  const shopNavItems = [
+    { icon: "store", label: "Resource Store", id: "store" },
+    { icon: "receipt-long", label: "Order History", id: "orderHistory" },
+  ];
+
+  const blogNavItems = [
+    { icon: "article", label: "All Blogs", id: "blogAll" },
+    { icon: "person-outline", label: "My Blogs", id: "blogMine" },
+  ];
+
+  const accountNavItems = [
+    { icon: "person", label: "Profile", id: "profile" },
+    { icon: "settings", label: "Settings", id: "settings" },
+  ];
+
   return (
     <>
-      {/* Overlay khi drawer mở */}
       {sidebarOpen && (
         <Reanimated.View
           style={[drawerStyles.overlay, overlayStyle]}
@@ -109,7 +113,6 @@ export default function GlobalSidebar() {
         />
       )}
 
-      {/* Navigation Drawer */}
       <Reanimated.View style={[drawerStyles.drawer, drawerStyle]}>
         {/* Header */}
         <View style={drawerStyles.drawerHeader}>
@@ -118,43 +121,59 @@ export default function GlobalSidebar() {
               source={{
                 uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
               }}
-              style={{ width: 28, height: 28, resizeMode: "contain" }}
+              style={{ width: 36, height: 36, resizeMode: "contain" }}
             />
             <Text style={drawerStyles.drawerTitle}>SketchNote</Text>
           </View>
           <Pressable onPress={toggleSidebar} style={drawerStyles.closeButton}>
-            <Icon name="close" size={24} color="#6B7280" />
+            <Icon name="close" size={24} color="#64748B" />
           </Pressable>
         </View>
 
         {/* User Info */}
         <View style={drawerStyles.userInfo}>
           <View style={drawerStyles.avatar}>
-            <Icon name="account-circle" size={48} color="#4F46E5" />
+            {user?.avatarUrl ? (
+              <Image
+                source={{ uri: user.avatarUrl }}
+                style={drawerStyles.avatarImage}
+              />
+            ) : (
+              <Icon name="account-circle" size={64} color="#3B82F6" />
+            )}
           </View>
+
           <Text style={drawerStyles.userName}>
-            {user?.name || "Người dùng"}
+            {user
+              ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+                "User"
+              : "Guest"}
           </Text>
+
           <Text style={drawerStyles.userEmail}>
-            {user?.email || "user@example.com"}
+            {user?.email ?? "guest@example.com"}
           </Text>
+
+          {user?.role && (
+            <View style={drawerStyles.roleBadge}>
+              <Text style={drawerStyles.roleText}>{user.role}</Text>
+            </View>
+          )}
         </View>
 
         {/* Navigation Items */}
-        <ScrollView style={drawerStyles.drawerItems}>
-          {/* Sidebar Menu Items */}
-          {[
-            { icon: "description", label: "Documents", id: "documents" },
-            { icon: "star", label: "Favorites", id: "favorites" },
-            { icon: "share", label: "Shared", id: "shared" },
-            { icon: "store", label: "Marketplace", id: "marketplace" },
-            { icon: "delete", label: "Trash", id: "trash" },
-          ].map((item) => (
+        <ScrollView
+          style={drawerStyles.drawerItems}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={drawerStyles.sectionTitle}>MAIN</Text>
+          {mainNavItems.map((item) => (
             <Pressable
               key={item.id}
-              style={[
+              style={({ pressed }) => [
                 drawerStyles.drawerItem,
                 activeNavItem === item.id && drawerStyles.drawerItemActive,
+                pressed && { opacity: 0.7 },
               ]}
               onPress={() => handleNavPress(item.id)}
             >
@@ -166,8 +185,8 @@ export default function GlobalSidebar() {
               >
                 <Icon
                   name={item.icon}
-                  size={20}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#6B7280"}
+                  size={22}
+                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
                 />
               </View>
               <Text
@@ -197,9 +216,10 @@ export default function GlobalSidebar() {
           ].map((item) => (
             <Pressable
               key={item.id}
-              style={[
+              style={({ pressed }) => [
                 drawerStyles.drawerItem,
                 activeNavItem === item.id && drawerStyles.drawerItemActive,
+                pressed && { opacity: 0.7 },
               ]}
               onPress={() => handleNavPress(item.id)}
             >
@@ -211,8 +231,8 @@ export default function GlobalSidebar() {
               >
                 <Icon
                   name={item.icon}
-                  size={20}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#6B7280"}
+                  size={22}
+                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
                 />
               </View>
               <Text
@@ -228,16 +248,15 @@ export default function GlobalSidebar() {
 
           <View style={drawerStyles.divider} />
 
-          {/* Profile & Settings */}
-          {[
-            { icon: "person", label: "Hồ sơ", id: "profile" },
-            { icon: "settings", label: "Cài đặt", id: "settings" },
-          ].map((item) => (
+          {/* Blog Section */}
+          <Text style={drawerStyles.sectionTitle}>BLOG</Text>
+          {blogNavItems.map((item) => (
             <Pressable
               key={item.id}
-              style={[
+              style={({ pressed }) => [
                 drawerStyles.drawerItem,
                 activeNavItem === item.id && drawerStyles.drawerItemActive,
+                pressed && { opacity: 0.7 },
               ]}
               onPress={() => handleNavPress(item.id)}
             >
@@ -249,8 +268,42 @@ export default function GlobalSidebar() {
               >
                 <Icon
                   name={item.icon}
-                  size={20}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#6B7280"}
+                  size={22}
+                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                />
+              </View>
+              <Text
+                style={[
+                  drawerStyles.drawerText,
+                  activeNavItem === item.id && drawerStyles.drawerTextActive,
+                ]}
+              >
+                {item.label}
+              </Text>
+            </Pressable>
+          ))}
+          <View style={drawerStyles.divider} />
+          <Text style={drawerStyles.sectionTitle}>ACCOUNT</Text>
+          {accountNavItems.map((item) => (
+            <Pressable
+              key={item.id}
+              style={({ pressed }) => [
+                drawerStyles.drawerItem,
+                activeNavItem === item.id && drawerStyles.drawerItemActive,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={() => handleNavPress(item.id)}
+            >
+              <View
+                style={[
+                  drawerStyles.iconContainer,
+                  activeNavItem === item.id && drawerStyles.iconContainerActive,
+                ]}
+              >
+                <Icon
+                  name={item.icon}
+                  size={22}
+                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
                 />
               </View>
               <Text
@@ -267,14 +320,16 @@ export default function GlobalSidebar() {
 
         {/* Footer */}
         <View style={drawerStyles.drawerFooter}>
-          <TouchableOpacity 
-            style={drawerStyles.logoutButton} 
+          <Pressable
+            style={({ pressed }) => [
+              drawerStyles.logoutButton,
+              pressed && { opacity: 0.7 },
+            ]}
             onPress={handleLogout}
-            activeOpacity={0.7}
           >
-            <Icon name="logout" size={20} color="#EF4444" />
-            <Text style={drawerStyles.logoutText}>Logout</Text>
-          </TouchableOpacity>
+            <Icon name="logout" size={20} color="#DC2626" />
+            <Text style={drawerStyles.logoutText}>Sign Out</Text>
+          </Pressable>
           <Text style={drawerStyles.versionText}>Version 1.0.0</Text>
         </View>
       </Reanimated.View>

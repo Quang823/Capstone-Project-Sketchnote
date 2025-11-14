@@ -1,10 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-// import { authService } from "./authService"; // Nếu bạn có file này
+// Avoid importing authService here to prevent circular dependency.
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
-const API_URL2 = process.env.EXPO_PUBLIC_API_URL2;
+// const API_URL = process.env.EXPO_PUBLIC_API_URL;
+// const API_URL2 = process.env.EXPO_PUBLIC_API_URL2;
 
+const API_URL = "http://139.59.119.65:8888/";
+const API_URL2 = "http://146.190.90.222:8087/";
+
+// const API_URL = "https://sketchnote.litecsys.com/";
+// const API_URL2 = "https://sketchnote.litecsys.com/";
 // 🟢 API 1 (server chính)
 export const publicApi = axios.create({
   baseURL: API_URL,
@@ -44,7 +49,13 @@ const attachAuthInterceptor = (instance) => {
       if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
         try {
-          const newToken = await authService.refreshToken(); // tùy bạn implement
+          // Read refresh token directly and call refresh endpoint with plain axios to avoid cycles
+          const refreshToken = await AsyncStorage.getItem("refreshToken");
+          if (!refreshToken) throw new Error("Missing refreshToken");
+          const res = await axios.post(`${API_URL}api/auth/refresh-token`, {
+            refreshToken,
+          });
+          const newToken = res?.data?.result?.accessToken;
           if (newToken) {
             await AsyncStorage.setItem("accessToken", newToken);
             originalRequest.headers.Authorization = `Bearer ${newToken}`;

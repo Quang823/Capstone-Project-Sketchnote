@@ -22,7 +22,7 @@ export const authService = {
     } catch (err) {
       const message =
         err.response?.data?.message || err.message || "Login failed.";
-      
+
       throw new Error(message);
     }
   },
@@ -49,18 +49,50 @@ export const authService = {
 
       return null;
     } catch (err) {
-      
       return null;
     }
   },
 
-  logout: async () => {
+  getCurrentUser: async (sub) => {
     try {
-      await AsyncStorage.multiRemove(["accessToken", "refreshToken", "roles"]);
-      return true;
-    } catch (e) {
-      console.error("Error logging out:", e);
-      return false;
+      if (!sub) throw new Error("Missing sub when fetching current user");
+
+      const res = await authApiController.getCurrentUser(sub);
+
+      if (res?.data?.result) {
+        return res.data.result;
+      }
+
+      throw new Error("User data not found.");
+    } catch (err) {
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to fetch current user.";
+      throw new Error(message);
+    }
+  },
+  getUserById: async (id) => {
+    try {
+      if (!id && id !== 0) throw new Error("Missing user id");
+      const res = await authApiController.getUserById(id);
+      if (res?.data?.result) return res.data.result;
+      throw new Error("User not found");
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || "Failed to get user.";
+      throw new Error(message);
+    }
+  },
+  updateUser: async (id, payload) => {
+    try {
+      if (!id && id !== 0) throw new Error("Missing user id");
+      const res = await authApiController.updateUser(id, payload || {});
+      if (res?.data?.result) return res.data.result;
+      throw new Error("Update failed");
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || "Failed to update user.";
+      throw new Error(message);
     }
   },
 };
+

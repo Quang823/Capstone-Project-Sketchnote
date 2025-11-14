@@ -80,8 +80,9 @@ export default function GestureHandler(
     scrollYShared, // ✅ Animated scroll value
     pageOffsetY = 0, // ✅ Page offset trong project
     onColorPicked, // 👈 Thêm prop
+    selectedId: selectedIdProp,
   },
-  ref
+  ref,
 ) {
   // Expose resetRulerLock function to parent components
   useImperativeHandle(ref, () => ({
@@ -89,6 +90,58 @@ export default function GestureHandler(
       rulerLockRef.current = null;
     },
   }));
+
+  // Track last scheduled requestAnimationFrame ID to cancel on unmount
+  const rafIdRef = useRef(null);
+
+  // Cleanup: cancel any pending RAF to prevent leaks when unmounting
+  useEffect(() => {
+    return () => {
+      try {
+        if (typeof rafIdRef.current === "number") {
+          cancelAnimationFrame(rafIdRef.current);
+        }
+      } catch {}
+      rafIdRef.current = null;
+      // Reset transient refs to release memory
+      rafScheduled.current = false;
+      liveRef.current = [];
+    };
+  }, []);
+
+  // Helper: dynamic minimum distance squared for point sampling
+  const getMinDistSq = useCallback(() => {
+    try {
+      const scale = zoomState?.scale?.value ?? 1;
+      const basePx = 3; // base minimum step in pixels
+      const effWidth =
+        tool === "pencil"
+          ? (pencilWidth ?? strokeWidth ?? 1)
+          : tool === "brush"
+            ? (brushWidth ?? strokeWidth ?? 1)
+            : tool === "calligraphy"
+              ? (calligraphyWidth ?? strokeWidth ?? 1)
+              : tool === "eraser"
+                ? (eraserSize ?? strokeWidth ?? 1)
+                : (strokeWidth ?? 1);
+      // When zoomed out (scale < 1), increase min distance; when zoomed in, allow denser points
+      const minDist = Math.max(
+        2,
+        basePx / Math.max(0.6, scale) + Math.min(6, effWidth * 0.15),
+      );
+      return minDist * minDist;
+    } catch {
+      return 9; // fallback
+    }
+  }, [
+    zoomState,
+    tool,
+    pencilWidth,
+    brushWidth,
+    calligraphyWidth,
+    eraserSize,
+    strokeWidth,
+  ]);
   const distPointToSegment = (px, py, x1, y1, x2, y2) => {
     const vx = x2 - x1;
     const vy = y2 - y1;
@@ -256,7 +309,7 @@ export default function GestureHandler(
           eSegs[s][0],
           eSegs[s][1],
           eSegs[s][2],
-          eSegs[s][3]
+          eSegs[s][3],
         );
         if (d <= radius + (stroke.width || 6) * 0.5) {
           cutEdge[i] = true;
@@ -317,6 +370,14 @@ export default function GestureHandler(
   const [selectedBox, setSelectedBox] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [editorVisible, setEditorVisible] = useState(false);
+
+  // [FIX] Sync local selectedId back to the parent (CanvasContainer)
+  useEffect(() => {
+    if (typeof onSelectStroke === "function") {
+      onSelectStroke(selectedId);
+    }
+  }, [selectedId, onSelectStroke]);
+
   const [editorProps, setEditorProps] = useState({
     x: 0,
     y: 0,
@@ -326,6 +387,15 @@ export default function GestureHandler(
 
   const [draggingText, setDraggingText] = useState(null);
   const [tempStrokeId, setTempStrokeId] = useState(null);
+
+  useEffect(() => {
+    if (
+      typeof selectedIdProp === "string" &&
+      selectedIdProp !== selectedId
+    ) {
+      setSelectedId(selectedIdProp);
+    }
+  }, [selectedIdProp]);
   const getActiveStrokes = useCallback(() => {
     // Validate strokes is array before filtering
     if (!Array.isArray(strokes)) return [];
@@ -333,7 +403,7 @@ export default function GestureHandler(
       (s) =>
         s &&
         (!activeLayerId || s.layerId === activeLayerId) &&
-        (s.visible ?? true)
+        (s.visible ?? true),
     );
   }, [strokes, activeLayerId]);
 
@@ -439,20 +509,6 @@ export default function GestureHandler(
     }
   }, [rulerPosition]);
 
-  // useEffect(() => {
-  //   console.log("📍 GestureHandler received rulerPosition:", rulerPosition);
-  //   if (rulerPosition) {
-  //     console.log("   -> Has ruler data:", {
-  //       x: rulerPosition.x,
-  //       y: rulerPosition.y,
-  //       rotation: rulerPosition.rotation,
-  //       scale: rulerPosition.scale,
-  //     });
-  //   } else {
-  //     console.log("   -> Ruler position is NULL");
-  //   }
-  // }, [rulerPosition]);
-
   // Cache canvas ruler to avoid recalculating every frame
   const canvasRulerCache = useRef(null);
   const lastRulerPositionRef = useRef(null);
@@ -494,7 +550,7 @@ export default function GestureHandler(
     const rawW = Number.isFinite(r.width) ? r.width : undefined;
     const rawH = Number.isFinite(r.height) ? r.height : undefined;
 
-    let useWidth = Number.isFinite(rawW) && rawW > 0 ? rawW : page?.w ?? 600;
+    let useWidth = Number.isFinite(rawW) && rawW > 0 ? rawW : (page?.w ?? 600);
     let useHeight = Number.isFinite(rawH) && rawH > 0 ? rawH : 60;
 
     const s = zoomMirror?.scale || 1;
@@ -550,7 +606,7 @@ export default function GestureHandler(
     (vals) => {
       runOnJS(setZoomMirror)({ scale: vals.s, x: vals.x, y: vals.y });
       runOnJS(invalidateRulerCache)();
-    }
+    },
   );
 
   useEffect(() => {
@@ -566,7 +622,7 @@ export default function GestureHandler(
   const selectedStroke = useMemo(
     () =>
       Array.isArray(strokes) ? strokes.find((s) => s?.id === selectedId) : null,
-    [strokes, selectedId]
+    [strokes, selectedId],
   );
 
   const { handleMoveCommit } = useLassoTransform({
@@ -578,16 +634,21 @@ export default function GestureHandler(
   });
 
   useEffect(() => {
-    if (!selectedStroke) return;
-    if (!["image", "sticker"].includes(selectedStroke.tool)) return;
-
-    setSelectedBox({
-      x: selectedStroke.x ?? 0,
-      y: selectedStroke.y ?? 0,
-      width: selectedStroke.width ?? 100,
-      height: selectedStroke.height ?? 100,
-      rotation: selectedStroke.rotation ?? 0,
-    });
+    if (
+      selectedStroke &&
+      ["image", "sticker", "table"].includes(selectedStroke.tool)
+    ) {
+      setSelectedBox({
+        x: selectedStroke.x ?? 0,
+        y: selectedStroke.y ?? 0,
+        width: selectedStroke.width ?? 100,
+        height: selectedStroke.height ?? 100,
+        rotation: selectedStroke.rotation ?? 0,
+      });
+    } else {
+      // If no stroke is selected, or it's not a selectable object, clear the box.
+      setSelectedBox(null);
+    }
   }, [selectedStroke]);
   const liveTransformRef = useRef({
     dx: 0,
@@ -674,7 +735,7 @@ export default function GestureHandler(
       setRealtimeText,
       editorProps.x,
       editorProps.y,
-    ]
+    ],
   );
 
   const hitTestText = (x, y, strokesOrLayers) => {
@@ -831,16 +892,18 @@ export default function GestureHandler(
     .numberOfTaps(2)
     .maxDuration(300)
     .maxDistance(15)
+    .runOnJS(true)
     .onStart((e) => {
       const validStrokes = getActiveStrokes?.() || [];
       const hit = hitTestText(e.x, e.y, validStrokes);
       if (!hit) return;
 
       if (hit.tool === "emoji") {
-        setSelectedId(hit.id);
-        onSelectStroke?.(hit.id);
+        runOnJS(setSelectedId)(hit.id);
+        if (typeof onSelectStroke === "function")
+          runOnJS(onSelectStroke)(hit.id);
 
-        setSelectedBox({
+        const box = {
           x: hit.x - (hit.padding || 0) - 1,
           y: hit.y - (hit.fontSize || 18) / 2 - (hit.padding || 0) - 1,
           width:
@@ -848,32 +911,87 @@ export default function GestureHandler(
             (hit.padding || 0) * 2 +
             2,
           height: (hit.fontSize || 18) + (hit.padding || 0) * 2 + 2,
-        });
+        };
+        runOnJS(setSelectedBox)(box);
         return;
       }
 
       if (hit.tool === "text") {
-        setSelectedId(hit.id);
-        onSelectStroke?.(hit.id);
-        setSelectedBox(null);
+        runOnJS(setSelectedId)(hit.id);
+        if (typeof onSelectStroke === "function")
+          runOnJS(onSelectStroke)(hit.id);
+        runOnJS(setSelectedBox)(null);
 
         if (typeof setRealtimeText === "function") {
-          setRealtimeText({ id: hit.id, ...hit });
+          runOnJS(setRealtimeText)({ id: hit.id, ...hit });
         }
 
-        setEditorProps({
+        runOnJS(setEditorProps)({
           x: hit.x,
           y: hit.y,
           tool: hit.tool,
           data: hit,
         });
-        setEditorVisible(true);
+        runOnJS(setEditorVisible)(true);
       }
     });
 
   const tap = Gesture.Tap()
     .runOnJS(true)
     .onStart((e) => {
+      // Nếu đang dùng các tool vẽ tự do, tạo chấm ngay tại vị trí tap
+      const isFreehandTool = [
+        "pen",
+        "pencil",
+        "brush",
+        "calligraphy",
+        "highlighter",
+        "marker",
+        "airbrush",
+        "crayon",
+      ].includes(tool);
+      if (isFreehandTool && isInsidePage(e.x, e.y, page)) {
+        const w =
+          {
+            pen: strokeWidth,
+            pencil: pencilWidth,
+            brush: brushWidth,
+            calligraphy: calligraphyWidth,
+            highlighter: strokeWidth * 2,
+            eraser: eraserSize,
+          }[tool] ?? strokeWidth;
+
+        const toolConfig = configByTool[tool] || {
+          pressure: 0.5,
+          thickness: 1,
+          stabilization: 0.2,
+        };
+
+        const newStroke = {
+          id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          tool,
+          color,
+          width: w,
+          points: [{ x: e.x, y: e.y }],
+          opacity:
+            tool === "brush"
+              ? brushOpacity
+              : tool === "calligraphy"
+                ? calligraphyOpacity
+                : 1,
+          ...toolConfig,
+          layerId: activeLayerId,
+          rotation: 0,
+        };
+
+        try {
+          onAddStroke?.(newStroke);
+        } catch (err) {
+          console.error("Error adding dot stroke:", err);
+        }
+        return;
+      }
+
       // 🎨 Eyedropper tool - pick color from stroke
       if (tool === "eyedropper") {
         // Try to find a stroke at tap position across ALL visible strokes
@@ -886,10 +1004,6 @@ export default function GestureHandler(
           // Set màu và lưu vào picked colors
           setColor?.(hit.color);
           onColorPicked?.(hit.color);
-
-          // if (typeof __DEV__ !== "undefined" && __DEV__) {
-          //   console.log("🎨 Eyedropper picked color:", hit.color);
-          // }
         } else {
           // Check other strokes (shapes, lines, etc.)
           const activeStrokes = visible;
@@ -901,7 +1015,7 @@ export default function GestureHandler(
             const isShape =
               s.tool &&
               ["rectangle", "circle", "triangle", "star", "polygon"].includes(
-                s.tool
+                s.tool,
               );
             const hasFill = s.fill && s.fillColor;
 
@@ -943,12 +1057,6 @@ export default function GestureHandler(
                   // Tap vào bên trong shape có fill → lấy fillColor
                   setColor?.(s.fillColor);
                   onColorPicked?.(s.fillColor);
-                  if (typeof __DEV__ !== "undefined" && __DEV__) {
-                    // console.log(
-                    //   "🎨 Eyedropper picked fill color:",
-                    //   s.fillColor
-                    // );
-                  }
                   return;
                 }
               }
@@ -965,9 +1073,6 @@ export default function GestureHandler(
                 // Gần viền → lấy màu viền
                 setColor?.(s.color);
                 onColorPicked?.(s.color);
-                // if (typeof __DEV__ !== "undefined" && __DEV__) {
-                //   console.log("🎨 Eyedropper picked stroke color:", s.color);
-                // }
                 return;
               }
             }
@@ -986,13 +1091,6 @@ export default function GestureHandler(
       const hitImage = hitTestImage(e.x, e.y, strokes);
       if (hitImage) {
         setSelectedId(hitImage.id);
-        setSelectedBox({
-          x: hitImage.x,
-          y: hitImage.y,
-          width: hitImage.width,
-          height: hitImage.height,
-          rotation: hitImage.rotation ?? 0,
-        });
         setEditorVisible(false);
         return;
       }
@@ -1034,7 +1132,7 @@ export default function GestureHandler(
             const pad = snap.padding || 0;
             const newFont = Math.max(
               8,
-              Math.round((selectedBox.height || 0) - pad * 2)
+              Math.round((selectedBox.height || 0) - pad * 2),
             );
             const tx = (selectedBox.x || 0) + pad;
             const ty = (selectedBox.y || 0) + newFont + pad;
@@ -1070,8 +1168,8 @@ export default function GestureHandler(
                 tool === "sticky"
                   ? "#FFEB3B"
                   : tool === "comment"
-                  ? "#E3F2FD"
-                  : "transparent",
+                    ? "#E3F2FD"
+                    : "transparent",
               padding: tool === "sticky" || tool === "comment" ? 8 : 0,
               layerId: activeLayerId,
             });
@@ -1160,7 +1258,7 @@ export default function GestureHandler(
                 edges.topEdge.x1,
                 edges.topEdge.y1,
                 edges.topEdge.x2,
-                edges.topEdge.y2
+                edges.topEdge.y2,
               );
               const dBottom = distanceToSegment(
                 px,
@@ -1168,7 +1266,7 @@ export default function GestureHandler(
                 edges.bottomEdge.x1,
                 edges.bottomEdge.y1,
                 edges.bottomEdge.x2,
-                edges.bottomEdge.y2
+                edges.bottomEdge.y2,
               );
 
               const minD = Math.min(dTop, dBottom);
@@ -1202,12 +1300,12 @@ export default function GestureHandler(
                 // Luôn lấy vị trí ruler mới nhất, không sử dụng cache
                 const latestCanvasRuler = screenRulerToCanvasRuler(
                   rulerPosition,
-                  false
+                  false,
                 );
                 const constrained = constrainToRulerBarrier(
                   { x: px, y: py },
                   null,
-                  latestCanvasRuler || canvasRuler
+                  latestCanvasRuler || canvasRuler,
                 );
                 if (
                   constrained &&
@@ -1249,7 +1347,7 @@ export default function GestureHandler(
             const isShape =
               s.tool &&
               ["rectangle", "circle", "triangle", "star", "polygon"].includes(
-                s.tool
+                s.tool,
               );
             const hasFill = s.fill && s.fillColor;
 
@@ -1347,7 +1445,7 @@ export default function GestureHandler(
       // Các logic text/drag init (giữ nguyên) - nhưng dùng px/py thay vì e.x/e.y
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true),
           )
         : [];
       if (selectedId && draggingText) {
@@ -1370,7 +1468,7 @@ export default function GestureHandler(
       const last = liveRef.current.at(-1) || { x: 0, y: 0 };
       const dx = px - last.x;
       const dy = py - last.y;
-      if (dx * dx + dy * dy < 9) return;
+      if (dx * dx + dy * dy < getMinDistSq()) return;
 
       const toolConfig = configByTool[tool] || {
         pressure: 0.5,
@@ -1390,10 +1488,11 @@ export default function GestureHandler(
 
       if (!rafScheduled.current) {
         rafScheduled.current = true;
-        requestAnimationFrame(() => {
+        const id = requestAnimationFrame(() => {
           rafScheduled.current = false;
           setCurrentPoints([...liveRef.current]);
         });
+        rafIdRef.current = id;
       }
     })
 
@@ -1421,14 +1520,21 @@ export default function GestureHandler(
       // --- Nếu đang vẽ vùng lasso mới ---
       if (tool === "lasso" && !isMovingLasso) {
         setLassoPoints((prev) => [...prev, { x: e.x, y: e.y }]);
-        setCurrentPoints((prev) => [...(prev ?? []), { x: e.x, y: e.y }]);
+        if (!rafScheduled.current) {
+          rafScheduled.current = true;
+          const id = requestAnimationFrame(() => {
+            rafScheduled.current = false;
+            setCurrentPoints((prev) => [...(prev ?? []), { x: e.x, y: e.y }]);
+          });
+          rafIdRef.current = id;
+        }
         return;
       }
 
       // Các xử lý khác giữ nguyên (text dragging, eraser, normal drawing...)
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true),
           )
         : [];
 
@@ -1458,7 +1564,7 @@ export default function GestureHandler(
                     0) -
                   1,
               }
-            : box
+            : box,
         );
 
         setEditorProps((prev) => ({ ...prev, x: newX, y: newY }));
@@ -1490,7 +1596,7 @@ export default function GestureHandler(
         if (eraserMode === "stroke") {
           if (!rafScheduled.current) {
             rafScheduled.current = true;
-            requestAnimationFrame(() => {
+            const id = requestAnimationFrame(() => {
               rafScheduled.current = false;
               validStrokes.forEach((s, i) => {
                 if (!s.points) return;
@@ -1502,7 +1608,7 @@ export default function GestureHandler(
 
                 if (hit && typeof onDeleteStroke === "function") {
                   const globalIndex = strokes.findIndex(
-                    (s) => s.id === validStrokes[i].id
+                    (s) => s.id === validStrokes[i].id,
                   );
                   if (globalIndex !== -1) {
                     // Reset ruler lock khi xóa nét vẽ
@@ -1514,6 +1620,7 @@ export default function GestureHandler(
                 }
               });
             });
+            rafIdRef.current = id;
           }
           return;
         }
@@ -1522,15 +1629,29 @@ export default function GestureHandler(
           // Always record the first point so preview appears immediately
           if (liveRef.current.length === 0) {
             liveRef.current.push({ x: e.x, y: e.y });
-            setCurrentPoints([...liveRef.current]);
+            if (!rafScheduled.current) {
+              rafScheduled.current = true;
+              const id = requestAnimationFrame(() => {
+                rafScheduled.current = false;
+                setCurrentPoints([...liveRef.current]);
+              });
+              rafIdRef.current = id;
+            }
             return;
           }
           const last = liveRef.current.at(-1);
           const dx = e.x - (last?.x ?? e.x);
           const dy = e.y - (last?.y ?? e.y);
-          if (dx * dx + dy * dy < 9) return;
+          if (dx * dx + dy * dy < getMinDistSq()) return;
           liveRef.current.push({ x: e.x, y: e.y });
-          setCurrentPoints([...liveRef.current]);
+          if (!rafScheduled.current) {
+            rafScheduled.current = true;
+            const id = requestAnimationFrame(() => {
+              rafScheduled.current = false;
+              setCurrentPoints([...liveRef.current]);
+            });
+            rafIdRef.current = id;
+          }
           return;
         }
 
@@ -1538,14 +1659,15 @@ export default function GestureHandler(
           const last = liveRef.current.at(-1) || { x: 0, y: 0 };
           const dx = e.x - last.x;
           const dy = e.y - last.y;
-          if (dx * dx + dy * dy < 9) return;
+          if (dx * dx + dy * dy < getMinDistSq()) return;
           liveRef.current.push({ x: e.x, y: e.y });
           if (!rafScheduled.current) {
             rafScheduled.current = true;
-            requestAnimationFrame(() => {
+            const id = requestAnimationFrame(() => {
               rafScheduled.current = false;
               setCurrentPoints([...liveRef.current]);
             });
+            rafIdRef.current = id;
             const livePath = canvasRef?.current?.livePath;
             if (livePath) livePath.lineTo(e.x, e.y);
           }
@@ -1557,7 +1679,7 @@ export default function GestureHandler(
       const last = liveRef.current.at(-1) || { x: 0, y: 0 };
       const dx = e.x - last.x;
       const dy = e.y - last.y;
-      if (dx * dx + dy * dy < 9) return;
+      if (dx * dx + dy * dy < getMinDistSq()) return;
 
       const toolConfig = configByTool[tool] || {
         pressure: 0.5,
@@ -1585,7 +1707,7 @@ export default function GestureHandler(
               edgeSeg.x1,
               edgeSeg.y1,
               edgeSeg.x2,
-              edgeSeg.y2
+              edgeSeg.y2,
             );
           }
         } catch (err) {
@@ -1599,7 +1721,7 @@ export default function GestureHandler(
             const constrainedPoint = constrainToRulerBarrier(
               point,
               prevPoint,
-              canvasRuler
+              canvasRuler,
             );
             if (
               constrainedPoint &&
@@ -1624,10 +1746,11 @@ export default function GestureHandler(
 
       if (!rafScheduled.current) {
         rafScheduled.current = true;
-        requestAnimationFrame(() => {
+        const id = requestAnimationFrame(() => {
           rafScheduled.current = false;
           setCurrentPoints([...liveRef.current]);
         });
+        rafIdRef.current = id;
       }
     })
     .onFinalize(() => {
@@ -1646,7 +1769,7 @@ export default function GestureHandler(
                 (s) =>
                   s &&
                   (!activeLayerId || s.layerId === activeLayerId) &&
-                  (s.points || s.x)
+                  (s.points || s.x),
               )
               .filter((s) => {
                 const bbox = getBoundingBoxForStroke(s);
@@ -1663,7 +1786,7 @@ export default function GestureHandler(
             insideIds.map((id) => {
               const s = strokes.find((st) => st.id === id);
               return { id, x: s?.x ?? 0, y: s?.y ?? 0 };
-            })
+            }),
           );
           setLassoSelection(insideIds);
           // set base box once when selection is created
@@ -1790,7 +1913,7 @@ export default function GestureHandler(
 
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true),
           )
         : [];
       if (!activeLayerId) return;
@@ -1806,7 +1929,7 @@ export default function GestureHandler(
           if (pointInPolygon(poly, cx, cy)) {
             try {
               const globalIndex = strokes.findIndex(
-                (s) => s.id === validStrokes[i].id
+                (s) => s.id === validStrokes[i].id,
               );
               if (globalIndex !== -1) onDeleteStroke(globalIndex);
             } catch (err) {
@@ -1912,18 +2035,51 @@ export default function GestureHandler(
         stabilization: 0.2,
       };
 
+      // 🛠️ Giảm số điểm để tránh lag khi stroke quá dài
+      const shouldDecimate = [
+        "pen",
+        "pencil",
+        "brush",
+        "calligraphy",
+        "highlighter",
+        "marker",
+        "airbrush",
+        "crayon",
+      ].includes(tool);
+
+      const decimatePoints = (pts, minDist) => {
+        if (!Array.isArray(pts) || pts.length < 3) return pts;
+        const out = [pts[0]];
+        const minDistSq = Math.max(0.25, (minDist || 0.5) * (minDist || 0.5));
+        for (let i = 1; i < pts.length; i++) {
+          const prev = out[out.length - 1];
+          const p = pts[i];
+          const dx = (p.x || 0) - (prev.x || 0);
+          const dy = (p.y || 0) - (prev.y || 0);
+          if (dx * dx + dy * dy >= minDistSq) out.push(p);
+        }
+        const last = pts[pts.length - 1];
+        const tail = out[out.length - 1];
+        if (last && (last.x !== tail.x || last.y !== tail.y)) out.push(last);
+        return out;
+      };
+
+      const simplifiedPoints = shouldDecimate
+        ? decimatePoints(finalPoints, Math.max(0.5, (w || 2) * 0.15))
+        : finalPoints;
+
       const newStroke = {
         id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
         tool,
         color,
         width: w,
-        points: finalPoints,
+        points: simplifiedPoints,
         opacity:
           tool === "brush"
             ? brushOpacity
             : tool === "calligraphy"
-            ? calligraphyOpacity
-            : 1,
+              ? calligraphyOpacity
+              : 1,
         ...toolConfig,
         layerId: activeLayerId,
         rotation: 0,
@@ -1957,6 +2113,21 @@ export default function GestureHandler(
         }
       }
     });
+
+  // Cleanup on unmount: clear live points and reset currentPoints to avoid leaks
+  useEffect(() => {
+    return () => {
+      try {
+        rafScheduled.current = false;
+        if (typeof rafIdRef.current === "number") {
+          cancelAnimationFrame(rafIdRef.current);
+          rafIdRef.current = null;
+        }
+        liveRef.current = [];
+        setCurrentPoints([]);
+      } catch {}
+    };
+  }, []);
 
   const lassoBox = useMemo(() => {
     // While moving (either via canvas or box), render box as base + visual offset
@@ -2126,7 +2297,7 @@ export default function GestureHandler(
         selectedId &&
         !editorVisible &&
         ["text", "sticky", "comment", "emoji"].includes(
-          selectedStroke?.tool
+          selectedStroke?.tool,
         ) && (
           <TextSelectionBox
             x={selectedBox.x}
@@ -2147,7 +2318,7 @@ export default function GestureHandler(
             }}
             onMove={(dx, dy) => {
               setSelectedBox((box) =>
-                box ? { ...box, x: box.x + dx, y: box.y + dy } : box
+                box ? { ...box, x: box.x + dx, y: box.y + dy } : box,
               );
 
               if (typeof setRealtimeText === "function") {
@@ -2155,7 +2326,7 @@ export default function GestureHandler(
                   setRealtimeText((prev) =>
                     prev && prev.id === selectedId
                       ? { ...prev, x: prev.x + dx, y: prev.y + dy }
-                      : prev
+                      : prev,
                   );
                 });
               }
@@ -2191,12 +2362,12 @@ export default function GestureHandler(
               const scaleY = h / baseH;
               const scale = Math.max(
                 0.3,
-                Math.min(6, Math.min(scaleX, scaleY))
+                Math.min(6, Math.min(scaleX, scaleY)),
               );
               const pad = snap.padding;
               const newFont = Math.max(
                 8,
-                Math.round((snap.fontSize || 18) * scale)
+                Math.round((snap.fontSize || 18) * scale),
               );
               textResizeRef.current.lastNewFont = newFont;
               // Derive new text position from box: left/top -> x,y
@@ -2206,7 +2377,7 @@ export default function GestureHandler(
               // Recompute box from text metrics to stay consistent with renderer
               const tw = Math.max(
                 20,
-                approxTextWidthLocal(snap.text, newFont) + pad * 2
+                approxTextWidthLocal(snap.text, newFont) + pad * 2,
               );
               const th = Math.max(20, newFont + pad * 2);
 
@@ -2236,8 +2407,8 @@ export default function GestureHandler(
                   : Math.max(
                       8,
                       Math.round(
-                        selectedBox?.height - pad * 2 || snap.fontSize || 18
-                      )
+                        selectedBox?.height - pad * 2 || snap.fontSize || 18,
+                      ),
                     );
 
               const newFont = Math.max(8, Math.round(preferredFont));
@@ -2384,7 +2555,7 @@ export default function GestureHandler(
                 width={screenW}
                 height={screenH}
                 rotation={selectedBox.rotation ?? 0}
-                scale={1}
+                scale={s}
                 pan={{ x: 0, y: 0 }}
                 onMoveStart={() => {
                   const sItem = strokes.find((it) => it.id === selectedId);
@@ -2410,7 +2581,7 @@ export default function GestureHandler(
                 onMove={(dx, dy) => {
                   if (!selectedId) return;
                   setSelectedBox((b) =>
-                    b ? { ...b, x: b.x + dx, y: b.y + dy } : b
+                    b ? { ...b, x: b.x + dx, y: b.y + dy } : b,
                   );
                   liveTransformRef.current.dx =
                     (liveTransformRef.current.dx || 0) + dx;
@@ -2524,7 +2695,7 @@ export default function GestureHandler(
                           width: newWidth,
                           height: newHeight,
                         }
-                      : box
+                      : box,
                   );
 
                   if (typeof onLiveUpdateStroke === "function" && selectedId) {
@@ -2606,7 +2777,10 @@ export default function GestureHandler(
               />
 
               <ImageSelectionBox
-                {...selectedBox}
+                x={screenX}
+                y={screenY}
+                width={screenW}
+                height={screenH}
                 onCopy={() => {
                   const target = strokes.find((s) => s.id === selectedId);
                   if (!target) return;

@@ -8,6 +8,7 @@ import React, {
   useCallback,
   memo,
 } from "react";
+import { useFont } from "@shopify/react-native-skia";
 import { View, Text, TouchableOpacity, Dimensions, Alert } from "react-native";
 import Animated, {
   useSharedValue,
@@ -21,9 +22,128 @@ import Animated, {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import CanvasContainer from "./CanvasContainer";
 import CustomScrollbar from "./CustomScrollbar";
-import DocumentSidebar from "../sidebar/DocumentSidebar";
+import DocumentSidebar from "../document/DocumentSidebar";
+import DocumentOverviewModal from "../document/DocumentOverviewModal";
 import { projectService } from "../../../service/projectService";
 import { calculatePageDimensions } from "../../../utils/pageDimensions";
+import Icon from "react-native-vector-icons/MaterialIcons";
+import RobotoRegular from "../../../assets/fonts/Roboto/Roboto_Condensed-Regular.ttf";
+import RobotoBold from "../../../assets/fonts/Roboto/Roboto_Condensed-Bold.ttf";
+import RobotoItalic from "../../../assets/fonts/Roboto/Roboto_Condensed-Italic.ttf";
+import RobotoBoldItalic from "../../../assets/fonts/Roboto/Roboto_Condensed-BoldItalic.ttf";
+import LatoRegular from "../../../assets/fonts/Lato/Lato-Regular.ttf";
+import LatoBold from "../../../assets/fonts/Lato/Lato-Bold.ttf";
+import LatoItalic from "../../../assets/fonts/Lato/Lato-Italic.ttf";
+import LatoBoldItalic from "../../../assets/fonts/Lato/Lato-BoldItalic.ttf";
+import MontserratRegular from "../../../assets/fonts/Montserrat/Montserrat-Regular.ttf";
+import MontserratBold from "../../../assets/fonts/Montserrat/Montserrat-Bold.ttf";
+import MontserratItalic from "../../../assets/fonts/Montserrat/Montserrat-Italic.ttf";
+import MontserratBoldItalic from "../../../assets/fonts/Montserrat/Montserrat-BoldItalic.ttf";
+import OpenSansCondensedRegular from "../../../assets/fonts/OpenSans/OpenSans_Condensed-Regular.ttf";
+import OpenSansCondensedBold from "../../../assets/fonts/OpenSans/OpenSans_Condensed-Bold.ttf";
+import OpenSansCondensedItalic from "../../../assets/fonts/OpenSans/OpenSans_Condensed-Italic.ttf";
+import OpenSansCondensedBoldItalic from "../../../assets/fonts/OpenSans/OpenSans_Condensed-BoldItalic.ttf";
+import InterRegular from "../../../assets/fonts/Inter/Inter_18pt-Regular.ttf";
+import InterBold from "../../../assets/fonts/Inter/Inter_18pt-Bold.ttf";
+import InterItalic from "../../../assets/fonts/Inter/Inter_18pt-Italic.ttf";
+import InterBoldItalic from "../../../assets/fonts/Inter/Inter_18pt-BoldItalic.ttf";
+import PoppinsRegular from "../../../assets/fonts/Poppins/Poppins-Regular.ttf";
+import PoppinsBold from "../../../assets/fonts/Poppins/Poppins-Bold.ttf";
+import PoppinsItalic from "../../../assets/fonts/Poppins/Poppins-Italic.ttf";
+import PoppinsBoldItalic from "../../../assets/fonts/Poppins/Poppins-BoldItalic.ttf";
+import PacificoRegular from "../../../assets/fonts/Pacifico/Pacifico-Regular.ttf";
+import NotoColorEmojiRegular from "../../../assets/fonts/NotoColorEmoji/NotoColorEmoji-Regular.ttf";
+
+const FONT_MAP = {
+  Roboto: {
+    Regular: RobotoRegular,
+    Bold: RobotoBold,
+    Italic: RobotoItalic,
+    BoldItalic: RobotoBoldItalic,
+  },
+  Lato: {
+    Regular: LatoRegular,
+    Bold: LatoBold,
+    Italic: LatoItalic,
+    BoldItalic: LatoBoldItalic,
+  },
+  Montserrat: {
+    Regular: MontserratRegular,
+    Bold: MontserratBold,
+    Italic: MontserratItalic,
+    BoldItalic: MontserratBoldItalic,
+  },
+  OpenSans: {
+    Regular: OpenSansCondensedRegular,
+    Bold: OpenSansCondensedBold,
+    Italic: OpenSansCondensedItalic,
+    BoldItalic: OpenSansCondensedBoldItalic,
+  },
+  Inter: {
+    Regular: InterRegular,
+    Bold: InterBold,
+    Italic: InterItalic,
+    BoldItalic: InterBoldItalic,
+  },
+  Poppins: {
+    Regular: PoppinsRegular,
+    Bold: PoppinsBold,
+    Italic: PoppinsItalic,
+    BoldItalic: PoppinsBoldItalic,
+  },
+  Pacifico: {
+    Regular: PacificoRegular,
+  },
+  NotoColorEmoji: {
+    Regular: NotoColorEmojiRegular,
+  },
+};
+
+const FONT_SIZES = [12, 18, 24];
+
+function usePreloadedFonts() {
+  const loaded = {};
+  for (const family in FONT_MAP) {
+    loaded[family] = {};
+    for (const styleKey of Object.keys(FONT_MAP[family])) {
+      loaded[family][styleKey] = {};
+      for (const sz of FONT_SIZES) {
+        loaded[family][styleKey][sz] = useFont(FONT_MAP[family][styleKey], sz);
+      }
+    }
+  }
+  return loaded;
+}
+
+function getNearestFont(loadedFonts, family, bold, italic, size = 18) {
+  const baseFamily = (family || "Roboto").replace(
+    /(-Regular|-Bold|-Italic|-BoldItalic)+$/g,
+    ""
+  );
+
+  const fontSet = loadedFonts[baseFamily] || loadedFonts["Roboto"];
+  const style =
+    bold && italic
+      ? "BoldItalic"
+      : bold
+      ? "Bold"
+      : italic
+      ? "Italic"
+      : "Regular";
+
+  const nearest = FONT_SIZES.reduce((a, b) =>
+    Math.abs(b - size) < Math.abs(a - size) ? b : a
+  );
+
+  return {
+    font:
+      fontSet?.[style]?.[nearest] ||
+      fontSet?.["Regular"]?.[nearest] ||
+      loadedFonts["Roboto"]["Regular"][18] ||
+      null,
+    nearest,
+  };
+}
 
 const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   {
@@ -57,10 +177,31 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   },
   ref
 ) {
+  const loadedFonts = usePreloadedFonts();
+
+  // ✨ FIX: Add cleanup effect to dispose of all SkFont objects on unmount
+  useEffect(() => {
+    return () => {
+      if (loadedFonts) {
+        for (const family in loadedFonts) {
+          for (const styleKey in loadedFonts[family]) {
+            for (const sz in loadedFonts[family][styleKey]) {
+              const font = loadedFonts[family][styleKey][sz];
+              if (font && typeof font.dispose === "function") {
+                font.dispose();
+              }
+            }
+          }
+        }
+      }
+    };
+  }, [loadedFonts]);
+
   const drawingDataRef = useRef({ pages: {} });
 
   // Sidebar state
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [overviewVisible, setOverviewVisible] = useState(false);
 
   // Initialize pages based on noteConfig
   const initialPages = useMemo(() => {
@@ -78,9 +219,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     const isFirstPageCover = firstPageFromAPI?.pageNumber === 1;
 
     // Add cover page if enabled
-    // ✅ Chỉ tạo cover page từ noteConfig.cover nếu:
-    //    - Có hasCover và cover config
-    //    - VÀ page đầu tiên từ API KHÔNG phải là cover (pageNumber !== 1)
     if (noteConfig.hasCover && noteConfig.cover && !isFirstPageCover) {
       pages.push({
         id: 1,
@@ -88,14 +226,13 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         backgroundColor: noteConfig.cover.color,
         template: noteConfig.cover.template,
         imageUrl: noteConfig.cover.imageUrl,
+        thumbnail: noteConfig.imageUrl, // Use project's main image for thumbnail
       });
     }
 
     // Add pages based on noteConfig.pages if provided
     if (Array.isArray(noteConfig.pages) && noteConfig.pages.length > 0) {
       noteConfig.pages.forEach((p, index) => {
-        // ✅ Nếu page đầu tiên có pageNumber === 1, đó là cover page
-        //    Dùng id = 1 và type = "cover" cho nó
         if (index === 0 && p.pageNumber === 1) {
           pages.push({
             id: 1,
@@ -105,9 +242,9 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             imageUrl: noteConfig.cover?.imageUrl,
             pageNumber: p.pageNumber,
             strokeUrl: p.strokeUrl,
+            thumbnail: noteConfig.imageUrl, // Use project's main image for thumbnail
           });
         } else {
-          // Paper pages: dùng pageId từ API hoặc pageNumber + offset
           const id = p.pageId ? Number(p.pageId) : Number(p.pageNumber) + 10000;
           pages.push({
             id,
@@ -116,16 +253,17 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             template: paperTemplate,
             pageNumber: p.pageNumber,
             strokeUrl: p.strokeUrl,
+            thumbnail: null, // No thumbnail for regular pages
           });
         }
       });
     } else {
-      // Fallback to a single editable page
       pages.push({
         id: pages.length + 1,
         type: "paper",
         backgroundColor: paperBg,
         template: paperTemplate,
+        thumbnail: null,
       });
     }
 
@@ -733,10 +871,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       });
 
       if (index >= 0) {
-        // console.log(
-        //   `[MultiPageCanvas] scrollToPageById: Found page at index ${index} for pageId ${pageId}`
-        // );
-        // ✅ Use requestAnimationFrame to ensure DOM is ready
         requestAnimationFrame(() => {
           if (!isUnmountedRef.current) {
             scrollToPage(index);
@@ -811,35 +945,22 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       });
     },
 
-    getProjectData: () => {
-      const allPages = Object.keys(pageRefs.current).map((id) => {
-        const strokes =
-          pageRefs.current[id]?.getStrokes?.() ||
-          drawingDataRef.current.pages[id] ||
-          [];
-        return { id, strokes };
-      });
-      return { createdAt: new Date().toISOString(), pages: allPages };
-    },
-
-    uploadAllPages: async () => {
-      const results = [];
+    // [NEW] This function ONLY gathers data from all pages. It does not upload.
+    getAllPagesData: () => {
+      const allPagesData = [];
       for (let index = 0; index < pages.length; index++) {
         const page = pages[index];
+        if (!page || page.id == null) continue;
 
         try {
-          // Thu thập strokes từ page hiện tại (theo layer)
           const strokes =
             pageRefs.current[page.id]?.getStrokes?.() ||
             drawingDataRef.current.pages[page.id] ||
             [];
-
-          // ✅ Thu thập layer metadata (name, visible, locked)
           const layersMetadata =
             pageRefs.current[page.id]?.getLayersMetadata?.() || [];
 
-          // Tạo JSON để lưu (bao gồm metadata cover/background và layers)
-          const jsonData = {
+          const dataObject = {
             id: page.id,
             createdAt: new Date().toISOString(),
             type: page.type || "paper",
@@ -847,11 +968,10 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             template: page.template,
             imageUrl: page.imageUrl,
             strokes,
-            layers: layersMetadata, // ✅ Lưu layer metadata
+            layers: layersMetadata,
           };
 
-          // Xác định pageNumber để lưu xuống backend/S3
-          const fallbackNumber = index + 1; // 1-based index (cover = 1)
+          const fallbackNumber = index + 1;
           const pageNumber =
             typeof page.pageNumber === "number"
               ? page.pageNumber
@@ -859,29 +979,44 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               ? 1
               : fallbackNumber;
 
-          const fileName = `${
-            noteConfig?.projectId || "project"
-          }-page-${pageNumber}.json`;
-          const { uploadUrl, strokeUrl } = await projectService.getPresign(
-            fileName,
-            "JSON"
-          );
-
-          // Upload JSON
-          const finalUrl = await projectService.uploadToPresignedUrl(
-            jsonData,
-            uploadUrl
-          );
-          results.push({
-            pageId: pageNumber,
-            url: finalUrl || strokeUrl,
-            type: page.type || "paper",
+          allPagesData.push({
+            pageId: page.id,
+            pageNumber: pageNumber,
+            dataObject: dataObject,
           });
         } catch (e) {
-          console.error(`Error uploading page ${page.id}:`, e);
+          console.error(`Error gathering data for page ${page.id}:`, e);
         }
       }
-      return results;
+      return allPagesData;
+    },
+
+    // [NEW] Append strokes to a specific page, used for incremental loading.
+    appendStrokesToPage: (pageId, strokeChunk) => {
+      if (!pageId || !strokeChunk || strokeChunk.length === 0) {
+        return;
+      }
+      const pageRef = pageRefs.current[pageId];
+      if (pageRef && typeof pageRef.appendStrokes === "function") {
+        pageRef.appendStrokes(strokeChunk);
+      } else {
+        console.warn(
+          `[MultiPageCanvas] appendStrokes not available for pageId: ${pageId}`
+        );
+      }
+    },
+
+    // [NEW] Clears all strokes from a specific page.
+    clearPage: (pageId) => {
+      if (!pageId) return;
+      const pageRef = pageRefs.current[pageId];
+      if (pageRef && typeof pageRef.clearAllStrokes === "function") {
+        pageRef.clearAllStrokes();
+      } else {
+        console.warn(
+          `[MultiPageCanvas] clearAllStrokes not available for pageId: ${pageId}`
+        );
+      }
     },
 
     // Insert table vào active page
@@ -915,14 +1050,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 const layersMetadata = Array.isArray(p.layersMetadata)
                   ? p.layersMetadata
                   : [];
-                // console.log(
-                //   `[MultiPageCanvas] Loading ${safeStrokes.length} strokes into page id: ${p.id}`
-                // );
                 try {
                   pageRef.loadStrokes(safeStrokes, layersMetadata);
-                  // console.log(
-                  //   `[MultiPageCanvas] Successfully loaded strokes into page id: ${p.id}`
-                  // );
                 } catch (loadError) {
                   // console.error(
                   //   `[MultiPageCanvas] Error loading strokes into page id: ${p.id}:`,
@@ -930,10 +1059,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                   // );
                 }
               } else if (retries > 0) {
-                // Retry sau 200ms nếu pageRef chưa sẵn sàng
-                // console.log(
-                //   `[MultiPageCanvas] Page ref not ready for id: ${p.id}, retrying... (${retries} retries left)`
-                // );
                 scheduleSafeTimeout(() => tryLoad(retries - 1), 200);
               } else {
                 console.warn(
@@ -986,6 +1111,18 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         }}
         onAddPage={addPage}
         resourceItems={[]}
+        onOpenOverview={() => setOverviewVisible(true)}
+      />
+      <DocumentOverviewModal
+        visible={overviewVisible}
+        onClose={() => setOverviewVisible(false)}
+        pages={pages}
+        activePageId={pages[activeIndex]?.id}
+        onPageSelect={(pageId) => {
+          scrollToPageById(pageId);
+        }}
+        onAddPage={addPage}
+        onResourceSelect={(uri) => {}}
       />
 
       {/* Pages - Wrapped with Gesture Detector for project-wide zoom */}
@@ -1050,6 +1187,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                           }
                         }
                       }}
+                      loadedFonts={loadedFonts}
+                      getNearestFont={getNearestFont}
                       {...{
                         tool,
                         color,

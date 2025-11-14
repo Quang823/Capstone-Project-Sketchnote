@@ -66,17 +66,10 @@ const getToday = () => {
     getProjectByUserId();
   }, []);
 
-  // ====== DEBUG: Log images state ======
-  // useEffect(() => {
-  //   console.log("🖼️ Images state updated:", images);
-  // }, [images]);
-
   // ====== HANDLE IMAGE UPLOADED ======
   const handleImageUploaded = (url) => {
-    // console.log("📸 Received image URL:", url);
     setImages((prev) => {
       const updated = [...prev, url];
-      // console.log("✅ Updated images array:", updated);
       return updated;
     });
   };

@@ -1,321 +1,408 @@
-import { StyleSheet, Dimensions } from "react-native";
+import { StyleSheet, Dimensions, Platform } from "react-native";
 
 const { width } = Dimensions.get("window");
 
-export const homeStyles = StyleSheet.create({
+// --- CONFIG / RESPONSIVE ---
+export const CONTENT_PADDING = 28;
+export const CARD_GAP = 16;
+
+// Responsive columns - 5 columns for better layout
+export const columns =
+  width >= 1400 ? 5 : width >= 1000 ? 4 : width >= 700 ? 3 : 2;
+
+// Tính CARD_WIDTH
+export const CARD_WIDTH = Math.floor(
+  (width - CONTENT_PADDING * 2 - CARD_GAP * (columns - 1)) / columns
+);
+
+export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F0FAFF", // gradient background handled in LinearGradient
+    backgroundColor: "#F8FAFC",
   },
-
-  mainContent: {
+  main: {
     flex: 1,
   },
-  scrollView: {
+  content: {
     flex: 1,
+    paddingHorizontal: CONTENT_PADDING,
+    paddingTop: 60,
   },
 
   // Header
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 30,
-  },
-  headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E7FF",
   },
-  menuButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  headerActions: {
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  headerActionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 4,
-    position: "relative",
-  },
-  cartBadge: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#2563EB",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cartBadgeText: {
-    fontSize: 10,
-    color: "#FFFFFF",
-    fontWeight: "bold",
-  },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 4,
-    position: "relative",
-  },
-  notificationBadge: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#DC2626",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  notificationCount: {
-    fontSize: 10,
-    color: "#FFFFFF",
-    fontWeight: "bold",
-  },
-  welcomeContainer: {
-    alignItems: "flex-start",
-  },
-  greetingText: {
-    fontSize: 16,
-    color: "#1E40AF",
-    marginBottom: 4,
-  },
-  userName: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 8,
-  },
-  motivationText: {
-    fontSize: 16,
-    color: "#1E3A8A",
-    fontStyle: "italic",
-  },
-
-  // Quick Actions
-  quickActionsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginTop: 16,
-  },
-  quickActionButton: {
-    width: (width - 60) / 2,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    marginBottom: 12,
-    alignItems: "center",
-    flexDirection: "row",
-  },
-  quickActionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  quickActionText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1E3A8A",
+    gap: 12,
     flex: 1,
   },
-
-  // Section
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 20,
+  headerTitle: {
+    fontSize: 26,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+    letterSpacing: -0.5,
   },
-  sectionHeader: {
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  iconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
+  },
+  filterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
+  },
+  filterText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1E40AF",
+  },
+  subscriptionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FEF3C7",
+  },
+  subscriptionText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#D97706",
+  },
+  createButton: {
+    borderRadius: 12,
+    overflow: "hidden",
+    elevation: 4,
+    shadowColor: "#3B82F6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  createButtonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  createButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
+  // Popover
+  popoverContainer: {
+    position: "absolute",
+    right: CONTENT_PADDING,
+    top: Platform.OS === "ios" ? 100 : 90,
+    zIndex: 100,
+  },
+  popover: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    minWidth: 220,
+    paddingVertical: 6,
+    elevation: 20,
+    shadowColor: "#1E40AF",
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+    borderWidth: 1,
+    borderColor: "#E0E7FF",
+  },
+  popoverItem: {
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+  },
+  popoverRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  popoverLabel: {
+    color: "#1E293B",
+    fontSize: 15,
+    fontWeight: "500",
+    flex: 1,
+  },
+  badge: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  popoverTip: {
+    marginTop: 8,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  popoverTipText: {
+    fontSize: 12,
+    color: "#64748B",
+    lineHeight: 16,
+  },
+
+  // Grid & Cards
+  gridContainer: {
+    paddingBottom: 120,
+  },
+  gridRow: {
+    justifyContent: "space-between",
+    marginBottom: CARD_GAP,
+  },
+  cardWrapper: {
+    width: CARD_WIDTH,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E0E7FF",
+    elevation: 2,
+    shadowColor: "#1E40AF",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    height: CARD_WIDTH * 0.55 + 90, // Fixed height: image height + info section
+  },
+  imageContainer: {
+    width: "100%",
+    height: CARD_WIDTH * 0.55,
+    backgroundColor: "#F1F5F9",
+    position: "relative",
+  },
+  projectImage: {
+    width: "100%",
+    height: "100%",
+  },
+  placeholderImage: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+  },
+  imageGradient: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 40,
+  },
+  cardInfo: {
+    padding: 10,
+  },
+  projectTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  projectDescription: {
+    fontSize: 11,
+    color: "#64748B",
+    lineHeight: 14,
+    marginBottom: 8,
+  },
+  cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  dateContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  dateText: {
+    fontSize: 10,
+    color: "#3B82F6",
+    fontWeight: "500",
+  },
+  arrowContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // States
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#64748B",
+    fontWeight: "500",
+  },
+  errorIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#FEE2E2",
+    justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 20,
+  errorTitle: {
+    fontSize: 22,
     fontWeight: "700",
-    color: "#0F172A",
+    color: "#1E293B",
+    marginBottom: 8,
   },
-  viewAllText: {
-    fontSize: 14,
-    color: "#2563EB",
-    fontWeight: "500",
-  },
-
-  // Courses
-  coursesContainer: {
-    marginTop: 16,
-  },
-  courseCard: {
-    width: 300,
-    marginRight: 16,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  courseCardInner: {
-    borderRadius: 16,
-    backgroundColor: "#FFFFFF",
-    overflow: "hidden",
-    position: "relative",
-  },
-  courseImage: {
-    width: "100%",
-    height: 160,
-    resizeMode: "cover",
-  },
-  courseOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 160,
-    backgroundColor: "rgba(0,0,0,0.25)",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    padding: 16,
-    flexDirection: "row",
-  },
-  courseLevelBadge: {
-    backgroundColor: "#FFFFFFCC",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  courseLevelText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#2563EB",
-  },
-  courseInfo: {
-    padding: 16,
-  },
-  courseTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#0F172A",
-    marginBottom: 6,
-    flexShrink: 1,
-  },
-  courseMetaContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  courseInstructor: {
-    fontSize: 14,
-    color: "#1E40AF",
-    marginLeft: 6,
-  },
-  courseDurationContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  courseDuration: {
-    fontSize: 14,
-    color: "#1E40AF",
-    marginLeft: 6,
-  },
-  progressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  progressBar: {
-    flex: 1,
-    height: 8,
-    backgroundColor: "#E0F2FE",
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#2563EB",
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 13,
-    color: "#2563EB",
-    fontWeight: "600",
-    minWidth: 35,
-  },
-
-  // Projects
-  projectCard: {
-    marginRight: 16,
-  },
-  projectCardInner: {
-    width: 200,
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: "#FFFFFF",
-  },
-  projectPreview: {
-    width: "100%",
-    height: 160,
-    borderRadius: 12,
-    resizeMode: "cover",
-    marginBottom: 0,
-  },
-  projectFooter: {
-    padding: 16,
-    justifyContent: "space-between",
-  },
-  projectTitle: {
+  errorText: {
     fontSize: 15,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 6,
-    flexShrink: 1,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 24,
   },
-  projectTimeContainer: {
-    flexDirection: "row",
+  retryButton: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: "#3B82F6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  emptyIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
     alignItems: "center",
+    marginBottom: 20,
   },
-  projectDate: {
-    fontSize: 12,
-    color: "#1E40AF",
-    marginLeft: 4,
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: "#64748B",
+    textAlign: "center",
+    marginBottom: 28,
+  },
+  createFirstButton: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: "#3B82F6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  createFirstButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+  },
+
+  // Pagination
+  paginationContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 24,
+    gap: 12,
+  },
+  paginationButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#DBEAFE",
+  },
+  paginationButtonDisabled: {
+    backgroundColor: "#F1F5F9",
+    borderColor: "#E2E8F0",
+  },
+  paginationNumbers: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  paginationNumber: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  paginationNumberActive: {
+    backgroundColor: "#3B82F6",
+    borderColor: "#3B82F6",
+  },
+  paginationNumberText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  paginationNumberTextActive: {
+    color: "#FFFFFF",
   },
 });

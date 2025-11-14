@@ -63,23 +63,6 @@ export function projectPointOnSegment(px, py, x1, y1, x2, y2) {
 
 export function getRulerEdges(ruler) {
   if (!ruler) return null;
-
-  // LUÔN log dữ liệu ruler để theo dõi vị trí mới nhất
-  // console.log(
-  //   "[rulerUtils.getRulerEdges] input=",
-  //   JSON.stringify({
-  //     x: ruler.x,
-  //     y: ruler.y,
-  //     rotation: ruler.rotation,
-  //     width: ruler.width,
-  //     height: ruler.height,
-  //     scale: ruler.scale,
-  //     _originalScreenPosition: ruler._originalScreenPosition,
-  //     timestamp: Date.now(),
-  //   })
-  // );
-  // Đảm bảo sử dụng vị trí mới nhất của ruler, KHÔNG sử dụng _originalScreenPosition
-  // Nếu ruler có _originalScreenPosition, đó có thể là vị trí cũ
   const {
     x = 0,
     y = 0,

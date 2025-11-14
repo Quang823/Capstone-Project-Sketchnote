@@ -31,7 +31,6 @@ export default function ResourceDetailScreen() {
     const fetchResource = async () => {
       try {
         const data = await resourceService.getResourceById(resourceId);
-        //console.log("📦 Resource Detail:", data);
         setResource(data);
       } catch (error) {
         Toast.show({
