@@ -2,7 +2,9 @@ import { privateApi, publicApi } from "./axiosInstance";
 
 export const resourceController = {
   getAllResource: async (page, size) => {
-    return await publicApi.get(`/api/orders/template?page=${page}&size=${size}`);
+    return await publicApi.get(
+      `/api/orders/template?page=${page}&size=${size}`
+    );
   },
 
   getAllResourcePopular: async (limit) => {

@@ -63,7 +63,7 @@ const getImageSize = (uri) => {
       (error) => {
         clearTimeout(timeout);
         reject(error);
-      },
+      }
     );
   });
 };
@@ -86,7 +86,7 @@ export default function DrawingScreen({ route }) {
             text: "OK",
             onPress: () => navigation.goBack(),
           },
-        ],
+        ]
       );
     }
   }, [noteConfig, navigation]);
@@ -353,12 +353,12 @@ export default function DrawingScreen({ route }) {
             ? updater(
                 prev[activePageId] || [
                   { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
-                ],
+                ]
               )
             : updater,
       }));
     },
-    [activePageId],
+    [activePageId]
   );
 
   // Handler for adding new layer
@@ -385,7 +385,7 @@ export default function DrawingScreen({ route }) {
         };
       });
     },
-    [layerCounter],
+    [layerCounter]
   );
 
   // Layer panel callbacks - memoized to prevent re-renders
@@ -410,7 +410,7 @@ export default function DrawingScreen({ route }) {
 
       if (!layerExists) {
         console.warn(
-          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`,
+          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`
         );
         // Fallback về layer đầu tiên nếu layer không tồn tại
         if (currentLayers.length > 0) {
@@ -426,25 +426,25 @@ export default function DrawingScreen({ route }) {
         layerSelectTimeoutRef.current = null;
       }, 50); // 50ms debounce
     },
-    [pageLayers, activePageId],
+    [pageLayers, activePageId]
   );
 
   const handleToggleVisibility = useCallback(
     (id) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)),
+        prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
       );
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleToggleLock = useCallback(
     (id) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l)),
+        prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l))
       );
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleLayerAdd = useCallback(() => {
@@ -455,16 +455,16 @@ export default function DrawingScreen({ route }) {
     (id) => {
       updateCurrentPageLayers((prev) => prev.filter((l) => l.id !== id));
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleLayerRename = useCallback(
     (id, newName) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, name: newName } : l)),
+        prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
       );
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleCloseLayerPanel = useCallback(() => setShowLayerPanel(false), []);
@@ -561,7 +561,7 @@ export default function DrawingScreen({ route }) {
         thickness: 1.0,
         stabilization: 0.2,
       },
-    [tool, toolConfigs],
+    [tool, toolConfigs]
   );
 
   const handleSettingChange = useCallback((toolName, key, value) => {
@@ -587,11 +587,11 @@ export default function DrawingScreen({ route }) {
       "airbrush",
       "crayon",
     ],
-    [],
+    []
   );
   const shapeTools = useMemo(
     () => ["line", "arrow", "rect", "circle", "triangle", "star", "polygon"],
-    [],
+    []
   );
   const [penColors, setPenColors] = useState({
     pen: "#111827",
@@ -629,11 +629,11 @@ export default function DrawingScreen({ route }) {
     if (typeof color !== "string") return;
     if (penTools.includes(tool)) {
       setPenColors((prev) =>
-        prev[tool] === color ? prev : { ...prev, [tool]: color },
+        prev[tool] === color ? prev : { ...prev, [tool]: color }
       );
     } else if (shapeTools.includes(tool)) {
       setShapeColors((prev) =>
-        prev[tool] === color ? prev : { ...prev, [tool]: color },
+        prev[tool] === color ? prev : { ...prev, [tool]: color }
       );
     }
   }, [tool, color]);
@@ -692,7 +692,7 @@ export default function DrawingScreen({ route }) {
       setStrokeWidth(size);
       setPenBaseWidths((prev) => ({ ...prev, [tool]: size }));
     },
-    [tool],
+    [tool]
   );
 
   const multiPageCanvasRef = useRef();
@@ -742,7 +742,7 @@ export default function DrawingScreen({ route }) {
           if (sanitizedChunk.length > 0) {
             multiPageCanvasRef.current?.appendStrokesToPage(
               pageId,
-              sanitizedChunk,
+              sanitizedChunk
             );
           }
 
@@ -797,7 +797,7 @@ export default function DrawingScreen({ route }) {
               projectId,
               p.pageNumber,
               p.strokeUrl,
-              { signal: controller.signal },
+              { signal: controller.signal }
             );
 
             if (controller.signal.aborted || !data) continue;
@@ -817,7 +817,7 @@ export default function DrawingScreen({ route }) {
                 const existingLayers = prev[pageId] || [];
                 const mergedLayers = data.layers.map((savedLayer) => {
                   const existingLayer = existingLayers.find(
-                    (l) => l?.id === savedLayer.id,
+                    (l) => l?.id === savedLayer.id
                   );
                   return {
                     id: savedLayer.id,
@@ -848,7 +848,7 @@ export default function DrawingScreen({ route }) {
             if (e.name !== "AbortError") {
               console.error(
                 `❌ Load page ${p.pageNumber} failed:`,
-                e?.message || e,
+                e?.message || e
               );
             }
           }
@@ -859,7 +859,7 @@ export default function DrawingScreen({ route }) {
           if (!controller.signal.aborted) {
             Alert.alert(
               "Lỗi",
-              "Không thể tải dữ liệu project. Vui lòng thử lại.",
+              "Không thể tải dữ liệu project. Vui lòng thử lại."
             );
           }
         }
@@ -972,8 +972,8 @@ export default function DrawingScreen({ route }) {
         projectService.uploadPageToS3(
           noteConfig.projectId,
           page.pageNumber,
-          page.dataObject,
-        ),
+          page.dataObject
+        )
       );
 
       const uploadedPagesResults = await Promise.all(uploadPromises);
@@ -984,11 +984,9 @@ export default function DrawingScreen({ route }) {
         const tempUri =
           (FileSystem.cacheDirectory || FileSystem.documentDirectory) +
           `snapshot_${noteConfig.projectId}_${snap.pageNumber}.png`;
-        await FileSystem.writeAsStringAsync(
-          tempUri,
-          snap.base64,
-          { encoding: FileSystem.EncodingType.Base64 },
-        );
+        await FileSystem.writeAsStringAsync(tempUri, snap.base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
         try {
           const res = await uploadToCloudinary(tempUri);
           return { pageNumber: snap.pageNumber, url: res?.secure_url };
@@ -1004,7 +1002,7 @@ export default function DrawingScreen({ route }) {
         projectId: noteConfig.projectId,
         pages: uploadedPagesResults.map((result) => {
           const snap = uploadedSnapshots.find(
-            (s) => s.pageNumber === result.pageNumber,
+            (s) => s.pageNumber === result.pageNumber
           );
           return {
             pageNumber: result.pageNumber,
@@ -1018,7 +1016,7 @@ export default function DrawingScreen({ route }) {
 
       try {
         const refreshed = await projectService.getProjectById(
-          noteConfig.projectId,
+          noteConfig.projectId
         );
         const serverPages = Array.isArray(refreshed?.pages)
           ? refreshed.pages
@@ -1080,8 +1078,18 @@ export default function DrawingScreen({ route }) {
           format: "png",
           quality: 1,
         });
+        let safeName = String(options.fileName || "Untitled").trim();
+        safeName = safeName.replace(/[^a-zA-Z0-9._-]+/g, "_");
+        if (!safeName.toLowerCase().endsWith(".png")) safeName += ".png";
+        const dest =
+          (FileSystem.documentDirectory || FileSystem.cacheDirectory) +
+          safeName;
+        try {
+          await FileSystem.copyAsync({ from: uri, to: dest });
+        } catch {}
+        const sharePath = dest || uri;
         if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, {
+          await Sharing.shareAsync(sharePath, {
             mimeType: "image/png",
             dialogTitle: "Chia sẻ bản vẽ",
           });
@@ -1177,10 +1185,35 @@ export default function DrawingScreen({ route }) {
           return;
         }
         // Use Skia snapshots for reliable per-page capture
+        // Build selected page numbers from modal options
+        let selectedNums = [];
+        if (
+          options.pageMode === "range" &&
+          typeof options.pageRange === "string"
+        ) {
+          const m = options.pageRange.match(/\s*(\d+)\s*-\s*(\d+)\s*/);
+          if (m) {
+            const start = Math.max(1, parseInt(m[1], 10));
+            const end = Math.max(start, parseInt(m[2], 10));
+            const set = new Set();
+            for (let i = start; i <= end; i++) set.add(i);
+            selectedNums = Array.from(set.values());
+          }
+        } else if (
+          options.pageMode === "list" &&
+          typeof options.pageList === "string"
+        ) {
+          selectedNums = options.pageList
+            .split(/[,\s]+/)
+            .map((x) => parseInt(x, 10))
+            .filter((n) => Number.isFinite(n) && n >= 1);
+        }
+
         const pdfPath = await exportPagesToPdf(
           pagesData,
           pageRefs.current,
           options.fileName,
+          selectedNums
         );
 
         await Sharing.shareAsync(pdfPath, {
@@ -1234,7 +1267,7 @@ export default function DrawingScreen({ route }) {
         const manipResult = await manipulateAsync(
           localUri,
           [{ rotate: 0 }], // No-op to just get orientation fixed
-          { compress: 0.9, format: SaveFormat.JPEG },
+          { compress: 0.9, format: SaveFormat.JPEG }
         );
         localUri = manipResult.uri;
         size = { width: manipResult.width, height: manipResult.height };
@@ -1248,7 +1281,7 @@ export default function DrawingScreen({ route }) {
 
       if (!cloudUrl) {
         throw new Error(
-          "Upload to Cloudinary succeeded but no secure_url was returned.",
+          "Upload to Cloudinary succeeded but no secure_url was returned."
         );
       }
 
@@ -1292,7 +1325,7 @@ export default function DrawingScreen({ route }) {
         setIsUploadingAsset(true);
         const cloudUrl = await projectService.uploadAsset(
           localUri,
-          "image/jpeg",
+          "image/jpeg"
         );
         if (!cloudUrl) {
           throw new Error("Failed to upload image from camera.");
@@ -1433,8 +1466,8 @@ export default function DrawingScreen({ route }) {
               {isSaving
                 ? "Saving..."
                 : isUploadingAsset
-                  ? "Uploading asset..."
-                  : "Loading project..."}
+                ? "Uploading asset..."
+                : "Loading project..."}
             </Text>
           </View>
         </View>
