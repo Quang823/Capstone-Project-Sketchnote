@@ -49,4 +49,16 @@ export const orderService = {
       throw new Error(message);
     }
   },
+  createOrderRetry: async (orderId) => {
+    try {
+      const res = await orderController.createOrderRetry(orderId);
+      return res.data;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Create order retry failed.";
+      throw new Error(message);
+    }
+  },
 };

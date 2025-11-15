@@ -38,6 +38,7 @@ export default function ResourceDetailScreen() {
           text1: "Lỗi tải dữ liệu",
           text2: error.message,
         });
+        console.log(error);
       } finally {
         setLoading(false);
       }
@@ -49,7 +50,8 @@ export default function ResourceDetailScreen() {
   useEffect(() => {
     const fetchUserResources = async () => {
       try {
-        const resUser = await resourceService.getResourceByUserId();
+        const resUser = await resourceService.getResourceProjectByUserId();
+        console.log(resUser);
         const userData = resUser || [];
         // console.log("✅ Resource By User Id:", userData);
         setUserResources(userData);
@@ -179,7 +181,7 @@ const alreadyOwned = userResources.some(
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+        <Text style={styles.loadingText}>Loading resource details...</Text>
       </View>
     );
   }
@@ -203,7 +205,7 @@ const alreadyOwned = userResources.some(
         >
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
-        <Text style={styles.headerTitle}>Chi tiết sản phẩm</Text>
+        <Text style={styles.headerTitle}>Resource Detail</Text>
         <Pressable
           style={styles.cartButton}
           onPress={() => navigation.navigate("Cart")}
@@ -276,7 +278,7 @@ const alreadyOwned = userResources.some(
                   style={styles.authorAvatar}
                 />
                 <View style={styles.authorInfo}>
-                  <Text style={styles.authorLabel}>Tác giả</Text>
+                  <Text style={styles.authorLabel}>Designer</Text>
                   <Text style={styles.authorName}>
                     {resource.designer?.fullName || "Designer Studio"}
                   </Text>
@@ -307,20 +309,20 @@ const alreadyOwned = userResources.some(
 
               {/* Description */}
               <View style={styles.sectionInner}>
-                <Text style={styles.sectionTitle}>Mô tả</Text>
+                <Text style={styles.sectionTitle}>Description</Text>
                 <Text style={styles.descriptionText}>{resource.description}</Text>
               </View>
 
               {/* Product Info */}
             <View style={[styles.sectionInner, styles.sectionInnerLast]}>
-  <Text style={styles.sectionTitle}>Thông tin sản phẩm</Text>
+  <Text style={styles.sectionTitle}>Product Info</Text>
 
   <View style={styles.infoGrid}>
     {/* Expired Time */}
     <View style={styles.infoItem}>
       <Icon name="event-busy" size={18} color="#F59E0B" />
       <View style={styles.infoTextContainer}>
-        <Text style={styles.infoLabel}>Hết hạn</Text>
+        <Text style={styles.infoLabel}>Expired Time</Text>
         <Text style={styles.infoValue}>
           {new Date(resource.expiredTime).toLocaleDateString("vi-VN")}
         </Text>
@@ -331,7 +333,7 @@ const alreadyOwned = userResources.some(
     <View style={styles.infoItem}>
       <Icon name="event-available" size={18} color="#10B981" />
       <View style={styles.infoTextContainer}>
-        <Text style={styles.infoLabel}>Phát hành</Text>
+        <Text style={styles.infoLabel}>Release Date</Text>
         <Text style={styles.infoValue}>
           {new Date(resource.releaseDate).toLocaleDateString("vi-VN")}
         </Text>
@@ -342,7 +344,7 @@ const alreadyOwned = userResources.some(
     <View style={styles.infoItem}>
       <Icon name="file-download" size={18} color="#3B82F6" />
       <View style={styles.infoTextContainer}>
-        <Text style={styles.infoLabel}>Lượt tải</Text>
+        <Text style={styles.infoLabel}>Download Count</Text>
         <Text style={styles.infoValue}>
           {resource.downloadCount ?? 120}
         </Text>
@@ -353,7 +355,7 @@ const alreadyOwned = userResources.some(
     <View style={styles.infoItem}>
       <Icon name="storage" size={18} color="#10B981" />
       <View style={styles.infoTextContainer}>
-        <Text style={styles.infoLabel}>Dung lượng</Text>
+        <Text style={styles.infoLabel}>File Size</Text>
         <Text style={styles.infoValue}>
           {resource.size ? `${resource.size} MB` : '15 MB'}
         </Text>
@@ -369,7 +371,7 @@ const alreadyOwned = userResources.some(
                   style={[styles.actionButton, styles.addToCartButton]}
                   onPress={handleAddToCart}
                 >
-                  <Text style={styles.actionButtonText}>Thêm vào giỏ</Text>
+                  <Text style={styles.actionButtonText}>Add to Cart</Text>
                 </Pressable>
 
                 <Pressable
@@ -378,7 +380,7 @@ const alreadyOwned = userResources.some(
                 >
                   <Icon name="flash-on" size={16} color="#FFFFFF" />
                   <Text style={[styles.actionButtonText, styles.buyNowButtonText]}>
-                    Mua ngay
+                    Mua ngqay
                   </Text>
                 </Pressable>
               </View>
@@ -390,11 +392,11 @@ const alreadyOwned = userResources.some(
         <View style={styles.infoContainer}>
           <View style={styles.section}>
             <View style={styles.reviewsHeader}>
-              <Text style={styles.sectionTitle}>Đánh giá sản phẩm</Text>
-              <Pressable style={styles.writeReviewButton}>
+              <Text style={styles.sectionTitle}>Reviews</Text>
+              {/* <Pressable style={styles.writeReviewButton}>
                 <Icon name="rate-review" size={16} color="#FFFFFF" />
-                <Text style={styles.writeReviewText}>Viết đánh giá</Text>
-              </Pressable>
+                <Text style={styles.writeReviewText}>Write a Review</Text>
+              </Pressable> */}
             </View>
 
             {/* ⭐ Rating Overview */}
@@ -404,7 +406,7 @@ const alreadyOwned = userResources.some(
                 <View style={styles.starsContainerSmall}>
                   {renderStars(4.5)}
                 </View>
-                <Text style={styles.totalReviews}>128 đánh giá</Text>
+                <Text style={styles.totalReviews}>(128 reviews)</Text>
               </View>
 
               <View style={styles.ratingBars}>
@@ -472,7 +474,7 @@ const alreadyOwned = userResources.some(
 
                 {/* Load More */}
                 <Pressable style={styles.loadMoreButton}>
-                  <Text style={styles.loadMoreText}>Xem thêm đánh giá</Text>
+                  <Text style={styles.loadMoreText}>Load more reviews</Text>
                   <Icon name="keyboard-arrow-down" size={20} color="#3B82F6" />
                 </Pressable>
             </View>

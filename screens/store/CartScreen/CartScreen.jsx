@@ -38,7 +38,7 @@ export default function CartScreen() {
     } else {
       setDiscount(0);
       setAppliedCoupon(null);
-      Alert.alert("Mã không hợp lệ", "Vui lòng nhập lại mã giảm giá");
+      Alert.alert("Invalid Code", "Please enter a valid discount code");
     }
   };
 
@@ -54,34 +54,30 @@ export default function CartScreen() {
       };
 
       const res = await orderService.createOrder(orderData);
-   
       const orderId = res?.result?.orderId;
 
-      if (!orderId) throw new Error("Không lấy được orderId");
+      if (!orderId) throw new Error("Unable to get orderId");
 
-      // Xóa giỏ hàng
+      // Clear cart
       cart.forEach((item) => removeFromCart(item.id));
 
       Toast.show({
         type: "info",
-        text1: "Đang chuyển hướng đến trang thanh toán...",
+        text1: "Redirecting to payment...",
       });
 
-      // 👉 Chuyển qua màn OrderSuccess, truyền orderId
+      // Navigate to OrderSuccess screen with orderId
       navigation.navigate("OrderSuccess", { orderId });
-
     } catch (err) {
       Toast.show({
         type: "error",
-        text1: "Tạo đơn hàng thất bại",
+        text1: "Order creation failed",
         text2: err.message,
       });
     } finally {
       setLoading(false);
     }
   };
-
-
 
   const finalTotal = total - discount;
 
@@ -92,21 +88,21 @@ export default function CartScreen() {
           <Pressable onPress={() => navigation.goBack()} style={cartStyles.backBtn}>
             <Icon name="arrow-back" size={24} color="#1F2937" />
           </Pressable>
-          <Text style={cartStyles.headerTitle}>Giỏ hàng của bạn</Text>
+          <Text style={cartStyles.headerTitle}>Your Cart</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={cartStyles.emptyContainer}>
           <Icon name="shopping-cart" size={100} color="#D1D5DB" />
-          <Text style={cartStyles.emptyTitle}>Giỏ hàng trống</Text>
+          <Text style={cartStyles.emptyTitle}>Your cart is empty</Text>
           <Text style={cartStyles.emptyText}>
-            Bạn chưa thêm sản phẩm nào
+            You haven't added any products yet
           </Text>
           <Pressable
             style={cartStyles.shopNowBtn}
             onPress={() => navigation.navigate("ResourceStore")}
           >
-            <Text style={cartStyles.shopNowText}>Mua sắm ngay</Text>
+            <Text style={cartStyles.shopNowText}>Shop Now</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -121,7 +117,7 @@ export default function CartScreen() {
         </Pressable>
         <Text style={cartStyles.headerTitle}>Cart ({cart.length})</Text>
         <Pressable onPress={() => navigation.navigate("ResourceStore")}>
-          <Text style={cartStyles.continueText}>Tiếp tục mua sắm</Text>
+          <Text style={cartStyles.continueText}>Continue Shopping</Text>
         </Pressable>
       </View>
 
@@ -170,11 +166,11 @@ export default function CartScreen() {
         </View>
 
         <View style={cartStyles.rightColumn}>
-          <Text style={cartStyles.summaryTitle}>Tóm tắt đơn hàng</Text>
+          <Text style={cartStyles.summaryTitle}>Order Summary</Text>
 
           <View style={cartStyles.summaryCard}>
             <View style={cartStyles.summaryRow}>
-              <Text style={cartStyles.label}>Tạm tính</Text>
+              <Text style={cartStyles.label}>Subtotal</Text>
               <Text style={cartStyles.value}>{subtotal.toLocaleString()} đ</Text>
             </View>
 
@@ -183,7 +179,7 @@ export default function CartScreen() {
                 <View style={cartStyles.discountLabelRow}>
                   <Icon name="local-offer" size={16} color="#10B981" />
                   <Text style={cartStyles.discountLabel}>
-                    Giảm giá ({appliedCoupon})
+                    Discount ({appliedCoupon})
                   </Text>
                 </View>
                 <Text style={cartStyles.discountValue}>
@@ -195,23 +191,23 @@ export default function CartScreen() {
             <View style={cartStyles.divider} />
 
             <View style={cartStyles.summaryRow}>
-              <Text style={cartStyles.totalLabel}>Tổng cộng</Text>
+              <Text style={cartStyles.totalLabel}>Total</Text>
               <Text style={cartStyles.totalValue}>{finalTotal.toLocaleString()} đ</Text>
             </View>
           </View>
 
           <View style={cartStyles.couponSection}>
-            <Text style={cartStyles.couponTitle}>Mã giảm giá</Text>
+            <Text style={cartStyles.couponTitle}>Coupon Code</Text>
             <View style={cartStyles.couponRow}>
               <TextInput
-                placeholder="Nhập mã..."
+                placeholder="Enter code..."
                 style={cartStyles.couponInput}
                 value={coupon}
                 onChangeText={setCoupon}
                 placeholderTextColor="#9CA3AF"
               />
               <Pressable style={cartStyles.applyBtn} onPress={applyCoupon}>
-                <Text style={cartStyles.applyText}>Áp dụng</Text>
+                <Text style={cartStyles.applyText}>Apply</Text>
               </Pressable>
             </View>
           </View>
@@ -223,7 +219,7 @@ export default function CartScreen() {
           >
             <Icon name="lock" size={20} color="#FFFFFF" />
             <Text style={cartStyles.checkoutText}>
-              {isCreatingOrder ? "Đang tạo đơn..." : "Thanh toán ngay"}
+              {isCreatingOrder ? "Creating Order..." : "Checkout Now"}
             </Text>
             <Icon name="arrow-forward" size={20} color="#FFFFFF" />
           </Pressable>

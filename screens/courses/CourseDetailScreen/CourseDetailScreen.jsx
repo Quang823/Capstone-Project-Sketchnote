@@ -6,6 +6,7 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -22,7 +23,6 @@ import { courseService } from "../../../service/courseService";
 import Toast from "react-native-toast-message";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
-
 
 const formatDuration = (seconds) => {
   if (!seconds) return "0 phút";
@@ -44,8 +44,8 @@ export default function CourseDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedModules, setExpandedModules] = useState({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
 
@@ -81,39 +81,69 @@ export default function CourseDetailScreen() {
       isPreview: true,
     });
   };
-const handleBuyCourse = async () => {
-  try {
-    console.log("Buying course:", course.price);
-    const res = await courseService.buyCourse(course.price);
-    console.log("Buy course response:", res);
 
-    if (res.result.status === "SUCCESS") {
-      console.log("Enrolling course:", course.id);
-      const enrollRes = await courseService.enrollCourse(course.id);
-      console.log("Enroll response:", enrollRes);
+  const handleBuyCourse = async () => {
+    try {
+      console.log("Buying course:", course.price);
+      const res = await courseService.buyCourse(course.price);
+      console.log("Buy course response:", res);
 
-      Toast.show({
-        type: "success",
-        text1: "Buy Success",
-      });
-      handleStartLearning();
-    } else {
+      // ✅ Kiểm tra lỗi thiếu tiền
+      if (res.code === 402) {
+        setShowConfirmModal(true);
+        return;
+      }
+
+      // ✅ Kiểm tra các lỗi khác
+      if (res.code && res.code !== 200) {
+        Toast.show({
+          type: "error",
+          text1: "Buy Failed",
+          text2: res.message || "An error occurred",
+        });
+        return;
+      }
+
+      // ✅ Kiểm tra thành công
+      if (res.result?.status === "SUCCESS") {
+        console.log("Enrolling course:", course.id);
+        const enrollRes = await courseService.enrollCourse(course.id);
+        console.log("Enroll response:", enrollRes);
+
+        Toast.show({
+          type: "success",
+          text1: "Buy Success",
+          text2: "Course purchased successfully!",
+        });
+        
+        // Refresh course data to update isEnrolled status
+        await fetchCourseDetail(courseId);
+        handleStartLearning();
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Buy Failed",
+          text2: "Unknown error occurred",
+        });
+      }
+    } catch (error) {
+      console.error("Buy course error:", error);
       Toast.show({
         type: "error",
         text1: "Buy Failed",
-        text2: "Deposit not enough",
+        text2: error.message || "Something went wrong",
       });
-      navigation.navigate("Wallet");
     }
-  } catch (error) {
-    console.error("Buy course error:", error);
-    Toast.show({
-      type: "error",
-      text1: "Buy Failed",
-      text2: error.message,
-    });
-  }
-};
+  };
+
+  const handleConfirmGoToWallet = () => {
+    setShowConfirmModal(false);
+    navigation.navigate("Wallet");
+  };
+
+  const handleCancelGoToWallet = () => {
+    setShowConfirmModal(false);
+  };
 
   const toggleLesson = (lessonId) => {
     setExpandedModules((prev) => ({
@@ -123,56 +153,54 @@ const handleBuyCourse = async () => {
   };
 
   const fetchCourseDetail = async (courseId) => {
-  try {
-    setLoading(true);
-    setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
-    const response = await courseService.getCourseById(courseId);
-    const enrolledRes = await courseService.getAllCourseEnrollments2();
+      const response = await courseService.getCourseById(courseId);
+      const enrolledRes = await courseService.getAllCourseEnrollments2();
 
-    if (response && response.result) {
-      const data = response.result;
+      if (response && response.result) {
+        const data = response.result;
 
-      // ✅ Check xem khóa học hiện tại đã mua chưa
-      const enrolledCourses = enrolledRes.result || [];
-      const isEnrolled = enrolledCourses.some(
-        (item) => item.courseId === data.courseId
-      );
+        // ✅ Check xem khóa học hiện tại đã mua chưa
+        const enrolledCourses = enrolledRes.result || [];
+        const isEnrolled = enrolledCourses.some(
+          (item) => item.courseId === data.courseId
+        );
 
-      const transformedCourse = {
-        id: data.courseId,
-        title: data.title,
-        subtitle: data.subtitle,
-        description: data.description,
-        instructor: "Instructor",
-        imageUrl: data.imageUrl?.trim() || null,
-        price: data.price,
-        rating: 4.5,
-        students: data.studentCount,
-        level: data.lessons?.length > 5 ? "Nâng cao" : "Cơ bản",
-        category: data.category,
-        duration: formatDuration(data.totalDuration),
-        totalLessons: data.lessons?.length || 0,
-        includes: [
-          `${data.lessons?.length || 0}  video lessions`,
-          "Study materials",
-          "Full access to all lessons",
-         
-        ],
-        lessons: data.lessons || [],
-        isEnrolled, 
-      };
+        const transformedCourse = {
+          id: data.courseId,
+          title: data.title,
+          subtitle: data.subtitle,
+          description: data.description,
+          instructor: "Instructor",
+          imageUrl: data.imageUrl?.trim() || null,
+          price: data.price,
+          rating: 4.5,
+          students: data.studentCount,
+          level: data.lessons?.length > 5 ? "Nâng cao" : "Cơ bản",
+          category: data.category,
+          duration: formatDuration(data.totalDuration),
+          totalLessons: data.lessons?.length || 0,
+          includes: [
+            `${data.lessons?.length || 0} video lessons`,
+            "Study materials",
+            "Full access to all lessons",
+          ],
+          lessons: data.lessons || [],
+          isEnrolled,
+        };
 
-      setCourse(transformedCourse);
+        setCourse(transformedCourse);
+      }
+    } catch (error) {
+      console.error("Error fetching course detail:", error.message);
+      setError("Không thể tải thông tin khóa học");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error fetching course detail:", error.message);
-    setError("Không thể tải thông tin khóa học");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   if (loading) {
     return (
@@ -331,7 +359,47 @@ const handleBuyCourse = async () => {
           </View>
         </ReanimatedView>
       </ScrollView>
+
+      {/* Modal Confirm - Insufficient Balance */}
+      <Modal
+        visible={showConfirmModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancelGoToWallet}
+      >
+        <View style={courseDetailStyles.modalOverlay}>
+          <View style={courseDetailStyles.modalContent}>
+            <Icon name="account-balance-wallet" size={48} color="#EF4444" />
+            <Text style={courseDetailStyles.modalTitle}>Insufficient Balance</Text>
+            <Text style={courseDetailStyles.modalMessage}>
+              You don't have enough balance to purchase this course. Would you like to go to your wallet to deposit funds?
+            </Text>
+            
+            <View style={courseDetailStyles.modalButtons}>
+              <Pressable 
+                style={courseDetailStyles.cancelButton} 
+                onPress={handleCancelGoToWallet}
+              >
+                <Text style={courseDetailStyles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+              
+              <Pressable 
+                style={courseDetailStyles.confirmButton} 
+                onPress={handleConfirmGoToWallet}
+              >
+                <LinearGradient
+                  colors={["#3B82F6", "#2563EB"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={courseDetailStyles.confirmButtonGradient}
+                >
+                  <Text style={courseDetailStyles.confirmButtonText}>Go to Wallet</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
-

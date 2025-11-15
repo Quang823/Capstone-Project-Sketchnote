@@ -70,6 +70,7 @@ export default function WalletScreen() {
   const fetchWallet = async () => {
     try {
       const data = await paymentService.getWallet();
+      console.log(data)
       setWalletData(data.result);
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
@@ -140,7 +141,7 @@ export default function WalletScreen() {
     <View style={walletStyles.container}>
       {/* Header */}
       <View style={walletStyles.header}>
-        <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
+        {/* <SidebarToggleButton iconSize={24} iconColor="#1F2937" /> */}
         <Pressable onPress={() => navigation.navigate("Home")}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
@@ -249,7 +250,7 @@ export default function WalletScreen() {
                       )}
                     </View>
 
-                    <View style={styles.transactionRight}>
+                <View style={styles.transactionRight}>
                       <Text
                         style={[
                           styles.transactionAmount,
@@ -258,6 +259,9 @@ export default function WalletScreen() {
                       >
                         {style.sign}
                         {formatCurrency(transaction.amount)}
+                      </Text>
+                      <Text style={styles.balanceAfter}>
+                        Balance: {formatCurrency(transaction.balance)}
                       </Text>
                       {transaction.status && (
                         <View
@@ -442,10 +446,17 @@ const styles = {
   },
   transactionRight: {
     alignItems: "flex-end",
+    justifyContent: "center",
+    minWidth: 120,
   },
   transactionAmount: {
     fontSize: 16,
     fontWeight: "700",
+    marginBottom: 4,
+  },
+  balanceAfter: {
+    fontSize: 11,
+    color: "#6B7280",
     marginBottom: 4,
   },
   statusBadge: {
