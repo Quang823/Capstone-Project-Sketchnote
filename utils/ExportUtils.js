@@ -1,4 +1,5 @@
 import * as FileSystem from "expo-file-system";
+import { File } from "expo-file-system";
 import { Skia, ImageFormat } from "@shopify/react-native-skia";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -135,15 +136,26 @@ export async function handleExport(options, canvasRef) {
 export async function exportPagesToPdf(
   pagesData = [],
   pageRefs = {},
-  fileName = "Untitled"
+  fileName = "Untitled",
+  selectedPageNumbers = []
 ) {
   try {
     if (!Array.isArray(pagesData) || pagesData.length === 0) {
       throw new Error("No pages to export.");
     }
 
+    const shouldInclude = (num) =>
+      !Array.isArray(selectedPageNumbers) || selectedPageNumbers.length === 0
+        ? true
+        : selectedPageNumbers.includes(Number(num));
+
+    const pagesToExport = pagesData.filter((p) => shouldInclude(p?.pageNumber));
+    if (pagesToExport.length === 0) {
+      throw new Error("No matching pages to export.");
+    }
+
     const imagesBase64 = [];
-    for (const page of pagesData) {
+    for (const page of pagesToExport) {
       const pid = page?.pageId;
       const ref = pid != null ? pageRefs[pid] : null;
       if (!ref || typeof ref.getSnapshot !== "function") continue;
@@ -160,23 +172,37 @@ export async function exportPagesToPdf(
     }
 
     const htmlContent = imagesBase64
-      .map(
-        (b64) => `
-          <div style="page-break-after: always; width: 100%; height: 100%; margin: 0; padding: 0;">
-            <img src="data:image/png;base64,${b64}" style="width: 100%; height: 100%; object-fit: contain;" />
-          </div>
-        `
-      )
+      .map((b64, idx) => {
+        const isLast = idx === imagesBase64.length - 1;
+        const pageStyle = `width:595pt;height:842pt;${
+          !isLast ? "page-break-after: always;" : ""
+        }`;
+        const imgStyle =
+          "max-width:100%;max-height:100%;display:block;object-fit:contain;";
+        return `<div style="${pageStyle}"><img src="data:image/png;base64,${b64}" style="${imgStyle}" /></div>`;
+      })
       .join("");
 
-    const html = `<html><body style="margin: 0; padding: 0;">${htmlContent}</body></html>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8" /><style>
+      @page { margin: 0; size: A4; }
+      body { margin: 0; padding: 0; }
+    </style></head><body>${htmlContent}</body></html>`;
 
     // Tạo file PDF tạm
     const { uri } = await Print.printToFileAsync({ html, base64: false });
 
-    // Trả về trực tiếp URI tạm của file PDF
-    const pdfUri = uri;
-    return pdfUri;
+    // Đổi tên file theo tên người dùng nhập
+    let safeName = String(fileName || "Untitled").trim();
+    safeName = safeName.replace(/[^a-zA-Z0-9._-]+/g, "_");
+    if (!safeName.toLowerCase().endsWith(".pdf")) safeName += ".pdf";
+    const dest =
+      (FileSystem.documentDirectory || FileSystem.cacheDirectory) + safeName;
+    try {
+      await new File(uri).copyAsync(dest);
+      return dest;
+    } catch (e) {
+      return uri;
+    }
   } catch (error) {
     console.error("exportPagesToPdf failed:", error);
     throw error;
