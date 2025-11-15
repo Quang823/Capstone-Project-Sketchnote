@@ -43,9 +43,6 @@ export default function GlobalSidebar() {
       case "myCourses":
         navigation.navigate("MyCourses");
         break;
-      case "create":
-        navigation.navigate("DrawingScreen");
-        break;
       case "gallery":
         navigation.navigate("Gallery");
         break;
@@ -81,18 +78,6 @@ export default function GlobalSidebar() {
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayAnimation.value,
   }));
-
-  const mainNavItems = [
-    { icon: "home", label: "Home", id: "home" },
-    { icon: "school", label: "Courses", id: "courses" },
-    { icon: "add-circle-outline", label: "Create New", id: "create" },
-    { icon: "collections", label: "Gallery", id: "gallery" },
-  ];
-
-  const shopNavItems = [
-    { icon: "store", label: "Resource Store", id: "store" },
-    { icon: "receipt-long", label: "Order History", id: "orderHistory" },
-  ];
 
   const blogNavItems = [
     { icon: "article", label: "All Blogs", id: "blogAll" },
@@ -166,53 +151,13 @@ export default function GlobalSidebar() {
           style={drawerStyles.drawerItems}
           showsVerticalScrollIndicator={false}
         >
+          {/* MAIN */}
           <Text style={drawerStyles.sectionTitle}>MAIN</Text>
-          {mainNavItems.map((item) => (
-            <Pressable
-              key={item.id}
-              style={({ pressed }) => [
-                drawerStyles.drawerItem,
-                activeNavItem === item.id && drawerStyles.drawerItemActive,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={() => handleNavPress(item.id)}
-            >
-              <View
-                style={[
-                  drawerStyles.iconContainer,
-                  activeNavItem === item.id && drawerStyles.iconContainerActive,
-                ]}
-              >
-                <Icon
-                  name={item.icon}
-                  size={22}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
-                />
-              </View>
-              <Text
-                style={[
-                  drawerStyles.drawerText,
-                  activeNavItem === item.id && drawerStyles.drawerTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
-
-          <View style={drawerStyles.divider} />
-
-          {/* Main Navigation Items */}
           {[
-            { icon: "home", label: "Trang chủ", id: "home" },
-            { icon: "school", label: "Khóa học", id: "courses" },
-            { icon: "menu-book", label: "Khóa học của tôi", id: "myCourses" },
-            { icon: "add-circle", label: "Tạo mới", id: "create" },
-            { icon: "photo-library", label: "Thư viện", id: "gallery" },
-            { icon: "store", label: "Cửa hàng Resource", id: "store" },
-            { icon: "receipt-long", label: "Lịch sử đơn hàng", id: "orderHistory" },
-            { icon: "dynamic-feed", label: "Xem tất cả blog", id: "blogAll" },
-            { icon: "person-outline", label: "Blog của tôi", id: "blogMine" },
+            { icon: "home", label: "Home", id: "home" },
+            { icon: "school", label: "Courses", id: "courses" },
+            { icon: "menu-book", label: "My Courses", id: "myCourses" },
+            { icon: "photo-library", label: "Gallery", id: "gallery" },
           ].map((item) => (
             <Pressable
               key={item.id}
@@ -248,9 +193,16 @@ export default function GlobalSidebar() {
 
           <View style={drawerStyles.divider} />
 
-          {/* Blog Section */}
-          <Text style={drawerStyles.sectionTitle}>BLOG</Text>
-          {blogNavItems.map((item) => (
+          {/* STORE */}
+          <Text style={drawerStyles.sectionTitle}>STORE</Text>
+          {[
+            { icon: "store", label: "Resource Store", id: "store" },
+            {
+              icon: "receipt-long",
+              label: "Order History",
+              id: "orderHistory",
+            },
+          ].map((item) => (
             <Pressable
               key={item.id}
               style={({ pressed }) => [
@@ -282,9 +234,55 @@ export default function GlobalSidebar() {
               </Text>
             </Pressable>
           ))}
+
           <View style={drawerStyles.divider} />
+
+          {/* BLOG */}
+          <Text style={drawerStyles.sectionTitle}>BLOG</Text>
+          {[
+            { icon: "dynamic-feed", label: "All Blogs", id: "blogAll" },
+            { icon: "person-outline", label: "My Blogs", id: "blogMine" },
+          ].map((item) => (
+            <Pressable
+              key={item.id}
+              style={({ pressed }) => [
+                drawerStyles.drawerItem,
+                activeNavItem === item.id && drawerStyles.drawerItemActive,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={() => handleNavPress(item.id)}
+            >
+              <View
+                style={[
+                  drawerStyles.iconContainer,
+                  activeNavItem === item.id && drawerStyles.iconContainerActive,
+                ]}
+              >
+                <Icon
+                  name={item.icon}
+                  size={22}
+                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                />
+              </View>
+              <Text
+                style={[
+                  drawerStyles.drawerText,
+                  activeNavItem === item.id && drawerStyles.drawerTextActive,
+                ]}
+              >
+                {item.label}
+              </Text>
+            </Pressable>
+          ))}
+
+          <View style={drawerStyles.divider} />
+
+          {/* ACCOUNT */}
           <Text style={drawerStyles.sectionTitle}>ACCOUNT</Text>
-          {accountNavItems.map((item) => (
+          {[
+            { icon: "person", label: "Profile", id: "profile" },
+            { icon: "settings", label: "Settings", id: "settings" },
+          ].map((item) => (
             <Pressable
               key={item.id}
               style={({ pressed }) => [

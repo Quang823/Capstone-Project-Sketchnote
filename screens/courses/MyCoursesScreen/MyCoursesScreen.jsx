@@ -78,8 +78,15 @@ export default function MyCoursesScreen() {
 
           {/* Category Badge */}
           <View style={myCoursesStyles.categoryPriceRow}>
-            <View style={[myCoursesStyles.categoryBadge, { backgroundColor: "#E0E7FF" }]}>
-              <Text style={[myCoursesStyles.categoryText, { color: "#4F46E5" }]}>
+            <View
+              style={[
+                myCoursesStyles.categoryBadge,
+                { backgroundColor: "#E0E7FF" },
+              ]}
+            >
+              <Text
+                style={[myCoursesStyles.categoryText, { color: "#4F46E5" }]}
+              >
                 {course.category || "Other"}
               </Text>
             </View>
@@ -136,31 +143,39 @@ export default function MyCoursesScreen() {
     <View style={myCoursesStyles.container}>
       {/* Header */}
       <View style={myCoursesStyles.header}>
-        <SidebarToggleButton  iconSize={24} iconColor="#1F2937"  />
-        <Text style={myCoursesStyles.headerTitle}>My Courses</Text>
-        <View style={myCoursesStyles.placeholder} />
+        <View style={myCoursesStyles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+          <Text style={myCoursesStyles.headerTitle}>My Courses</Text>
+        </View>
       </View>
 
       {/* Content */}
-      <ScrollView style={myCoursesStyles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={myCoursesStyles.content}
+        showsVerticalScrollIndicator={false}
+      >
         {enrollments.length === 0 ? (
           <View style={myCoursesStyles.emptyContainer}>
             <Icon name="school" size={64} color="#D1D5DB" />
             <Text style={myCoursesStyles.emptyTitle}>No Courses Yet</Text>
             <Text style={myCoursesStyles.emptyDescription}>
-              You haven't enrolled in any courses yet. Start exploring and enroll in your first course!
+              You haven't enrolled in any courses yet. Start exploring and
+              enroll in your first course!
             </Text>
             <TouchableOpacity
               style={myCoursesStyles.exploreButton}
               onPress={() => navigation.navigate("CoursesScreen")}
             >
-              <Text style={myCoursesStyles.exploreButtonText}>Explore Courses</Text>
+              <Text style={myCoursesStyles.exploreButtonText}>
+                Explore Courses
+              </Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View>
             <Text style={myCoursesStyles.sectionTitle}>
-              {enrollments.length} {enrollments.length === 1 ? 'Course' : 'Courses'} Enrolled
+              {enrollments.length}{" "}
+              {enrollments.length === 1 ? "Course" : "Courses"} Enrolled
             </Text>
             {enrollments.map(renderCourseItem)}
           </View>

@@ -226,7 +226,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         backgroundColor: noteConfig.cover.color,
         template: noteConfig.cover.template,
         imageUrl: noteConfig.cover.imageUrl,
-        thumbnail: noteConfig.imageUrl,
         snapshotUrl: null,
       });
     }
@@ -243,7 +242,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             imageUrl: noteConfig.cover?.imageUrl,
             pageNumber: p.pageNumber,
             strokeUrl: p.strokeUrl,
-            thumbnail: noteConfig.imageUrl,
             snapshotUrl: p.snapshotUrl || null,
           });
         } else {
@@ -998,8 +996,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       for (let index = 0; index < pages.length; index++) {
         const page = pages[index];
         if (!page || page.id == null) continue;
-        const strokes =
-          pageRefs.current[page.id]?.getStrokes?.() || [];
+        const strokes = pageRefs.current[page.id]?.getStrokes?.() || [];
         const count = strokes.length;
         const lastId = count > 0 ? strokes[count - 1]?.id : "";
         const sig = `${count}:${lastId}`;
@@ -1023,7 +1020,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         const map = new Map(
           remotePages
             .filter((p) => p && typeof p.pageNumber === "number")
-            .map((p) => [p.pageNumber, p.snapshotUrl || null]),
+            .map((p) => [p.pageNumber, p.snapshotUrl || null])
         );
         setPages((prev) => {
           if (!Array.isArray(prev) || prev.length === 0) return prev;

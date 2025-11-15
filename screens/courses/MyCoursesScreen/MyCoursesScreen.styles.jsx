@@ -12,10 +12,28 @@ export const myCoursesStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: "#",
-    borderBottomWidth: 0,
+    paddingVertical: 16,
+    backgroundColor: "#FFFFFF",
+    paddingTop: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+    letterSpacing: -0.5,
   },
   backButton: {
     width: 40,
@@ -25,11 +43,7 @@ export const myCoursesStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "black",
-  },
+
   placeholder: {
     width: 40,
   },
@@ -183,39 +197,38 @@ export const myCoursesStyles = StyleSheet.create({
     borderRadius: 3,
   },
   categoryPriceRow: {
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginTop: 4,
-  marginBottom: 6,
-},
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 6,
+  },
 
-categoryBadge: {
-  flexDirection: "row",
-  alignItems: "center",
-  backgroundColor: "#E0E7FF",
-  paddingHorizontal: 10,
-  paddingVertical: 4,
-  borderRadius: 8,
-},
-categoryText: {
-  color: "#fff",
-  fontSize: 12,
-  marginLeft: 4,
-  fontWeight: "500",
-},
-priceText: {
-  fontSize: 15,
-  fontWeight: "700",
-  color: "#10B981", // xanh lá
-},
+  categoryBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E0E7FF",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  categoryText: {
+    color: "#fff",
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: "500",
+  },
+  priceText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#10B981", // xanh lá
+  },
 
-// Chỉnh lại metaText đậm hơn chút
-metaText: {
-  fontSize: 12,
-  color: "#374151",
-  marginLeft: 4,
-  fontWeight: "500",
-},
-
+  // Chỉnh lại metaText đậm hơn chút
+  metaText: {
+    fontSize: 12,
+    color: "#374151",
+    marginLeft: 4,
+    fontWeight: "500",
+  },
 });
