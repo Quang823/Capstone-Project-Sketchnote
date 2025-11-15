@@ -10,6 +10,7 @@ import {
   ScrollView,
   Animated,
   ImageBackground,
+  useWindowDimensions,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -18,6 +19,8 @@ import { authService } from "../../../service/authService";
 import { uploadToCloudinary } from "../../../service/cloudinary";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useToast } from "../../../hooks/use-toast";
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 
 const ProfileScreen = () => {
   const { user, setUser } = useContext(AuthContext);
@@ -29,6 +32,8 @@ const ProfileScreen = () => {
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scaleAnim = useState(new Animated.Value(0.9))[0];
   const { toast } = useToast();
+  const { width, height } = useWindowDimensions();
+  const isLargeScreen = width >= 768;
 
   // --- Fetch Profile ---
   useEffect(() => {
@@ -37,7 +42,6 @@ const ProfileScreen = () => {
         if (!user?.id) return;
         const data = await authService.getUserById(user.id);
 
-        // ⚡ Giữ avatar mới nếu đã upload
         setProfile((prev) => ({
           ...data,
           avatarUrl: prev?.avatarUrl || data.avatarUrl,
@@ -69,7 +73,7 @@ const ProfileScreen = () => {
     fetchProfile();
   }, [user]);
 
-  // --- Handle avatar upload ---
+  // --- Handle Avatar Upload ---
   const handleChooseAvatar = async () => {
     try {
       const permission =
@@ -96,13 +100,12 @@ const ProfileScreen = () => {
       setUploading(true);
       const uploadResult = await uploadToCloudinary(fileUri);
 
-      // 🔹 Cập nhật context và profile cùng lúc
       setUser((prev) => ({ ...prev, avatarUrl: uploadResult.secure_url }));
       setProfile((prev) => ({ ...prev, avatarUrl: uploadResult.secure_url }));
 
       toast({
         title: "Upload Successful!",
-        description: "Avatar has been updated!",
+        description: "Avatar updated.",
         variant: "success",
       });
     } catch (err) {
@@ -126,7 +129,6 @@ const ProfileScreen = () => {
         avatarUrl: profile.avatarUrl,
       });
 
-      // ⚡ Đồng bộ lại AuthContext với dữ liệu mới
       setUser((prev) => ({
         ...prev,
         firstName: profile.firstName,
@@ -135,8 +137,8 @@ const ProfileScreen = () => {
       }));
 
       toast({
-        title: "Save Successful!",
-        description: "Profile updated successfully!",
+        title: "Saved!",
+        description: "Profile updated successfully.",
         variant: "success",
       });
     } catch (err) {
@@ -152,14 +154,19 @@ const ProfileScreen = () => {
 
   if (loading)
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0EA5E9" />
+      <View style={styles.centerContainer}>
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
       </View>
     );
 
   if (!profile)
     return (
-      <View style={styles.center}>
+      <View style={styles.centerContainer}>
         <Text style={styles.errorText}>No profile found.</Text>
       </View>
     );
@@ -172,10 +179,7 @@ const ProfileScreen = () => {
         style={styles.toggleButton}
       />
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <ImageBackground
           source={{
@@ -192,30 +196,31 @@ const ProfileScreen = () => {
           </View>
         </ImageBackground>
 
-        {/* Content */}
-        <Animated.View
+        {/* TWO COLUMNS */}
+        <View
           style={[
-            styles.contentContainer,
+            styles.twoColumnContainer,
             {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
+              flexDirection: isLargeScreen ? "row" : "column",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: height - 180,
             },
           ]}
         >
-          {/* Avatar Section */}
-          <View style={styles.avatarSection}>
+          {/* LEFT - BIG AVATAR */}
+          <View style={styles.leftColumn}>
             <View style={styles.avatarContainer}>
               <TouchableOpacity
                 onPress={handleChooseAvatar}
-                activeOpacity={0.8}
                 style={styles.avatarWrapper}
+                activeOpacity={0.85}
               >
                 <Image
                   source={{
                     uri: profile.avatarUrl || user.avatarUrl || "",
                   }}
                   style={styles.avatar}
-                  defaultSource={require("../../../assets/logo.png")}
                 />
                 {uploading && (
                   <View style={styles.avatarOverlay}>
@@ -225,9 +230,8 @@ const ProfileScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={handleChooseAvatar}
                 style={styles.cameraButton}
-                activeOpacity={0.8}
+                onPress={handleChooseAvatar}
               >
                 <Text style={styles.cameraIcon}>📷</Text>
               </TouchableOpacity>
@@ -241,79 +245,63 @@ const ProfileScreen = () => {
             </View>
           </View>
 
-          {/* Form Section */}
-          <View style={styles.formCard}>
-            <Text style={styles.inputLabel}>First Name</Text>
-            <TextInput
-              style={styles.input}
-              value={profile.firstName}
-              onChangeText={(text) =>
-                setProfile((prev) => ({ ...prev, firstName: text }))
-              }
-              placeholder="Enter first name"
-              placeholderTextColor="#A0AEC0"
-            />
+          {/* RIGHT - FORM */}
+          <View style={styles.rightColumn}>
+            <View style={styles.formCard}>
+              <Text style={styles.inputLabel}>First Name</Text>
+              <TextInput
+                style={styles.input}
+                value={profile.firstName}
+                onChangeText={(t) =>
+                  setProfile((prev) => ({ ...prev, firstName: t }))
+                }
+              />
 
-            <Text style={styles.inputLabel}>Last Name</Text>
-            <TextInput
-              style={styles.input}
-              value={profile.lastName}
-              onChangeText={(text) =>
-                setProfile((prev) => ({ ...prev, lastName: text }))
-              }
-              placeholder="Enter last name"
-              placeholderTextColor="#A0AEC0"
-            />
+              <Text style={styles.inputLabel}>Last Name</Text>
+              <TextInput
+                style={styles.input}
+                value={profile.lastName}
+                onChangeText={(t) =>
+                  setProfile((prev) => ({ ...prev, lastName: t }))
+                }
+              />
 
-            <Text style={styles.inputLabel}>
-              Email{" "}
-              <Text style={{ fontSize: 12, color: "#A0AEC0" }}>
-                (can not change)
+              <Text style={styles.inputLabel}>
+                Email{" "}
+                <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
+                  (cannot change)
+                </Text>
               </Text>
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                { backgroundColor: "#E5E7EB", color: "#9CA3AF" },
-              ]}
-              value={profile.email}
-              editable={false}
-              placeholder="Enter email"
-              placeholderTextColor="#A0AEC0"
-            />
+              <TextInput
+                style={[styles.input, styles.disabledInput]}
+                value={profile.email}
+                editable={false}
+              />
 
-            <Text style={styles.inputLabel}>Avatar URL</Text>
-            <TextInput
-              style={styles.input}
-              value={profile.avatarUrl}
-              onChangeText={(text) =>
-                setProfile((prev) => ({ ...prev, avatarUrl: text }))
-              }
-              placeholder="https://example.com/avatar.jpg"
-              placeholderTextColor="#A0AEC0"
-            />
+              <Text style={styles.inputLabel}>Avatar URL</Text>
+              <TextInput
+                style={[styles.input, styles.disabledInput]}
+                value={profile.avatarUrl}
+                editable={false}
+              />
+            </View>
+
+            <TouchableOpacity activeOpacity={0.8} onPress={handleSave}>
+              <LinearGradient
+                colors={
+                  saving ? ["#A5B4FC", "#93C5FD"] : ["#3B82F6", "#2563EB"]
+                }
+                style={styles.saveButton}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.saveText}>Save Changes</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
-
-          {/* Save Button */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            <LinearGradient
-              colors={saving ? ["#A5B4FC", "#93C5FD"] : ["#3B82F6", "#2563EB"]}
-              style={styles.saveButton}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              {saving ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.saveText}>Save Changes</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -321,55 +309,60 @@ const ProfileScreen = () => {
 
 export default ProfileScreen;
 
-// --- Styles ---
+// ------------------ Styles ------------------
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-    position: "relative",
-  },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
   toggleButton: {
     position: "absolute",
     top: 16,
     left: 16,
     zIndex: 10,
   },
-  scrollView: { backgroundColor: "#F8FAFC" },
+
   headerBackground: {
     width: "100%",
-    height: 170,
+    height: 200,
     justifyContent: "center",
     alignItems: "center",
   },
   headerOverlay: {
-    backgroundColor: "rgba(0,0,0,0.4)",
     width: "100%",
     height: "100%",
+    backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#fff",
-    marginBottom: 8,
+  headerTitle: { fontSize: 40, fontWeight: "700", color: "#fff" },
+  headerSubtitle: { fontSize: 25, color: "#E2E8F0", marginTop: 4 },
+
+  // TWO COLUMNS
+  twoColumnContainer: {
+    width: "100%",
+    padding: 20,
+    gap: 30,
   },
-  headerSubtitle: { fontSize: 15, color: "#E2E8F0" },
-  contentContainer: {
-    marginTop: -40,
+  leftColumn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rightColumn: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
     width: "100%",
   },
-  avatarSection: { alignItems: "center", marginBottom: 30, width: "90%" },
+
+  // Avatar
   avatarContainer: {
     position: "relative",
     alignItems: "center",
     justifyContent: "center",
   },
   avatarWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 65,
+    width: 420,
+    height: 420,
+    borderRadius: 240,
     overflow: "hidden",
     backgroundColor: "#E2E8F0",
   },
@@ -382,22 +375,19 @@ const styles = StyleSheet.create({
   },
   cameraButton: {
     position: "absolute",
-    top: -12,
-    right: -12,
+    bottom: 30,
+    right: 30,
     backgroundColor: "#3B82F6",
-    borderRadius: 22,
+    borderRadius: 55,
     padding: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
     borderWidth: 2,
     borderColor: "#fff",
   },
-  cameraIcon: { fontSize: 13, color: "#fff" },
+  cameraIcon: { color: "#fff", fontSize: 34 },
+
   userName: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 30,
+    fontWeight: "700",
     color: "#1E3A8A",
     marginTop: 12,
   },
@@ -406,28 +396,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 4,
     borderRadius: 16,
-    marginTop: 2,
+    marginTop: 4,
   },
-  roleText: { color: "#2563EB", fontWeight: "600", fontSize: 10 },
+  roleText: { color: "#2563EB", fontWeight: "600", fontSize: 18 },
+
+  // Form
   formCard: {
+    width: "100%",
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    marginBottom: 12,
-    width: "100%",
-    maxWidth: 700,
-    alignSelf: "center",
+    elevation: 2,
+    shadowOpacity: 0.1,
+    marginRight: 30,
   },
   inputLabel: {
-    color: "#1E40AF",
     fontSize: 14,
+    color: "#1E40AF",
     fontWeight: "600",
-    marginBottom: 6,
     marginTop: 10,
+    marginBottom: 6,
   },
   input: {
     backgroundColor: "#EFF6FF",
@@ -439,25 +427,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#1E3A8A",
   },
+  disabledInput: {
+    backgroundColor: "#E5E7EB",
+    color: "#9CA3AF",
+  },
+
   saveButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    marginTop: 10,
+    padding: 15,
     borderRadius: 14,
+    width: "100%",
     alignItems: "center",
-    shadowColor: "#3B82F6",
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-    width: "90%",
-    maxWidth: 400,
-    alignSelf: "center",
   },
   saveText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-  center: {
+
+  centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
   },
-  errorText: { color: "#6B7280" },
 });

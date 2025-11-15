@@ -14,7 +14,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import { blogService } from "../../../service/blogService";
 import { myBlogStyles } from "./MyBlogScreen.styles";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
-
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 export default function MyBlogScreen({ navigation }) {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,27 +74,25 @@ export default function MyBlogScreen({ navigation }) {
   return (
     <View style={myBlogStyles.container}>
       {/* Header */}
-      <LinearGradient
-        colors={["#E0F2FE", "#FEF3C7"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={myBlogStyles.header}
-      >
-        <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
-        <Text style={myBlogStyles.headerTitle}>Manage My Blogs</Text>
-        <Pressable
-          onPress={() => navigation.navigate("CreateBlog")}
-          style={myBlogStyles.headerButton}
-        >
-          <Icon name="add" size={28} color="#fff" />
-        </Pressable>
-      </LinearGradient>
+      <View style={myBlogStyles.header}>
+        <View style={myBlogStyles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+          <Text style={myBlogStyles.headerTitle}>Manage My Blogs</Text>
+        </View>
+      </View>
 
       {/* Content */}
       {loading ? (
         <View style={myBlogStyles.loadingContainer}>
-          <ActivityIndicator size="large" color="#667EEA" />
-          <Text style={myBlogStyles.loadingText}>Loading your blogs...</Text>
+          <View style={myBlogStyles.centerContainer}>
+            <LottieView
+              source={loadingAnimation}
+              autoPlay
+              loop
+              style={{ width: 300, height: 300 }}
+            />
+            {/* <Text style={myBlogStyles.loadingText}>Loading your blogs...</Text> */}
+          </View>
         </View>
       ) : blogs.length === 0 ? (
         <View style={myBlogStyles.emptyContainer}>
@@ -107,7 +106,7 @@ export default function MyBlogScreen({ navigation }) {
             style={myBlogStyles.createButton}
           >
             <LinearGradient
-              colors={["#667EEA", "#764BA2"]}
+              colors={["#3B82F6", "#2563EB"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={myBlogStyles.createButtonGradient}

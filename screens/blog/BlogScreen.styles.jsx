@@ -1,23 +1,49 @@
 import { StyleSheet } from "react-native";
 
 export const blogStyles = StyleSheet.create({
-  container: { 
+  container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-  
+
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 16,
+    paddingVertical: 16,
     backgroundColor: "#FFFFFF",
+    paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+    letterSpacing: -0.5,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#64748B",
+    fontWeight: "500",
+  },
   backButton: {
     width: 40,
     height: 40,
@@ -28,24 +54,13 @@ export const blogStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  
-  headerTitle: { 
-    fontSize: 20, 
-    fontWeight: "700", 
-    color: "#1E293B",
-    letterSpacing: -0.5,
-  },
-  
-  headerRight: { 
-    width: 40 
-  },
 
-  searchContainer: { 
-    paddingHorizontal: 16, 
+  searchContainer: {
+    paddingHorizontal: 16,
     marginBottom: 16,
     marginTop: 16,
   },
-  
+
   searchInputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -61,23 +76,23 @@ export const blogStyles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  
-  searchIcon: { 
-    marginRight: 10 
+
+  searchIcon: {
+    marginRight: 10,
   },
-  
-  searchInput: { 
-    flex: 1, 
-    fontSize: 15, 
+
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
     color: "#1E293B",
     fontWeight: "500",
   },
 
-  categoriesContainer: { 
-    paddingLeft: 16, 
-    marginBottom: 16 
+  categoriesContainer: {
+    paddingLeft: 16,
+    marginBottom: 16,
   },
-  
+
   categoryButton: {
     paddingHorizontal: 18,
     paddingVertical: 10,
@@ -87,28 +102,28 @@ export const blogStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  
-  categoryButtonActive: { 
+
+  categoryButtonActive: {
     backgroundColor: "#60A5FA",
     borderColor: "#60A5FA",
   },
-  
-  categoryButtonText: { 
-    fontSize: 14, 
+
+  categoryButtonText: {
+    fontSize: 14,
     color: "#64748B",
     fontWeight: "600",
   },
-  
-  categoryButtonTextActive: { 
-    color: "#FFFFFF", 
-    fontWeight: "700" 
+
+  categoryButtonTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
 
-  blogCard: { 
+  blogCard: {
     marginBottom: 16,
     marginHorizontal: 16,
   },
-  
+
   blogCardInner: {
     borderRadius: 12,
     backgroundColor: "#FFFFFF",
@@ -121,18 +136,18 @@ export const blogStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  
-  blogImage: { 
+
+  blogImage: {
     width: "100%",
-    aspectRatio: 16 / 9, 
+    aspectRatio: 16 / 9,
     resizeMode: "cover",
     backgroundColor: "#F1F5F9",
-  }, 
-  
-  blogContent: { 
-    padding: 14 
   },
-  
+
+  blogContent: {
+    padding: 14,
+  },
+
   blogTitle: {
     fontSize: 15,
     fontWeight: "700",
@@ -140,19 +155,19 @@ export const blogStyles = StyleSheet.create({
     marginBottom: 6,
     lineHeight: 22,
   },
-  
-  blogAuthor: { 
-    fontSize: 13, 
-    color: "#64748B", 
+
+  blogAuthor: {
+    fontSize: 13,
+    color: "#64748B",
     marginBottom: 8,
     fontWeight: "500",
   },
-  
-  blogMeta: { 
-    flexDirection: "row", 
-    alignItems: "center" 
+
+  blogMeta: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  
+
   blogViews: {
     fontSize: 12,
     color: "#64748B",
@@ -166,10 +181,10 @@ export const blogStyles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 60,
   },
-  
-  emptyText: { 
-    fontSize: 16, 
-    color: "#64748B", 
+
+  emptyText: {
+    fontSize: 16,
+    color: "#64748B",
     marginTop: 16,
     fontWeight: "500",
   },

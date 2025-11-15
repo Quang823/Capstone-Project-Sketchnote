@@ -18,7 +18,8 @@ import { resourceService } from "../../../service/resourceService";
 import { useCart } from "../../../context/CartContext";
 import Toast from "react-native-toast-message";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
-
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function ResourceStoreScreen() {
@@ -31,7 +32,7 @@ export default function ResourceStoreScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const { cart, addToCart } = useCart();
-const [userResources, setUserResources] = useState([]);
+  const [userResources, setUserResources] = useState([]);
   // ✅ Fetch data riêng biệt - nếu 1 API lỗi thì các API khác vẫn chạy
   const fetchAllData = async () => {
     try {
@@ -41,14 +42,11 @@ const [userResources, setUserResources] = useState([]);
         const userData = resUser || [];
         // console.log("✅ Resource By User Id:", userData);
         setUserResources(userData);
-       
       } catch (error) {
         console.error("❌ Fetch Resource By User Id Failed:", error);
         setAllResources([]);
       }
-    } catch (error) {
-      
-    }
+    } catch (error) {}
     try {
       setLoading(true);
 
@@ -104,17 +102,17 @@ const [userResources, setUserResources] = useState([]);
   // ✅ Add to Cart
   const handleAddToCart = (resource, navigateToCart = false) => {
     const alreadyOwned = userResources.some(
-    (r) => r.resourceTemplateId === resource.resourceTemplateId
-  );
+      (r) => r.resourceTemplateId === resource.resourceTemplateId
+    );
 
-  if (alreadyOwned) {
-    Toast.show({
-      type: "info",
-      text1: "You have already purchased this resource.",
-      text2: "You cannot purchase the same resource multiple times.",
-    });
-    return; 
-  }
+    if (alreadyOwned) {
+      Toast.show({
+        type: "info",
+        text1: "You have already purchased this resource.",
+        text2: "You cannot purchase the same resource multiple times.",
+      });
+      return;
+    }
     const designerName = resource.designerInfo
       ? `${resource.designerInfo.firstName || ""} ${
           resource.designerInfo.lastName || ""
@@ -263,9 +261,16 @@ const [userResources, setUserResources] = useState([]);
 
   if (loading) {
     return (
-      <View style={resourceStoreStyles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={resourceStoreStyles.loadingText}>Loading data...</Text>
+      <View style={resourceStoreStyles.centerContainer}>
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
+        {/* <Text style={resourceStoreStyles.loadingText}>
+          Loading resources...
+        </Text> */}
       </View>
     );
   }
@@ -274,13 +279,12 @@ const [userResources, setUserResources] = useState([]);
     <View style={resourceStoreStyles.container}>
       {/* Header */}
       <View style={resourceStoreStyles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
-          {/* <Pressable onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back" size={24} color="#1F2937" />
-          </Pressable> */}
+        <View style={resourceStoreStyles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+          <Text style={resourceStoreStyles.headerTitle}>
+            Resource Marketplace
+          </Text>
         </View>
-        <Text style={resourceStoreStyles.headerTitle}> Resource Store</Text>
         <Pressable
           style={resourceStoreStyles.cartButton}
           onPress={() => navigation.navigate("Cart")}
@@ -352,7 +356,9 @@ const [userResources, setUserResources] = useState([]);
           <View style={resourceStoreStyles.sectionContainer}>
             <View style={resourceStoreStyles.sectionHeader}>
               <Icon name="new-releases" size={24} color="#4F46E5" />
-              <Text style={resourceStoreStyles.sectionTitle}>Latest Resources</Text>
+              <Text style={resourceStoreStyles.sectionTitle}>
+                Latest Resources
+              </Text>
             </View>
             <ScrollView
               horizontal
@@ -369,7 +375,9 @@ const [userResources, setUserResources] = useState([]);
           <View style={resourceStoreStyles.sectionContainer}>
             <View style={resourceStoreStyles.sectionHeader}>
               <Icon name="trending-up" size={24} color="#F59E0B" />
-              <Text style={resourceStoreStyles.sectionTitle}>Popular Resources</Text>
+              <Text style={resourceStoreStyles.sectionTitle}>
+                Popular Resources
+              </Text>
             </View>
             <ScrollView
               horizontal

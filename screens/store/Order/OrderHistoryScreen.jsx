@@ -14,7 +14,8 @@ import { useNavigation } from "@react-navigation/native";
 import { orderService } from "../../../service/orderService";
 import { styles } from "./OrderHistoryScreen.styles";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
-
+import loadingAnimation from "../../../assets/loading.json";
+import LottieView from "lottie-react-native";
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
   const [orders, setOrders] = useState([]);
@@ -50,14 +51,14 @@ export default function OrderHistoryScreen() {
     try {
       setRetryingOrderId(orderId);
       await orderService.createOrderRetry(orderId);
-      
+
       // Sau khi retry thành công, chuyển đến trang thanh toán
       navigation.navigate("PaymentSuccess", {
         orderId,
         invoiceNumber,
         totalAmount,
       });
-      
+
       // Refresh lại danh sách orders
       await fetchOrders();
     } catch (error) {
@@ -121,16 +122,17 @@ export default function OrderHistoryScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
-          <Text style={styles.headerTitle}>Order History</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#64B5F6" />
-        </View>
-      </SafeAreaView>
+      <View style={styles.centerContainer}>
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
+        {/* <Text style={styles.loadingText}>
+          Loading orders...
+        </Text> */}
+      </View>
     );
   }
 
@@ -138,11 +140,10 @@ export default function OrderHistoryScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Icon name="arrow-back" size={24} color="#2D2D2D" />
-          </Pressable>
-          <Text style={styles.headerTitle}>Order History</Text>
-          <View style={{ width: 40 }} />
+          <View style={styles.headerLeft}>
+            <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+            <Text style={styles.headerTitle}>Order History</Text>
+          </View>
         </View>
         <View style={styles.emptyContainer}>
           <Icon name="receipt-long" size={100} color="#B0BEC5" />
@@ -164,13 +165,10 @@ export default function OrderHistoryScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Icon name="arrow-back" size={24} color="#2D2D2D" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Order History</Text>
-        <Pressable onPress={onRefresh}>
-          <Icon name="refresh" size={24} color="#2D2D2D" />
-        </Pressable>
+        <View style={styles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+          <Text style={styles.headerTitle}>Order History</Text>
+        </View>
       </View>
 
       <ScrollView
@@ -186,9 +184,7 @@ export default function OrderHistoryScreen() {
             <View style={styles.orderHeader}>
               <View style={styles.orderHeaderLeft}>
                 <Icon name="receipt" size={20} color="#4FC3F7" />
-                <Text style={styles.invoiceNumber}>
-                  {order.invoiceNumber}
-                </Text>
+                <Text style={styles.invoiceNumber}>{order.invoiceNumber}</Text>
               </View>
               <View
                 style={[
@@ -201,12 +197,7 @@ export default function OrderHistoryScreen() {
                   size={14}
                   color="#1F2937"
                 />
-                <Text
-                  style={[
-                    styles.statusText,
-                    { color: "#1F2937" },
-                  ]}
-                >
+                <Text style={[styles.statusText, { color: "#1F2937" }]}>
                   {order.orderStatus}
                 </Text>
               </View>
@@ -271,7 +262,11 @@ export default function OrderHistoryScreen() {
                 <View
                   style={[
                     styles.paymentBadge,
-                    { backgroundColor: `${getStatusColor(order.paymentStatus)}80` },
+                    {
+                      backgroundColor: `${getStatusColor(
+                        order.paymentStatus
+                      )}80`,
+                    },
                   ]}
                 >
                   <Icon
@@ -285,12 +280,7 @@ export default function OrderHistoryScreen() {
                     size={14}
                     color="#1F2937"
                   />
-                  <Text
-                    style={[
-                      styles.paymentText,
-                      { color: "#1F2937" },
-                    ]}
-                  >
+                  <Text style={[styles.paymentText, { color: "#1F2937" }]}>
                     {order.paymentStatus}
                   </Text>
                 </View>
@@ -313,33 +303,35 @@ export default function OrderHistoryScreen() {
                 )}
 
                 {/* Nút Retry Payment cho FAILED & CANCELLED */}
-                {order.paymentStatus === "FAILED" && 
-                 order.orderStatus === "CANCELLED" && (
-                  <Pressable
-                    style={[
-                      styles.checkoutBtn,
-                      { backgroundColor: "#FF6B6B" },
-                      retryingOrderId === order.orderId && { opacity: 0.6 }
-                    ]}
-                    onPress={() =>
-                      handleRetryPayment(
-                        order.orderId,
-                        order.invoiceNumber,
-                        order.totalAmount
-                      )
-                    }
-                    disabled={retryingOrderId === order.orderId}
-                  >
-                    {retryingOrderId === order.orderId ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <>
-                        <Icon name="refresh" size={16} color="#FFFFFF" />
-                        <Text style={styles.checkoutBtnText}>Retry Payment</Text>
-                      </>
-                    )}
-                  </Pressable>
-                )}
+                {order.paymentStatus === "FAILED" &&
+                  order.orderStatus === "CANCELLED" && (
+                    <Pressable
+                      style={[
+                        styles.checkoutBtn,
+                        { backgroundColor: "#FF6B6B" },
+                        retryingOrderId === order.orderId && { opacity: 0.6 },
+                      ]}
+                      onPress={() =>
+                        handleRetryPayment(
+                          order.orderId,
+                          order.invoiceNumber,
+                          order.totalAmount
+                        )
+                      }
+                      disabled={retryingOrderId === order.orderId}
+                    >
+                      {retryingOrderId === order.orderId ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <>
+                          <Icon name="refresh" size={16} color="#FFFFFF" />
+                          <Text style={styles.checkoutBtnText}>
+                            Retry Payment
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
+                  )}
               </View>
             </View>
           </View>

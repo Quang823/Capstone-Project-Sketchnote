@@ -1,23 +1,49 @@
 import { StyleSheet } from "react-native";
 
 export const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: "#F8FAFC" 
+  container: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
   },
-  
+
   header: {
-    paddingTop: 30,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#FFFFFF",
+    paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+    letterSpacing: -0.5,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: "#64748B",
+    fontWeight: "500",
+  },
   backBtn: {
     width: 40,
     height: 40,
@@ -28,47 +54,40 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  
-  headerTitle: { 
-    fontSize: 20, 
-    fontWeight: "700", 
-    color: "#1E293B",
-    letterSpacing: -0.5,
+
+  content: {
+    flex: 1,
+    padding: 16,
   },
-  
-  content: { 
-    flex: 1, 
-    padding: 16 
+
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  
-  centerContainer: { 
-    flex: 1, 
-    justifyContent: "center", 
-    alignItems: "center" 
-  },
-  
+
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 32,
   },
-  
-  emptyTitle: { 
-    fontSize: 22, 
-    fontWeight: "700", 
-    color: "#1E293B", 
-    marginTop: 16 
+
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginTop: 16,
   },
-  
-  emptyText: { 
-    fontSize: 14, 
-    color: "#64748B", 
-    marginTop: 8, 
+
+  emptyText: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 8,
     textAlign: "center",
     fontWeight: "500",
   },
-  
+
   shopBtn: {
     marginTop: 24,
     paddingHorizontal: 32,
@@ -81,13 +100,13 @@ export const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  
-  shopBtnText: { 
-    color: "#FFFFFF", 
-    fontSize: 16, 
-    fontWeight: "700" 
+
+  shopBtnText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
-  
+
   orderCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
@@ -101,26 +120,26 @@ export const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  
+
   orderHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
   },
-  
-  orderHeaderLeft: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    gap: 8 
+
+  orderHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  
-  invoiceNumber: { 
-    fontSize: 16, 
-    fontWeight: "700", 
-    color: "#1E293B" 
+
+  invoiceNumber: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1E293B",
   },
-  
+
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -130,12 +149,12 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
   },
-  
-  statusText: { 
-    fontSize: 12, 
-    fontWeight: "700" 
+
+  statusText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
-  
+
   orderInfo: {
     flexDirection: "row",
     gap: 16,
@@ -144,19 +163,19 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
-  
-  infoRow: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    gap: 6 
+
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  
-  infoText: { 
-    fontSize: 13, 
-    color: "#64748B", 
-    fontWeight: "500" 
+
+  infoText: {
+    fontSize: 13,
+    color: "#64748B",
+    fontWeight: "500",
   },
-  
+
   itemsContainer: {
     gap: 12,
     marginBottom: 14,
@@ -164,31 +183,31 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
   },
-  
-  itemRow: { 
-    flexDirection: "row", 
-    justifyContent: "space-between" 
+
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
   },
-  
-  itemInfo: { 
-    flex: 1, 
-    marginRight: 12 
+
+  itemInfo: {
+    flex: 1,
+    marginRight: 12,
   },
-  
-  itemName: { 
-    fontSize: 14, 
-    fontWeight: "700", 
-    color: "#1E293B", 
-    marginBottom: 4 
+
+  itemName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E293B",
+    marginBottom: 4,
   },
-  
-  itemDesc: { 
-    fontSize: 12, 
-    color: "#64748B", 
+
+  itemDesc: {
+    fontSize: 12,
+    color: "#64748B",
     marginBottom: 6,
     fontWeight: "500",
   },
-  
+
   typeBadge: {
     alignSelf: "flex-start",
     backgroundColor: "#F1F5F9",
@@ -198,58 +217,58 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  
-  typeBadgeText: { 
-    fontSize: 10, 
-    fontWeight: "700", 
-    color: "#64748B" 
+
+  typeBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#64748B",
   },
-  
-  itemRight: { 
-    alignItems: "flex-end" 
+
+  itemRight: {
+    alignItems: "flex-end",
   },
-  
-  itemPrice: { 
-    fontSize: 14, 
-    fontWeight: "700", 
-    color: "#1E293B" 
+
+  itemPrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1E293B",
   },
-  
-  discountText: { 
-    fontSize: 12, 
-    color: "#10B981", 
+
+  discountText: {
+    fontSize: 12,
+    color: "#10B981",
     marginTop: 2,
     fontWeight: "600",
   },
-  
-  orderFooter: { 
-    gap: 12 
+
+  orderFooter: {
+    gap: 12,
   },
-  
-  totalRow: { 
-    flexDirection: "row", 
+
+  totalRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  
-  totalLabel: { 
-    fontSize: 14, 
-    fontWeight: "600", 
-    color: "#64748B" 
+
+  totalLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
   },
-  
-  totalAmount: { 
-    fontSize: 20, 
-    fontWeight: "700", 
-    color: "#1E293B" 
+
+  totalAmount: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1E293B",
   },
-  
-  actionRow: { 
-    flexDirection: "row", 
+
+  actionRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  
+
   paymentBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -259,12 +278,12 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
   },
-  
-  paymentText: { 
-    fontSize: 12, 
-    fontWeight: "700" 
+
+  paymentText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
-  
+
   checkoutBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -279,10 +298,10 @@ export const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  
-  checkoutBtnText: { 
-    color: "#FFFFFF", 
-    fontSize: 14, 
-    fontWeight: "700" 
+
+  checkoutBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });
