@@ -6,6 +6,7 @@ import {
   Pressable,
   TextInput,
   Dimensions,
+  Image 
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -26,12 +27,28 @@ export default function DesignerQuickUploadScreen() {
   const [description, setDescription] = useState("");
   const [type, setType] = useState("OTHER");
   const [price, setPrice] = useState("");
-  const [releaseDate, setReleaseDate] = useState("");
+
   const [expiredTime, setExpiredTime] = useState("");
   const [images, setImages] = useState([]);
   const [itemUrls, setItemUrls] = useState([""]); // Array of text URLs
   const [isUploading, setIsUploading] = useState(false);
+const [itemSource, setItemSource] = useState("upload"); // hoặc "project"
+const [localItems, setLocalItems] = useState([]);
+const [projects, setProjects] = useState([]);
+const [selectedProjectId, setSelectedProjectId] = useState(null);
+const getToday = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  const hours = String(today.getHours()).padStart(2, "0");
+  const minutes = String(today.getMinutes()).padStart(2, "0");
+  const seconds = String(today.getSeconds()).padStart(2, "0");
 
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+
+  const [releaseDate, setReleaseDate] = useState(getToday());
   // ====== PERMISSION ======
   useEffect(() => {
     (async () => {
@@ -45,6 +62,8 @@ export default function DesignerQuickUploadScreen() {
         });
       }
     })();
+
+    getProjectByUserId();
   }, []);
 
   // ====== HANDLE IMAGE UPLOADED ======
@@ -54,7 +73,15 @@ export default function DesignerQuickUploadScreen() {
       return updated;
     });
   };
-
+  const getProjectByUserId = async () => {
+    try {
+      const response = await resourceService.getProjectByUserId();
+     setProjects(response.projects);
+    } catch (error) {
+      console.error("Error fetching project by user ID:", error);
+      throw error;
+    }
+  };
   // ====== HANDLE ITEM URL CHANGE ======
   const updateItemUrl = (index, value) => {
     const updated = [...itemUrls];
@@ -70,37 +97,64 @@ export default function DesignerQuickUploadScreen() {
     setItemUrls(itemUrls.filter((_, i) => i !== index));
   };
 
-  // ====== HANDLE UPLOAD ======
-  const handleUpload = async () => {
-    // Validation
-    if (
-      !name.trim() ||
-      !description.trim() ||
-      !type.trim() ||
-      !price ||
-      !releaseDate ||
-      !expiredTime ||
-      images.length === 0
-    ) {
-      Toast.show({
-        type: "error",
-        text1: "Missing information",
-        text2: "Please fill in all required fields.",
-      });
-      return;
-    }
+  
+// ====== HANDLE UPLOAD ======
+const handleUpload = async () => {
+  // Validation chung
+  if (
+    !name.trim() ||
+    !description.trim() ||
+    !type.trim() ||
+    !price ||
+    !expiredTime
+  ) {
+    Toast.show({
+      type: "error",
+      text1: "Missing information",
+      text2: "Please fill in all required fields.",
+    });
+    return;
+  }
 
-    setIsUploading(true);
-    try {
-      const formattedType = type.toUpperCase();
-      const formattedImages = images.map((url, index) => ({
-        imageUrl: url,
-        isThumbnail: index === 0,
-      }));
+  // Kiểm tra ảnh chỉ khi chọn "Upload từ máy"
+  if (itemSource === "upload" && images.length === 0) {
+    Toast.show({
+      type: "error",
+      text1: "Missing images",
+      text2: "Please upload at least one banner image.",
+    });
+    return;
+  }
 
-      // Filter out empty item URLs
-      const validItemUrls = itemUrls.filter((url) => url.trim() !== "");
+  // Validation riêng cho từng loại
+  if (itemSource === "upload" && localItems.length === 0) {
+    Toast.show({
+      type: "error",
+      text1: "Missing items",
+      text2: "Please upload at least one item image.",
+    });
+    return;
+  }
 
+  if (itemSource === "project" && !selectedProjectId) {
+    Toast.show({
+      type: "error",
+      text1: "Missing project",
+      text2: "Please select a project.",
+    });
+    return;
+  }
+
+  setIsUploading(true);
+  try {
+    const formattedType = type.toUpperCase();
+    const formattedImages = images.map((url, index) => ({
+      imageUrl: url,
+      isThumbnail: index === 0,
+    }));
+
+    // Nếu chọn "Upload từ máy" - gọi uploadResource
+    if (itemSource === "upload") {
       const template = {
         name,
         description,
@@ -109,31 +163,60 @@ export default function DesignerQuickUploadScreen() {
         releaseDate,
         expiredTime,
         images: formattedImages,
-        items: validItemUrls.map((url, idx) => ({
+        items: localItems.map((url, idx) => ({
           itemIndex: idx + 1,
-          itemUrl: url.trim(),
+          itemUrl: url,
         })),
       };
+
       await resourceService.uploadResource(template);
+    } 
+    // Nếu chọn "Chọn từ project" - gọi uploadTemplate
+    else if (itemSource === "project") {
+      // Lấy thông tin project được chọn
+      const selectedProject = projects.find(
+        (p) => p.projectId === selectedProjectId
+      );
 
-      Toast.show({
-        type: "success",
-        text1: "Upload Successful 🎉",
-        text2: "Your template has been uploaded successfully.",
-      });
+      // Body cho uploadTemplate - chỉ dùng ảnh từ project
+      const templateData = {
+        name,
+        description,
+        type: formattedType,
+        price: Number(price),
+        expiredTime: new Date(expiredTime).toISOString(), // Format thành ISO 8601
+        images: [
+          {
+            imageUrl: selectedProject?.imageUrl,
+            isThumbnail: true,
+          }
+        ],
+      };
 
-      setTimeout(() => navigation.goBack(), 1500);
-    } catch (err) {
-      console.error("Upload error:", err);
-      Toast.show({
-        type: "error",
-        text1: "Upload Failed",
-        text2: err.message || "Something went wrong while uploading.",
-      });
-    } finally {
-      setIsUploading(false);
+      // console.log('📤 Uploading template with project:', selectedProjectId);
+      // console.log('📦 Data:', JSON.stringify(templateData, null, 2));
+      
+      await resourceService.uploadTemplate(selectedProjectId, templateData);
     }
-  };
+
+    Toast.show({
+      type: "success",
+      text1: "Upload Successful 🎉",
+      text2: "Your template has been uploaded successfully.",
+    });
+
+    setTimeout(() => navigation.goBack(), 1500);
+  } catch (err) {
+    console.error("Upload error:", err);
+    Toast.show({
+      type: "error",
+      text1: "Upload Failed",
+      text2: err.message || "Something went wrong while uploading.",
+    });
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   // ====== UI ======
   return (
@@ -251,7 +334,8 @@ export default function DesignerQuickUploadScreen() {
         {/* Images Section */}
         <View style={designerQuickUploadStyles.imageUploadSection}>
           <Text style={designerQuickUploadStyles.sectionTitle}>
-            Images * ({images.length})
+            Banner * ({images.length})
+
           </Text>
           <MultipleImageUploader
             onImageUploaded={handleImageUploaded}
@@ -260,69 +344,147 @@ export default function DesignerQuickUploadScreen() {
         </View>
 
         {/* Item URLs Section - Text Input */}
-        <View style={designerQuickUploadStyles.itemsSection}>
-          <View
+        {/* Item Section */}
+<View style={designerQuickUploadStyles.itemsSection}>
+  <Text style={designerQuickUploadStyles.sectionTitle}>
+    Item Upload *
+  </Text>
+
+  {/* Chọn nguồn item: upload hoặc project */}
+  <View
+    style={{
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 10,
+      marginTop: 8,
+    }}
+  >
+    <Pressable
+      onPress={() => setItemSource("upload")}
+      style={{
+        flex: 1,
+        backgroundColor: itemSource === "upload" ? "#10B981" : "#E5E7EB",
+        paddingVertical: 10,
+        borderRadius: 8,
+        alignItems: "center",
+      }}
+    >
+      <Text
+        style={{
+          color: itemSource === "upload" ? "#fff" : "#111827",
+          fontWeight: "500",
+        }}
+      >
+        Upload từ máy
+      </Text>
+    </Pressable>
+
+    <Pressable
+      onPress={() => setItemSource("project")}
+      style={{
+        flex: 1,
+        backgroundColor: itemSource === "project" ? "#10B981" : "#E5E7EB",
+        paddingVertical: 10,
+        borderRadius: 8,
+        alignItems: "center",
+      }}
+    >
+      <Text
+        style={{
+          color: itemSource === "project" ? "#fff" : "#111827",
+          fontWeight: "500",
+        }}
+      >
+        Chọn từ project
+      </Text>
+    </Pressable>
+  </View>
+
+  {/* Nếu người dùng chọn “Upload từ máy” */}
+  {itemSource === "upload" && (
+    <View style={{ marginTop: 15 }}>
+      <Text style={designerQuickUploadStyles.sectionTitle}>
+        Upload Item Images ({localItems.length})
+      </Text>
+      <MultipleImageUploader
+        onImageUploaded={(url) =>
+          setLocalItems((prev) => [...prev, url])
+        }
+        maxImages={10}
+      />
+    </View>
+  )}
+
+  {/* Nếu người dùng chọn “Project” */}
+  {itemSource === "project" && (
+    <View style={{ marginTop: 15 }}>
+      <Text style={designerQuickUploadStyles.sectionTitle}>
+        Chọn Project ({projects.length})
+      </Text>
+
+      {projects.length === 0 ? (
+        <Text style={{ color: "#6B7280", marginTop: 8 }}>
+          Không có project nào.
+        </Text>
+      ) : (
+        projects.map((proj) => (
+          <Pressable
+            key={proj.projectId}
+            onPress={() => setSelectedProjectId(proj.projectId)}
             style={{
               flexDirection: "row",
-              justifyContent: "space-between",
               alignItems: "center",
+              padding: 10,
+              marginVertical: 6,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor:
+                selectedProjectId === proj.projectId
+                  ? "#10B981"
+                  : "#E5E7EB",
+              backgroundColor:
+                selectedProjectId === proj.projectId
+                  ? "#D1FAE5"
+                  : "#F9FAFB",
             }}
           >
-            <Text style={designerQuickUploadStyles.sectionTitle}>
-              Item URLs (Optional)
-            </Text>
-            <Pressable
-              onPress={addItemUrl}
-              style={{
-                backgroundColor: "#10B981",
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 6,
-                flexDirection: "row",
-                alignItems: "center",
-              }}
-            >
-              <Icon name="add" size={16} color="#fff" />
-              <Text style={{ color: "#fff", marginLeft: 4, fontSize: 14 }}>
-                Add URL
-              </Text>
-            </Pressable>
-          </View>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+  {/* Ảnh project */}
+  <Image
+    source={{ uri: proj.imageUrl }}
+    style={{
+      width: 60,
+      height: 60,
+      borderRadius: 8,
+      marginRight: 10,
+      backgroundColor: "#f3f4f6", // fallback khi chưa có ảnh
+    }}
+  />
 
-          {itemUrls.map((url, index) => (
-            <View
-              key={index}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginTop: 10,
-                gap: 8,
-              }}
-            >
-              <TextInput
-                style={[
-                  designerQuickUploadStyles.textInput,
-                  { flex: 1, marginBottom: 0 },
-                ]}
-                value={url}
-                onChangeText={(text) => updateItemUrl(index, text)}
-                placeholder={`Item URL ${index + 1}`}
-              />
-              {itemUrls.length > 1 && (
-                <Pressable
-                  onPress={() => removeItemUrl(index)}
-                  style={{
-                    backgroundColor: "#EF4444",
-                    padding: 8,
-                    borderRadius: 6,
-                  }}
-                >
-                  <Icon name="delete" size={20} color="#fff" />
-                </Pressable>
-              )}
-            </View>
-          ))}
-        </View>
+  {/* Thông tin project */}
+  <View style={{ flex: 1 }}>
+    <Text style={{ fontWeight: "600", color: "#111827" }}>
+      {proj.name}
+    </Text>
+    <Text
+      style={{
+        color: "#6B7280",
+        fontSize: 13,
+        marginTop: 2,
+      }}
+    >
+      {proj.description}
+    </Text>
+  </View>
+</View>
+
+          </Pressable>
+        ))
+      )}
+    </View>
+  )}
+</View>
+
 
         {/* Upload Button */}
         <Pressable

@@ -170,16 +170,18 @@ export const resourceStoreStyles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 3,
+    height: 380, // Fixed height for all cards
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
-    height: 160,
+    height: 160, // Fixed image height
     backgroundColor: '#F1F5F9',
   },
   resourceImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
   typeBadge: {
     position: 'absolute',
@@ -198,6 +200,8 @@ export const resourceStoreStyles = StyleSheet.create({
   },
   resourceInfo: {
     padding: 16,
+    flex: 1,
+    justifyContent: 'space-between',
   },
   resourceName: {
     fontSize: 16,
@@ -205,6 +209,7 @@ export const resourceStoreStyles = StyleSheet.create({
     color: '#1E293B',
     marginBottom: 6,
     lineHeight: 22,
+    minHeight: 44, // Fixed height for title (2 lines)
   },
   resourceDescription: {
     fontSize: 13,
@@ -212,6 +217,8 @@ export const resourceStoreStyles = StyleSheet.create({
     marginBottom: 12,
     lineHeight: 18,
     fontWeight: '500',
+    minHeight: 36, // Fixed height for description (2 lines)
+    overflow: 'hidden',
   },
   price: {
     fontSize: 20,

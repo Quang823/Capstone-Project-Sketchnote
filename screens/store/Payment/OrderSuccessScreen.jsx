@@ -18,14 +18,14 @@ export default function OrderSuccessScreen() {
     const fetchOrder = async () => {
       try {
         if (!orderId) {
-          setError("Không có mã đơn hàng.");
+          setError("No order ID found.");
           return;
         }
         const res = await orderService.getOrderById(orderId);
         if (res) setOrder(res);
-        else setError("Không tìm thấy thông tin đơn hàng.");
+        else setError("Order information not found.");
       } catch (err) {
-        setError("Lỗi khi tải thông tin đơn hàng.");
+        setError("Error loading order information.");
       } finally {
         setLoading(false);
       }
@@ -36,8 +36,8 @@ export default function OrderSuccessScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={styles.loadingText}>Đang xác nhận thanh toán...</Text>
+        <ActivityIndicator size="large" color="#60A5FA" />
+        <Text style={styles.loadingText}>Confirming payment...</Text>
       </View>
     );
   }
@@ -47,14 +47,22 @@ export default function OrderSuccessScreen() {
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable style={styles.backButton} onPress={() => navigation.navigate("Home")}>
-          <Text style={styles.backText}>Quay lại</Text>
+          <Text style={styles.backText}>Go Back</Text>
         </Pressable>
       </View>
     );
   }
 
+  // Check if payment was successful
+  const isPaymentSuccess = order?.paymentStatus?.toUpperCase() === "PAID" || 
+                          order?.paymentStatus?.toUpperCase() === "SUCCESS" ||
+                          order?.paymentStatus?.toUpperCase() === "COMPLETED";
+  
+  const isPaymentFailed = order?.paymentStatus?.toUpperCase() === "FAILED" ||
+                         order?.orderStatus?.toUpperCase() === "CANCELLED";
+
   return (
-    <LinearGradient colors={["#E0EAFC", "#CFDEF3"]} style={styles.gradient}>
+    <LinearGradient colors={["#EFF6FF", "#DBEAFE"]} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
         <MotiView
           from={{ scale: 0.8, opacity: 0 }}
@@ -62,26 +70,88 @@ export default function OrderSuccessScreen() {
           transition={{ type: "spring", duration: 800 }}
           style={styles.card}
         >
-          <Text style={styles.title}>Thanh toán thành công 🎉</Text>
+          {/* Dynamic Title based on payment status */}
+          {isPaymentSuccess ? (
+            <Text style={styles.titleSuccess}>Payment Successful 🎉</Text>
+          ) : isPaymentFailed ? (
+            <Text style={styles.titleFailed}>Payment Failed ❌</Text>
+          ) : (
+            <Text style={styles.titlePending}>Payment Pending ⏳</Text>
+          )}
 
           <View style={styles.infoBox}>
-            <Text style={styles.label}>Mã đơn hàng:</Text>
-            <Text style={styles.value}>{order?.orderId}</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Order ID:</Text>
+              <Text style={styles.value}>{order?.orderId}</Text>
+            </View>
 
-            <Text style={styles.label}>Tổng tiền:</Text>
-            <Text style={styles.value}>{order?.totalAmount} VND</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Total Amount:</Text>
+              <Text style={styles.value}>{order?.totalAmount?.toLocaleString()} VND</Text>
+            </View>
 
-            <Text style={styles.label}>Trạng thái thanh toán:</Text>
-            <Text style={styles.statusPaid}>{order?.paymentStatus}</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Payment Status:</Text>
+              <View style={[
+                styles.statusBadge,
+                isPaymentSuccess ? styles.statusSuccess : 
+                isPaymentFailed ? styles.statusFailed : 
+                styles.statusPending
+              ]}>
+                <Text style={[
+                  styles.statusText,
+                  isPaymentSuccess ? styles.statusTextSuccess : 
+                  isPaymentFailed ? styles.statusTextFailed : 
+                  styles.statusTextPending
+                ]}>
+                  {order?.paymentStatus || "UNKNOWN"}
+                </Text>
+              </View>
+            </View>
 
-            <Text style={styles.label}>Trạng thái đơn hàng:</Text>
-            <Text style={styles.statusConfirmed}>{order?.orderStatus}</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Order Status:</Text>
+              <View style={[
+                styles.statusBadge,
+                order?.orderStatus?.toUpperCase() === "CANCELLED" ? styles.statusFailed :
+                order?.orderStatus?.toUpperCase() === "CONFIRMED" ? styles.statusPending :
+                styles.statusSuccess
+              ]}>
+                <Text style={[
+                  styles.statusText,
+                  order?.orderStatus?.toUpperCase() === "CANCELLED" ? styles.statusTextFailed :
+                  order?.orderStatus?.toUpperCase() === "CONFIRMED" ? styles.statusTextPending :
+                  styles.statusTextSuccess
+                ]}>
+                  {order?.orderStatus || "UNKNOWN"}
+                </Text>
+              </View>
+            </View>
 
-            <Text style={styles.label}>Ngày tạo:</Text>
-            <Text style={styles.value}>
-              {new Date(order?.createdAt).toLocaleString("vi-VN")}
-            </Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.label}>Created At:</Text>
+              <Text style={styles.value}>
+                {new Date(order?.createdAt).toLocaleString("en-US", {
+                  dateStyle: "medium",
+                  timeStyle: "short"
+                })}
+              </Text>
+            </View>
           </View>
+
+          {/* Warning message for failed payments */}
+          {isPaymentFailed && (
+            <MotiView
+              from={{ opacity: 0, translateY: -10 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ delay: 300 }}
+              style={styles.warningBox}
+            >
+              <Text style={styles.warningText}>
+                ⚠️ Your payment could not be processed. Please try again or contact support.
+              </Text>
+            </MotiView>
+          )}
         </MotiView>
 
         <MotiView
@@ -90,25 +160,40 @@ export default function OrderSuccessScreen() {
           transition={{ delay: 300 }}
           style={styles.itemsSection}
         >
-          <Text style={styles.subTitle}>🛍️ Danh sách sản phẩm:</Text>
-          {order?.items?.map((item, index) => (
-            <MotiView
-              key={index}
-              from={{ opacity: 0, translateY: 20 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ delay: index * 100 }}
-              style={styles.itemCard}
-            >
-              <Text style={styles.itemName}>{item.templateName}</Text>
-              <Text style={styles.itemDesc}>{item.templateDescription}</Text>
-              <Text style={styles.itemPrice}>{item.unitPrice} VND</Text>
-            </MotiView>
-          ))}
+          <Text style={styles.subTitle}>🛍️ Order Items</Text>
+          <View style={styles.itemsGrid}>
+            {order?.items?.map((item, index) => (
+              <MotiView
+                key={index}
+                from={{ opacity: 0, translateY: 20 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                transition={{ delay: index * 100 }}
+                style={styles.itemCard}
+              >
+                <Text style={styles.itemName}>{item.templateName}</Text>
+                <Text style={styles.itemDesc}>{item.templateDescription}</Text>
+                <Text style={styles.itemPrice}>{item.unitPrice?.toLocaleString()} VND</Text>
+              </MotiView>
+            ))}
+          </View>
         </MotiView>
 
-        <Pressable style={styles.backButton} onPress={() => navigation.navigate("Home")}>
-          <Text style={styles.backText}>Về trang chủ</Text>
-        </Pressable>
+        <View style={styles.buttonContainer}>
+          {isPaymentFailed && (
+            <Pressable 
+              style={[styles.button, styles.retryButton]} 
+              onPress={() => navigation.navigate("Checkout", { orderId })}
+            >
+              <Text style={styles.buttonText}>Try Again</Text>
+            </Pressable>
+          )}
+          <Pressable 
+            style={[styles.button, styles.backButton]} 
+            onPress={() => navigation.navigate("Home")}
+          >
+            <Text style={styles.buttonText}>Back to Home</Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </LinearGradient>
   );
