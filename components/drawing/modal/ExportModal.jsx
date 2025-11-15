@@ -16,6 +16,10 @@ const ExportModal = ({ visible, onClose, onExport }) => {
   const [fileName, setFileName] = useState("Unnamed note");
   const [includeBg, setIncludeBg] = useState(true);
 
+  const [pageMode, setPageMode] = useState("all");
+  const [pageRange, setPageRange] = useState("");
+  const [pageList, setPageList] = useState("");
+
   const options = [
     {
       key: "editable",
@@ -106,10 +110,88 @@ const ExportModal = ({ visible, onClose, onExport }) => {
             </Text>
           </View>
 
+          {/* Pages selection */}
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.label}>Pages to export:</Text>
+
+            <View style={styles.pageRow}>
+              {/* Left buttons */}
+              <View style={styles.pageLeft}>
+                <Pressable
+                  onPress={() => setPageMode("all")}
+                  style={[
+                    styles.pageOption,
+                    pageMode === "all" && styles.pageOptionSelected,
+                  ]}
+                >
+                  <Text style={styles.pageOptionLabel}>All</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setPageMode("range")}
+                  style={[
+                    styles.pageOption,
+                    pageMode === "range" && styles.pageOptionSelected,
+                  ]}
+                >
+                  <Text style={styles.pageOptionLabel}>Range</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setPageMode("list")}
+                  style={[
+                    styles.pageOption,
+                    pageMode === "list" && styles.pageOptionSelected,
+                  ]}
+                >
+                  <Text style={styles.pageOptionLabel}>List</Text>
+                </Pressable>
+              </View>
+
+              {/* Right: label + input */}
+              <View style={styles.pageRight}>
+                {pageMode === "all" && (
+                  <Text style={styles.pageInfo}>Export all pages</Text>
+                )}
+
+                {pageMode === "range" && (
+                  <>
+                    <TextInput
+                      style={styles.input}
+                      value={pageRange}
+                      onChangeText={setPageRange}
+                      placeholder="e.g., 1–3"
+                    />
+                  </>
+                )}
+
+                {pageMode === "list" && (
+                  <>
+                    <TextInput
+                      style={styles.input}
+                      value={pageList}
+                      onChangeText={setPageList}
+                      placeholder="e.g., 1,3,5"
+                    />
+                  </>
+                )}
+              </View>
+            </View>
+          </View>
+
           {/* Export button */}
           <TouchableOpacity
             style={styles.exportBtn}
-            onPress={() => onExport({ selected, fileName, includeBg })}
+            onPress={() =>
+              onExport({
+                selected,
+                fileName,
+                includeBg,
+                pageMode,
+                pageRange,
+                pageList,
+              })
+            }
           >
             <Text style={styles.exportText}>Export and share</Text>
           </TouchableOpacity>
@@ -139,6 +221,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
   },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -177,10 +260,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
     contentFit: "contain",
-    backgroundColor: "transparent",
   },
   optionIconSelected: {
-    tintColor: "#007AFF", // chỉ đổi màu khi selected
+    tintColor: "#007AFF",
   },
 
   optionLabel: { color: "#000", fontSize: 13 },
@@ -217,13 +299,58 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
+    marginTop: 16,
   },
   exportText: { color: "#fff", fontWeight: "bold" },
 
   savePath: {
     color: "#999",
     fontSize: 12,
-    marginTop: 8,
+    marginTop: 10,
     textAlign: "center",
+  },
+
+  /* --- PAGE SECTION --- */
+
+  pageRow: {
+    flexDirection: "row",
+    marginTop: 8,
+    gap: 12,
+  },
+
+  pageLeft: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
+  },
+
+  pageRight: {
+    flex: 1,
+    justifyContent: "center",
+  },
+
+  pageOption: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#F2F2F2",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    alignItems: "center",
+  },
+
+  pageOptionSelected: {
+    backgroundColor: "#EAF4FF",
+    borderColor: "#007AFF",
+  },
+
+  pageOptionLabel: {
+    fontSize: 14,
+    color: "#000",
+  },
+
+  pageInfo: {
+    color: "#777",
+    fontSize: 13,
   },
 });
