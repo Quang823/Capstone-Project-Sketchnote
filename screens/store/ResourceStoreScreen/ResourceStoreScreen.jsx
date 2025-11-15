@@ -31,9 +31,24 @@ export default function ResourceStoreScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const { cart, addToCart } = useCart();
-
+const [userResources, setUserResources] = useState([]);
   // ✅ Fetch data riêng biệt - nếu 1 API lỗi thì các API khác vẫn chạy
   const fetchAllData = async () => {
+    try {
+      // Fetch Resource By User Id
+      try {
+        const resUser = await resourceService.getResourceProjectByUserId();
+        const userData = resUser || [];
+        // console.log("✅ Resource By User Id:", userData);
+        setUserResources(userData);
+       
+      } catch (error) {
+        console.error("❌ Fetch Resource By User Id Failed:", error);
+        setAllResources([]);
+      }
+    } catch (error) {
+      
+    }
     try {
       setLoading(true);
 
@@ -88,6 +103,18 @@ export default function ResourceStoreScreen() {
 
   // ✅ Add to Cart
   const handleAddToCart = (resource, navigateToCart = false) => {
+    const alreadyOwned = userResources.some(
+    (r) => r.resourceTemplateId === resource.resourceTemplateId
+  );
+
+  if (alreadyOwned) {
+    Toast.show({
+      type: "info",
+      text1: "You have already purchased this resource.",
+      text2: "You cannot purchase the same resource multiple times.",
+    });
+    return; 
+  }
     const designerName = resource.designerInfo
       ? `${resource.designerInfo.firstName || ""} ${
           resource.designerInfo.lastName || ""
@@ -238,7 +265,7 @@ export default function ResourceStoreScreen() {
     return (
       <View style={resourceStoreStyles.loadingContainer}>
         <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={resourceStoreStyles.loadingText}>Đang tải dữ liệu...</Text>
+        <Text style={resourceStoreStyles.loadingText}>Loading data...</Text>
       </View>
     );
   }
@@ -253,7 +280,7 @@ export default function ResourceStoreScreen() {
             <Icon name="arrow-back" size={24} color="#1F2937" />
           </Pressable> */}
         </View>
-        <Text style={resourceStoreStyles.headerTitle}>Cửa hàng Resource</Text>
+        <Text style={resourceStoreStyles.headerTitle}> Resource Store</Text>
         <Pressable
           style={resourceStoreStyles.cartButton}
           onPress={() => navigation.navigate("Cart")}
@@ -325,7 +352,7 @@ export default function ResourceStoreScreen() {
           <View style={resourceStoreStyles.sectionContainer}>
             <View style={resourceStoreStyles.sectionHeader}>
               <Icon name="new-releases" size={24} color="#4F46E5" />
-              <Text style={resourceStoreStyles.sectionTitle}>Mới nhất</Text>
+              <Text style={resourceStoreStyles.sectionTitle}>Latest Resources</Text>
             </View>
             <ScrollView
               horizontal
@@ -342,7 +369,7 @@ export default function ResourceStoreScreen() {
           <View style={resourceStoreStyles.sectionContainer}>
             <View style={resourceStoreStyles.sectionHeader}>
               <Icon name="trending-up" size={24} color="#F59E0B" />
-              <Text style={resourceStoreStyles.sectionTitle}>Phổ biến</Text>
+              <Text style={resourceStoreStyles.sectionTitle}>Popular Resources</Text>
             </View>
             <ScrollView
               horizontal
@@ -360,7 +387,7 @@ export default function ResourceStoreScreen() {
             <View style={resourceStoreStyles.sectionHeader}>
               <Icon name="apps" size={24} color="#10B981" />
               <Text style={resourceStoreStyles.sectionTitle}>
-                Tất cả Resource
+                All Resources
               </Text>
             </View>
             <ScrollView
@@ -380,7 +407,7 @@ export default function ResourceStoreScreen() {
             <View style={resourceStoreStyles.emptyState}>
               <Icon name="inbox" size={80} color="#D1D5DB" />
               <Text style={resourceStoreStyles.emptyStateText}>
-                Không có resource nào
+                No resources available.
               </Text>
             </View>
           )}

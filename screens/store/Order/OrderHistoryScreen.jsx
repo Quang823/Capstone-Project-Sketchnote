@@ -6,6 +6,7 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -19,6 +20,7 @@ export default function OrderHistoryScreen() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [retryingOrderId, setRetryingOrderId] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -28,9 +30,11 @@ export default function OrderHistoryScreen() {
     try {
       setLoading(true);
       const response = await orderService.getOrderByUserId();
+      console.log("response:", response);
       setOrders(response || []);
     } catch (error) {
       console.error("Error fetching orders:", error);
+      Alert.alert("Error", "Failed to load orders. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -40,6 +44,31 @@ export default function OrderHistoryScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     fetchOrders();
+  };
+
+  const handleRetryPayment = async (orderId, invoiceNumber, totalAmount) => {
+    try {
+      setRetryingOrderId(orderId);
+      await orderService.createOrderRetry(orderId);
+      
+      // Sau khi retry thành công, chuyển đến trang thanh toán
+      navigation.navigate("PaymentSuccess", {
+        orderId,
+        invoiceNumber,
+        totalAmount,
+      });
+      
+      // Refresh lại danh sách orders
+      await fetchOrders();
+    } catch (error) {
+      console.error("Error retrying payment:", error);
+      Alert.alert(
+        "Retry Failed",
+        error.message || "Failed to retry payment. Please try again."
+      );
+    } finally {
+      setRetryingOrderId(null);
+    }
   };
 
   // 🎨 Màu trạng thái pastel đồng nhất
@@ -55,6 +84,8 @@ export default function OrderHistoryScreen() {
         return "#64B5F6"; // Xanh dương sáng
       case "PAID":
         return "#9575CD"; // Tím nhẹ
+      case "FAILED":
+        return "#FF8A80"; // Đỏ cam nhạt
       default:
         return "#BA68C8"; // Dự phòng
     }
@@ -70,6 +101,8 @@ export default function OrderHistoryScreen() {
         return "cancel";
       case "CONFIRMED":
         return "check";
+      case "FAILED":
+        return "error";
       default:
         return "info";
     }
@@ -90,7 +123,7 @@ export default function OrderHistoryScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-            <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
+          <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
           <Text style={styles.headerTitle}>Order History</Text>
           <View style={{ width: 40 }} />
         </View>
@@ -245,6 +278,8 @@ export default function OrderHistoryScreen() {
                     name={
                       order.paymentStatus === "PENDING"
                         ? "payment"
+                        : order.paymentStatus === "FAILED"
+                        ? "error"
                         : "check-circle"
                     }
                     size={14}
@@ -260,6 +295,7 @@ export default function OrderHistoryScreen() {
                   </Text>
                 </View>
 
+                {/* Nút Pay Now cho PENDING */}
                 {order.paymentStatus === "PENDING" && (
                   <Pressable
                     style={styles.checkoutBtn}
@@ -275,6 +311,35 @@ export default function OrderHistoryScreen() {
                     <Icon name="arrow-forward" size={16} color="#FFFFFF" />
                   </Pressable>
                 )}
+
+                {/* Nút Retry Payment cho FAILED & CANCELLED */}
+                {order.paymentStatus === "FAILED" && 
+                 order.orderStatus === "CANCELLED" && (
+                  <Pressable
+                    style={[
+                      styles.checkoutBtn,
+                      { backgroundColor: "#FF6B6B" },
+                      retryingOrderId === order.orderId && { opacity: 0.6 }
+                    ]}
+                    onPress={() =>
+                      handleRetryPayment(
+                        order.orderId,
+                        order.invoiceNumber,
+                        order.totalAmount
+                      )
+                    }
+                    disabled={retryingOrderId === order.orderId}
+                  >
+                    {retryingOrderId === order.orderId ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Icon name="refresh" size={16} color="#FFFFFF" />
+                        <Text style={styles.checkoutBtnText}>Retry Payment</Text>
+                      </>
+                    )}
+                  </Pressable>
+                )}
               </View>
             </View>
           </View>
@@ -283,5 +348,3 @@ export default function OrderHistoryScreen() {
     </SafeAreaView>
   );
 }
-
-

@@ -8,10 +8,11 @@ import {
   Alert,
   Dimensions,
   useWindowDimensions,
+  Pressable,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { blogService } from "../../service/blogService";
-
+import Icon from "react-native-vector-icons/MaterialIcons";
 
 const { width } = Dimensions.get("window");
 
@@ -26,7 +27,9 @@ export default function BlogDetailScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const isTablet = windowWidth >= 768;
   const contentMaxWidth = isTablet ? 1000 : windowWidth;
-
+const handleBackPress = () => {
+    navigation.goBack();
+  };
   // 🧩 Gọi API thật
   const fetchBlogDetail = async () => {
     try {
@@ -67,7 +70,7 @@ export default function BlogDetailScreen() {
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" }}>
         <ActivityIndicator size="large" color="#60A5FA" />
         <Text style={{ marginTop: 16, color: "#64748B", fontSize: 16, fontWeight: "600" }}>
-          Đang tải bài viết...
+         Loading blog...
         </Text>
       </View>
     );
@@ -84,10 +87,17 @@ export default function BlogDetailScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
       <ScrollView showsVerticalScrollIndicator={false}>
+     
+        
         {/* Hero Section */}
         <View style={{ backgroundColor: "#FFFFFF", paddingBottom: 32 }}>
           {/* Header Image */}
+             {/* Back Button */}
+        <Pressable style={{ padding: 10 }} onPress={handleBackPress}>
+          <Icon name="arrow-back" size={24} color="#1F2937" />
+        </Pressable>
           {blog.imageUrl && (
+            
             <Image
               source={{ uri: blog.imageUrl }}
               style={{
@@ -186,7 +196,7 @@ export default function BlogDetailScreen() {
                       color: "#1E40AF",
                     }}
                   >
-                    TÓM TẮT
+                    Summary
                   </Text>
                 </View>
                 <Text
@@ -343,7 +353,7 @@ export default function BlogDetailScreen() {
                 fontWeight: "500",
               }}
             >
-              Hết bài viết
+              End of the blog
             </Text>
           </View>
         </View>

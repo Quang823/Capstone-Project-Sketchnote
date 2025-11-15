@@ -38,7 +38,10 @@ export default function GlobalSidebar() {
         navigation.navigate("Home");
         break;
       case "courses":
-        navigation.navigate("Courses");
+        navigation.navigate("CoursesScreen");
+        break;
+      case "myCourses":
+        navigation.navigate("MyCourses");
         break;
       case "create":
         navigation.navigate("DrawingScreen");
@@ -199,9 +202,18 @@ export default function GlobalSidebar() {
 
           <View style={drawerStyles.divider} />
 
-          {/* Shop Section */}
-          <Text style={drawerStyles.sectionTitle}>SHOP</Text>
-          {shopNavItems.map((item) => (
+          {/* Main Navigation Items */}
+          {[
+            { icon: "home", label: "Trang chủ", id: "home" },
+            { icon: "school", label: "Khóa học", id: "courses" },
+            { icon: "menu-book", label: "Khóa học của tôi", id: "myCourses" },
+            { icon: "add-circle", label: "Tạo mới", id: "create" },
+            { icon: "photo-library", label: "Thư viện", id: "gallery" },
+            { icon: "store", label: "Cửa hàng Resource", id: "store" },
+            { icon: "receipt-long", label: "Lịch sử đơn hàng", id: "orderHistory" },
+            { icon: "dynamic-feed", label: "Xem tất cả blog", id: "blogAll" },
+            { icon: "person-outline", label: "Blog của tôi", id: "blogMine" },
+          ].map((item) => (
             <Pressable
               key={item.id}
               style={({ pressed }) => [

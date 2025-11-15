@@ -7,12 +7,13 @@ import {
   FlatList,
   Modal,
   Dimensions,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
-const TABS = ["All", "Deposits", "Purchases", "Pending"];
+const TABS = ["All", "Deposits", "Expenses", "Pending"];
 const screenWidth = Dimensions.get("window").width;
 
 export default function TransactionHistoryScreen() {
@@ -35,26 +36,70 @@ export default function TransactionHistoryScreen() {
     }).start();
   };
 
-  // Summary
+  // Get transaction config
+  const getTransactionConfig = (transaction) => {
+    const configs = {
+      DEPOSIT: {
+        icon: "account-balance-wallet",
+        color: transaction.status === "SUCCESS" ? "#10B981" : transaction.status === "PENDING" ? "#F59E0B" : "#EF4444",
+        sign: "+",
+        label: transaction.status === "SUCCESS" ? "Deposit Success" : transaction.status === "PENDING" ? "Pending Deposit" : "Deposit Failed",
+        description: `Deposit to wallet${transaction.orderCode ? ` • #${transaction.orderCode}` : ""}`,
+        category: "deposit"
+      },
+      COURSE_FEE: {
+        icon: "school",
+        color: "#8B5CF6",
+        sign: "-",
+        label: "Course Fee",
+        description: "Course enrollment payment",
+        category: "expense"
+      },
+      PAYMENT: {
+        icon: "payment",
+        color: "#EF4444",
+        sign: "-",
+        label: "Payment",
+        description: "Payment transaction",
+        category: "expense"
+      },
+      PURCHASE: {
+        icon: "shopping-cart",
+        color: "#EF4444",
+        sign: "-",
+        label: "Purchase",
+        description: "Product purchase",
+        category: "expense"
+      }
+    };
+
+    return configs[transaction.type] || configs.PURCHASE;
+  };
+
+  // Summary calculations
   const totalDeposit = transactions
-    .filter((t) => t.type === "DEPOSIT")
+    .filter((t) => t.type === "DEPOSIT" && t.status === "SUCCESS")
     .reduce((sum, t) => sum + (t.amount || 0), 0);
-  const totalPurchase = transactions
-    .filter((t) => t.type === "PURCHASE")
+  
+  const totalExpense = transactions
+    .filter((t) => ["COURSE_FEE", "PAYMENT", "PURCHASE"].includes(t.type) && t.status === "SUCCESS")
     .reduce((sum, t) => sum + (t.amount || 0), 0);
+  
   const totalPending = transactions.filter((t) => t.status === "PENDING").length;
 
   // Filtered data
-  const filteredData = transactions.filter((t) => {
-    if (activeTab === "All") return true;
-    if (activeTab === "Deposits") return t.type === "DEPOSIT";
-    if (activeTab === "Purchases") return t.type === "PURCHASE";
-    if (activeTab === "Pending") return t.status === "PENDING";
-  });
+  const filteredData = transactions
+    .filter((t) => {
+      if (activeTab === "All") return true;
+      if (activeTab === "Deposits") return t.type === "DEPOSIT";
+      if (activeTab === "Expenses") return ["COURSE_FEE", "PAYMENT", "PURCHASE"].includes(t.type);
+      if (activeTab === "Pending") return t.status === "PENDING";
+      return true;
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   // Helpers
-  const formatCurrency = (n) =>
-    (n ?? 0).toLocaleString("vi-VN") + " VND";
+  const formatCurrency = (n) => (n ?? 0).toLocaleString("vi-VN") + " VND";
 
   const formatDate = (d) =>
     new Date(d).toLocaleString("vi-VN", {
@@ -66,12 +111,7 @@ export default function TransactionHistoryScreen() {
     });
 
   const renderItem = ({ item }) => {
-    const color =
-      item.status === "SUCCESS"
-        ? "#10B981"
-        : item.status === "PENDING"
-        ? "#F59E0B"
-        : "#EF4444";
+    const config = getTransactionConfig(item);
 
     return (
       <Pressable
@@ -81,40 +121,25 @@ export default function TransactionHistoryScreen() {
           setModalVisible(true);
         }}
       >
-        <View style={[styles.iconWrap, { backgroundColor: `${color}15` }]}>
-          <Icon
-            name={item.type === "DEPOSIT" ? "account-balance-wallet" : "shopping-cart"}
-            size={22}
-            color={color}
-          />
+        <View style={[styles.iconWrap, { backgroundColor: `${config.color}15` }]}>
+          <Icon name={config.icon} size={22} color={config.color} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.cardTitle}>
-            {item.type === "DEPOSIT"
-              ? item.status === "PENDING"
-                ? "Pending Deposit"
-                : "Deposit"
-              : "Purchase"}
-          </Text>
+          <Text style={styles.cardTitle}>{config.label}</Text>
+          <Text style={styles.cardDescription}>{config.description}</Text>
           <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
-          {item.orderCode && (
-            <Text style={styles.cardCode}>Order: {item.orderCode}</Text>
+          {item.externalTransactionId && (
+            <Text style={styles.cardCode}>Ref: {item.externalTransactionId}</Text>
           )}
         </View>
         <View style={{ alignItems: "flex-end" }}>
-          <Text style={[styles.amount, { color }]}>
-            {item.type === "DEPOSIT" ? "+" : "-"}
-            {formatCurrency(item.amount)}
+          <Text style={[styles.amount, { color: config.color }]}>
+            {config.sign}{formatCurrency(item.amount)}
           </Text>
-          <View
-            style={[
-              styles.badge,
-              {
-                backgroundColor: `${color}15`,
-              },
-            ]}
-          >
-            <Text style={[styles.badgeText, { color }]}>{item.status}</Text>
+          <View style={[styles.badge, { backgroundColor: `${config.color}15` }]}>
+            <Text style={[styles.badgeText, { color: config.color }]}>
+              {item.status}
+            </Text>
           </View>
         </View>
       </Pressable>
@@ -135,18 +160,25 @@ export default function TransactionHistoryScreen() {
       {/* Summary */}
       <View style={styles.summaryBox}>
         <View style={styles.summaryItem}>
+          <Icon name="account-balance-wallet" size={20} color="#10B981" style={{ marginBottom: 4 }} />
           <Text style={styles.summaryLabel}>Total Deposit</Text>
-          <Text style={styles.summaryValue}>+{formatCurrency(totalDeposit)}</Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Total Purchase</Text>
-          <Text style={[styles.summaryValue, { color: "#EF4444" }]}>
-            -{formatCurrency(totalPurchase)}
+          <Text style={[styles.summaryValue, { color: "#10B981" }]}>
+            +{formatCurrency(totalDeposit)}
           </Text>
         </View>
+        <View style={styles.divider} />
         <View style={styles.summaryItem}>
+          <Icon name="trending-down" size={20} color="#EF4444" style={{ marginBottom: 4 }} />
+          <Text style={styles.summaryLabel}>Total Expense</Text>
+          <Text style={[styles.summaryValue, { color: "#EF4444" }]}>
+            -{formatCurrency(totalExpense)}
+          </Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.summaryItem}>
+          <Icon name="schedule" size={20} color="#F59E0B" style={{ marginBottom: 4 }} />
           <Text style={styles.summaryLabel}>Pending</Text>
-          <Text style={[styles.summaryValue, { color: "#F59E0B" }]}>
+          <Text style={[styles.summaryValue, { color: "#F59E0B", fontSize: 18 }]}>
             {totalPending}
           </Text>
         </View>
@@ -157,9 +189,7 @@ export default function TransactionHistoryScreen() {
         <Animated.View
           style={[
             styles.tabIndicator,
-            {
-              transform: [{ translateX }],
-            },
+            { transform: [{ translateX }] },
           ]}
         />
         {TABS.map((tab, index) => (
@@ -198,28 +228,97 @@ export default function TransactionHistoryScreen() {
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Transaction Detail</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Transaction Details</Text>
+              <Pressable onPress={() => setModalVisible(false)}>
+                <Icon name="close" size={24} color="#6B7280" />
+              </Pressable>
+            </View>
+
             {selectedTx && (
-              <>
-                <Text style={styles.detailText}>
-                  Type: {selectedTx.type}
-                </Text>
-                <Text style={styles.detailText}>
-                  Status: {selectedTx.status}
-                </Text>
-                <Text style={styles.detailText}>
-                  Amount: {formatCurrency(selectedTx.amount)}
-                </Text>
-                <Text style={styles.detailText}>
-                  Date: {formatDate(selectedTx.createdAt)}
-                </Text>
-                {selectedTx.orderCode && (
-                  <Text style={styles.detailText}>
-                    Order Code: {selectedTx.orderCode}
-                  </Text>
-                )}
-              </>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {(() => {
+                  const config = getTransactionConfig(selectedTx);
+                  return (
+                    <>
+                      {/* Transaction Icon & Type */}
+                      <View style={styles.modalIconSection}>
+                        <View style={[styles.modalIcon, { backgroundColor: `${config.color}15` }]}>
+                          <Icon name={config.icon} size={40} color={config.color} />
+                        </View>
+                        <Text style={styles.modalLabel}>{config.label}</Text>
+                        <Text style={styles.modalAmount}>
+                          {config.sign}{formatCurrency(selectedTx.amount)}
+                        </Text>
+                      </View>
+
+                      {/* Details */}
+                      <View style={styles.detailSection}>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Status</Text>
+                          <View style={[styles.statusBadge, { backgroundColor: `${config.color}15` }]}>
+                            <Text style={[styles.statusBadgeText, { color: config.color }]}>
+                              {selectedTx.status}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Transaction ID</Text>
+                          <Text style={styles.detailValue}>#{selectedTx.transactionId}</Text>
+                        </View>
+
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Type</Text>
+                          <Text style={styles.detailValue}>{selectedTx.type}</Text>
+                        </View>
+
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Date & Time</Text>
+                          <Text style={styles.detailValue}>{formatDate(selectedTx.createdAt)}</Text>
+                        </View>
+
+                        {selectedTx.orderCode && (
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>Order Code</Text>
+                            <Text style={styles.detailValue}>#{selectedTx.orderCode}</Text>
+                          </View>
+                        )}
+
+                        {selectedTx.externalTransactionId && (
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>Reference ID</Text>
+                            <Text style={styles.detailValue}>{selectedTx.externalTransactionId}</Text>
+                          </View>
+                        )}
+
+                        {selectedTx.provider && (
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>Payment Provider</Text>
+                            <Text style={styles.detailValue}>{selectedTx.provider}</Text>
+                          </View>
+                        )}
+
+                        {selectedTx.orderId && (
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>Order ID</Text>
+                            <Text style={styles.detailValue}>#{selectedTx.orderId}</Text>
+                          </View>
+                        )}
+
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Description</Text>
+                          <Text style={[styles.detailValue, { maxWidth: '60%', textAlign: 'right' }]}>
+                            {config.description}
+                          </Text>
+                        </View>
+                      </View>
+                    </>
+                  );
+                })()}
+              </ScrollView>
             )}
+
             <Pressable
               style={styles.closeBtn}
               onPress={() => setModalVisible(false)}
@@ -246,21 +345,23 @@ const styles = {
     borderBottomColor: "#E5E7EB",
   },
   headerTitle: { fontSize: 18, fontWeight: "700", color: "#1F2937" },
+  
   summaryBox: {
     flexDirection: "row",
     justifyContent: "space-around",
     backgroundColor: "#FFFFFF",
     margin: 12,
     borderRadius: 16,
-    paddingVertical: 12,
+    paddingVertical: 16,
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowRadius: 8,
     elevation: 3,
   },
-  summaryItem: { alignItems: "center" },
-  summaryLabel: { fontSize: 12, color: "#6B7280" },
-  summaryValue: { fontSize: 15, fontWeight: "700", color: "#10B981" },
+  summaryItem: { alignItems: "center", flex: 1 },
+  summaryLabel: { fontSize: 11, color: "#6B7280", marginBottom: 4 },
+  summaryValue: { fontSize: 14, fontWeight: "700" },
+  divider: { width: 1, backgroundColor: "#E5E7EB", marginHorizontal: 8 },
 
   tabBar: {
     flexDirection: "row",
@@ -302,8 +403,9 @@ const styles = {
     alignItems: "center",
     marginRight: 12,
   },
-  cardTitle: { fontSize: 15, fontWeight: "600", color: "#1F2937" },
-  cardDate: { fontSize: 12, color: "#6B7280" },
+  cardTitle: { fontSize: 15, fontWeight: "600", color: "#1F2937", marginBottom: 2 },
+  cardDescription: { fontSize: 13, color: "#6B7280", marginBottom: 4 },
+  cardDate: { fontSize: 12, color: "#9CA3AF" },
   cardCode: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
   amount: { fontSize: 15, fontWeight: "700" },
   badge: { borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4 },
@@ -314,23 +416,91 @@ const styles = {
 
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
+    maxHeight: "85%",
   },
-  modalTitle: { fontSize: 18, fontWeight: "700", color: "#1F2937", marginBottom: 10 },
-  detailText: { fontSize: 14, color: "#374151", marginBottom: 4 },
-  closeBtn: {
-    marginTop: 16,
-    backgroundColor: "#3B82F6",
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  modalTitle: { fontSize: 20, fontWeight: "700", color: "#1F2937" },
+  
+  modalIconSection: {
+    alignItems: "center",
+    marginBottom: 24,
+    paddingVertical: 16,
+  },
+  modalIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  modalLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#6B7280",
+    marginBottom: 8,
+  },
+  modalAmount: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#1F2937",
+  },
+
+  detailSection: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 12,
-    borderRadius: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  detailLabel: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  detailValue: {
+    fontSize: 14,
+    color: "#1F2937",
+    fontWeight: "600",
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  closeBtn: {
+    backgroundColor: "#3B82F6",
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: "center",
   },
-  closeBtnText: { color: "#FFF", fontWeight: "600" },
+  closeBtnText: { color: "#FFF", fontWeight: "600", fontSize: 16 },
 };

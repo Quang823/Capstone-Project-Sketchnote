@@ -61,43 +61,46 @@ export default function DesignerHomeScreen() {
   };
 
   const handleNavPress = (navItem) => {
-  setActiveNavItem(navItem);
-  if (drawerOpen) {
-    Animated.parallel([
-      Animated.timing(drawerAnimation, {
-        toValue: -320,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(overlayAnimation, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setDrawerOpen(false);
-      switch (navItem) {
-        case "products":
-          navigation.navigate("DesignerProducts");
-          break;
-        case "analytics":
-          navigation.navigate("DesignerAnalytics");
-          break;
-        case "quickUpload":
-          navigation.navigate("DesignerQuickUpload");
-          break;
-        case "profile":
-          navigation.navigate("ProfileScreen");
-          break;
-        case "settings":
-          navigation.navigate("SettingsScreen");
-          break;
-        default:
-          break;
-      }
-    });
-  }
-};
+    setActiveNavItem(navItem);
+    if (drawerOpen) {
+      Animated.parallel([
+        Animated.timing(drawerAnimation, {
+          toValue: -320,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayAnimation, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setDrawerOpen(false);
+        switch (navItem) {
+          case "products":
+            navigation.navigate("DesignerProducts");
+            break;
+          case "analytics":
+            navigation.navigate("DesignerAnalytics");
+            break;
+          case "quickUpload":
+            navigation.navigate("DesignerQuickUpload");
+            break;
+          case "wallet":
+            navigation.navigate("DesignerWallet");
+            break;
+          case "profile":
+            navigation.navigate("ProfileScreen");
+            break;
+          case "settings":
+            navigation.navigate("SettingsScreen");
+            break;
+          default:
+            break;
+        }
+      });
+    }
+  };
 
 
   const handleQuickAction = (action) => {
@@ -160,6 +163,30 @@ export default function DesignerHomeScreen() {
             Quản lý sản phẩm và theo dõi hiệu suất của bạn
           </Text>
         </View>
+
+        {/* Wallet Card */}
+        <Pressable 
+          style={designerHomeStyles.walletCard}
+          onPress={() => navigation.navigate("DesignerWallet")}
+        >
+          <LinearGradient
+            colors={['#4F46E5', '#7C3AED']}
+            style={designerHomeStyles.walletGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <View style={designerHomeStyles.walletHeader}>
+              <Text style={designerHomeStyles.walletTitle}>Ví Designer</Text>
+              <Icon name="account-balance-wallet" size={24} color="#FFFFFF" />
+            </View>
+            <Text style={designerHomeStyles.walletBalance}>25,000,000 VND</Text>
+            <Text style={designerHomeStyles.walletSubtitle}>Số dư khả dụng</Text>
+            <View style={designerHomeStyles.walletFooter}>
+              <Text style={designerHomeStyles.walletFooterText}>Xem chi tiết</Text>
+              <Icon name="arrow-forward" size={16} color="#FFFFFF" />
+            </View>
+          </LinearGradient>
+        </Pressable>
 
         {/* Quick Stats */}
         <View style={designerHomeStyles.statsContainer}>

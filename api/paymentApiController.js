@@ -7,9 +7,9 @@ export const paymentApiController = {
   depositWallet: async (amount) => {
     return await privateApi.post(
       `/api/payment/deposit?amount=${amount}`,
-      {},
+      null,
       {
-        baseURL: "http://146.190.90.222:8089",
+        baseURL: "http://34.30.141.121:8089",
       }
     );
   },

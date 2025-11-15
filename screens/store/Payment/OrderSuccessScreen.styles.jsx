@@ -1,4 +1,7 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Dimensions } from "react-native";
+
+const { width } = Dimensions.get("window");
+const isTablet = width >= 768;
 
 export const styles = StyleSheet.create({
   // Loading & Error States
@@ -6,32 +9,33 @@ export const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F0F9FF",
     padding: 20,
   },
   loadingText: {
     marginTop: 16,
-    fontSize: 16,
+    fontSize: isTablet ? 18 : 16,
     color: "#64748B",
     fontWeight: "600",
   },
   errorText: {
-    fontSize: 16,
+    fontSize: isTablet ? 18 : 16,
     color: "#EF4444",
     textAlign: "center",
     marginBottom: 20,
     fontWeight: "600",
+    maxWidth: 500,
   },
 
   // Main Layout
   gradient: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F0F9FF",
   },
   container: {
-    padding: 20,
-    paddingTop: 80,
-    maxWidth: 600,
+    padding: isTablet ? 40 : 20,
+    paddingTop: isTablet ? 60 : 40,
+    maxWidth: isTablet ? 900 : 600,
     alignSelf: "center",
     width: "100%",
   },
@@ -39,74 +43,124 @@ export const styles = StyleSheet.create({
   // Success Card
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 28,
+    borderRadius: isTablet ? 24 : 16,
+    padding: isTablet ? 40 : 24,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
+    borderColor: "#BFDBFE",
+    shadowColor: "#3B82F6",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  title: {
-    fontSize: 28,
+  
+  // Dynamic Titles
+  titleSuccess: {
+    fontSize: isTablet ? 36 : 28,
     fontWeight: "700",
     color: "#10B981",
     textAlign: "center",
-    marginBottom: 28,
+    marginBottom: 32,
+    letterSpacing: -0.5,
+  },
+  titleFailed: {
+    fontSize: isTablet ? 36 : 28,
+    fontWeight: "700",
+    color: "#EF4444",
+    textAlign: "center",
+    marginBottom: 32,
+    letterSpacing: -0.5,
+  },
+  titlePending: {
+    fontSize: isTablet ? 36 : 28,
+    fontWeight: "700",
+    color: "#F59E0B",
+    textAlign: "center",
+    marginBottom: 32,
     letterSpacing: -0.5,
   },
 
   // Info Box
   infoBox: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: "#F0F9FF",
+    borderRadius: isTablet ? 16 : 12,
+    padding: isTablet ? 28 : 20,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#BFDBFE",
+  },
+  infoRow: {
+    flexDirection: isTablet ? "row" : "column",
+    justifyContent: isTablet ? "space-between" : "flex-start",
+    alignItems: isTablet ? "center" : "flex-start",
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0F2FE",
   },
   label: {
-    fontSize: 13,
-    color: "#64748B",
+    fontSize: isTablet ? 16 : 14,
+    color: "#475569",
     fontWeight: "600",
-    marginTop: 12,
-    marginBottom: 4,
+    marginBottom: isTablet ? 0 : 6,
+    minWidth: isTablet ? 160 : "auto",
   },
   value: {
-    fontSize: 16,
+    fontSize: isTablet ? 18 : 16,
     color: "#1E293B",
     fontWeight: "700",
-    marginBottom: 4,
   },
-  statusPaid: {
-    fontSize: 14,
-    color: "#10B981",
-    fontWeight: "700",
-    backgroundColor: "#F0FDF4",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
+
+  // Status Badges
+  statusBadge: {
+    paddingHorizontal: isTablet ? 20 : 14,
+    paddingVertical: isTablet ? 10 : 8,
+    borderRadius: isTablet ? 10 : 8,
     alignSelf: "flex-start",
     borderWidth: 1,
-    borderColor: "#BBF7D0",
-    overflow: "hidden",
-    marginBottom: 4,
+    marginTop: isTablet ? 0 : 4,
   },
-  statusConfirmed: {
-    fontSize: 14,
-    color: "#F59E0B",
+  statusSuccess: {
+    backgroundColor: "#D1FAE5",
+    borderColor: "#6EE7B7",
+  },
+  statusFailed: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#FCA5A5",
+  },
+  statusPending: {
+    backgroundColor: "#FEF3C7",
+    borderColor: "#FCD34D",
+  },
+  statusText: {
+    fontSize: isTablet ? 15 : 14,
     fontWeight: "700",
-    backgroundColor: "#FFFBEB",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignSelf: "flex-start",
+  },
+  statusTextSuccess: {
+    color: "#059669",
+  },
+  statusTextFailed: {
+    color: "#DC2626",
+  },
+  statusTextPending: {
+    color: "#D97706",
+  },
+
+  // Warning Box
+  warningBox: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: isTablet ? 14 : 12,
+    padding: isTablet ? 20 : 16,
+    marginTop: 24,
     borderWidth: 1,
-    borderColor: "#FDE68A",
-    overflow: "hidden",
-    marginBottom: 4,
+    borderColor: "#FCD34D",
+  },
+  warningText: {
+    fontSize: isTablet ? 16 : 14,
+    color: "#92400E",
+    fontWeight: "600",
+    lineHeight: isTablet ? 24 : 20,
+    textAlign: "center",
   },
 
   // Items Section
@@ -114,60 +168,79 @@ export const styles = StyleSheet.create({
     marginBottom: 24,
   },
   subTitle: {
-    fontSize: 20,
+    fontSize: isTablet ? 26 : 20,
     fontWeight: "700",
     color: "#1E293B",
-    marginBottom: 16,
+    marginBottom: 20,
     letterSpacing: -0.5,
+  },
+  itemsGrid: {
+    flexDirection: isTablet ? "row" : "column",
+    flexWrap: isTablet ? "wrap" : "nowrap",
+    gap: isTablet ? 16 : 0,
   },
   itemCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 12,
+    borderRadius: isTablet ? 16 : 12,
+    padding: isTablet ? 24 : 18,
+    marginBottom: isTablet ? 0 : 12,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
+    borderColor: "#BFDBFE",
+    shadowColor: "#3B82F6",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+    flex: isTablet ? 1 : undefined,
+    minWidth: isTablet ? "45%" : "100%",
+    maxWidth: isTablet ? "48%" : "100%",
   },
   itemName: {
-    fontSize: 16,
+    fontSize: isTablet ? 18 : 16,
     fontWeight: "700",
     color: "#1E293B",
-    marginBottom: 6,
-    lineHeight: 22,
+    marginBottom: 8,
+    lineHeight: isTablet ? 26 : 22,
   },
   itemDesc: {
-    fontSize: 13,
+    fontSize: isTablet ? 15 : 13,
     color: "#64748B",
-    marginBottom: 10,
+    marginBottom: 12,
     fontWeight: "500",
-    lineHeight: 18,
+    lineHeight: isTablet ? 22 : 18,
   },
   itemPrice: {
-    fontSize: 17,
+    fontSize: isTablet ? 20 : 17,
     fontWeight: "700",
-    color: "#60A5FA",
+    color: "#3B82F6",
   },
 
-  // Back Button
-  backButton: {
-    backgroundColor: "#60A5FA",
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: "center",
+  // Buttons
+  buttonContainer: {
+    flexDirection: isTablet ? "row" : "column",
+    gap: isTablet ? 16 : 12,
     marginTop: 8,
-    shadowColor: "#60A5FA",
+  },
+  button: {
+    paddingVertical: isTablet ? 18 : 16,
+    borderRadius: isTablet ? 14 : 12,
+    alignItems: "center",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 10,
+    elevation: 5,
+    flex: isTablet ? 1 : undefined,
   },
-  backText: {
-    fontSize: 16,
+  backButton: {
+    backgroundColor: "#3B82F6",
+    shadowColor: "#3B82F6",
+  },
+  retryButton: {
+    backgroundColor: "#10B981",
+    shadowColor: "#10B981",
+  },
+  buttonText: {
+    fontSize: isTablet ? 18 : 16,
     fontWeight: "700",
     color: "#FFFFFF",
   },

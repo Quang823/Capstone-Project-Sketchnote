@@ -112,9 +112,9 @@ export default function BlogScreen() {
     >
       {/* 🔹 Header */}
       <View style={blogStyles.header}>
-        <SidebarToggleButton iconSize={24} />
-
-        <Text style={blogStyles.headerTitle}>Bài viết</Text>
+      <SidebarToggleButton iconSize={24}  />
+        
+        <Text style={blogStyles.headerTitle}>Blog</Text>
         <View style={blogStyles.headerRight} />
       </View>
 
@@ -129,7 +129,7 @@ export default function BlogScreen() {
           />
           <TextInput
             style={blogStyles.searchInput}
-            placeholder="Tìm kiếm bài viết..."
+            placeholder="Find blog..."
             value={searchQuery}
             onChangeText={setSearchQuery}
           />

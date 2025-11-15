@@ -6,6 +6,7 @@ import HomeScreen from "../screens/home/HomeScreen/HomeScreen";
 import CourseDetailScreen from "../screens/courses/CourseDetailScreen/CourseDetailScreen";
 import CoursesScreen from "../screens/courses/CoursesScreen/CoursesScreen";
 import LessonScreen from "../screens/courses/LessonScreen/LessonScreen";
+import MyCoursesScreen from "../screens/courses/MyCoursesScreen/MyCoursesScreen";
 
 import BlogScreen from "../screens/blog/BlogScreen";
 import BlogDetailScreen from "../screens/blog/BlogDetailScreen";
@@ -29,6 +30,7 @@ import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/D
 import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
 import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
 import DesignerSubscription from "../screens/store/DesignerSubscription/DesignerSubscription";
+import DesignerWalletScreen from "../screens/designer/DesignerWalletScreen/DesignerWalletScreen";
 import ProfileScreen from "../screens/auth/ProfileScreen/ProfileScreen";
 const Stack = createNativeStackNavigator();
 
@@ -47,6 +49,7 @@ export default function AppNavigator() {
       <Stack.Screen name="CourseDetailScreen" component={CourseDetailScreen} />
       <Stack.Screen name="CoursesScreen" component={CoursesScreen} />
       <Stack.Screen name="LessonScreen" component={LessonScreen} />
+      <Stack.Screen name="MyCourses" component={MyCoursesScreen} />
       <Stack.Screen name="BlogList" component={BlogScreen} />
       <Stack.Screen name="BlogDetail" component={BlogDetailScreen} />
       <Stack.Screen name="ResourceStore" component={ResourceStoreScreen} />
@@ -96,6 +99,7 @@ export default function AppNavigator() {
         name="DesignerQuickUpload"
         component={DesignerQuickUploadScreen}
       />
+      <Stack.Screen name="DesignerWallet" component={DesignerWalletScreen} />
     </Stack.Navigator>
   );
 }

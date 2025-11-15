@@ -61,4 +61,34 @@ export const resourceService = {
           throw new Error(message);
         }
     },
+    getProjectByUserId : async ()=>{
+        try {
+            const response = await resourceController.getProjectByUserId();
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Get project by user id failed.";
+          throw new Error(message);
+        }
+    },
+    uploadTemplate: async (projectId,data)=>{
+        try {
+            const response = await resourceController.uploadTemplate(projectId,data);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Upload template failed.";
+          throw new Error(message);
+        }
+    },
+    getResourceProjectByUserId : async ()=>{
+        try {
+            const response = await resourceController.getResourceProjectByUserId();
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Get resource project by user id failed.";
+          throw new Error(message);
+        }
+    }
 }
