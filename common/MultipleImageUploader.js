@@ -87,7 +87,7 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
       }
     } catch (error) {
       console.error("❌ Upload error:", error);
-      Alert.alert("Lỗi", error.message || "Không thể upload ảnh");
+      Alert.alert("Error", error.message || "Cannot upload image");
     } finally {
       setUploading(false);
     }
@@ -95,12 +95,12 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
 
   const removeImage = (index) => {
     Alert.alert(
-      "Xác nhận",
-      "Bạn có chắc muốn xóa ảnh này?",
+      "Confirm",
+      "Are you sure you want to delete this image?",
       [
-        { text: "Hủy", style: "cancel" },
+        { text: "Cancel", style: "cancel" },
         {
-          text: "Xóa",
+          text: "Delete",
           style: "destructive",
           onPress: () => {
             setImages((prev) => prev.filter((_, i) => i !== index));
@@ -117,7 +117,7 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
         onPress={pickImage}
         disabled={uploading || images.length >= maxImages}
         style={{
-          backgroundColor: images.length >= maxImages ? "#9CA3AF" : "#4F46E5",
+          backgroundColor: images.length >= maxImages ? "#9CA3AF" : "#31c3e7ff",
           paddingHorizontal: 12,
           paddingVertical: 8,
           borderRadius: 6,
@@ -130,15 +130,15 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
       >
         <Icon name="add-photo-alternate" size={16} color="#fff" />
         <Text style={{ color: "#fff", marginLeft: 6, fontSize: 14, fontWeight: "500" }}>
-          Thêm ảnh ({images.length}/{maxImages})
+          Add Image ({images.length}/{maxImages})
         </Text>
       </Pressable>
 
       {/* Loading Indicator */}
       {uploading && (
         <View style={{ marginTop: 12, alignItems: "center" }}>
-          <ActivityIndicator size="small" color="#4F46E5" />
-          <Text style={{ marginTop: 6, color: "#666", fontSize: 12 }}>Đang upload...</Text>
+          <ActivityIndicator size="small" color="#2eabefff" />
+          <Text style={{ marginTop: 6, color: "#666", fontSize: 12 }}>Uploading...</Text>
         </View>
       )}
 

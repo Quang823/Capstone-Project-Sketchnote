@@ -121,9 +121,9 @@ export default function DesignerHomeScreen() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Chào buổi sáng";
-    if (hour < 18) return "Chào buổi chiều";
-    return "Chào buổi tối";
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
   };
 
   return (
@@ -147,7 +147,7 @@ export default function DesignerHomeScreen() {
         </Pressable>
         <View style={designerHomeStyles.headerCenter}>
           <Text style={designerHomeStyles.headerTitle}>Designer Dashboard</Text>
-          <Text style={designerHomeStyles.headerSubtitle}>Quản lý sản phẩm & thống kê</Text>
+          <Text style={designerHomeStyles.headerSubtitle}>Manage products & analytics</Text>
         </View>
         <Pressable style={designerHomeStyles.notificationButton}>
           <Icon name="notifications" size={24} color="#1F2937" />
@@ -160,7 +160,7 @@ export default function DesignerHomeScreen() {
         <View style={designerHomeStyles.welcomeSection}>
           <Text style={designerHomeStyles.greeting}>{getGreeting()}, Designer!</Text>
           <Text style={designerHomeStyles.welcomeText}>
-            Quản lý sản phẩm và theo dõi hiệu suất của bạn
+            Manage your products and monitor performance
           </Text>
         </View>
 
@@ -176,13 +176,13 @@ export default function DesignerHomeScreen() {
             end={{ x: 1, y: 0 }}
           >
             <View style={designerHomeStyles.walletHeader}>
-              <Text style={designerHomeStyles.walletTitle}>Ví Designer</Text>
+              <Text style={designerHomeStyles.walletTitle}>Designer Wallet</Text>
               <Icon name="account-balance-wallet" size={24} color="#FFFFFF" />
             </View>
             <Text style={designerHomeStyles.walletBalance}>25,000,000 VND</Text>
-            <Text style={designerHomeStyles.walletSubtitle}>Số dư khả dụng</Text>
+            <Text style={designerHomeStyles.walletSubtitle}>Available balance</Text>
             <View style={designerHomeStyles.walletFooter}>
-              <Text style={designerHomeStyles.walletFooterText}>Xem chi tiết</Text>
+              <Text style={designerHomeStyles.walletFooterText}>View details</Text>
               <Icon name="arrow-forward" size={16} color="#FFFFFF" />
             </View>
           </LinearGradient>
@@ -196,7 +196,7 @@ export default function DesignerHomeScreen() {
             </View>
             <View style={designerHomeStyles.statContent}>
               <Text style={designerHomeStyles.statNumber}>12</Text>
-              <Text style={designerHomeStyles.statLabel}>Sản phẩm đã đăng</Text>
+              <Text style={designerHomeStyles.statLabel}>Published products</Text>
             </View>
           </View>
 
@@ -206,7 +206,7 @@ export default function DesignerHomeScreen() {
             </View>
             <View style={designerHomeStyles.statContent}>
               <Text style={designerHomeStyles.statNumber}>2.5M</Text>
-              <Text style={designerHomeStyles.statLabel}>Tổng lượt tải</Text>
+              <Text style={designerHomeStyles.statLabel}>Total downloads</Text>
             </View>
           </View>
 
@@ -216,14 +216,14 @@ export default function DesignerHomeScreen() {
             </View>
             <View style={designerHomeStyles.statContent}>
               <Text style={designerHomeStyles.statNumber}>15.2M</Text>
-              <Text style={designerHomeStyles.statLabel}>Doanh thu (VND)</Text>
+              <Text style={designerHomeStyles.statLabel}>Revenue (VND)</Text>
             </View>
           </View>
         </View>
 
         {/* Quick Actions */}
         <View style={designerHomeStyles.quickActionsSection}>
-          <Text style={designerHomeStyles.sectionTitle}>Thao tác nhanh</Text>
+          <Text style={designerHomeStyles.sectionTitle}>Quick actions</Text>
           <View style={designerHomeStyles.quickActionsGrid}>
             <Pressable
               style={designerHomeStyles.quickActionCard}
@@ -236,8 +236,8 @@ export default function DesignerHomeScreen() {
                 style={designerHomeStyles.quickActionGradient}
               >
                 <Icon name="upload" size={32} color="#FFFFFF" />
-                <Text style={designerHomeStyles.quickActionText}>Đăng nhanh</Text>
-                <Text style={designerHomeStyles.quickActionSubtext}>Template mới</Text>
+                <Text style={designerHomeStyles.quickActionText}>Quick upload</Text>
+                <Text style={designerHomeStyles.quickActionSubtext}>New template</Text>
               </LinearGradient>
             </Pressable>
 
@@ -252,8 +252,8 @@ export default function DesignerHomeScreen() {
                 style={designerHomeStyles.quickActionGradient}
               >
                 <Icon name="inventory" size={32} color="#FFFFFF" />
-                <Text style={designerHomeStyles.quickActionText}>Sản phẩm</Text>
-                <Text style={designerHomeStyles.quickActionSubtext}>Quản lý</Text>
+                <Text style={designerHomeStyles.quickActionText}>Products</Text>
+                <Text style={designerHomeStyles.quickActionSubtext}>Manage</Text>
               </LinearGradient>
             </Pressable>
 
@@ -268,8 +268,8 @@ export default function DesignerHomeScreen() {
                 style={designerHomeStyles.quickActionGradient}
               >
                 <Icon name="analytics" size={32} color="#FFFFFF" />
-                <Text style={designerHomeStyles.quickActionText}>Thống kê</Text>
-                <Text style={designerHomeStyles.quickActionSubtext}>Hiệu suất</Text>
+                <Text style={designerHomeStyles.quickActionText}>Analytics</Text>
+                <Text style={designerHomeStyles.quickActionSubtext}>Performance</Text>
               </LinearGradient>
             </Pressable>
 
@@ -284,8 +284,8 @@ export default function DesignerHomeScreen() {
                 style={designerHomeStyles.quickActionGradient}
               >
                 <Icon name="create" size={32} color="#FFFFFF" />
-                <Text style={designerHomeStyles.quickActionText}>Vẽ mới</Text>
-                <Text style={designerHomeStyles.quickActionSubtext}>Tạo template</Text>
+                <Text style={designerHomeStyles.quickActionText}>Create drawing</Text>
+                <Text style={designerHomeStyles.quickActionSubtext}>Build template</Text>
               </LinearGradient>
             </Pressable>
           </View>
@@ -293,17 +293,17 @@ export default function DesignerHomeScreen() {
 
         {/* Recent Activity */}
         <View style={designerHomeStyles.activitySection}>
-          <Text style={designerHomeStyles.sectionTitle}>Hoạt động gần đây</Text>
+          <Text style={designerHomeStyles.sectionTitle}>Recent activity</Text>
           <View style={designerHomeStyles.activityList}>
             <View style={designerHomeStyles.activityItem}>
               <View style={designerHomeStyles.activityIcon}>
                 <Icon name="upload" size={20} color="#10B981" />
               </View>
               <View style={designerHomeStyles.activityContent}>
-                <Text style={designerHomeStyles.activityTitle}>Template mới đã đăng</Text>
-                <Text style={designerHomeStyles.activityTime}>2 giờ trước</Text>
+                <Text style={designerHomeStyles.activityTitle}>New template published</Text>
+                <Text style={designerHomeStyles.activityTime}>2 hours ago</Text>
               </View>
-              <Text style={designerHomeStyles.activityStatus}>Thành công</Text>
+              <Text style={designerHomeStyles.activityStatus}>Success</Text>
             </View>
 
             <View style={designerHomeStyles.activityItem}>
@@ -311,10 +311,10 @@ export default function DesignerHomeScreen() {
                 <Icon name="download" size={20} color="#3B82F6" />
               </View>
               <View style={designerHomeStyles.activityContent}>
-                <Text style={designerHomeStyles.activityTitle}>Template được tải xuống</Text>
-                <Text style={designerHomeStyles.activityTime}>5 giờ trước</Text>
+                <Text style={designerHomeStyles.activityTitle}>Template downloaded</Text>
+                <Text style={designerHomeStyles.activityTime}>5 hours ago</Text>
               </View>
-              <Text style={designerHomeStyles.activityStatus}>+150 lượt</Text>
+              <Text style={designerHomeStyles.activityStatus}>+150 downloads</Text>
             </View>
 
             <View style={designerHomeStyles.activityItem}>
@@ -322,8 +322,8 @@ export default function DesignerHomeScreen() {
                 <Icon name="attach-money" size={20} color="#F59E0B" />
               </View>
               <View style={designerHomeStyles.activityContent}>
-                <Text style={designerHomeStyles.activityTitle}>Thanh toán nhận được</Text>
-                <Text style={designerHomeStyles.activityTime}>1 ngày trước</Text>
+                <Text style={designerHomeStyles.activityTitle}>Payment received</Text>
+                <Text style={designerHomeStyles.activityTime}>1 day ago</Text>
               </View>
               <Text style={designerHomeStyles.activityStatus}>+500K VND</Text>
             </View>

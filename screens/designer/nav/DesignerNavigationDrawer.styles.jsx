@@ -103,6 +103,18 @@ export const designerDrawerStyles = StyleSheet.create({
     paddingTop: 16,
     paddingHorizontal: 12,
   },
+  sectionWrapper: {
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    marginLeft: 12,
+  },
   drawerItem: {
     flexDirection: 'row',
     alignItems: 'center',
