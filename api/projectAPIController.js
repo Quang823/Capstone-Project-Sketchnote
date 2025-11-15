@@ -76,6 +76,7 @@ export const projectAPIController = {
               {
                 pageNumber: pageData.pageNumber,
                 strokeUrl: pageData.strokeUrl,
+                snapshotUrl: pageData.snapshotUrl || "",
               },
             ],
           };

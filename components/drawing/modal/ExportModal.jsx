@@ -9,6 +9,7 @@ import {
   Pressable,
   Switch,
 } from "react-native";
+import { Image } from "expo-image";
 
 const ExportModal = ({ visible, onClose, onExport }) => {
   const [selected, setSelected] = useState("editable");
@@ -19,11 +20,23 @@ const ExportModal = ({ visible, onClose, onExport }) => {
     {
       key: "editable",
       label: "Editable PDF",
-      desc: "Editable PDF can be edited in other apps after being exported",
+      icon: "https://cdn-icons-png.flaticon.com/512/1827/1827933.png",
     },
-    { key: "noneditable", label: "Non-editable PDF" },
-    { key: "picture", label: "Picture" },
-    { key: "sketchnote", label: "SketchNote" },
+    {
+      key: "noneditable",
+      label: "Non-editable PDF",
+      icon: "https://cdn-icons-png.flaticon.com/512/565/565655.png",
+    },
+    {
+      key: "picture",
+      label: "Picture",
+      icon: "https://cdn-icons-png.flaticon.com/512/747/747968.png",
+    },
+    {
+      key: "sketchnote",
+      label: "SketchNote",
+      icon: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763174915/ctsrrmlfcxxmsmvb9yhm.png",
+    },
   ];
 
   return (
@@ -55,12 +68,14 @@ const ExportModal = ({ visible, onClose, onExport }) => {
                 ]}
                 onPress={() => setSelected(opt.key)}
               >
-                <View
+                <Image
+                  source={{ uri: opt.icon }}
                   style={[
                     styles.optionIcon,
                     selected === opt.key && styles.optionIconSelected,
                   ]}
                 />
+
                 <Text style={styles.optionLabel}>{opt.label}</Text>
               </Pressable>
             ))}
@@ -114,12 +129,12 @@ export default ExportModal;
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
   },
   modal: {
-    backgroundColor: "#111",
+    backgroundColor: "#ffffff",
     width: "50%",
     borderRadius: 16,
     padding: 20,
@@ -130,68 +145,83 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  cancel: { color: "#fff", fontSize: 16 },
-  title: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  exportOnly: { color: "#4da6ff", fontSize: 16 },
+  cancel: { color: "#007AFF", fontSize: 16 },
+  title: { color: "#000", fontSize: 16, fontWeight: "bold" },
+  exportOnly: { color: "#007AFF", fontSize: 16 },
+
   optionRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 10,
   },
+
   option: {
     flex: 1,
     alignItems: "center",
     paddingVertical: 20,
     marginHorizontal: 4,
     borderRadius: 12,
-    backgroundColor: "#2b2b2b",
+    backgroundColor: "#F4F6F8",
+    borderWidth: 1,
+    borderColor: "#ddd",
   },
   optionSelected: {
-    backgroundColor: "#3c3c3c",
-    borderWidth: 1,
-    borderColor: "#4da6ff",
+    backgroundColor: "#EAF4FF",
+    borderColor: "#007AFF",
+    borderWidth: 1.5,
   },
+
   optionIcon: {
-    width: 32,
-    height: 32,
-    backgroundColor: "#555",
+    width: 30,
+    height: 30,
     borderRadius: 8,
     marginBottom: 8,
+    contentFit: "contain",
+    backgroundColor: "transparent",
   },
-  optionIconSelected: { backgroundColor: "#4da6ff" },
-  optionLabel: { color: "#fff", fontSize: 13 },
+  optionIconSelected: {
+    tintColor: "#007AFF", // chỉ đổi màu khi selected
+  },
+
+  optionLabel: { color: "#000", fontSize: 13 },
+
   warningText: {
     fontSize: 12,
-    color: "#ffb84d",
+    color: "#FFC107",
     marginTop: 8,
   },
-  label: { color: "#bbb", fontSize: 13, marginBottom: 4 },
+
+  label: { color: "#333", fontSize: 13, marginBottom: 4 },
+
   input: {
-    backgroundColor: "#222",
+    backgroundColor: "#F2F2F2",
     borderRadius: 8,
     padding: 10,
-    color: "#fff",
+    color: "#000",
   },
+
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
     marginVertical: 12,
   },
   checkboxText: {
-    color: "#ccc",
+    color: "#333",
     fontSize: 13,
     flex: 1,
     marginLeft: 8,
   },
+
   exportBtn: {
-    backgroundColor: "#00aaff",
+    backgroundColor: "#007AFF",
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
   },
   exportText: { color: "#fff", fontWeight: "bold" },
+
   savePath: {
-    color: "#666",
+    color: "#999",
     fontSize: 12,
     marginTop: 8,
     textAlign: "center",

@@ -879,13 +879,16 @@ export default function DrawingScreen({ route }) {
   }, [noteConfig?.projectId, sanitizeStroke]);
 
   // [REWRITTEN] 💾 SAVE with offline support
-  const handleSaveFile = async () => {
+  const handleSaveFile = async (options = {}) => {
+    const silent = !!options.silent;
     if (isSaving) {
-      toast({
-        title: "Saving...",
-        description: "The saving process is in progress. Please wait.",
-        variant: "default",
-      });
+      if (!silent) {
+        toast({
+          title: "Saving...",
+          description: "The saving process is in progress. Please wait.",
+          variant: "default",
+        });
+      }
 
       return;
     }
@@ -908,7 +911,7 @@ export default function DrawingScreen({ route }) {
       return;
     }
 
-    setIsSaving(true);
+    if (!silent) setIsSaving(true);
 
     const pagesData = multiPageCanvasRef.current.getAllPagesData();
     if (!pagesData || pagesData.length === 0) {
@@ -928,32 +931,38 @@ export default function DrawingScreen({ route }) {
         await offlineStorage.saveProjectLocally(localKey, page.dataObject);
       }
 
-      toast({
-        title: "Saved Locally",
-        description: "All pages have been saved to your device.",
-        variant: "default",
-      });
+      if (!silent) {
+        toast({
+          title: "Saved Locally",
+          description: "All pages have been saved to your device.",
+          variant: "default",
+        });
+      }
     } catch (localSaveError) {
       console.error("❌ [DrawingScreen] Error saving locally:", localSaveError);
-      toast({
-        title: "Storage Error",
-        description: "Unable to save data to the device storage.",
-        variant: "destructive",
-      });
-      setIsSaving(false);
+      if (!silent) {
+        toast({
+          title: "Storage Error",
+          description: "Unable to save data to the device storage.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+      }
       return;
     }
 
     // Check network status
     const netState = await NetInfo.fetch();
     if (!netState.isConnected || !netState.isInternetReachable) {
-      toast({
-        title: "Saved Offline",
-        description:
-          "Your data has been saved locally. It will sync when you're online.",
-        variant: "default",
-      });
-      setIsSaving(false);
+      if (!silent) {
+        toast({
+          title: "Saved Offline",
+          description:
+            "Your data has been saved locally. It will sync when you're online.",
+          variant: "default",
+        });
+        setIsSaving(false);
+      }
       // TODO: Add pages to a persistent sync queue if needed
       return;
     }
@@ -969,35 +978,88 @@ export default function DrawingScreen({ route }) {
 
       const uploadedPagesResults = await Promise.all(uploadPromises);
 
+      const snapshots =
+        multiPageCanvasRef.current?.getAllPagesSnapshots?.() || [];
+      const snapshotUploads = snapshots.map(async (snap) => {
+        const tempUri =
+          (FileSystem.cacheDirectory || FileSystem.documentDirectory) +
+          `snapshot_${noteConfig.projectId}_${snap.pageNumber}.png`;
+        await FileSystem.writeAsStringAsync(
+          tempUri,
+          snap.base64,
+          { encoding: FileSystem.EncodingType.Base64 },
+        );
+        try {
+          const res = await uploadToCloudinary(tempUri);
+          return { pageNumber: snap.pageNumber, url: res?.secure_url };
+        } finally {
+          try {
+            await FileSystem.deleteAsync(tempUri, { idempotent: true });
+          } catch {}
+        }
+      });
+      const uploadedSnapshots = await Promise.all(snapshotUploads);
+
       const finalPayload = {
         projectId: noteConfig.projectId,
-        pages: uploadedPagesResults.map((result) => ({
-          pageNumber: result.pageNumber,
-          strokeUrl: result.url,
-        })),
+        pages: uploadedPagesResults.map((result) => {
+          const snap = uploadedSnapshots.find(
+            (s) => s.pageNumber === result.pageNumber,
+          );
+          return {
+            pageNumber: result.pageNumber,
+            strokeUrl: result.url,
+            snapshotUrl: snap?.url || "",
+          };
+        }),
       };
 
       await projectService.createPage(finalPayload);
 
-      toast({
-        title: "Success!",
-        description:
-          "Your project has been saved and synchronized successfully.",
-        variant: "default",
-      });
+      try {
+        const refreshed = await projectService.getProjectById(
+          noteConfig.projectId,
+        );
+        const serverPages = Array.isArray(refreshed?.pages)
+          ? refreshed.pages
+          : [];
+        multiPageCanvasRef.current?.refreshSnapshots?.(serverPages);
+      } catch {}
+
+      if (!silent) {
+        toast({
+          title: "Success!",
+          description:
+            "Your project has been saved and synchronized successfully.",
+          variant: "default",
+        });
+      }
     } catch (syncError) {
       console.error("❌ [DrawingScreen] Sync failed:", syncError);
-      toast({
-        title: "Sync Failed",
-        description:
-          "Your data is safe locally. We'll try syncing again later.",
-        variant: "destructive",
-      });
+      if (!silent) {
+        toast({
+          title: "Sync Failed",
+          description:
+            "Your data is safe locally. We'll try syncing again later.",
+          variant: "destructive",
+        });
+      }
       // TODO: Add pages to a persistent sync queue if sync fails
     } finally {
-      setIsSaving(false);
+      if (!silent) setIsSaving(false);
     }
   };
+
+  useEffect(() => {
+    const id = setInterval(async () => {
+      try {
+        if (!isSaving) {
+          await handleSaveFile({ silent: true });
+        }
+      } catch {}
+    }, 60000);
+    return () => clearInterval(id);
+  }, [noteConfig?.projectId]);
 
   // 📤 EXPORT (local PDF/PNG)
   const handleExportFile = async (options) => {

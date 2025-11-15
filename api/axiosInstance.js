@@ -5,11 +5,11 @@ import axios from "axios";
 // const API_URL = process.env.EXPO_PUBLIC_API_URL;
 // const API_URL2 = process.env.EXPO_PUBLIC_API_URL2;
 
-const API_URL = "http://139.59.119.65:8888/";
-const API_URL2 = "http://146.190.90.222:8087/";
+// const API_URL = "http://139.59.119.65:8888/";
+// const API_URL2 = "http://146.190.90.222:8087/";
 
-// const API_URL = "https://sketchnote.litecsys.com/";
-// const API_URL2 = "https://sketchnote.litecsys.com/";
+const API_URL = "https://sketchnote.litecsys.com/";
+const API_URL2 = "https://sketchnote.litecsys.com/";
 // 🟢 API 1 (server chính)
 export const publicApi = axios.create({
   baseURL: API_URL,

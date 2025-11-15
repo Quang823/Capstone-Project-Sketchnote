@@ -129,8 +129,8 @@ const DocumentBrowserContent = ({
                 page.id != null
                   ? String(page.id)
                   : page.pageId != null
-                    ? String(page.pageId)
-                    : `page-${index}`;
+                  ? String(page.pageId)
+                  : `page-${index}`;
 
               return (
                 <Pressable
@@ -145,9 +145,9 @@ const DocumentBrowserContent = ({
                   onPress={() => handlePageSelect(pageId)}
                 >
                   <View style={styles.pageThumbnail}>
-                    {page.thumbnail ? (
+                    {page.snapshotUrl ? (
                       <LazyImage
-                        source={{ uri: page.thumbnail }}
+                        source={{ uri: page.snapshotUrl }}
                         style={styles.thumbnailImage}
                       />
                     ) : (
@@ -168,7 +168,7 @@ const DocumentBrowserContent = ({
                   >
                     <Text style={styles.pageNumber}>
                       {isListLayout
-                        ? (page.pageNumber ?? index + 1)
+                        ? page.pageNumber ?? index + 1
                         : `Page ${page.pageNumber ?? index + 1}`}
                     </Text>
 

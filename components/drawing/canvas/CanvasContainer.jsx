@@ -26,6 +26,7 @@ import Animated, {
   useAnimatedReaction,
 } from "react-native-reanimated";
 import { File } from "expo-file-system";
+import { ImageFormat } from "@shopify/react-native-skia";
 import { Dimensions } from "react-native";
 
 const PAGE_MARGIN_H = 24;
@@ -694,6 +695,15 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         return rendererRef.current.getSnapshot();
       }
       return null;
+    },
+    getSnapshotBase64: (quality = 90) => {
+      try {
+        const img = rendererRef.current?.getSnapshot();
+        if (!img) return null;
+        return img.encodeToBase64(ImageFormat.PNG, quality);
+      } catch {
+        return null;
+      }
     },
     // Hoàn tác
     undo: () => {
