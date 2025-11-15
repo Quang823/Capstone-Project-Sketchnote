@@ -25,7 +25,7 @@ import { MotiView } from "moti";
 import LottieView from "lottie-react-native";
 import AnimatedBackground from "../LoginScreen/AnimatedBackground";
 import { registerStyles } from "./RegisterScreen.styles";
-
+import { authService } from "../../../service/authService";
 export default function RegisterScreen({ onBack }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -44,7 +44,6 @@ export default function RegisterScreen({ onBack }) {
   const { toast } = useToast();
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
-  const { register } = useContext(AuthContext);
 
   const buttonScale = useSharedValue(1);
   const rotateIcon = useSharedValue(0);
@@ -89,14 +88,32 @@ export default function RegisterScreen({ onBack }) {
         variant: "destructive",
       });
     }
+
     if (password !== confirmPassword) {
-      return toast({ title: "Passwords do not match", variant: "destructive" });
+      return toast({
+        title: "Passwords do not match",
+        variant: "destructive",
+      });
     }
 
     setIsLoading(true);
     try {
-      await register({ email, password, firstName, lastName, avatarUrl: null });
-      toast({ title: "Account created successfully!", variant: "success" });
+      const payload = {
+        email,
+        password,
+        firstName,
+        lastName,
+        avatarUrl: null,
+      };
+
+      const res = await authService.register(payload);
+
+      // Backend có thể trả về { message, result, ... } → ta check message
+      toast({
+        title: res?.message || "Account created successfully!",
+        variant: "success",
+      });
+
       navigation.navigate("Login");
     } catch (error) {
       toast({
@@ -204,7 +221,8 @@ export default function RegisterScreen({ onBack }) {
                         Share & Inspire
                       </Text>
                       <Text style={registerStyles.featureDesc}>
-                        Post sketches, follow other creators, and get inspired !!!
+                        Post sketches, follow other creators, and get inspired
+                        !!!
                       </Text>
                     </View>
                   </MotiView>

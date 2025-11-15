@@ -226,7 +226,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         backgroundColor: noteConfig.cover.color,
         template: noteConfig.cover.template,
         imageUrl: noteConfig.cover.imageUrl,
-        thumbnail: noteConfig.imageUrl, // Use project's main image for thumbnail
+        thumbnail: noteConfig.imageUrl,
+        snapshotUrl: null,
       });
     }
 
@@ -242,7 +243,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             imageUrl: noteConfig.cover?.imageUrl,
             pageNumber: p.pageNumber,
             strokeUrl: p.strokeUrl,
-            thumbnail: noteConfig.imageUrl, // Use project's main image for thumbnail
+            thumbnail: noteConfig.imageUrl,
+            snapshotUrl: p.snapshotUrl || null,
           });
         } else {
           const id = p.pageId ? Number(p.pageId) : Number(p.pageNumber) + 10000;
@@ -253,7 +255,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             template: paperTemplate,
             pageNumber: p.pageNumber,
             strokeUrl: p.strokeUrl,
-            thumbnail: null, // No thumbnail for regular pages
+            snapshotUrl: p.snapshotUrl || null,
           });
         }
       });
@@ -263,7 +265,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         type: "paper",
         backgroundColor: paperBg,
         template: paperTemplate,
-        thumbnail: null,
+        snapshotUrl: null,
       });
     }
 
@@ -271,6 +273,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   }, [noteConfig]);
 
   const [pages, setPages] = useState(initialPages);
+  const snapshotSignaturesRef = useRef({});
 
   // Initialize layers for initial pages
   // IMPORTANT: Only run once when component mounts, NOT when setPageLayers changes
@@ -989,6 +992,55 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         }
       }
       return allPagesData;
+    },
+    getAllPagesSnapshots: () => {
+      const out = [];
+      for (let index = 0; index < pages.length; index++) {
+        const page = pages[index];
+        if (!page || page.id == null) continue;
+        const strokes =
+          pageRefs.current[page.id]?.getStrokes?.() || [];
+        const count = strokes.length;
+        const lastId = count > 0 ? strokes[count - 1]?.id : "";
+        const sig = `${count}:${lastId}`;
+        if (snapshotSignaturesRef.current[page.id] === sig) continue;
+        const b64 = pageRefs.current[page.id]?.getSnapshotBase64?.(85);
+        if (!b64) continue;
+        snapshotSignaturesRef.current[page.id] = sig;
+        const fallbackNumber = index + 1;
+        const pageNumber =
+          typeof page.pageNumber === "number"
+            ? page.pageNumber
+            : page.type === "cover"
+            ? 1
+            : fallbackNumber;
+        out.push({ pageId: page.id, pageNumber, base64: b64 });
+      }
+      return out;
+    },
+    refreshSnapshots: (remotePages = []) => {
+      try {
+        const map = new Map(
+          remotePages
+            .filter((p) => p && typeof p.pageNumber === "number")
+            .map((p) => [p.pageNumber, p.snapshotUrl || null]),
+        );
+        setPages((prev) => {
+          if (!Array.isArray(prev) || prev.length === 0) return prev;
+          return prev.map((pg, idx) => {
+            const fallbackNumber = idx + 1;
+            const num =
+              typeof pg.pageNumber === "number"
+                ? pg.pageNumber
+                : pg.type === "cover"
+                ? 1
+                : fallbackNumber;
+            const snap = map.get(num);
+            if (snap == null || snap === pg.snapshotUrl) return pg;
+            return { ...pg, snapshotUrl: snap };
+          });
+        });
+      } catch (e) {}
     },
 
     // [NEW] Append strokes to a specific page, used for incremental loading.
