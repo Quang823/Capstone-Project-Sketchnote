@@ -6,13 +6,13 @@ import { useNavigation } from "@react-navigation/native";
 import { getUserFromToken } from "../../../utils/AuthUtils";
 import { authService } from "../../../service/authService";
 
-export default function DesignerNavigationDrawer({ 
-  drawerOpen, 
-  drawerAnimation, 
-  overlayAnimation, 
-  activeNavItem, 
-  onToggleDrawer, 
-  onNavPress 
+export default function DesignerNavigationDrawer({
+  drawerOpen,
+  drawerAnimation,
+  overlayAnimation,
+  activeNavItem,
+  onToggleDrawer,
+  onNavPress,
 }) {
   const [user, setUser] = useState(null);
   const navigation = useNavigation();
@@ -28,9 +28,72 @@ export default function DesignerNavigationDrawer({
   const handleLogout = async () => {
     const ok = await authService.logout();
     if (ok) {
-      navigation.replace("Login"); 
+      navigation.replace("Login");
     }
   };
+
+  const mainNavItems = [
+    { icon: "dashboard", label: "Bảng điều khiển", id: "home" },
+    { icon: "inventory", label: "Quản lý sản phẩm", id: "products" },
+    { icon: "analytics", label: "Thống kê & Báo cáo", id: "analytics" },
+  ];
+
+  const workspaceNavItems = [
+    { icon: "upload", label: "Đăng nhanh template", id: "quickUpload" },
+    { icon: "create", label: "Tạo mới", id: "create" },
+    { icon: "photo-library", label: "Thư viện", id: "gallery" },
+  ];
+
+  const accountNavItems = [
+    { icon: "account-balance-wallet", label: "Ví Designer", id: "wallet" },
+    { icon: "person", label: "Hồ sơ", id: "profile" },
+    { icon: "settings", label: "Cài đặt", id: "settings" },
+  ];
+
+  const renderNavItems = (items) =>
+    items.map((item) => {
+      const isActive = activeNavItem === item.id;
+      return (
+        <Pressable
+          key={item.id}
+          style={({ pressed }) => [
+            designerDrawerStyles.drawerItem,
+            isActive && designerDrawerStyles.drawerItemActive,
+            pressed && { opacity: 0.7 },
+          ]}
+          onPress={() => onNavPress(item.id)}
+        >
+          <View
+            style={[
+              designerDrawerStyles.iconContainer,
+              isActive && designerDrawerStyles.iconContainerActive,
+            ]}
+          >
+            <Icon
+              name={item.icon}
+              size={20}
+              color={isActive ? "#4F46E5" : "#6B7280"}
+            />
+          </View>
+          <Text
+            style={[
+              designerDrawerStyles.drawerText,
+              isActive && designerDrawerStyles.drawerTextActive,
+            ]}
+          >
+            {item.label}
+          </Text>
+        </Pressable>
+      );
+    });
+
+  const renderNavSection = (title, items, isLastSection = false) => (
+    <View key={title} style={designerDrawerStyles.sectionWrapper}>
+      <Text style={designerDrawerStyles.sectionTitle}>{title}</Text>
+      {renderNavItems(items)}
+      {!isLastSection && <View style={designerDrawerStyles.divider} />}
+    </View>
+  );
 
   return (
     <>
@@ -77,231 +140,9 @@ export default function DesignerNavigationDrawer({
         
         {/* Navigation Items */}
         <ScrollView style={designerDrawerStyles.drawerItems}>
-          {/* Dashboard */}
-          <Pressable 
-            style={[
-              designerDrawerStyles.drawerItem, 
-              activeNavItem === 'home' && designerDrawerStyles.drawerItemActive
-            ]}
-            onPress={() => onNavPress('home')}
-          >
-            <View style={[
-              designerDrawerStyles.iconContainer,
-              activeNavItem === 'home' && designerDrawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="dashboard" 
-                size={20} 
-                color={activeNavItem === 'home' ? "#FFFFFF" : "#6B7280"} 
-              />
-            </View>
-            <Text 
-              style={[
-                designerDrawerStyles.drawerText,
-                activeNavItem === 'home' && designerDrawerStyles.drawerTextActive
-              ]}
-            >
-              Dashboard
-            </Text>
-          </Pressable>
-
-          {/* Products Management */}
-          <Pressable 
-            style={[
-              designerDrawerStyles.drawerItem, 
-              activeNavItem === 'products' && designerDrawerStyles.drawerItemActive
-            ]}
-            onPress={() => onNavPress('products')}
-          >
-            <View style={[
-              designerDrawerStyles.iconContainer,
-              activeNavItem === 'products' && designerDrawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="inventory" 
-                size={20} 
-                color={activeNavItem === 'products' ? "#FFFFFF" : "#6B7280"} 
-              />
-            </View>
-            <Text 
-              style={[
-                designerDrawerStyles.drawerText,
-                activeNavItem === 'products' && designerDrawerStyles.drawerTextActive
-              ]}
-            >
-              Quản lý sản phẩm
-            </Text>
-          </Pressable>
-
-          {/* Analytics */}
-          <Pressable 
-            style={[
-              designerDrawerStyles.drawerItem, 
-              activeNavItem === 'analytics' && designerDrawerStyles.drawerItemActive
-            ]}
-            onPress={() => onNavPress('analytics')}
-          >
-            <View style={[
-              designerDrawerStyles.iconContainer,
-              activeNavItem === 'analytics' && designerDrawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="analytics" 
-                size={20} 
-                color={activeNavItem === 'analytics' ? "#FFFFFF" : "#6B7280"} 
-              />
-            </View>
-            <Text 
-              style={[
-                designerDrawerStyles.drawerText,
-                activeNavItem === 'analytics' && designerDrawerStyles.drawerTextActive
-              ]}
-            >
-              Thống kê & Báo cáo
-            </Text>
-          </Pressable>
-
-          {/* Quick Upload */}
-          <Pressable 
-            style={[
-              designerDrawerStyles.drawerItem, 
-              activeNavItem === 'quickUpload' && designerDrawerStyles.drawerItemActive
-            ]}
-            onPress={() => onNavPress('quickUpload')}
-          >
-            <View style={[
-              designerDrawerStyles.iconContainer,
-              activeNavItem === 'quickUpload' && designerDrawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="upload" 
-                size={20} 
-                color={activeNavItem === 'quickUpload' ? "#FFFFFF" : "#6B7280"} 
-              />
-            </View>
-            <Text 
-              style={[
-                designerDrawerStyles.drawerText,
-                activeNavItem === 'quickUpload' && designerDrawerStyles.drawerTextActive
-              ]}
-            >
-              Đăng nhanh template
-            </Text>
-          </Pressable>
-
-          {/* Create New */}
-          <Pressable 
-            style={[
-              designerDrawerStyles.drawerItem, 
-              activeNavItem === 'create' && designerDrawerStyles.drawerItemActive
-            ]}
-            onPress={() => onNavPress('create')}
-          >
-            <View style={[
-              designerDrawerStyles.iconContainer,
-              activeNavItem === 'create' && designerDrawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="create" 
-                size={20} 
-                color={activeNavItem === 'create' ? "#FFFFFF" : "#6B7280"} 
-              />
-            </View>
-            <Text 
-              style={[
-                designerDrawerStyles.drawerText,
-                activeNavItem === 'create' && designerDrawerStyles.drawerTextActive
-              ]}
-            >
-              Tạo mới
-            </Text>
-          </Pressable>
-
-          {/* Gallery */}
-          <Pressable 
-            style={[
-              designerDrawerStyles.drawerItem, 
-              activeNavItem === 'gallery' && designerDrawerStyles.drawerItemActive
-            ]}
-            onPress={() => onNavPress('gallery')}
-          >
-            <View style={[
-              designerDrawerStyles.iconContainer,
-              activeNavItem === 'gallery' && designerDrawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="photo-library" 
-                size={20} 
-                color={activeNavItem === 'gallery' ? "#FFFFFF" : "#6B7280"} 
-              />
-            </View>
-            <Text 
-              style={[
-                designerDrawerStyles.drawerText,
-                activeNavItem === 'gallery' && designerDrawerStyles.drawerTextActive
-              ]}
-            >
-              Thư viện
-            </Text>
-          </Pressable>
-
-          <View style={designerDrawerStyles.divider} />
-
-          {/* Profile */}
-          <Pressable 
-            style={[
-              designerDrawerStyles.drawerItem, 
-              activeNavItem === 'profile' && designerDrawerStyles.drawerItemActive
-            ]}
-            onPress={() => onNavPress('profile')}
-          >
-            <View style={[
-              designerDrawerStyles.iconContainer,
-              activeNavItem === 'profile' && designerDrawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="person" 
-                size={20} 
-                color={activeNavItem === 'profile' ? "#FFFFFF" : "#6B7280"} 
-              />
-            </View>
-            <Text 
-              style={[
-                designerDrawerStyles.drawerText,
-                activeNavItem === 'profile' && designerDrawerStyles.drawerTextActive
-              ]}
-            >
-              Hồ sơ
-            </Text>
-          </Pressable>
-          
-          {/* Settings */}
-          <Pressable 
-            style={[
-              designerDrawerStyles.drawerItem, 
-              activeNavItem === 'settings' && designerDrawerStyles.drawerItemActive
-            ]}
-            onPress={() => onNavPress('settings')}
-          >
-            <View style={[
-              designerDrawerStyles.iconContainer,
-              activeNavItem === 'settings' && designerDrawerStyles.iconContainerActive
-            ]}>
-              <Icon 
-                name="settings" 
-                size={20} 
-                color={activeNavItem === 'settings' ? "#FFFFFF" : "#6B7280"} 
-              />
-            </View>
-            <Text 
-              style={[
-                designerDrawerStyles.drawerText,
-                activeNavItem === 'settings' && designerDrawerStyles.drawerTextActive
-              ]}
-            >
-              Cài đặt
-            </Text>
-          </Pressable>
+          {renderNavSection("MAIN", mainNavItems)}
+          {renderNavSection("WORKSPACE", workspaceNavItems)}
+          {renderNavSection("ACCOUNT", accountNavItems, true)}
         </ScrollView>
         
         {/* Footer */}

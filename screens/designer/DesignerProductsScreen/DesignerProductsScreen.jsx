@@ -45,7 +45,7 @@ export default function DesignerProductsScreen() {
       setCurrentPage(page);
     } catch (error) {
       console.error("Error fetching products:", error);
-      Alert.alert("Lỗi", "Không thể tải danh sách sản phẩm");
+      Alert.alert("Error", "Unable to load the product list");
     } finally {
       setLoading(false);
     }
@@ -131,14 +131,14 @@ const getStatusText = (status) => {
   const handleEditProduct = (product) => {
     setShowDetailModal(false);
     // Navigate to edit screen or show edit modal
-    Alert.alert("Chỉnh sửa", `Chỉnh sửa: ${product.name}`);
+    Alert.alert("Edit", `Edit: ${product.name}`);
   };
 
   const handleDeleteProduct = (product) => {
-    Alert.alert("Xóa sản phẩm", `Bạn có chắc muốn xóa "${product.name}"?`, [
-      { text: "Hủy", style: "cancel" },
+    Alert.alert("Delete product", `Are you sure you want to delete "${product.name}"?`, [
+      { text: "Cancel", style: "cancel" },
       {
-        text: "Xóa",
+        text: "Delete",
         style: "destructive",
         onPress: () => {
           setProducts(
@@ -161,8 +161,8 @@ const getStatusText = (status) => {
       )
     );
     Alert.alert(
-      "Thành công",
-      `Sản phẩm đã được ${product.isActive ? "tắt" : "bật"}!`
+      "Success",
+      `Product has been ${product.isActive ? "disabled" : "enabled"}!`
     );
   };
 
@@ -182,7 +182,7 @@ const getStatusText = (status) => {
         <Pressable onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
-        <Text style={designerProductsStyles.headerTitle}>Quản lý sản phẩm</Text>
+        <Text style={designerProductsStyles.headerTitle}>Product Management</Text>
         <Pressable onPress={() => setShowFilterModal(true)}>
           <Icon name="filter-list" size={24} color="#1F2937" />
         </Pressable>
@@ -192,17 +192,17 @@ const getStatusText = (status) => {
       <View style={designerProductsStyles.statsContainer}>
         <View style={designerProductsStyles.statCard}>
           <Text style={designerProductsStyles.statNumber}>{stats.total}</Text>
-          <Text style={designerProductsStyles.statLabel}>Tổng sản phẩm</Text>
+          <Text style={designerProductsStyles.statLabel}>Total products</Text>
         </View>
         <View style={designerProductsStyles.statCard}>
           <Text style={designerProductsStyles.statNumber}>{stats.active}</Text>
-          <Text style={designerProductsStyles.statLabel}>Hoạt động</Text>
+          <Text style={designerProductsStyles.statLabel}>Active</Text>
         </View>
         <View style={designerProductsStyles.statCard}>
           <Text style={designerProductsStyles.statNumber}>
             {stats.inactive}
           </Text>
-          <Text style={designerProductsStyles.statLabel}>Không hoạt động</Text>
+          <Text style={designerProductsStyles.statLabel}>Inactive</Text>
         </View>
       </View>
 
@@ -212,7 +212,7 @@ const getStatusText = (status) => {
           <Icon name="search" size={20} color="#6B7280" />
           <TextInput
             style={designerProductsStyles.searchInput}
-            placeholder="Tìm kiếm sản phẩm..."
+            placeholder="Search products..."
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -251,7 +251,7 @@ const getStatusText = (status) => {
         {loading ? (
           <View style={designerProductsStyles.emptyState}>
             <Text style={designerProductsStyles.emptyStateTitle}>
-              Đang tải...
+              Loading...
             </Text>
           </View>
         ) : filteredProducts.map((product) => (
@@ -307,7 +307,7 @@ const getStatusText = (status) => {
                 <View style={designerProductsStyles.statItem}>
                   <Icon name="calendar-today" size={14} color="#6B7280" />
                   <Text style={designerProductsStyles.statText}>
-                    Phát hành: {formatDate(product.releaseDate)}
+                    Released: {formatDate(product.releaseDate)}
                   </Text>
                 </View>
               </View>
@@ -355,12 +355,12 @@ const getStatusText = (status) => {
           <View style={designerProductsStyles.emptyState}>
             <Icon name="inventory" size={64} color="#D1D5DB" />
             <Text style={designerProductsStyles.emptyStateTitle}>
-              Không có sản phẩm
+              No products
             </Text>
             <Text style={designerProductsStyles.emptyStateText}>
               {searchQuery
-                ? "Không tìm thấy sản phẩm phù hợp"
-                : "Bạn chưa có sản phẩm nào"}
+                ? "No matching products found"
+                : "You haven't added any products yet"}
             </Text>
           </View>
         )}
@@ -385,11 +385,11 @@ const getStatusText = (status) => {
               marginRight: 8,
             }}
           >
-            <Text style={{ color: "#FFF" }}>Trước</Text>
+            <Text style={{ color: "#FFF" }}>Prev</Text>
           </Pressable>
 
           <Text style={{ fontSize: 16, color: "#374151" }}>
-            Trang {currentPage + 1} / {totalPages}
+            Page {currentPage + 1} / {totalPages}
           </Text>
 
           <Pressable
@@ -404,7 +404,7 @@ const getStatusText = (status) => {
               marginLeft: 8,
             }}
           >
-            <Text style={{ color: "#FFF" }}>Sau</Text>
+            <Text style={{ color: "#FFF" }}>Next</Text>
           </Pressable>
         </View>
       )}
@@ -419,14 +419,14 @@ const getStatusText = (status) => {
         <View style={designerProductsStyles.modalOverlay}>
           <View style={designerProductsStyles.modalContent}>
             <View style={designerProductsStyles.modalHeader}>
-              <Text style={designerProductsStyles.modalTitle}>Bộ lọc</Text>
+              <Text style={designerProductsStyles.modalTitle}>Filters</Text>
               <Pressable onPress={() => setShowFilterModal(false)}>
                 <Icon name="close" size={24} color="#6B7280" />
               </Pressable>
             </View>
             
            <View style={designerProductsStyles.modalBody}>
-  <Text style={designerProductsStyles.modalSectionTitle}>Trạng thái</Text>
+  <Text style={designerProductsStyles.modalSectionTitle}>Status</Text>
   {["ALL", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED", "DELETED"].map((status) => (
     <Pressable
       key={status}
@@ -459,7 +459,7 @@ const getStatusText = (status) => {
           <View style={designerProductsStyles.detailModalContent}>
             <View style={designerProductsStyles.modalHeader}>
               <Text style={designerProductsStyles.modalTitle}>
-                Chi tiết sản phẩm
+                Product details
               </Text>
               <Pressable onPress={() => setShowDetailModal(false)}>
                 <Icon name="close" size={24} color="#6B7280" />
@@ -493,7 +493,7 @@ const getStatusText = (status) => {
                   {/* Product Info */}
                   <View style={designerProductsStyles.detailSection}>
                     <Text style={designerProductsStyles.detailLabel}>
-                      Tên sản phẩm
+                      Product name
                     </Text>
                     <Text style={designerProductsStyles.detailValue}>
                       {selectedProduct.name}
@@ -502,7 +502,7 @@ const getStatusText = (status) => {
 
                   <View style={designerProductsStyles.detailSection}>
                     <Text style={designerProductsStyles.detailLabel}>
-                      Mô tả
+                      Description
                     </Text>
                     <Text style={designerProductsStyles.detailValue}>
                       {selectedProduct.description}
@@ -512,7 +512,7 @@ const getStatusText = (status) => {
                   <View style={designerProductsStyles.detailRow}>
                     <View style={designerProductsStyles.detailSection}>
                       <Text style={designerProductsStyles.detailLabel}>
-                        Giá
+                        Price
                       </Text>
                       <Text style={designerProductsStyles.detailValue}>
                         {formatCurrency(selectedProduct.price)}
@@ -521,7 +521,7 @@ const getStatusText = (status) => {
 
                     <View style={designerProductsStyles.detailSection}>
                       <Text style={designerProductsStyles.detailLabel}>
-                        Loại
+                        Type
                       </Text>
                       <Text style={designerProductsStyles.detailValue}>
                         {selectedProduct.type}
@@ -532,7 +532,7 @@ const getStatusText = (status) => {
                   <View style={designerProductsStyles.detailRow}>
                     <View style={designerProductsStyles.detailSection}>
                       <Text style={designerProductsStyles.detailLabel}>
-                        Ngày phát hành
+                        Release date
                       </Text>
                       <Text style={designerProductsStyles.detailValue}>
                         {formatDate(selectedProduct.releaseDate)}
@@ -541,7 +541,7 @@ const getStatusText = (status) => {
 
                     <View style={designerProductsStyles.detailSection}>
                       <Text style={designerProductsStyles.detailLabel}>
-                        Ngày hết hạn
+                        Expiration date
                       </Text>
                       <Text style={designerProductsStyles.detailValue}>
                         {formatDate(selectedProduct.expiredTime)}
@@ -551,7 +551,7 @@ const getStatusText = (status) => {
 
                   <View style={designerProductsStyles.detailSection}>
                     <Text style={designerProductsStyles.detailLabel}>
-                      Trạng thái
+                      Status
                     </Text>
                     <View
                       style={[
@@ -574,7 +574,7 @@ const getStatusText = (status) => {
                   {selectedProduct.designerInfo && (
                     <View style={designerProductsStyles.detailSection}>
                       <Text style={designerProductsStyles.detailLabel}>
-                        Thông tin Designer
+                        Designer info
                       </Text>
                       <Text style={designerProductsStyles.detailValue}>
                         {selectedProduct.designerInfo.firstName}{" "}
@@ -591,7 +591,7 @@ const getStatusText = (status) => {
                     selectedProduct.items.length > 0 && (
                       <View style={designerProductsStyles.detailSection}>
                         <Text style={designerProductsStyles.detailLabel}>
-                          Số lượng items: {selectedProduct.items.length}
+                          Items count: {selectedProduct.items.length}
                         </Text>
                       </View>
                     )}
@@ -607,7 +607,7 @@ const getStatusText = (status) => {
                     >
                       <Icon name="edit" size={20} color="#FFFFFF" />
                       <Text style={designerProductsStyles.detailButtonText}>
-                        Chỉnh sửa
+                        Edit
                       </Text>
                     </Pressable>
 
@@ -629,7 +629,7 @@ const getStatusText = (status) => {
                         color="#FFFFFF"
                       />
                       <Text style={designerProductsStyles.detailButtonText}>
-                        {selectedProduct.isActive ? "Tắt" : "Bật"}
+                        {selectedProduct.isActive ? "Deactivate" : "Activate"}
                       </Text>
                     </Pressable>
 
@@ -642,7 +642,7 @@ const getStatusText = (status) => {
                     >
                       <Icon name="delete" size={20} color="#FFFFFF" />
                       <Text style={designerProductsStyles.detailButtonText}>
-                        Xóa
+                        Delete
                       </Text>
                     </Pressable>
                   </View>

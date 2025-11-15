@@ -32,7 +32,7 @@ export default function DesignerQuickUploadScreen() {
   const [images, setImages] = useState([]);
   const [itemUrls, setItemUrls] = useState([""]); // Array of text URLs
   const [isUploading, setIsUploading] = useState(false);
-const [itemSource, setItemSource] = useState("upload"); // hoặc "project"
+const [itemSource, setItemSource] = useState("upload"); // or "project"
 const [localItems, setLocalItems] = useState([]);
 const [projects, setProjects] = useState([]);
 const [selectedProjectId, setSelectedProjectId] = useState(null);
@@ -100,7 +100,7 @@ const getToday = () => {
   
 // ====== HANDLE UPLOAD ======
 const handleUpload = async () => {
-  // Validation chung
+  // Shared validation
   if (
     !name.trim() ||
     !description.trim() ||
@@ -116,7 +116,7 @@ const handleUpload = async () => {
     return;
   }
 
-  // Kiểm tra ảnh chỉ khi chọn "Upload từ máy"
+  // Only validate banner images when uploading locally
   if (itemSource === "upload" && images.length === 0) {
     Toast.show({
       type: "error",
@@ -126,7 +126,7 @@ const handleUpload = async () => {
     return;
   }
 
-  // Validation riêng cho từng loại
+  // Source-specific validation
   if (itemSource === "upload" && localItems.length === 0) {
     Toast.show({
       type: "error",
@@ -153,7 +153,7 @@ const handleUpload = async () => {
       isThumbnail: index === 0,
     }));
 
-    // Nếu chọn "Upload từ máy" - gọi uploadResource
+    // Uploading directly from local files -> call uploadResource
     if (itemSource === "upload") {
       const template = {
         name,
@@ -171,14 +171,14 @@ const handleUpload = async () => {
 
       await resourceService.uploadResource(template);
     } 
-    // Nếu chọn "Chọn từ project" - gọi uploadTemplate
+    // Selecting from existing project -> call uploadTemplate
     else if (itemSource === "project") {
-      // Lấy thông tin project được chọn
+      // Get selected project info
       const selectedProject = projects.find(
         (p) => p.projectId === selectedProjectId
       );
 
-      // Body cho uploadTemplate - chỉ dùng ảnh từ project
+      // Request payload for uploadTemplate - reuse project image
       const templateData = {
         name,
         description,
@@ -350,7 +350,7 @@ const handleUpload = async () => {
     Item Upload *
   </Text>
 
-  {/* Chọn nguồn item: upload hoặc project */}
+  {/* Choose item source: upload or project */}
   <View
     style={{
       flexDirection: "row",
@@ -375,7 +375,7 @@ const handleUpload = async () => {
           fontWeight: "500",
         }}
       >
-        Upload từ máy
+        Upload from device
       </Text>
     </Pressable>
 
@@ -395,16 +395,16 @@ const handleUpload = async () => {
           fontWeight: "500",
         }}
       >
-        Chọn từ project
+        Select from project
       </Text>
     </Pressable>
   </View>
 
-  {/* Nếu người dùng chọn “Upload từ máy” */}
+  {/* If the user chooses “Upload from device” */}
   {itemSource === "upload" && (
     <View style={{ marginTop: 15 }}>
       <Text style={designerQuickUploadStyles.sectionTitle}>
-        Upload Item Images ({localItems.length})
+        Upload item images ({localItems.length})
       </Text>
       <MultipleImageUploader
         onImageUploaded={(url) =>
@@ -415,16 +415,16 @@ const handleUpload = async () => {
     </View>
   )}
 
-  {/* Nếu người dùng chọn “Project” */}
+  {/* If the user chooses “Project” */}
   {itemSource === "project" && (
     <View style={{ marginTop: 15 }}>
       <Text style={designerQuickUploadStyles.sectionTitle}>
-        Chọn Project ({projects.length})
+        Select project ({projects.length})
       </Text>
 
       {projects.length === 0 ? (
         <Text style={{ color: "#6B7280", marginTop: 8 }}>
-          Không có project nào.
+          No projects available.
         </Text>
       ) : (
         projects.map((proj) => (

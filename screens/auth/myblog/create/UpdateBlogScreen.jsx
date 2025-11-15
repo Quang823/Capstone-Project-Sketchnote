@@ -6,14 +6,17 @@ import {
   Pressable,
   ActivityIndicator,
   ScrollView,
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { styles } from "./CreateBlogScreen.styles";
-
 import { blogService } from "../../../../service/blogService";
 import ImageUploader from "../../../../common/ImageUploader";
+
+const { width } = Dimensions.get('window');
+const isTablet = width >= 768;
 
 export default function UpdateBlogScreen({ route, navigation }) {
   const { blog } = route.params;
@@ -24,13 +27,15 @@ export default function UpdateBlogScreen({ route, navigation }) {
   const [imageUrl, setImageUrl] = useState("");
   const [contents, setContents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // --- Fetch blog chi tiết ---
   useEffect(() => {
     const fetchBlogDetail = async () => {
       try {
+        setInitialLoading(true);
         const res = await blogService.getBlogById(blog.id);
-        const fullBlog = res.result || res; // tuỳ API structure
+        const fullBlog = res.result || res;
 
         setTitle(fullBlog.title || "");
         setSummary(fullBlog.summary || "");
@@ -60,6 +65,8 @@ export default function UpdateBlogScreen({ route, navigation }) {
           text1: "Failed to load blog data",
           text2: err.message,
         });
+      } finally {
+        setInitialLoading(false);
       }
     };
 
@@ -79,7 +86,7 @@ export default function UpdateBlogScreen({ route, navigation }) {
     ]);
   };
 
- 
+  // --- Remove Section ---
   const removeContentSection = async (index) => {
     const section = contents[index];
 
@@ -88,7 +95,7 @@ export default function UpdateBlogScreen({ route, navigation }) {
         await blogService.deleteContent(section.id);
         Toast.show({
           type: "success",
-          text1: "Section deleted successfully!",
+          text1: "✅ Section deleted successfully!",
         });
       } catch (err) {
         console.error("❌ Delete content failed:", err);
@@ -97,11 +104,10 @@ export default function UpdateBlogScreen({ route, navigation }) {
           text1: "Delete failed",
           text2: err.message,
         });
-        return; // Dừng nếu xóa thất bại
+        return;
       }
     }
 
-    // Xóa trong state
     const newContents = contents.filter((_, i) => i !== index);
     const reindexed = newContents.map((item, i) => ({ ...item, index: i }));
     setContents(reindexed);
@@ -183,64 +189,135 @@ export default function UpdateBlogScreen({ route, navigation }) {
     }
   };
 
+  // --- Loading State ---
+  if (initialLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+        <Text style={{ marginTop: 16, fontSize: 16, color: "#6B7280" }}>
+          Loading blog data...
+        </Text>
+      </View>
+    );
+  }
+
   // --- Render ---
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
+          <Icon name="arrow-back" size={isTablet ? 28 : 24} color="#1F2937" />
         </Pressable>
-        <Text style={styles.headerTitle}>Update Blog</Text>
+        <Text style={styles.headerTitle}>✏️ Update Blog</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Title */}
-        <TextInput
-          style={styles.input}
-          placeholder="Enter title..."
-          value={title}
-          onChangeText={setTitle}
-        />
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        {/* Main Content - 2 columns on tablet */}
+        <View style={styles.mainContent}>
+          {/* Left Column - Basic Info */}
+          <View style={styles.leftColumn}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter an engaging title..."
+              placeholderTextColor="#9CA3AF"
+              value={title}
+              onChangeText={setTitle}
+            />
 
-        {/* Summary */}
-        <TextInput
-          style={[styles.input, { height: 80, textAlignVertical: "top" }]}
-          placeholder="Enter summary..."
-          value={summary}
-          onChangeText={setSummary}
-          multiline
-        />
+            <TextInput
+              style={[styles.input, { height: isTablet ? 140 : 80, textAlignVertical: "top" }]}
+              placeholder="Write a compelling summary..."
+              placeholderTextColor="#9CA3AF"
+              value={summary}
+              onChangeText={setSummary}
+              multiline
+            />
+          </View>
 
-        {/* Main Image */}
-        <View style={styles.imageSection}>
-          <Text style={styles.sectionLabel}>Main Image</Text>
-          <ImageUploader
-            onUploaded={(url) => setImageUrl(url)}
-            existingImage={imageUrl}
-          />
+          {/* Right Column - Main Image */}
+          <View style={styles.rightColumn}>
+            <View style={styles.imageSection}>
+              <Text style={styles.sectionLabel}>📸 Featured Image</Text>
+              <ImageUploader
+                onUploaded={(url) => setImageUrl(url)}
+                existingImage={imageUrl}
+              />
+            </View>
+          </View>
         </View>
 
-        {/* Content Sections */}
-        <View style={styles.contentSections}>
-          <Text style={styles.sectionLabel}>Content Sections</Text>
+        {/* Divider */}
+        <View style={styles.divider} />
 
+        {/* Content Sections */}
+        <View style={styles.contentSectionsHeader}>
+          <Text style={styles.sectionLabel}>📝 Content Sections</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ fontSize: isTablet ? 16 : 14, color: "#6B7280", fontWeight: "600", marginRight: 8 }}>
+              {contents.length} {contents.length === 1 ? 'Section' : 'Sections'}
+            </Text>
+            <View style={{
+              backgroundColor: '#FEF3C7',
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              borderRadius: 12,
+            }}>
+              <Text style={{ fontSize: 12, color: '#92400E', fontWeight: '700' }}>
+                {contents.filter(c => c.id).length} Existing | {contents.filter(c => !c.id).length} New
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.contentCardsContainer}>
           {contents.map((section, index) => (
             <View key={section.id || `new-${index}`} style={styles.contentCard}>
               <View style={styles.contentHeader}>
-                <Text style={styles.contentIndex}>
-                  Section {index + 1} {section.id ? "(Existing)" : "(New)"}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={styles.contentIndex}>Section {index + 1}</Text>
+                  {section.id ? (
+                    <View style={{
+                      backgroundColor: '#DBEAFE',
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                    }}>
+                      <Text style={{ fontSize: 11, color: '#1E40AF', fontWeight: '700' }}>
+                        EXISTING
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={{
+                      backgroundColor: '#D1FAE5',
+                      paddingHorizontal: 10,
+                      paddingVertical: 4,
+                      borderRadius: 12,
+                    }}>
+                      <Text style={{ fontSize: 11, color: '#065F46', fontWeight: '700' }}>
+                        NEW
+                      </Text>
+                    </View>
+                  )}
+                </View>
                 {contents.length > 1 && (
-                  <Pressable onPress={() => removeContentSection(index)}>
-                    <Icon name="delete" size={20} color="#EF4444" />
+                  <Pressable 
+                    onPress={() => removeContentSection(index)}
+                    style={styles.deleteButton}
+                  >
+                    <Icon name="delete" size={isTablet ? 22 : 20} color="#EF4444" />
                   </Pressable>
                 )}
               </View>
 
               <TextInput
                 style={styles.input}
-                placeholder="Section title..."
+                placeholder="Section title (optional)..."
+                placeholderTextColor="#9CA3AF"
                 value={section.sectionTitle}
                 onChangeText={(text) =>
                   updateContentSection(index, "sectionTitle", text)
@@ -248,8 +325,9 @@ export default function UpdateBlogScreen({ route, navigation }) {
               />
 
               <TextInput
-                style={[styles.input, { height: 120, textAlignVertical: "top" }]}
-                placeholder="Section content..."
+                style={[styles.input, { height: isTablet ? 140 : 120, textAlignVertical: "top" }]}
+                placeholder="Write your section content here..."
+                placeholderTextColor="#9CA3AF"
                 value={section.content}
                 onChangeText={(text) =>
                   updateContentSection(index, "content", text)
@@ -258,7 +336,7 @@ export default function UpdateBlogScreen({ route, navigation }) {
               />
 
               <View style={styles.imageSection}>
-                <Text style={styles.imageLabel}>Section Image (optional)</Text>
+                <Text style={styles.imageLabel}>🖼️ Section Image (optional)</Text>
                 <ImageUploader
                   onUploaded={(url) =>
                     updateContentSection(index, "contentUrl", url)
@@ -268,29 +346,34 @@ export default function UpdateBlogScreen({ route, navigation }) {
               </View>
             </View>
           ))}
-
-          {/* Add Section Button */}
-          <Pressable onPress={addContentSection} style={styles.addSectionButton}>
-            <Icon name="add-circle-outline" size={20} color="#4F46E5" />
-            <Text style={styles.addSectionText}>Add Another Section</Text>
-          </Pressable>
         </View>
 
-        {/* Update Button */}
-        <Pressable onPress={handleUpdateBlog} disabled={loading}>
-          <LinearGradient
-            colors={["#6366F1", "#8B5CF6"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.submitButton}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.submitText}>Update Blog</Text>
-            )}
-          </LinearGradient>
+        {/* Add Section Button */}
+        <Pressable onPress={addContentSection} style={styles.addSectionButton}>
+          <Icon name="add-circle-outline" size={isTablet ? 24 : 20} color="#4F46E5" />
+          <Text style={styles.addSectionText}>Add Another Section</Text>
         </Pressable>
+
+        {/* Update Button */}
+        <View style={styles.submitButtonContainer}>
+          <Pressable onPress={handleUpdateBlog} disabled={loading}>
+            <LinearGradient
+              colors={["#6366F1", "#8B5CF6"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.submitButton}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size={isTablet ? "large" : "small"} />
+              ) : (
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Icon name="update" size={isTablet ? 24 : 20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.submitText}>Update Blog</Text>
+                </View>
+              )}
+            </LinearGradient>
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );

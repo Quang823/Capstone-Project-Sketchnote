@@ -146,7 +146,7 @@ export default function DesignerWalletScreen() {
         <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#1E293B" />
         </Pressable>
-        <Text style={styles.headerTitle}>Ví Designer</Text>
+        <Text style={styles.headerTitle}> Designer Wallet</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -163,7 +163,7 @@ export default function DesignerWalletScreen() {
         >
           <View style={styles.balanceHeader}>
             <View>
-              <Text style={styles.balanceLabel}>Số dư khả dụng</Text>
+              <Text style={styles.balanceLabel}>SAvailable Balance</Text>
               <Text style={styles.balanceAmount}>
                 {formatCurrency(walletData.balance)}
               </Text>
@@ -176,17 +176,17 @@ export default function DesignerWalletScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{formatCurrency(walletData.totalEarnings)}</Text>
-              <Text style={styles.statLabel}>Tổng thu nhập</Text>
+              <Text style={styles.statLabel}>Total Earnings</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{formatCurrency(walletData.pendingWithdrawals)}</Text>
-              <Text style={styles.statLabel}>Đang chờ rút</Text>
+              <Text style={styles.statLabel}>Pending Withdrawals</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{formatCurrency(walletData.totalWithdrawn)}</Text>
-              <Text style={styles.statLabel}>Đã rút</Text>
+              <Text style={styles.statLabel}>Total Withdrawn</Text>
             </View>
           </View>
           
@@ -194,7 +194,7 @@ export default function DesignerWalletScreen() {
             style={styles.withdrawButton}
             onPress={() => setShowWithdrawModal(true)}
           >
-            <Text style={styles.withdrawButtonText}>Rút tiền</Text>
+            <Text style={styles.withdrawButtonText}>Withdraw</Text>
             <Icon name="arrow-forward" size={20} color="#4F46E5" />
           </TouchableOpacity>
         </LinearGradient>
@@ -208,7 +208,7 @@ export default function DesignerWalletScreen() {
             <View style={[styles.actionIcon, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
               <Icon name="history" size={24} color="#6366F1" />
             </View>
-            <Text style={styles.actionText}>Lịch sử</Text>
+            <Text style={styles.actionText}>Transaction History</Text>
           </Pressable>
           
           <Pressable 
@@ -218,7 +218,7 @@ export default function DesignerWalletScreen() {
             <View style={[styles.actionIcon, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
               <Icon name="swap-horiz" size={24} color="#A855F7" />
             </View>
-            <Text style={styles.actionText}>Lịch sử rút tiền</Text>
+            <Text style={styles.actionText}>Withdrawal History</Text>
           </Pressable>
           
           <Pressable 
@@ -228,19 +228,19 @@ export default function DesignerWalletScreen() {
             <View style={[styles.actionIcon, { backgroundColor: 'rgba(236, 72, 153, 0.1)' }]}>
               <Icon name="account-balance" size={24} color="#EC4899" />
             </View>
-            <Text style={styles.actionText}>Tài khoản NH</Text>
+            <Text style={styles.actionText}>Bank Accounts</Text>
           </Pressable>
         </View>
 
         {/* Recent Transactions */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Giao dịch gần đây</Text>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
             {walletData.transactions.length > 5 && (
               <Pressable
                 onPress={() => navigation.navigate("TransactionHistory")}
               >
-                <Text style={styles.viewAllText}>Xem tất cả</Text>
+                <Text style={styles.viewAllText}>View All</Text>
               </Pressable>
             )}
           </View>
@@ -270,9 +270,9 @@ export default function DesignerWalletScreen() {
                   </View>
                   <View style={styles.transactionInfo}>
                     <Text style={styles.transactionTitle}>
-                      {transaction.type === 'DEPOSIT' ? 'Nạp tiền' : 
-                       transaction.type === 'WITHDRAWAL' ? 'Rút tiền' : 
-                       'Mua hàng'}
+                      {transaction.type === 'DEPOSIT' ? 'Deposit' : 
+                       transaction.type === 'WITHDRAWAL' ? 'Withdrawal' : 
+                       'Purchase'}
                     </Text>
                     <Text style={styles.transactionDate}>
                       {formatDate(transaction.createdAt)}
@@ -295,9 +295,9 @@ export default function DesignerWalletScreen() {
           ) : (
             <View style={styles.emptyState}>
               <Icon name="receipt" size={48} color="#CBD5E1" />
-              <Text style={styles.emptyStateText}>Chưa có giao dịch nào</Text>
+              <Text style={styles.emptyStateText}>No recent transactions</Text>
               <Text style={styles.emptyStateSubtext}>
-                Các giao dịch của bạn sẽ xuất hiện tại đây
+                Recent transactions will appear here
               </Text>
             </View>
           )}
@@ -314,19 +314,19 @@ export default function DesignerWalletScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Rút tiền</Text>
+              <Text style={styles.modalTitle}>Withdrawal</Text>
               <Pressable onPress={() => setShowWithdrawModal(false)}>
                 <Icon name="close" size={24} color="#64748B" />
               </Pressable>
             </View>
             
             <ScrollView style={styles.modalBody}>
-              <Text style={styles.inputLabel}>Số tiền muốn rút (VND)</Text>
+              <Text style={styles.inputLabel}>Withdrawal Amount (VND)</Text>
               <View style={styles.amountInputContainer}>
                 <Text style={styles.currencySymbol}>₫</Text>
                 <TextInput
                   style={styles.amountInput}
-                  placeholder="Nhập số tiền"
+                  placeholder="Enter amount"
                   keyboardType="numeric"
                   value={withdrawAmount}
                   onChangeText={setWithdrawAmount}
@@ -334,7 +334,7 @@ export default function DesignerWalletScreen() {
               </View>
               
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
-                Chọn nhanh
+                Quick Amounts
               </Text>
               <View style={styles.quickAmounts}>
                 {quickAmounts.map((amount) => (
@@ -354,33 +354,33 @@ export default function DesignerWalletScreen() {
               </View>
               
               <Text style={[styles.inputLabel, { marginTop: 24 }]}>
-                Thông tin ngân hàng
+                Bank Information
               </Text>
               <View style={styles.bankInfoContainer}>
                 <View style={styles.bankInfoItem}>
-                  <Text style={styles.bankInfoLabel}>Ngân hàng</Text>
+                  <Text style={styles.bankInfoLabel}>Bank Name</Text>
                   <TextInput
                     style={styles.bankInfoInput}
-                    placeholder="Tên ngân hàng"
+                    placeholder="Enter bank name"
                     value={bankInfo.bankName}
                     onChangeText={(text) => setBankInfo({...bankInfo, bankName: text})}
                   />
                 </View>
                 <View style={styles.bankInfoItem}>
-                  <Text style={styles.bankInfoLabel}>Số tài khoản</Text>
+                  <Text style={styles.bankInfoLabel}>Account Number</Text>
                   <TextInput
                     style={styles.bankInfoInput}
-                    placeholder="Số tài khoản"
+                    placeholder="Enter account number"
                     keyboardType="numeric"
                     value={bankInfo.accountNumber}
                     onChangeText={(text) => setBankInfo({...bankInfo, accountNumber: text})}
                   />
                 </View>
                 <View style={styles.bankInfoItem}>
-                  <Text style={styles.bankInfoLabel}>Tên chủ tài khoản</Text>
+                  <Text style={styles.bankInfoLabel}>Account Name</Text>
                   <TextInput
                     style={styles.bankInfoInput}
-                    placeholder="Họ và tên"
+                    placeholder="Enter account name"  
                     value={bankInfo.accountName}
                     onChangeText={(text) => setBankInfo({...bankInfo, accountName: text})}
                   />
@@ -390,7 +390,7 @@ export default function DesignerWalletScreen() {
               <View style={styles.noteContainer}>
                 <Icon name="info" size={16} color="#64748B" />
                 <Text style={styles.noteText}>
-                  Thời gian xử lý: 1-3 ngày làm việc. Phí rút tiền: 1.1% (tối thiểu 5,000 VND).
+                  Processing Time: 1-3 business days. Withdrawal Fee: 1.1% (minimum 5,000 VND).
                 </Text>
               </View>
             </ScrollView>
@@ -407,7 +407,7 @@ export default function DesignerWalletScreen() {
                 onPress={handleWithdraw}
                 disabled={!withdrawAmount || !bankInfo.bankName || !bankInfo.accountNumber || !bankInfo.accountName}
               >
-                <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Xác nhận</Text>
+                <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Confirm</Text>
               </Pressable>
             </View>
           </View>

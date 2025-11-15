@@ -1,11 +1,14 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { styles } from "./CreateBlogScreen.styles";
 import { blogService } from "../../../../service/blogService";
 import ImageUploader from "../../../../common/ImageUploader";
+
+const { width } = Dimensions.get('window');
+const isTablet = width >= 768;
 
 export default function CreateBlogScreen({ navigation }) {
   const [title, setTitle] = useState("");
@@ -31,7 +34,6 @@ export default function CreateBlogScreen({ navigation }) {
   const removeContentSection = (index) => {
     if (contents.length > 1) {
       const newContents = contents.filter((_, i) => i !== index);
-      // Cập nhật lại index
       const reindexed = newContents.map((item, i) => ({ ...item, index: i }));
       setContents(reindexed);
     }
@@ -53,7 +55,6 @@ export default function CreateBlogScreen({ navigation }) {
       return;
     }
 
-    // Kiểm tra ít nhất 1 content section có nội dung
     const hasContent = contents.some(c => c.content.trim() !== "");
     if (!hasContent) {
       Toast.show({
@@ -70,7 +71,7 @@ export default function CreateBlogScreen({ navigation }) {
       const blogData = {
         title: title.trim(),
         summary: summary.trim(),
-        imageUrl: imageUrl ,
+        imageUrl: imageUrl,
         contents: contents.map((item, idx) => ({
           sectionTitle: item.sectionTitle.trim(),
           content: item.content.trim(),
@@ -100,48 +101,72 @@ export default function CreateBlogScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
+          <Icon name="arrow-back" size={isTablet ? 28 : 24} color="#1F2937" />
         </Pressable>
         <Text style={styles.headerTitle}>Create New Post</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Title */}
-        <TextInput
-          style={styles.input}
-          placeholder="Enter title..."
-          value={title}
-          onChangeText={setTitle}
-        />
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        {/* Main Content - 2 columns on tablet */}
+        <View style={styles.mainContent}>
+          {/* Left Column - Basic Info */}
+          <View style={styles.leftColumn}>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter an engaging title..."
+              placeholderTextColor="#9CA3AF"
+              value={title}
+              onChangeText={setTitle}
+            />
 
-        {/* Summary */}
-        <TextInput
-          style={[styles.input, { height: 80, textAlignVertical: "top" }]}
-          placeholder="Enter summary..."
-          value={summary}
-          onChangeText={setSummary}
-          multiline
-        />
+            <TextInput
+              style={[styles.input, { height: isTablet ? 140 : 80, textAlignVertical: "top" }]}
+              placeholder="Write a compelling summary..."
+              placeholderTextColor="#9CA3AF"
+              value={summary}
+              onChangeText={setSummary}
+              multiline
+            />
+          </View>
 
-        {/* Main Image */}
-        <View style={styles.imageSection}>
-          <Text style={styles.sectionLabel}>Main Image</Text>
-          <ImageUploader onUploaded={(url) => setImageUrl(url)} />
+          {/* Right Column - Main Image */}
+          <View style={styles.rightColumn}>
+            <View style={styles.imageSection}>
+              <Text style={styles.sectionLabel}>📸 Featured Image</Text>
+              <ImageUploader onUploaded={(url) => setImageUrl(url)} />
+            </View>
+          </View>
         </View>
 
+        {/* Divider */}
+        <View style={styles.divider} />
+
         {/* Content Sections */}
-        <View style={styles.contentSections}>
-          <Text style={styles.sectionLabel}>Content Sections</Text>
-          
+        <View style={styles.contentSectionsHeader}>
+          <Text style={styles.sectionLabel}>📝 Content Sections</Text>
+          <Text style={{ fontSize: isTablet ? 16 : 14, color: "#6B7280", fontWeight: "600" }}>
+            {contents.length} {contents.length === 1 ? 'Section' : 'Sections'}
+          </Text>
+        </View>
+        
+        <View style={styles.contentCardsContainer}>
           {contents.map((section, index) => (
             <View key={index} style={styles.contentCard}>
               <View style={styles.contentHeader}>
                 <Text style={styles.contentIndex}>Section {index + 1}</Text>
                 {contents.length > 1 && (
-                  <Pressable onPress={() => removeContentSection(index)}>
-                    <Icon name="delete" size={20} color="#EF4444" />
+                  <Pressable 
+                    onPress={() => removeContentSection(index)}
+                    style={styles.deleteButton}
+                  >
+                    <Icon name="delete" size={isTablet ? 22 : 20} color="#EF4444" />
                   </Pressable>
                 )}
               </View>
@@ -149,49 +174,56 @@ export default function CreateBlogScreen({ navigation }) {
               <TextInput
                 style={styles.input}
                 placeholder="Section title (optional)..."
+                placeholderTextColor="#9CA3AF"
                 value={section.sectionTitle}
                 onChangeText={(text) => updateContentSection(index, "sectionTitle", text)}
               />
 
               <TextInput
-                style={[styles.input, { height: 120, textAlignVertical: "top" }]}
-                placeholder="Section content..."
+                style={[styles.input, { height: isTablet ? 140 : 120, textAlignVertical: "top" }]}
+                placeholder="Write your section content here..."
+                placeholderTextColor="#9CA3AF"
                 value={section.content}
                 onChangeText={(text) => updateContentSection(index, "content", text)}
                 multiline
               />
 
               <View style={styles.imageSection}>
-                <Text style={styles.imageLabel}>Section Image (optional)</Text>
+                <Text style={styles.imageLabel}>🖼️ Section Image (optional)</Text>
                 <ImageUploader 
                   onUploaded={(url) => updateContentSection(index, "contentUrl", url)} 
                 />
               </View>
             </View>
           ))}
-
-          {/* Add Section Button */}
-          <Pressable onPress={addContentSection} style={styles.addSectionButton}>
-            <Icon name="add-circle-outline" size={20} color="#4F46E5" />
-            <Text style={styles.addSectionText}>Add Another Section</Text>
-          </Pressable>
         </View>
 
-        {/* Post Button */}
-        <Pressable onPress={handleCreateBlog} disabled={loading}>
-          <LinearGradient
-            colors={["#4F46E5", "#c39ae9ff"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.submitButton}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.submitText}>Post</Text>
-            )}
-          </LinearGradient>
+        {/* Add Section Button */}
+        <Pressable onPress={addContentSection} style={styles.addSectionButton}>
+          <Icon name="add-circle-outline" size={isTablet ? 24 : 20} color="#4F46E5" />
+          <Text style={styles.addSectionText}>Add Another Section</Text>
         </Pressable>
+
+        {/* Post Button */}
+        <View style={styles.submitButtonContainer}>
+          <Pressable onPress={handleCreateBlog} disabled={loading}>
+            <LinearGradient
+              colors={["#4F46E5", "#7C3AED"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.submitButton}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size={isTablet ? "large" : "small"} />
+              ) : (
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Icon name="publish" size={isTablet ? 24 : 20} color="#fff" style={{ marginRight: 8 }} />
+                  <Text style={styles.submitText}>Publish Post</Text>
+                </View>
+              )}
+            </LinearGradient>
+          </Pressable>
+        </View>
       </ScrollView>
     </View>
   );
