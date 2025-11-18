@@ -25,6 +25,7 @@ export default function TextSelectionBox({
 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const pos = useRef(new Animated.ValueXY({ x, y })).current;
+  const draggingRef = useRef(false);
 
   // Refs to avoid stale closures inside PanResponder
   const boxRef = useRef({ x, y }); // latest props
@@ -54,18 +55,16 @@ export default function TextSelectionBox({
 
   // keep boxRef and Animated.Value in sync when parent moves the box
   useEffect(() => {
-    // update ref first
     boxRef.current = { x, y };
-    // push value to Animated.ValueXY immediately (no animation)
-    pos.setValue({ x, y });
-    // also update lastReported so next incremental delta is relative to current
-    lastReportedRef.current = { x, y };
-    // reset pending just in case
-    pendingDeltaRef.current = { x: 0, y: 0 };
-    framePendingRef.current = false;
-    if (rafIdRef.current) {
-      cancelAnimationFrame(rafIdRef.current);
-      rafIdRef.current = null;
+    if (!draggingRef.current) {
+      pos.setValue({ x, y });
+      lastReportedRef.current = { x, y };
+      pendingDeltaRef.current = { x: 0, y: 0 };
+      framePendingRef.current = false;
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
     }
   }, [x, y, pos]);
 
@@ -108,6 +107,7 @@ export default function TextSelectionBox({
         startPos.current = { x: g.x0, y: g.y0 };
         // store the box origin at the moment gesture starts
         startBoxRef.current = { ...boxRef.current };
+        draggingRef.current = true;
         // lastReportedRef is the last absolute position we used for diff calculations
         lastReportedRef.current = { ...startBoxRef.current };
         // reset pending
@@ -174,6 +174,7 @@ export default function TextSelectionBox({
 
         // ensure final sync with parent values (parent normally updates via onMove)
         lastReportedRef.current = { ...boxRef.current };
+        draggingRef.current = false;
       },
       onPanResponderTerminationRequest: () => true,
       onPanResponderTerminate: () => {

@@ -699,15 +699,20 @@ export default function DrawingScreen({ route }) {
   const [isLoadingProject, setIsLoadingProject] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // New state for saving indicator
   const [isUploadingAsset, setIsUploadingAsset] = useState(false); // New state for asset uploads
+  const lastSyncTimeRef = useRef(0);
 
   // [NEW] Setup network listener for auto-sync
   useEffect(() => {
+    const THROTTLE_MS = 10000;
     const unsubscribe = NetInfo.addEventListener((state) => {
       if (state.isConnected && state.isInternetReachable) {
-        projectService.syncPendingPages();
+        const now = Date.now();
+        if (now - lastSyncTimeRef.current >= THROTTLE_MS) {
+          lastSyncTimeRef.current = now;
+          projectService.syncPendingPages();
+        }
       }
     });
-
     return () => {
       unsubscribe();
     };
@@ -1272,6 +1277,19 @@ export default function DrawingScreen({ route }) {
         localUri = manipResult.uri;
         size = { width: manipResult.width, height: manipResult.height };
       }
+      const MAX_DIM = 1600;
+      if (size.width > MAX_DIM || size.height > MAX_DIM) {
+        const scale = MAX_DIM / Math.max(size.width, size.height);
+        const newW = Math.round(size.width * scale);
+        const newH = Math.round(size.height * scale);
+        const resizeResult = await manipulateAsync(
+          localUri,
+          [{ resize: { width: newW, height: newH } }],
+          { compress: 0.85, format: SaveFormat.JPEG }
+        );
+        localUri = resizeResult.uri;
+        size = { width: resizeResult.width, height: resizeResult.height };
+      }
 
       // Upload the corrected image
       // console.log(`☁️ Uploading ${localUri} to Cloudinary...`);
@@ -1321,17 +1339,31 @@ export default function DrawingScreen({ route }) {
       });
       if (!result.canceled) {
         const localUri = result.assets[0].uri;
-
         setIsUploadingAsset(true);
+        let imgWidth = result.assets[0].width;
+        let imgHeight = result.assets[0].height;
+        const MAX_DIM = 1600;
+        let uriToUpload = localUri;
+        if (imgWidth > MAX_DIM || imgHeight > MAX_DIM) {
+          const scale = MAX_DIM / Math.max(imgWidth, imgHeight);
+          const newW = Math.round(imgWidth * scale);
+          const newH = Math.round(imgHeight * scale);
+          const resizeResult = await manipulateAsync(
+            localUri,
+            [{ resize: { width: newW, height: newH } }],
+            { compress: 0.85, format: SaveFormat.JPEG }
+          );
+          uriToUpload = resizeResult.uri;
+          imgWidth = resizeResult.width;
+          imgHeight = resizeResult.height;
+        }
         const cloudUrl = await projectService.uploadAsset(
-          localUri,
+          uriToUpload,
           "image/jpeg"
         );
         if (!cloudUrl) {
           throw new Error("Failed to upload image from camera.");
         }
-
-        const { width: imgWidth, height: imgHeight } = result.assets[0];
         const maxWidth = 400;
         const scale = Math.min(1, maxWidth / imgWidth);
 
@@ -1364,13 +1396,30 @@ export default function DrawingScreen({ route }) {
       // Sticker is an image from a local URI that needs to be uploaded
       if (tool === "sticker" && uri && !uri.startsWith("http")) {
         setIsUploadingAsset(true);
-        const cloudUrl = await projectService.uploadAsset(uri, "image/png"); // Assuming stickers are png
+        let stickerUri = uri;
+        const { width: imgWidth0, height: imgHeight0 } = await getImageSize(uri);
+        const MAX_DIM = 512;
+        let imgWidth = imgWidth0;
+        let imgHeight = imgHeight0;
+        if (imgWidth0 > MAX_DIM || imgHeight0 > MAX_DIM) {
+          const scale = MAX_DIM / Math.max(imgWidth0, imgHeight0);
+          const newW = Math.round(imgWidth0 * scale);
+          const newH = Math.round(imgHeight0 * scale);
+          const resized = await manipulateAsync(
+            uri,
+            [{ resize: { width: newW, height: newH } }],
+            { compress: 0.85, format: SaveFormat.PNG }
+          );
+          stickerUri = resized.uri;
+          imgWidth = resized.width;
+          imgHeight = resized.height;
+        }
+        const cloudUrl = await projectService.uploadAsset(stickerUri, "image/png");
         if (!cloudUrl) {
           throw new Error("Failed to upload sticker.");
         }
 
-        const { width: imgWidth, height: imgHeight } = await getImageSize(uri);
-        const maxWidth = 150; // Stickers are smaller
+        const maxWidth = 150;
         const scale = Math.min(1, maxWidth / imgWidth);
 
         multiPageCanvasRef.current.addStickerStroke({

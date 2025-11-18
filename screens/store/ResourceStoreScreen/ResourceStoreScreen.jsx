@@ -39,12 +39,12 @@ export default function ResourceStoreScreen() {
       // Fetch Resource By User Id
       try {
         const resUser = await resourceService.getResourceProjectByUserId();
-        const userData = resUser || [];
+        const userData = Array.isArray(resUser) ? resUser : [];
         // console.log("✅ Resource By User Id:", userData);
         setUserResources(userData);
       } catch (error) {
         console.error("❌ Fetch Resource By User Id Failed:", error);
-        setAllResources([]);
+        setUserResources([]);
       }
     } catch (error) {}
     try {
@@ -101,7 +101,7 @@ export default function ResourceStoreScreen() {
 
   // ✅ Add to Cart
   const handleAddToCart = (resource, navigateToCart = false) => {
-    const alreadyOwned = userResources.some(
+    const alreadyOwned = Array.isArray(userResources) && userResources.some(
       (r) => r.resourceTemplateId === resource.resourceTemplateId
     );
 
