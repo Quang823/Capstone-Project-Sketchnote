@@ -181,54 +181,7 @@ export function buildShapeFromPoints(tool, points) {
  * Tính bounding box cho stroke/shape để tăng tốc kiểm tra hit-test (eraser).
  */
 export function getBoundingBoxForStroke(s) {
-  if (s.points && s.points.length) {
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-    for (const p of s.points) {
-      if (p.x < minX) minX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y > maxY) maxY = p.y;
-    }
-    const pad = (s.width || 10) * 1.5;
-    return {
-      minX: minX - pad,
-      minY: minY - pad,
-      maxX: maxX + pad,
-      maxY: maxY + pad,
-    };
-  }
-
-  // Text-like objects: text, sticky, comment, emoji
-  if (["text", "sticky", "comment", "emoji"].includes(s.tool)) {
-    const x = s.x ?? 0;
-    const y = s.y ?? 0;
-    const fontSize = s.fontSize || 18;
-    const padding = s.padding || 0;
-    // Approximate text width
-    const text = typeof s.text === "string" ? s.text : "";
-    const approxWidth = text.length * fontSize * 0.6 + padding * 2;
-    const height = fontSize + padding * 2;
-    // Text position is baseline, so box top is y - fontSize - padding
-    return {
-      minX: x - padding,
-      minY: y - fontSize - padding,
-      maxX: x + approxWidth,
-      maxY: y + padding,
-    };
-  }
-
-  // Image/Sticker/Table: use x,y,width,height (rotation handled by center point check)
-  if (["image", "sticker", "table"].includes(s.tool)) {
-    const x = s.x ?? 0;
-    const y = s.y ?? 0;
-    const w = s.width || 100;
-    const h = s.height || 100;
-    return { minX: x, minY: y, maxX: x + w, maxY: y + h };
-  }
-
+  // 1) Shapes: prefer shape geometry over points if available
   if (s.shape) {
     const sh = s.shape;
     if (s.tool === "circle") {
@@ -296,6 +249,52 @@ export function getBoundingBoxForStroke(s) {
         maxY: maxY2 + pad,
       };
     }
+  }
+
+  // 2) Text-like objects
+  if (["text", "sticky", "comment", "emoji"].includes(s.tool)) {
+    const x = s.x ?? 0;
+    const y = s.y ?? 0;
+    const fontSize = s.fontSize || 18;
+    const padding = s.padding || 0;
+    const text = typeof s.text === "string" ? s.text : "";
+    const approxWidth = text.length * fontSize * 0.6 + padding * 2;
+    return {
+      minX: x - padding,
+      minY: y - fontSize - padding,
+      maxX: x + approxWidth,
+      maxY: y + padding,
+    };
+  }
+
+  // 3) Image/Sticker/Table
+  if (["image", "sticker", "table"].includes(s.tool)) {
+    const x = s.x ?? 0;
+    const y = s.y ?? 0;
+    const w = s.width || 100;
+    const h = s.height || 100;
+    return { minX: x, minY: y, maxX: x + w, maxY: y + h };
+  }
+
+  // 4) Fallback: strokes defined by points
+  if (s.points && s.points.length) {
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    for (const p of s.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const pad = (s.width || 10) * 1.5;
+    return {
+      minX: minX - pad,
+      minY: minY - pad,
+      maxX: maxX + pad,
+      maxY: maxY + pad,
+    };
   }
 
   return null;

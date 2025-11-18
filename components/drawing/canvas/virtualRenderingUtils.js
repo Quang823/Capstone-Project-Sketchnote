@@ -1,6 +1,6 @@
 /**
  * Virtual Rendering Utilities
- * 
+ *
  * Optimize canvas rendering by only drawing strokes visible in viewport.
  * Critical for performance when dealing with 500+ strokes per page.
  */
@@ -12,23 +12,29 @@
  */
 export const getStrokeBounds = (stroke) => {
   if (!stroke) return null;
-  
+
   // Handle different stroke types
-  if (stroke.points && Array.isArray(stroke.points) && stroke.points.length > 0) {
+  if (
+    stroke.points &&
+    Array.isArray(stroke.points) &&
+    stroke.points.length > 0
+  ) {
     // Path-based strokes (pen, pencil, marker, etc.)
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
-    
+    let minX = Infinity,
+      maxX = -Infinity;
+    let minY = Infinity,
+      maxY = -Infinity;
+
     for (const point of stroke.points) {
       if (point.x < minX) minX = point.x;
       if (point.x > maxX) maxX = point.x;
       if (point.y < minY) minY = point.y;
       if (point.y > maxY) maxY = point.y;
     }
-    
+
     // Add stroke width padding
     const padding = (stroke.strokeWidth || stroke.width || 2) / 2;
-    
+
     return {
       minX: minX - padding,
       maxX: maxX + padding,
@@ -36,14 +42,19 @@ export const getStrokeBounds = (stroke) => {
       maxY: maxY + padding,
     };
   }
-  
+
   // Handle shape-based strokes
   if (stroke.shape) {
     const { shape } = stroke;
-    const padding = (stroke.strokeWidth || 2) / 2;
-    
-    if (shape.x !== undefined && shape.y !== undefined && shape.w !== undefined && shape.h !== undefined) {
-      // Rectangle/square
+    const padding = (stroke.strokeWidth || stroke.width || 2) / 2;
+
+    // Rectangle/square
+    if (
+      shape.x !== undefined &&
+      shape.y !== undefined &&
+      shape.w !== undefined &&
+      shape.h !== undefined
+    ) {
       return {
         minX: shape.x - padding,
         maxX: shape.x + shape.w + padding,
@@ -51,9 +62,13 @@ export const getStrokeBounds = (stroke) => {
         maxY: shape.y + shape.h + padding,
       };
     }
-    
-    if (shape.cx !== undefined && shape.cy !== undefined && shape.r !== undefined) {
-      // Circle
+
+    // Circle
+    if (
+      shape.cx !== undefined &&
+      shape.cy !== undefined &&
+      shape.r !== undefined
+    ) {
       return {
         minX: shape.cx - shape.r - padding,
         maxX: shape.cx + shape.r + padding,
@@ -61,9 +76,14 @@ export const getStrokeBounds = (stroke) => {
         maxY: shape.cy + shape.r + padding,
       };
     }
-    
-    if (shape.cx !== undefined && shape.cy !== undefined && shape.rx !== undefined && shape.ry !== undefined) {
-      // Oval
+
+    // Oval
+    if (
+      shape.cx !== undefined &&
+      shape.cy !== undefined &&
+      shape.rx !== undefined &&
+      shape.ry !== undefined
+    ) {
       return {
         minX: shape.cx - shape.rx - padding,
         maxX: shape.cx + shape.rx + padding,
@@ -71,19 +91,49 @@ export const getStrokeBounds = (stroke) => {
         maxY: shape.cy + shape.ry + padding,
       };
     }
-    
+
+    // Line/Arrow
+    if (
+      shape.x1 !== undefined &&
+      shape.y1 !== undefined &&
+      shape.x2 !== undefined &&
+      shape.y2 !== undefined
+    ) {
+      const minX = Math.min(shape.x1, shape.x2) - padding;
+      const maxX = Math.max(shape.x1, shape.x2) + padding;
+      const minY = Math.min(shape.y1, shape.y2) - padding;
+      const maxY = Math.max(shape.y1, shape.y2) + padding;
+      return { minX, maxX, minY, maxY };
+    }
+
+    // Triangle
+    if (
+      shape.x1 !== undefined &&
+      shape.y1 !== undefined &&
+      shape.x2 !== undefined &&
+      shape.y2 !== undefined &&
+      shape.x3 !== undefined &&
+      shape.y3 !== undefined
+    ) {
+      const minX = Math.min(shape.x1, shape.x2, shape.x3) - padding;
+      const maxX = Math.max(shape.x1, shape.x2, shape.x3) + padding;
+      const minY = Math.min(shape.y1, shape.y2, shape.y3) - padding;
+      const maxY = Math.max(shape.y1, shape.y2, shape.y3) + padding;
+      return { minX, maxX, minY, maxY };
+    }
+
+    // Polygon/star
     if (shape.points && Array.isArray(shape.points)) {
-      // Polygon/star
-      let minX = Infinity, maxX = -Infinity;
-      let minY = Infinity, maxY = -Infinity;
-      
+      let minX = Infinity,
+        maxX = -Infinity;
+      let minY = Infinity,
+        maxY = -Infinity;
       for (const point of shape.points) {
         if (point.x < minX) minX = point.x;
         if (point.x > maxX) maxX = point.x;
         if (point.y < minY) minY = point.y;
         if (point.y > maxY) maxY = point.y;
       }
-      
       return {
         minX: minX - padding,
         maxX: maxX + padding,
@@ -92,29 +142,37 @@ export const getStrokeBounds = (stroke) => {
       };
     }
   }
-  
+
   // Handle text strokes
-  if (stroke.tool === 'text' || stroke.tool === 'sticky' || stroke.tool === 'comment') {
-    const x = stroke.x || 0;
-    const y = stroke.y || 0;
-    const width = stroke.width || 100;
-    const height = stroke.height || (stroke.fontSize || 18) + 10;
-    
+  if (
+    stroke.tool === "text" ||
+    stroke.tool === "sticky" ||
+    stroke.tool === "comment" ||
+    stroke.tool === "emoji"
+  ) {
+    const x = stroke.x ?? 0;
+    const y = stroke.y ?? 0;
+    const fs = stroke.fontSize || 18;
+    const pad = stroke.padding || 0;
+    const text = typeof stroke.text === "string" ? stroke.text : "";
+    const approxWidth = Math.max(20, text.length * fs * 0.6 + pad * 2);
+    const approxHeight = Math.max(20, fs + pad * 2);
+
     return {
-      minX: x,
-      maxX: x + width,
-      minY: y,
-      maxY: y + height,
+      minX: x - pad,
+      maxX: x - pad + approxWidth,
+      minY: y - fs - pad,
+      maxY: y - fs - pad + approxHeight,
     };
   }
-  
+
   // Handle image/sticker
-  if (stroke.tool === 'image' || stroke.tool === 'sticker') {
+  if (stroke.tool === "image" || stroke.tool === "sticker") {
     const x = stroke.x || 0;
     const y = stroke.y || 0;
     const width = stroke.width || 100;
     const height = stroke.height || 100;
-    
+
     return {
       minX: x,
       maxX: x + width,
@@ -122,14 +180,14 @@ export const getStrokeBounds = (stroke) => {
       maxY: y + height,
     };
   }
-  
+
   // Handle table
-  if (stroke.tool === 'table') {
+  if (stroke.tool === "table") {
     const x = stroke.x || 0;
     const y = stroke.y || 0;
     const width = stroke.width || 200;
     const height = stroke.height || 150;
-    
+
     return {
       minX: x,
       maxX: x + width,
@@ -137,7 +195,7 @@ export const getStrokeBounds = (stroke) => {
       maxY: y + height,
     };
   }
-  
+
   return null;
 };
 
@@ -149,7 +207,7 @@ export const getStrokeBounds = (stroke) => {
  */
 export const boundsIntersect = (bounds1, bounds2) => {
   if (!bounds1 || !bounds2) return false;
-  
+
   return !(
     bounds1.maxX < bounds2.minX ||
     bounds1.minX > bounds2.maxX ||
@@ -169,22 +227,26 @@ export const getVisibleStrokes = (strokes, viewport, options = {}) => {
   if (!Array.isArray(strokes) || strokes.length === 0) {
     return [];
   }
-  
-  if (!viewport || typeof viewport.width !== 'number' || typeof viewport.height !== 'number') {
+
+  if (
+    !viewport ||
+    typeof viewport.width !== "number" ||
+    typeof viewport.height !== "number"
+  ) {
     // No valid viewport - return all strokes
     return strokes;
   }
-  
+
   const padding = options.padding || 100; // Extra padding to render off-screen strokes
-  
+
   const viewportBounds = {
     minX: viewport.x - padding,
     maxX: viewport.x + viewport.width + padding,
     minY: viewport.y - padding,
     maxY: viewport.y + viewport.height + padding,
   };
-  
-  return strokes.filter(stroke => {
+
+  return strokes.filter((stroke) => {
     const bounds = getStrokeBounds(stroke);
     return bounds && boundsIntersect(bounds, viewportBounds);
   });
@@ -199,23 +261,25 @@ export const batchStrokesByType = (strokes) => {
   if (!Array.isArray(strokes) || strokes.length === 0) {
     return [];
   }
-  
+
   const batches = {};
-  
-  strokes.forEach(stroke => {
+
+  strokes.forEach((stroke) => {
     // Create batch key based on stroke properties
-    const tool = stroke.tool || 'unknown';
-    const color = stroke.color || '#000000';
+    const tool = stroke.tool || "unknown";
+    const color = stroke.color || "#000000";
     const strokeWidth = stroke.strokeWidth || stroke.width || 1;
-    
+
     // Don't batch complex items (text, images, tables)
-    if (['text', 'sticky', 'comment', 'image', 'sticker', 'table'].includes(tool)) {
+    if (
+      ["text", "sticky", "comment", "image", "sticker", "table"].includes(tool)
+    ) {
       // Each gets its own batch
       const uniqueKey = `${tool}-${stroke.id}`;
       batches[uniqueKey] = [stroke];
       return;
     }
-    
+
     // Batch simple strokes by type and style
     const key = `${tool}-${color}-${strokeWidth}`;
     if (!batches[key]) {
@@ -223,7 +287,7 @@ export const batchStrokesByType = (strokes) => {
     }
     batches[key].push(stroke);
   });
-  
+
   return Object.entries(batches).map(([key, strokes]) => ({
     key,
     strokes,
@@ -241,19 +305,24 @@ export const batchStrokesByType = (strokes) => {
  */
 export const calculateViewport = (page, zoom, scrollY, screen) => {
   if (!page || !screen) {
-    return { x: 0, y: 0, width: screen?.width || 500, height: screen?.height || 800 };
+    return {
+      x: 0,
+      y: 0,
+      width: screen?.width || 500,
+      height: screen?.height || 800,
+    };
   }
-  
+
   const scale = zoom?.scale || 1;
   const translateX = zoom?.translateX || 0;
   const translateY = zoom?.translateY || 0;
-  
+
   // Convert screen coordinates to canvas coordinates
-  const viewportX = ((-translateX) / scale) + page.x;
-  const viewportY = ((scrollY - translateY) / scale) + page.y;
+  const viewportX = -translateX / scale + page.x;
+  const viewportY = (scrollY - translateY) / scale + page.y;
   const viewportWidth = (screen.width || 500) / scale;
   const viewportHeight = (screen.height || 800) / scale;
-  
+
   return {
     x: viewportX,
     y: viewportY,
@@ -269,33 +338,33 @@ export const calculateViewport = (page, zoom, scrollY, screen) => {
  */
 export const estimateRenderingComplexity = (strokes) => {
   if (!Array.isArray(strokes)) return 0;
-  
+
   let complexity = 0;
-  
-  strokes.forEach(stroke => {
+
+  strokes.forEach((stroke) => {
     // Base complexity per stroke
     complexity += 1;
-    
+
     // Add complexity based on point count
     if (stroke.points && Array.isArray(stroke.points)) {
       complexity += stroke.points.length * 0.01;
     }
-    
+
     // Heavy items add more complexity
-    if (['image', 'sticker', 'table'].includes(stroke.tool)) {
+    if (["image", "sticker", "table"].includes(stroke.tool)) {
       complexity += 5;
     }
-    
-    if (['text', 'sticky', 'comment'].includes(stroke.tool)) {
+
+    if (["text", "sticky", "comment"].includes(stroke.tool)) {
       complexity += 2;
     }
-    
+
     // Complex tools add complexity
-    if (['airbrush', 'calligraphy', 'brush'].includes(stroke.tool)) {
+    if (["airbrush", "calligraphy", "brush"].includes(stroke.tool)) {
       complexity += 3;
     }
   });
-  
+
   // Normalize to 0-100
   return Math.min(100, complexity / 10);
 };

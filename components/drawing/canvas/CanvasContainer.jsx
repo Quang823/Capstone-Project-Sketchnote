@@ -67,9 +67,38 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     loadedFonts, // 👈 Pass down preloaded fonts
     getNearestFont, // 👈 Pass down font helper
   },
-  ref,
+  ref
 ) {
   const imageRefs = useRef(new Map());
+  const [internalLayers, setInternalLayers] = useState(layers);
+
+  // Sync metadata from props while preserving existing strokes
+  useEffect(() => {
+    if (!Array.isArray(layers)) return;
+    setInternalLayers((prev) => {
+      if (!Array.isArray(prev) || prev.length === 0) return layers;
+      const map = new Map(prev.map((l) => [l.id, { ...l }]));
+      layers.forEach((inLayer) => {
+        const ex = map.get(inLayer.id);
+        if (ex) {
+          map.set(inLayer.id, {
+            ...ex,
+            name: inLayer.name ?? ex.name,
+            visible: inLayer.visible ?? ex.visible,
+            locked: inLayer.locked ?? ex.locked,
+            strokes:
+              Array.isArray(inLayer.strokes) && inLayer.strokes.length > 0
+                ? inLayer.strokes
+                : ex.strokes || [],
+          });
+        } else {
+          map.set(inLayer.id, { ...inLayer });
+        }
+      });
+      return Array.from(map.values());
+    });
+  }, [layers]);
+
   // Cleanup imageRefs to avoid retaining component references
   useEffect(() => {
     return () => {
@@ -173,11 +202,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         : [];
       for (let j = 0; j < strokes.length; j++) {
         const s = strokes[j];
-        if (
-          s &&
-          typeof s.id === "string" &&
-          s.id.startsWith("s_")
-        ) {
+        if (s && typeof s.id === "string" && s.id.startsWith("s_")) {
           const num = parseInt(s.id.slice(2), 10);
           if (!isNaN(num) && num > maxIdNum) {
             maxIdNum = num;
@@ -191,26 +216,78 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     }
   }, [layers]);
 
+  const allStrokes = React.useMemo(
+    () =>
+      Array.isArray(internalLayers)
+        ? internalLayers.flatMap((l) => (l && l.strokes ? l.strokes : []))
+        : [],
+    [internalLayers]
+  );
+
   const modifyStrokesBulk = (updates = [], options = {}) => {
-    const isTransient = !!options.transient;
-    updateActiveLayer((strokes = []) => {
-      if (!Array.isArray(strokes) || strokes.length === 0) return strokes;
-      if (!Array.isArray(updates) || updates.length === 0) return strokes;
-      const next = [...strokes];
+    if (!updates || updates.length === 0) {
+      return;
+    }
+
+    const updater = (prevLayers) => {
+      if (!Array.isArray(prevLayers)) return prevLayers;
+
+      const layerMap = new Map(
+        prevLayers.map((l) => [l.id, { ...l, strokes: [...(l.strokes || [])] }])
+      );
+      let hasChanges = false;
+
       updates.forEach((u) => {
-        const idx = u?.index;
-        const changes = u?.changes || {};
-        if (typeof idx !== "number" || idx < 0 || idx >= next.length) return;
-        const old = next[idx];
-        const { __transient, ...clean } = changes;
-        next[idx] = { ...old, ...clean };
+        const { id, index, changes } = u;
+        if (!changes) return;
+
+        if (id) {
+          for (const layer of layerMap.values()) {
+            const strokeIndex = layer.strokes.findIndex((s) => s.id === id);
+            if (strokeIndex !== -1) {
+              const base = layer.strokes[strokeIndex] || {};
+              const merged = { ...base };
+              Object.keys(changes).forEach((k) => {
+                if (k === "shape") {
+                  const sh = changes.shape;
+                  if (sh && typeof sh === "object") {
+                    const finite = Object.values(sh).every(
+                      (v) => typeof v !== "number" || Number.isFinite(v)
+                    );
+                    merged.shape = finite ? sh : base.shape;
+                  } else if (changes.shape == null) {
+                    merged.shape = base.shape;
+                  }
+                } else if (changes[k] !== undefined) {
+                  merged[k] = changes[k];
+                }
+              });
+              layer.strokes[strokeIndex] = merged;
+              hasChanges = true;
+              break;
+            }
+          }
+        } else if (typeof index === "number" && activeLayerId) {
+          const layer = layerMap.get(activeLayerId);
+          if (layer && index >= 0 && index < layer.strokes.length) {
+            layer.strokes[index] = {
+              ...layer.strokes[index],
+              ...changes,
+            };
+            hasChanges = true;
+          }
+        }
       });
-      // For transient bulk updates, skip undo push
-      if (!isTransient) {
-        // Optional: push a single combined action; omitted to keep undo simple per-item via modifyStrokeAt
+
+      if (!hasChanges) {
+        return prevLayers;
       }
-      return next;
-    });
+
+      return Array.from(layerMap.values());
+    };
+
+    setLayers(updater);
+    setInternalLayers(updater);
   };
 
   const page = {
@@ -226,77 +303,56 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   const [selectedId, setSelectedId] = useState(null);
 
   const getActiveLayer = useCallback(() => {
-    if (!Array.isArray(layers) || layers.length === 0) return null;
-
-    // ✅ Validate layers trước khi tìm
-    const validLayers = layers.filter(
-      (l) => l && typeof l === "object" && l.id,
+    if (!Array.isArray(internalLayers) || internalLayers.length === 0)
+      return null;
+    const validLayers = internalLayers.filter(
+      (l) => l && typeof l === "object" && l.id
     );
-
     if (validLayers.length === 0) return null;
-
-    // Try to find layer by activeLayerId
     let layer = validLayers.find((l) => l.id === activeLayerId);
-
-    // If not found, fallback to first layer
     if (!layer && validLayers.length > 0) {
       layer = validLayers[0];
     }
-
     return layer || null;
-  }, [layers, activeLayerId]);
+  }, [internalLayers, activeLayerId]);
 
   const updateActiveLayer = useCallback(
     (updateFn) => {
-      // ✅ Kiểm tra activeLayerId trước khi update
       if (!activeLayerId) {
         console.warn("[CanvasContainer] updateActiveLayer: No activeLayerId");
         return;
       }
-
-      setLayers((prev) => {
+      setInternalLayers((prev) => {
         if (!Array.isArray(prev)) return prev;
         return prev.map((layer) => {
-          if (!layer || typeof layer !== "object") return layer;
-          if (layer.id !== activeLayerId) return layer;
+          if (!layer || typeof layer !== "object" || layer.id !== activeLayerId)
+            return layer;
           const safeStrokes = Array.isArray(layer.strokes) ? layer.strokes : [];
           return { ...layer, strokes: updateFn(safeStrokes) };
         });
       });
     },
-    [activeLayerId],
+    [activeLayerId]
   );
 
   const updateLayerById = (layerId, updateFn) => {
-    // ✅ Kiểm tra layerId trước khi update
-    if (!layerId) {
-      console.warn("[CanvasContainer] updateLayerById: No layerId provided");
-      return;
-    }
-
-    if (typeof updateFn !== "function") {
-      console.warn(
-        "[CanvasContainer] updateLayerById: updateFn is not a function",
-      );
-      return;
-    }
-
-    setLayers((prev) => {
+    if (!layerId || typeof updateFn !== "function") return;
+    setInternalLayers((prev) => {
       if (!Array.isArray(prev)) return prev;
       return prev.map((l) => {
-        if (!l || typeof l !== "object") return l;
-        if (l?.id === layerId) {
-          const safeStrokes = Array.isArray(l.strokes) ? l.strokes : [];
-          return { ...l, strokes: updateFn(safeStrokes) };
-        }
-        return l;
+        if (!l || typeof l !== "object" || l?.id !== layerId) return l;
+        const safeStrokes = Array.isArray(l.strokes) ? l.strokes : [];
+        return { ...l, strokes: updateFn(safeStrokes) };
       });
     });
   };
-  // ✅ Safe filter with validation
+
   const visibleLayers = React.useMemo(
-    () => (Array.isArray(layers) ? layers.filter((l) => l?.visible) : []),
-    [layers],
+    () =>
+      Array.isArray(internalLayers)
+        ? internalLayers.filter((l) => l?.visible)
+        : [],
+    [internalLayers]
   );
 
   // ====== ZOOM / PAN ======
@@ -310,7 +366,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   // Stable zoom state object to pass to children without causing re-renders
   const zoomStateMemo = React.useMemo(
     () => ({ scale, translateX, translateY }),
-    [],
+    []
   );
 
   const clampPan = () => {
@@ -376,7 +432,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   // Compose gestures: pinch riêng, pan và doubleTap có thể cùng lúc
   const composedGesture = Gesture.Exclusive(
     pinch,
-    Gesture.Simultaneous(pan, doubleTap),
+    Gesture.Simultaneous(pan, doubleTap)
   );
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -393,7 +449,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     () => derivedZoom.value,
     (val, prev) => {
       if (val !== prev) runOnJS(updateZoomPercentJS)(val);
-    },
+    }
   );
 
   // Cập nhật zoomSnapshot (JS numbers) mỗi khi shared values thay đổi
@@ -408,7 +464,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       ) {
         runOnJS(updateZoomSnapshotJS)({ s: vals.s, tx: vals.tx, ty: vals.ty });
       }
-    },
+    }
   );
 
   // ====== Helpers ======
@@ -436,7 +492,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     if (!activeLayerId) {
       console.warn(
-        "[CanvasContainer] addStrokeInternal: No activeLayerId, cannot add stroke",
+        "[CanvasContainer] addStrokeInternal: No activeLayerId, cannot add stroke"
       );
       return;
     }
@@ -534,7 +590,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     w = 100,
     h = 100,
     scrollOffsetX = 0,
-    scrollOffsetY = 0,
+    scrollOffsetY = 0
   ) => {
     "worklet";
     const screenCenterX = width / 2;
@@ -552,11 +608,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     const finalX = Math.max(
       page.x,
-      Math.min(canvasCenterX, page.x + page.w - w),
+      Math.min(canvasCenterX, page.x + page.w - w)
     );
     const finalY = Math.max(
       page.y,
-      Math.min(canvasCenterY, page.y + page.h - h),
+      Math.min(canvasCenterY, page.y + page.h - h)
     );
 
     return { x: finalX, y: finalY };
@@ -578,11 +634,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     // Clamp trong page bounds
     const finalX = Math.max(
       page.x,
-      Math.min(canvasCenterX, page.x + page.w - w),
+      Math.min(canvasCenterX, page.x + page.w - w)
     );
     const finalY = Math.max(
       page.y,
-      Math.min(canvasCenterY, page.y + page.h - h),
+      Math.min(canvasCenterY, page.y + page.h - h)
     );
 
     return { x: finalX, y: finalY };
@@ -639,7 +695,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       strokeData.width ?? 120,
       strokeData.height ?? 120,
       strokeData.scrollOffsetX ?? 0,
-      strokeData.scrollOffsetY ?? 0,
+      strokeData.scrollOffsetY ?? 0
     );
 
     const newStroke = {
@@ -667,7 +723,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       0,
       0,
       strokeData.scrollOffsetX ?? 0,
-      strokeData.scrollOffsetY ?? 0,
+      strokeData.scrollOffsetY ?? 0
     );
     const newStroke = {
       id: nextId(),
@@ -794,7 +850,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     // [NEW] Clears all strokes from all layers on this canvas.
     clearAllStrokes: () => {
-      setLayers((prev) => {
+      setInternalLayers((prev) => {
         if (!Array.isArray(prev)) return [];
         return prev.map((l) => ({ ...l, strokes: [] }));
       });
@@ -805,10 +861,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     // Lấy tất cả strokes từ tất cả layers (để lưu đầy đủ)
     getStrokes: () => {
-      if (!Array.isArray(layers) || layers.length === 0) return [];
+      if (!Array.isArray(internalLayers) || internalLayers.length === 0)
+        return [];
 
       // ✅ Lấy tất cả strokes từ tất cả layers (không chỉ active layer)
-      const allStrokes = layers
+      const allStrokes = internalLayers
         .filter((layer) => layer && typeof layer === "object")
         .flatMap((layer) => {
           const layerStrokes = Array.isArray(layer.strokes)
@@ -826,9 +883,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     // ✅ Lấy layer metadata (name, visible, locked) để lưu
     getLayersMetadata: () => {
-      if (!Array.isArray(layers) || layers.length === 0) return [];
+      if (!Array.isArray(internalLayers) || internalLayers.length === 0)
+        return [];
 
-      return layers
+      return internalLayers
         .filter((layer) => layer && typeof layer === "object" && layer.id)
         .map((layer) => ({
           id: layer.id,
@@ -984,7 +1042,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         });
 
         // ✅ Load strokes vào đúng layer với metadata
-        setLayers((prev) => {
+        setInternalLayers((prev) => {
           if (!Array.isArray(prev)) {
             // Nếu không có layers, tạo mới từ strokes và metadata
             return Object.keys(strokesByLayer).map((layerId) => {
@@ -1064,9 +1122,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         });
 
         // Update layers by appending new strokes
-        setLayers((prevLayers) => {
+        const updater = (prevLayers) => {
           if (!Array.isArray(prevLayers)) {
-            // If no layers exist, create them from the new strokes
             return Object.keys(newStrokesByLayer).map((layerId) => ({
               id: layerId,
               name: `Layer ${layerId}`,
@@ -1075,22 +1132,18 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               strokes: newStrokesByLayer[layerId],
             }));
           }
-
           const layerMap = new Map(
             prevLayers.map((l) => [
               l.id,
               { ...l, strokes: [...(l.strokes || [])] },
-            ]),
+            ])
           );
-
           Object.keys(newStrokesByLayer).forEach((layerId) => {
             const newStrokes = newStrokesByLayer[layerId];
             if (layerMap.has(layerId)) {
-              // Layer exists, append strokes
               const existingLayer = layerMap.get(layerId);
               existingLayer.strokes.push(...newStrokes);
             } else {
-              // New layer from the chunk, create it
               layerMap.set(layerId, {
                 id: layerId,
                 name: `Layer ${layerId}`,
@@ -1100,9 +1153,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               });
             }
           });
-
           return Array.from(layerMap.values());
-        });
+        };
+        setInternalLayers(updater);
+        if (typeof setLayers === "function") setLayers(updater);
       } catch (e) {
         console.error("[CanvasContainer] appendStrokes error:", e);
       }
@@ -1125,7 +1179,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       if (["text", "sticky", "comment"].includes(strokeSnapshot.tool))
         setRealtimeText(null);
     },
-    [tool, color, activeConfig],
+    [tool, color, activeConfig]
   );
 
   return (
@@ -1156,7 +1210,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             onSelectStroke={(id) => setSelectedId(id)}
             selectedId={selectedId}
             // ⬇️ chỉ truyền strokes của layer đang active
-            strokes={getActiveLayer()?.strokes || []}
+            strokes={allStrokes}
             // ⬇️ truyền tất cả strokes của các layer đang visible để eyedropper có thể lấy màu bất kể layer đang active
             allVisibleStrokes={visibleLayers.flatMap((l) => l.strokes || [])}
             setRedoStack={setRedoStack}
@@ -1182,6 +1236,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             zoomState={zoomStateMemo}
             // ⬇️ truyền ref renderer để có thể nâng cấp eyedropper lấy pixel snapshot sau này
             canvasRef={rendererRef}
+            getNearestFont={getNearestFont}
           >
             <CanvasRenderer
               ref={rendererRef}

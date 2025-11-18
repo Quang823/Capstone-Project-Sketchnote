@@ -1,5 +1,18 @@
-import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
-import { View, Text, ScrollView, Pressable, Dimensions, ActivityIndicator } from "react-native";
+import React, {
+  useCallback,
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  Dimensions,
+  ActivityIndicator,
+} from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import YoutubePlayer from "react-native-youtube-iframe";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -17,15 +30,16 @@ const formatDuration = (seconds) => {
   if (!seconds) return "0:00";
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
 // Extract YouTube video ID from URL
 const extractYouTubeId = (url) => {
   if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const regExp =
+    /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
   const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
+  return match && match[2].length === 11 ? match[2] : null;
 };
 
 export default function LessonScreen() {
@@ -37,11 +51,11 @@ export default function LessonScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentLessonId, setCurrentLessonId] = useState(lessonId);
-  const [activeTab, setActiveTab] = useState('content');
+  const [activeTab, setActiveTab] = useState("content");
   const [expandedLessons, setExpandedLessons] = useState({});
 
   // Video tracking states
-  const [playerState, setPlayerState] = useState('unstarted');
+  const [playerState, setPlayerState] = useState("unstarted");
   const [currentTime, setCurrentTime] = useState(0);
   const [canProceed, setCanProceed] = useState(false);
   const playerRef = useRef(null);
@@ -49,6 +63,7 @@ export default function LessonScreen() {
   const lastUpdateRef = useRef(Date.now());
   const intervalRef = useRef(null);
   const saveIntervalRef = useRef(null);
+  const updateTimeRef = useRef(null);
 
   useEffect(() => {
     fetchCourseData();
@@ -86,9 +101,9 @@ export default function LessonScreen() {
     }
 
     return () => {
-      // Cleanup khi unmount
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (saveIntervalRef.current) clearInterval(saveIntervalRef.current);
+      if (updateTimeRef.current) clearInterval(updateTimeRef.current);
       saveLessonProgress();
     };
   }, [currentLessonId]);
@@ -98,7 +113,7 @@ export default function LessonScreen() {
       setLoading(true);
       setError(null);
       const response = await courseService.getCourseByIdEnrolled(courseId);
-      console.log(response.result.course.lessons)
+      console.log(response.result.course.lessons);
       if (response && response.result.course) {
         setCourse(response.result.course);
       }
@@ -123,121 +138,125 @@ export default function LessonScreen() {
           lastPosition = Math.floor(time);
         }
       } catch (err) {
-        console.log('Could not get current time from player');
+        console.log("Could not get current time from player");
       }
 
       const timeSpent = Math.floor(timeSpentRef.current);
-      
+
       // Tính completed dựa trên % xem video
       const lessonDuration = currentLesson?.duration || 0;
-      const watchPercentage = lessonDuration > 0 ? (lastPosition / lessonDuration) * 100 : 0;
+      const watchPercentage =
+        lessonDuration > 0 ? (lastPosition / lessonDuration) * 100 : 0;
       const completed = watchPercentage >= 80;
 
       // Chỉ lưu nếu có thời gian xem
       if (timeSpent > 0 || lastPosition > 0) {
-        console.log('Saving progress:', {
+        console.log("Saving progress:", {
           courseId,
           lessonId: currentLessonId,
           lastPosition,
           timeSpent,
           completed,
-          watchPercentage: watchPercentage.toFixed(1)
+          watchPercentage: watchPercentage.toFixed(1),
         });
 
         await courseService.saveLessonProgress(courseId, currentLessonId, {
           lastPosition,
           timeSpent,
-          completed
+          completed,
         });
 
-        console.log('Progress saved successfully');
-        
+        console.log("Progress saved successfully");
+
         // Tự động update local lesson status thành COMPLETED khi xem đủ 80%
         if (completed && course?.lessons) {
-          const updatedLessons = course.lessons.map(lesson => 
-            lesson.lessonId === currentLessonId 
-              ? { ...lesson, lessonProgressStatus: 'COMPLETED' }
+          const updatedLessons = course.lessons.map((lesson) =>
+            lesson.lessonId === currentLessonId
+              ? { ...lesson, lessonProgressStatus: "COMPLETED" }
               : lesson
           );
           setCourse({ ...course, lessons: updatedLessons });
-          console.log('Lesson status updated to COMPLETED');
+          console.log("Lesson status updated to COMPLETED");
         }
       }
     } catch (error) {
-      console.error('Error saving lesson progress:', error);
+      console.error("Error saving lesson progress:", error);
     }
   };
 
   // Callback khi trạng thái player thay đổi
-  const onChangeState = useCallback((state) => {
-    console.log('Player state:', state);
-    setPlayerState(state);
-    
-    if (state === 'playing') {
-      // Bắt đầu đếm thời gian xem
-      lastUpdateRef.current = Date.now();
-      
-      // Interval để đếm timeSpent
-      if (!intervalRef.current) {
-        intervalRef.current = setInterval(() => {
-          const now = Date.now();
-          const elapsed = (now - lastUpdateRef.current) / 1000;
-          timeSpentRef.current += elapsed;
-          lastUpdateRef.current = now;
-        }, 1000);
-      }
+  const onChangeState = useCallback(
+    (state) => {
+      console.log("Player state:", state);
+      setPlayerState(state);
 
-      // Interval để lưu progress định kỳ (mỗi 30 giây)
-      if (!saveIntervalRef.current) {
-        saveIntervalRef.current = setInterval(() => {
-          saveLessonProgress();
-        }, 30000); // 30 seconds
-      }
+      if (state === "playing") {
+        // Bắt đầu đếm thời gian xem
+        lastUpdateRef.current = Date.now();
 
-      // Update current time và check canProceed
-      const updateTime = setInterval(async () => {
-        try {
-          const time = await playerRef.current?.getCurrentTime();
-          if (time !== undefined && time !== null && time > 0) {
-            setCurrentTime(time);
-            
-            // Check nếu xem đủ 90% thì cho phép next
-            const lessonDuration = currentLesson?.duration || 0;
-            if (lessonDuration > 0) {
-              const watchPercentage = (time / lessonDuration) * 100;
-              setCanProceed(watchPercentage >= 90);
-              
-              // Debug log
-              console.log(`Video progress: ${time.toFixed(1)}s / ${lessonDuration}s (${watchPercentage.toFixed(1)}%)`);
-            }
-          }
-        } catch (err) {
-          console.log('Error getting current time:', err);
+        // Interval để đếm timeSpent
+        if (!intervalRef.current) {
+          intervalRef.current = setInterval(() => {
+            const now = Date.now();
+            const elapsed = (now - lastUpdateRef.current) / 1000;
+            timeSpentRef.current += elapsed;
+            lastUpdateRef.current = now;
+          }, 1000);
         }
-      }, 1000);
 
-      return () => clearInterval(updateTime);
-    } else {
-      // Dừng đếm khi pause/ended/paused
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      if (saveIntervalRef.current) {
-        clearInterval(saveIntervalRef.current);
-        saveIntervalRef.current = null;
-      }
+        // Interval để lưu progress định kỳ (mỗi 30 giây)
+        if (!saveIntervalRef.current) {
+          saveIntervalRef.current = setInterval(() => {
+            saveLessonProgress();
+          }, 30000); // 30 seconds
+        }
 
-      // Lưu progress khi pause hoặc ended
-      if (state === 'paused' || state === 'ended') {
-        saveLessonProgress();
+        if (!updateTimeRef.current) {
+          updateTimeRef.current = setInterval(async () => {
+            try {
+              const time = await playerRef.current?.getCurrentTime();
+              if (time !== undefined && time !== null && time > 0) {
+                setCurrentTime(time);
+                const lessonDuration = currentLesson?.duration || 0;
+                if (lessonDuration > 0) {
+                  const watchPercentage = (time / lessonDuration) * 100;
+                  setCanProceed(watchPercentage >= 90);
+                  console.log(
+                    `Video progress: ${time.toFixed(
+                      1
+                    )}s / ${lessonDuration}s (${watchPercentage.toFixed(1)}%)`
+                  );
+                }
+              }
+            } catch (err) {
+              console.log("Error getting current time:", err);
+            }
+          }, 1000);
+        }
+      } else {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        if (saveIntervalRef.current) {
+          clearInterval(saveIntervalRef.current);
+          saveIntervalRef.current = null;
+        }
+        if (updateTimeRef.current) {
+          clearInterval(updateTimeRef.current);
+          updateTimeRef.current = null;
+        }
+        if (state === "paused" || state === "ended") {
+          saveLessonProgress();
+        }
       }
-    }
-  }, [currentLessonId, courseId]);
+    },
+    [currentLessonId, courseId]
+  );
 
   const currentLesson = useMemo(() => {
     if (!course?.lessons) return null;
-    return course.lessons.find(l => l.lessonId === currentLessonId);
+    return course.lessons.find((l) => l.lessonId === currentLessonId);
   }, [course, currentLessonId]);
 
   const currentVideoId = useMemo(() => {
@@ -253,48 +272,48 @@ export default function LessonScreen() {
   // Check if a lesson can be accessed based on progress rules
   const canAccessLesson = (lessonIndex, lesson) => {
     if (!lesson) return false;
-    
+
     // If lesson is completed, always allow access
-    if (lesson.lessonProgressStatus === 'COMPLETED') {
+    if (lesson.lessonProgressStatus === "COMPLETED") {
       return true;
     }
-    
+
     // If lesson is the first one, always allow access
     if (lessonIndex === 0) {
       return true;
     }
-    
+
     // For other lessons, check if previous lesson is completed
     const previousLesson = course.lessons[lessonIndex - 1];
     if (!previousLesson) return false;
-    
+
     // Only allow access if previous lesson is completed
-    return previousLesson.lessonProgressStatus === 'COMPLETED';
+    return previousLesson.lessonProgressStatus === "COMPLETED";
   };
 
   const handleOpenLesson = (id) => {
-    const targetLesson = course.lessons.find(l => l.lessonId === id);
-    const targetIndex = course.lessons.findIndex(l => l.lessonId === id);
-    
+    const targetLesson = course.lessons.find((l) => l.lessonId === id);
+    const targetIndex = course.lessons.findIndex((l) => l.lessonId === id);
+
     // Check if lesson can be accessed based on progress rules
     if (!canAccessLesson(targetIndex, targetLesson)) {
       return; // Don't allow access if lesson is locked
     }
-    
+
     saveLessonProgress(); // Save lesson hiện tại
     setCurrentLessonId(id);
   };
 
   const toggleLessonExpand = (id) => {
-    setExpandedLessons(prev => ({
+    setExpandedLessons((prev) => ({
       ...prev,
-      [id]: !prev[id]
+      [id]: !prev[id],
     }));
   };
 
   const currentLessonIndex = useMemo(() => {
     if (!course?.lessons) return 0;
-    return course.lessons.findIndex(l => l.lessonId === currentLessonId);
+    return course.lessons.findIndex((l) => l.lessonId === currentLessonId);
   }, [course, currentLessonId]);
 
   const progress = useMemo(() => {
@@ -305,22 +324,22 @@ export default function LessonScreen() {
   // Check if current lesson can proceed to next
   const canProceedToNext = useMemo(() => {
     if (!course?.lessons || currentLessonIndex === -1) return false;
-    
+
     const currentLesson = course.lessons[currentLessonIndex];
     if (!currentLesson) return false;
-    
+
     // Can proceed if current lesson is completed
-    if (currentLesson.lessonProgressStatus === 'COMPLETED') {
+    if (currentLesson.lessonProgressStatus === "COMPLETED") {
       return true;
     }
-    
+
     // Fallback: check if user has watched enough of the video (80%)
     const lessonDuration = currentLesson?.duration || 0;
     if (lessonDuration > 0 && currentTime > 0) {
       const watchPercentage = (currentTime / lessonDuration) * 100;
       return watchPercentage >= 80;
     }
-    
+
     return false;
   }, [course, currentLessonIndex, currentTime]);
 
@@ -353,7 +372,9 @@ export default function LessonScreen() {
     return (
       <View style={lessonStyles.errorContainer}>
         <Icon name="error-outline" size={64} color="#EF4444" />
-        <Text style={lessonStyles.errorText}>{error || "Không tìm thấy khóa học"}</Text>
+        <Text style={lessonStyles.errorText}>
+          {error || "Không tìm thấy khóa học"}
+        </Text>
         <Pressable style={lessonStyles.retryButton} onPress={fetchCourseData}>
           <Text style={lessonStyles.retryButtonText}>Thử lại</Text>
         </Pressable>
@@ -376,89 +397,129 @@ export default function LessonScreen() {
             <Text style={lessonStyles.overviewText}>Lesson Overview</Text>
           </Pressable>
 
-          {course.lessons && course.lessons.map((lesson, index) => {
-            const isActive = lesson.lessonId === currentLessonId;
-            const isExpanded = expandedLessons[lesson.lessonId];
-            const lessonProgress = isActive ? progress : 0;
-            const isLocked = !canAccessLesson(index, lesson);
-            const isCompleted = lesson.lessonProgressStatus === 'COMPLETED';
-            
-            return (
-              <View key={lesson.lessonId} style={lessonStyles.sidebarItemContainer}>
-                <Pressable
-                  style={[
-                    lessonStyles.sidebarItem, 
-                    isActive && lessonStyles.sidebarItemActive,
-                    isLocked && lessonStyles.sidebarItemLocked
-                  ]}
-                  onPress={() => isLocked ? null : toggleLessonExpand(lesson.lessonId)}
-                  disabled={isLocked}
+          {course.lessons &&
+            course.lessons.map((lesson, index) => {
+              const isActive = lesson.lessonId === currentLessonId;
+              const isExpanded = expandedLessons[lesson.lessonId];
+              const lessonProgress = isActive ? progress : 0;
+              const isLocked = !canAccessLesson(index, lesson);
+              const isCompleted = lesson.lessonProgressStatus === "COMPLETED";
+
+              return (
+                <View
+                  key={lesson.lessonId}
+                  style={lessonStyles.sidebarItemContainer}
                 >
-                  <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                    {isLocked && (
-                      <Icon name="lock" size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
-                    )}
-                    {isCompleted && !isLocked && (
-                      <Icon name="check-circle" size={16} color="#10B981" style={{ marginRight: 8 }} />
-                    )}
-                    {!isLocked && !isCompleted && (
-                      <Icon name="play-circle-outline" size={16} color="#6B7280" style={{ marginRight: 8 }} />
-                    )}
-                    <Text style={[
-                      lessonStyles.sidebarItemText, 
-                      isActive && lessonStyles.sidebarItemTextActive,
-                      isLocked && lessonStyles.sidebarItemTextLocked
-                    ]}>
-                      {lesson.title}
-                    </Text>
-                  </View>
-                  <Icon 
-                    name={isExpanded ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
-                    size={20} 
-                    color={isLocked ? "#9CA3AF" : (isActive ? "#FFFFFF" : "#6B7280")} 
-                  />
-                </Pressable>
-                
-                {isExpanded && (
-                  <View style={lessonStyles.sidebarItemExpanded}>
-                    {lesson.content && (
-                      <Text style={lessonStyles.sidebarItemContent} numberOfLines={3}>
-                        {lesson.content}
-                      </Text>
-                    )}
-                    
-                    <View style={lessonStyles.sidebarItemMeta}>
-                      <View style={lessonStyles.sidebarMetaRow}>
-                        <Icon name="schedule" size={16} color="#6B7280" />
-                        <Text style={lessonStyles.sidebarMetaText}>{formatDuration(lesson.duration)}</Text>
-                      </View>
-                    </View>
-                    
-                    <Pressable 
-                      style={[
-                        lessonStyles.sidebarPlayButton,
-                        isLocked && lessonStyles.sidebarPlayButtonLocked
-                      ]}
-                      onPress={() => handleOpenLesson(lesson.lessonId)}
-                      disabled={isLocked}
+                  <Pressable
+                    style={[
+                      lessonStyles.sidebarItem,
+                      isActive && lessonStyles.sidebarItemActive,
+                      isLocked && lessonStyles.sidebarItemLocked,
+                    ]}
+                    onPress={() =>
+                      isLocked ? null : toggleLessonExpand(lesson.lessonId)
+                    }
+                    disabled={isLocked}
+                  >
+                    <View
+                      style={{
+                        flex: 1,
+                        flexDirection: "row",
+                        alignItems: "center",
+                      }}
                     >
-                      <Icon 
-                        name={isLocked ? "lock" : "play-circle-filled"} 
-                        size={20} 
-                        color={isLocked ? "#9CA3AF" : "#FFFFFF"} 
-                      />
-                      <Text style={[
-                        lessonStyles.sidebarPlayText,
-                        isLocked && lessonStyles.sidebarPlayTextLocked
-                      ]}>
-                        {isLocked ? "Locked" : "Start Lesson"}
+                      {isLocked && (
+                        <Icon
+                          name="lock"
+                          size={16}
+                          color="#9CA3AF"
+                          style={{ marginRight: 8 }}
+                        />
+                      )}
+                      {isCompleted && !isLocked && (
+                        <Icon
+                          name="check-circle"
+                          size={16}
+                          color="#10B981"
+                          style={{ marginRight: 8 }}
+                        />
+                      )}
+                      {!isLocked && !isCompleted && (
+                        <Icon
+                          name="play-circle-outline"
+                          size={16}
+                          color="#6B7280"
+                          style={{ marginRight: 8 }}
+                        />
+                      )}
+                      <Text
+                        style={[
+                          lessonStyles.sidebarItemText,
+                          isActive && lessonStyles.sidebarItemTextActive,
+                          isLocked && lessonStyles.sidebarItemTextLocked,
+                        ]}
+                      >
+                        {lesson.title}
                       </Text>
-                    </Pressable>
-                  </View>
-                )}
-              </View>
-            );
-          })}
+                    </View>
+                    <Icon
+                      name={
+                        isExpanded ? "keyboard-arrow-up" : "keyboard-arrow-down"
+                      }
+                      size={20}
+                      color={
+                        isLocked ? "#9CA3AF" : isActive ? "#FFFFFF" : "#6B7280"
+                      }
+                    />
+                  </Pressable>
+
+                  {isExpanded && (
+                    <View style={lessonStyles.sidebarItemExpanded}>
+                      {lesson.content && (
+                        <Text
+                          style={lessonStyles.sidebarItemContent}
+                          numberOfLines={3}
+                        >
+                          {lesson.content}
+                        </Text>
+                      )}
+
+                      <View style={lessonStyles.sidebarItemMeta}>
+                        <View style={lessonStyles.sidebarMetaRow}>
+                          <Icon name="schedule" size={16} color="#6B7280" />
+                          <Text style={lessonStyles.sidebarMetaText}>
+                            {formatDuration(lesson.duration)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Pressable
+                        style={[
+                          lessonStyles.sidebarPlayButton,
+                          isLocked && lessonStyles.sidebarPlayButtonLocked,
+                        ]}
+                        onPress={() => handleOpenLesson(lesson.lessonId)}
+                        disabled={isLocked}
+                      >
+                        <Icon
+                          name={isLocked ? "lock" : "play-circle-filled"}
+                          size={20}
+                          color={isLocked ? "#9CA3AF" : "#FFFFFF"}
+                        />
+                        <Text
+                          style={[
+                            lessonStyles.sidebarPlayText,
+                            isLocked && lessonStyles.sidebarPlayTextLocked,
+                          ]}
+                        >
+                          {isLocked ? "Locked" : "Start Lesson"}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
         </ScrollView>
       </View>
 
@@ -469,19 +530,29 @@ export default function LessonScreen() {
           <Text style={lessonStyles.headerTitle}>{course.title}</Text>
           <View style={lessonStyles.headerActions}>
             {/* Debug info - có thể xóa sau */}
-            <Text style={{ fontSize: 12, color: '#666', marginRight: 10 }}>
-              Time: {Math.floor(timeSpentRef.current)}s | Pos: {Math.floor(currentTime)}s | Status: {currentLesson?.lessonProgressStatus} | CanNext: {canProceedToNext ? 'Yes' : 'No'}
+            <Text style={{ fontSize: 12, color: "#666", marginRight: 10 }}>
+              Time: {Math.floor(timeSpentRef.current)}s | Pos:{" "}
+              {Math.floor(currentTime)}s | Status:{" "}
+              {currentLesson?.lessonProgressStatus} | CanNext:{" "}
+              {canProceedToNext ? "Yes" : "No"}
             </Text>
           </View>
         </View>
 
         <ScrollView style={lessonStyles.contentScroll}>
           {/* Lesson Title */}
-          <Text style={lessonStyles.lessonMainTitle}>{currentLesson?.title}</Text>
+          <Text style={lessonStyles.lessonMainTitle}>
+            {currentLesson?.title}
+          </Text>
 
           {/* Video Player */}
           {currentVideoId ? (
-            <View style={[lessonStyles.playerWrap, { width: PLAYER_WIDTH, height: PLAYER_HEIGHT }]}>
+            <View
+              style={[
+                lessonStyles.playerWrap,
+                { width: PLAYER_WIDTH, height: PLAYER_HEIGHT },
+              ]}
+            >
               <YoutubePlayer
                 ref={playerRef}
                 height={PLAYER_HEIGHT}
@@ -497,7 +568,13 @@ export default function LessonScreen() {
               />
             </View>
           ) : (
-            <View style={[lessonStyles.playerWrap, lessonStyles.noVideoPlaceholder, { width: PLAYER_WIDTH, height: PLAYER_HEIGHT }]}>
+            <View
+              style={[
+                lessonStyles.playerWrap,
+                lessonStyles.noVideoPlaceholder,
+                { width: PLAYER_WIDTH, height: PLAYER_HEIGHT },
+              ]}
+            >
               <Icon name="play-circle-outline" size={64} color="#9CA3AF" />
               <Text style={lessonStyles.noVideoText}>Không có video</Text>
             </View>
@@ -505,27 +582,51 @@ export default function LessonScreen() {
 
           {/* Tabs */}
           <View style={lessonStyles.tabs}>
-            <Pressable 
-              style={[lessonStyles.tab, activeTab === 'content' && lessonStyles.tabActive]}
-              onPress={() => setActiveTab('content')}
+            <Pressable
+              style={[
+                lessonStyles.tab,
+                activeTab === "content" && lessonStyles.tabActive,
+              ]}
+              onPress={() => setActiveTab("content")}
             >
-              <Text style={[lessonStyles.tabText, activeTab === 'content' && lessonStyles.tabTextActive]}>
+              <Text
+                style={[
+                  lessonStyles.tabText,
+                  activeTab === "content" && lessonStyles.tabTextActive,
+                ]}
+              >
                 Content
               </Text>
             </Pressable>
-            <Pressable 
-              style={[lessonStyles.tab, activeTab === 'notes' && lessonStyles.tabActive]}
-              onPress={() => setActiveTab('notes')}
+            <Pressable
+              style={[
+                lessonStyles.tab,
+                activeTab === "notes" && lessonStyles.tabActive,
+              ]}
+              onPress={() => setActiveTab("notes")}
             >
-              <Text style={[lessonStyles.tabText, activeTab === 'notes' && lessonStyles.tabTextActive]}>
+              <Text
+                style={[
+                  lessonStyles.tabText,
+                  activeTab === "notes" && lessonStyles.tabTextActive,
+                ]}
+              >
                 Notes
               </Text>
             </Pressable>
-            <Pressable 
-              style={[lessonStyles.tab, activeTab === 'discussion' && lessonStyles.tabActive]}
-              onPress={() => setActiveTab('discussion')}
+            <Pressable
+              style={[
+                lessonStyles.tab,
+                activeTab === "discussion" && lessonStyles.tabActive,
+              ]}
+              onPress={() => setActiveTab("discussion")}
             >
-              <Text style={[lessonStyles.tabText, activeTab === 'discussion' && lessonStyles.tabTextActive]}>
+              <Text
+                style={[
+                  lessonStyles.tabText,
+                  activeTab === "discussion" && lessonStyles.tabTextActive,
+                ]}
+              >
                 Discussion
               </Text>
             </Pressable>
@@ -533,39 +634,70 @@ export default function LessonScreen() {
 
           {/* Tab Content */}
           <View style={lessonStyles.tabContent}>
-            {activeTab === 'content' && (
+            {activeTab === "content" && (
               <Text style={lessonStyles.contentText}>
-                {currentLesson?.content || "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim curi an lin esam venlam."}
+                {currentLesson?.content ||
+                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim curi an lin esam venlam."}
               </Text>
             )}
-            {activeTab === 'notes' && (
-              <Text style={lessonStyles.contentText}>Ghi chú của bạn sẽ hiển thị ở đây...</Text>
+            {activeTab === "notes" && (
+              <Text style={lessonStyles.contentText}>
+                Ghi chú của bạn sẽ hiển thị ở đây...
+              </Text>
             )}
-            {activeTab === 'discussion' && (
-              <Text style={lessonStyles.contentText}>Thảo luận về bài học...</Text>
+            {activeTab === "discussion" && (
+              <Text style={lessonStyles.contentText}>
+                Thảo luận về bài học...
+              </Text>
             )}
           </View>
 
           {/* Navigation Buttons */}
           <View style={lessonStyles.navigationButtons}>
-            <Pressable 
-              style={[lessonStyles.navButton, lessonStyles.previousButton, currentLessonIndex === 0 && lessonStyles.navButtonDisabled]}
+            <Pressable
+              style={[
+                lessonStyles.navButton,
+                lessonStyles.previousButton,
+                currentLessonIndex === 0 && lessonStyles.navButtonDisabled,
+              ]}
               onPress={handlePrevious}
               disabled={currentLessonIndex === 0}
             >
-              <Icon name="arrow-back" size={20} color={currentLessonIndex === 0 ? "#9CA3AF" : "#2563EB"} />
-              <Text style={[lessonStyles.navButtonText, lessonStyles.previousButtonText, currentLessonIndex === 0 && lessonStyles.navButtonTextDisabled]}>
+              <Icon
+                name="arrow-back"
+                size={20}
+                color={currentLessonIndex === 0 ? "#9CA3AF" : "#2563EB"}
+              />
+              <Text
+                style={[
+                  lessonStyles.navButtonText,
+                  lessonStyles.previousButtonText,
+                  currentLessonIndex === 0 &&
+                    lessonStyles.navButtonTextDisabled,
+                ]}
+              >
                 PREVIOUS
               </Text>
             </Pressable>
 
-            <Pressable 
-              style={[lessonStyles.navButton, lessonStyles.completeButton, !canProceedToNext && lessonStyles.navButtonDisabled]}
+            <Pressable
+              style={[
+                lessonStyles.navButton,
+                lessonStyles.completeButton,
+                !canProceedToNext && lessonStyles.navButtonDisabled,
+              ]}
               onPress={handleComplete}
               disabled={!canProceedToNext}
             >
-              <Text style={[lessonStyles.completeButtonText, !canProceedToNext && lessonStyles.navButtonTextDisabled]}>
-               {currentLessonIndex === course.lessons.length - 1 ? "COMPLETE" : "NEXT"}
+              <Text
+                style={[
+                  lessonStyles.completeButtonText,
+                  !canProceedToNext && lessonStyles.navButtonTextDisabled,
+                ]}
+              >
+                {currentLessonIndex === course.lessons.length - 1
+                  ? "COMPLETE"
+                  : "NEXT"}
               </Text>
             </Pressable>
           </View>
