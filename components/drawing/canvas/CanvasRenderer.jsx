@@ -64,7 +64,7 @@ const makeRGBA = (input, alpha = 1) => {
     if (input.startsWith("rgba")) {
       return input.replace(
         /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/,
-        (_, r, g, b) => `rgba(${r},${g},${b},${alpha})`,
+        (_, r, g, b) => `rgba(${r},${g},${b},${alpha})`
       );
     }
     if (input.startsWith("#")) {
@@ -94,7 +94,7 @@ const makeRGBA = (input, alpha = 1) => {
       e.message,
       "Input:",
       input,
-      "Fallback to black",
+      "Fallback to black"
     );
     return `rgba(0,0,0,${alpha})`;
   }
@@ -138,7 +138,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     zoomSnapshot,
     scrollOffsetY = 0,
   },
-  ref,
+  ref
 ) {
   // Cache Skia.Path objects per stroke to avoid recomputing paths on each render
   const pathCacheRef = useRef(new Map());
@@ -149,6 +149,14 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     } catch {}
   }, [activeLayerId]);
   const canvasRef = useCanvasRef();
+
+  useEffect(() => {
+    return () => {
+      try {
+        pathCacheRef.current.clear();
+      } catch {}
+    };
+  }, []);
 
   // Safe image loading with error handling
   let backgroundImage = null;
@@ -217,7 +225,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           translateY: zoomSnapshot?.translateY ?? 0,
         },
         scrollOffsetY,
-        { width: screen.width, height: screen.height },
+        { width: screen.width, height: screen.height }
       );
     } catch (e) {
       return {
@@ -268,14 +276,14 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     smoothedPoints = [],
     density = 0.5,
     spread = 1.0,
-    baseSize = 6,
+    baseSize = 6
   ) {
     const dots = [];
     if (!Array.isArray(smoothedPoints) || smoothedPoints.length === 0)
       return dots;
     const totalRaw = Math.max(
       6,
-      Math.round(smoothedPoints.length * (density * 6)),
+      Math.round(smoothedPoints.length * (density * 6))
     );
     const total = Math.min(140, totalRaw);
     for (let i = 0; i < total; i++) {
@@ -291,11 +299,11 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       const ry = (pseudoRandom(seed + 1) - 0.5) * baseSize * spread;
       const r = Math.max(
         1,
-        Math.round((pseudoRandom(seed + 2) * baseSize) / 2),
+        Math.round((pseudoRandom(seed + 2) * baseSize) / 2)
       );
       const alpha = Math.max(
         0.06,
-        Math.min(0.5, pseudoRandom(seed + 3) * 0.45),
+        Math.min(0.5, pseudoRandom(seed + 3) * 0.45)
       );
       dots.push({ x: x + rx, y: y + ry, r, a: alpha });
     }
@@ -318,7 +326,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           color={makeRGBA(strokeColor, 0.14)}
           style="fill"
           blendMode="srcOver"
-        />,
+        />
       );
     }
     if (high.length) {
@@ -331,7 +339,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           color={makeRGBA(strokeColor, 0.28)}
           style="fill"
           blendMode="srcOver"
-        />,
+        />
       );
     }
     return <Group key="air-dots-group">{nodes}</Group>;
@@ -388,7 +396,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         s.fontFamily,
         s.bold,
         s.italic,
-        fontSize,
+        fontSize
       );
       const fallback = getNearestFont(loadedFonts, "Roboto", false, false, 18);
       const safeFont = font || fallback.font;
@@ -422,7 +430,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               color={bgColor}
               rx={6}
               ry={6}
-            />,
+            />
           );
           const fold = Skia.Path.Make();
           fold.moveTo(left + tw - foldSize, top);
@@ -430,7 +438,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           fold.lineTo(left + tw, top + foldSize);
           fold.close();
           elements.push(
-            <Path key={`${s.id}-sticky-fold`} path={fold} color="#FFED77" />,
+            <Path key={`${s.id}-sticky-fold`} path={fold} color="#FFED77" />
           );
         } else {
           const tailH = 8;
@@ -447,7 +455,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           bubble.quadTo(left, top, left + 10, top);
           bubble.close();
           elements.push(
-            <Path key={`${s.id}-comment-bg`} path={bubble} color="#E3F2FD" />,
+            <Path key={`${s.id}-comment-bg`} path={bubble} color="#E3F2FD" />
           );
           elements.push(
             <Path
@@ -456,7 +464,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               color="rgba(0,0,0,0.18)"
               style="stroke"
               strokeWidth={1.2}
-            />,
+            />
           );
         }
       }
@@ -467,7 +475,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           "NotoColorEmoji",
           false,
           false,
-          s.fontSize || 36,
+          s.fontSize || 36
         ).font;
         if (emojiFont) {
           elements.push(
@@ -478,7 +486,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               text={s.text || ""}
               font={emojiFont}
               color={s.color || "#000"}
-            />,
+            />
           );
         }
         return <Group key={`${s.id}-emoji-group`}>{elements}</Group>;
@@ -494,7 +502,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             font={safeFont}
             color={s.color || "#000"}
             transform={[{ scale: scaleFactor }]}
-          />,
+          />
         );
       }
 
@@ -507,7 +515,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             width={textWidth * 0.95}
             height={1.5}
             color={s.color || "#000"}
-          />,
+          />
         );
       }
 
@@ -524,7 +532,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             strokeColor="#2563EB"
             style="stroke"
             dashEffect={[6, 4]}
-          />,
+          />
         );
       }
 
@@ -647,7 +655,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           const effW = computeEffectiveWidth(
             baseW,
             s.thickness ?? thickness,
-            s.pressure ?? pressure,
+            s.pressure ?? pressure
           );
           return (
             <Circle
@@ -672,7 +680,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         const effW = computeEffectiveWidth(
           baseW,
           s.thickness ?? thickness,
-          s.pressure ?? pressure,
+          s.pressure ?? pressure
         );
         return (
           <Circle
@@ -687,7 +695,13 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
       // Do NOT smooth stored strokes; smoothing can bridge small gaps from pixel eraser splits
       // Cache path by a lightweight key derived from stroke id, point count, width, and tool
-      const cacheKey = `${s.id}:${s.points?.length || 0}:${s.width || strokeWidth || 0}:${s.tool || "pen"}`;
+      const first = s.points?.[0];
+      const last = s.points?.[s.points.length - 1];
+      const ax = Math.round(((first?.x || 0) + (last?.x || 0)) * 10) / 10;
+      const ay = Math.round(((first?.y || 0) + (last?.y || 0)) * 10) / 10;
+      const cacheKey = `${s.id}:${s.points?.length || 0}:${
+        s.width || strokeWidth || 0
+      }:${s.tool || "pen"}:${ax}:${ay}`;
       let path = pathCacheRef.current.get(cacheKey);
       if (!path) {
         path = makePathFromPoints(s.points);
@@ -734,7 +748,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       const effWidth = computeEffectiveWidth(
         baseW,
         s.thickness ?? thickness,
-        s.pressure ?? pressure,
+        s.pressure ?? pressure
       );
 
       // === BRUSH (distinct) ===
@@ -820,7 +834,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           s.points,
           Math.max(0.1, (airbrushDensity ?? 0.55) * 0.6),
           airbrushSpread,
-          Math.max(3, effWidth * 0.8),
+          Math.max(3, effWidth * 0.8)
         );
         const dotGroup = makeDotPaths(dots, strokeColor);
         return (
@@ -842,7 +856,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         const dir = Math.sqrt(dx * dx + dy * dy) || 1;
         const tilt = Math.max(
           0.3,
-          Math.min(1.6, 1 + (dy / dir - 0.5) * calligraphyAngle),
+          Math.min(1.6, 1 + (dy / dir - 0.5) * calligraphyAngle)
         );
 
         const main = (
@@ -990,7 +1004,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               let fillNode = null;
               if (
                 s.shape &&
-                s.fill &&
+                (s.fill || (typeof s.fillColor === "string" && s.fillColor)) &&
                 !["line", "arrow"].includes(s.tool) &&
                 [
                   "square",
@@ -1040,9 +1054,14 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                     path={path}
                     color={makeRGBA(s.fillColor || "#ffffff", 1)}
                     style="fill"
+                    blendMode="srcOver"
+                    opacity={typeof s.opacity === "number" ? s.opacity : 1}
                   />
                 );
-              } else if (s.fill && s.points?.length > 0) {
+              } else if (
+                (s.fill || (typeof s.fillColor === "string" && s.fillColor)) &&
+                s.points?.length > 0
+              ) {
                 const path = makePathFromPoints(s.points);
                 try {
                   path.close();
@@ -1053,6 +1072,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                     path={path}
                     color={makeRGBA(s.fillColor || "#ffffff", 1)}
                     style="fill"
+                    blendMode="srcOver"
+                    opacity={typeof s.opacity === "number" ? s.opacity : 1}
                   />
                 );
               }
@@ -1152,7 +1173,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             fontFamily,
             bold,
             italic,
-            fontSize,
+            fontSize
           );
           const safeFont =
             font ||
@@ -1160,7 +1181,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           const scaleFactor = nearest ? fontSize / nearest : 1;
           const textWidth = Math.max(
             40,
-            (text.length || 1) * (fontSize * 0.6) + padding * 2,
+            (text.length || 1) * (fontSize * 0.6) + padding * 2
           );
           const textHeight = Math.max(28, fontSize + padding * 2);
           const left = x - padding;
@@ -1180,7 +1201,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 color={bgColor}
                 rx={6}
                 ry={6}
-              />,
+              />
             );
             const fold = Skia.Path.Make();
             fold.moveTo(left + textWidth - foldSize, top);
@@ -1201,21 +1222,21 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               left + textWidth,
               top + textHeight,
               left + textWidth - 10,
-              top + textHeight,
+              top + textHeight
             );
             bubble.lineTo(left + 18, top + textHeight);
             bubble.quadTo(
               left + 10,
               top + textHeight + tailH,
               left + 8,
-              top + textHeight,
+              top + textHeight
             );
             bubble.quadTo(left, top + textHeight, left, top + textHeight - 10);
             bubble.lineTo(left, top + 10);
             bubble.quadTo(left, top, left + 10, top);
             bubble.close();
             elements.push(
-              <Path key="rt-comment-bg" path={bubble} color="#E3F2FD" />,
+              <Path key="rt-comment-bg" path={bubble} color="#E3F2FD" />
             );
             elements.push(
               <Path
@@ -1224,7 +1245,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 color="rgba(0,0,0,0.15)"
                 style="stroke"
                 strokeWidth={1.2}
-              />,
+              />
             );
           }
 
@@ -1238,7 +1259,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 font={safeFont}
                 color={makeRGBA(color, 1)}
                 transform={[{ scale: scaleFactor }]}
-              />,
+              />
             );
           }
 
@@ -1251,7 +1272,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 width={textWidth * 0.95}
                 height={1.5}
                 color={makeRGBA(color, 1)}
-              />,
+              />
             );
           }
 
@@ -1296,7 +1317,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   strokeWidth={1.4}
                   style="stroke"
                   strokeCap="round"
-                />,
+                />
               );
 
               offset += dashLength + gapLength;
@@ -1318,7 +1339,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               path={polyPath}
               color="rgba(0,188,212,0.08)"
               style="fill"
-            />,
+            />
           );
 
           return paths;
@@ -1367,12 +1388,12 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
           const basePath = makePathFromPoints(
             // Khi có thước, bỏ smoothing để preview bám cạnh thước thẳng tuyệt đối
-            hasRuler ? currentPoints : smoothPoints(currentPoints, dynamicStab),
+            hasRuler ? currentPoints : smoothPoints(currentPoints, dynamicStab)
           );
           const effWidth = computeEffectiveWidth(
             toolWidth,
             dynamicThickness,
-            dynamicPressure,
+            dynamicPressure
           );
 
           if (tool === "brush") {
@@ -1419,7 +1440,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 : smoothPoints(currentPoints, dynamicStab),
               Math.min(1, airbrushDensity * 1.0),
               airbrushSpread,
-              Math.max(4, effWidth),
+              Math.max(4, effWidth)
             );
             const dotGroup = makeDotPaths(baseDots, previewColor);
             return (
@@ -1505,7 +1526,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           strokeWidth={computeEffectiveWidth(
             calligraphyWidth || 1,
             thickness,
-            pressure,
+            pressure
           )}
           style="stroke"
           strokeCap="round"
@@ -1553,7 +1574,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   strokeWidth={1.5}
                   style="stroke"
                   strokeCap="round"
-                />,
+                />
               );
 
               offset += dashLength + gapLength;

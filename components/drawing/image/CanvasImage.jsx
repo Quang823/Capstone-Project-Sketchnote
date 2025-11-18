@@ -33,6 +33,14 @@ const CanvasImage = forwardRef(function CanvasImage(
   const uri = stroke?.uri ?? stroke?.imageUri ?? null;
   const img = useImage(uri);
 
+  useEffect(() => {
+    return () => {
+      try {
+        img?.dispose?.();
+      } catch {}
+    };
+  }, [img]);
+
   // Use useSharedValue to store position / size / rotation
   const xVal = useSharedValue(stroke?.x ?? 0);
   const yVal = useSharedValue(stroke?.y ?? 0);

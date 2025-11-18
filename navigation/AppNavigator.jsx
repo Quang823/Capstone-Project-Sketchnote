@@ -24,7 +24,7 @@ import PaymentFailedScreen from "../screens/payment/PaymentFailedScreen";
 import NoteSetupScreen from "../screens/note/NoteSetupScreenFinal";
 import TransactionHistoryScreen from "../screens/store/Transaction/TransactionHistoryScreen";
 import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
-import OrderSuccessScreen from "../screens/store/Payment/OrderSuccessScreen";
+import OrderSuccessScreen from "../screens/store/ResourceStoreScreen/Payment/OrderSuccessScreen";
 import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen";
 import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/DesignerProductsScreen";
 import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";

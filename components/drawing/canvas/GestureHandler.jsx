@@ -81,8 +81,10 @@ export default function GestureHandler(
     pageOffsetY = 0, // ✅ Page offset trong project
     onColorPicked, // 👈 Thêm prop
     selectedId: selectedIdProp,
+    selectedBox: selectedBoxProp,
+    onSelectionChange,
   },
-  ref,
+  ref
 ) {
   // Expose resetRulerLock function to parent components
   useImperativeHandle(ref, () => ({
@@ -116,18 +118,18 @@ export default function GestureHandler(
       const basePx = 3; // base minimum step in pixels
       const effWidth =
         tool === "pencil"
-          ? (pencilWidth ?? strokeWidth ?? 1)
+          ? pencilWidth ?? strokeWidth ?? 1
           : tool === "brush"
-            ? (brushWidth ?? strokeWidth ?? 1)
-            : tool === "calligraphy"
-              ? (calligraphyWidth ?? strokeWidth ?? 1)
-              : tool === "eraser"
-                ? (eraserSize ?? strokeWidth ?? 1)
-                : (strokeWidth ?? 1);
+          ? brushWidth ?? strokeWidth ?? 1
+          : tool === "calligraphy"
+          ? calligraphyWidth ?? strokeWidth ?? 1
+          : tool === "eraser"
+          ? eraserSize ?? strokeWidth ?? 1
+          : strokeWidth ?? 1;
       // When zoomed out (scale < 1), increase min distance; when zoomed in, allow denser points
       const minDist = Math.max(
         2,
-        basePx / Math.max(0.6, scale) + Math.min(6, effWidth * 0.15),
+        basePx / Math.max(0.6, scale) + Math.min(6, effWidth * 0.15)
       );
       return minDist * minDist;
     } catch {
@@ -309,7 +311,7 @@ export default function GestureHandler(
           eSegs[s][0],
           eSegs[s][1],
           eSegs[s][2],
-          eSegs[s][3],
+          eSegs[s][3]
         );
         if (d <= radius + (stroke.width || 6) * 0.5) {
           cutEdge[i] = true;
@@ -367,16 +369,18 @@ export default function GestureHandler(
   const lastEraserPointRef = useRef(null);
   // Ruler lock state: store only which edge to lock to ('top'|'bottom') to avoid stale coords
   const rulerLockRef = useRef(null); // { edge: 'top'|'bottom' } or null
-  const [selectedBox, setSelectedBox] = useState(null);
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedBox, setSelectedBox] = useState(selectedBoxProp);
+  const [selectedId, setSelectedId] = useState(selectedIdProp);
   const [editorVisible, setEditorVisible] = useState(false);
 
-  // [FIX] Sync local selectedId back to the parent (CanvasContainer)
+  // Sync with props from parent
   useEffect(() => {
-    if (typeof onSelectStroke === "function") {
-      onSelectStroke(selectedId);
-    }
-  }, [selectedId, onSelectStroke]);
+    setSelectedId(selectedIdProp);
+  }, [selectedIdProp]);
+
+  useEffect(() => {
+    setSelectedBox(selectedBoxProp);
+  }, [selectedBoxProp]);
 
   const [editorProps, setEditorProps] = useState({
     x: 0,
@@ -389,10 +393,7 @@ export default function GestureHandler(
   const [tempStrokeId, setTempStrokeId] = useState(null);
 
   useEffect(() => {
-    if (
-      typeof selectedIdProp === "string" &&
-      selectedIdProp !== selectedId
-    ) {
+    if (typeof selectedIdProp === "string" && selectedIdProp !== selectedId) {
       setSelectedId(selectedIdProp);
     }
   }, [selectedIdProp]);
@@ -403,7 +404,7 @@ export default function GestureHandler(
       (s) =>
         s &&
         (!activeLayerId || s.layerId === activeLayerId) &&
-        (s.visible ?? true),
+        (s.visible ?? true)
     );
   }, [strokes, activeLayerId]);
 
@@ -444,8 +445,13 @@ export default function GestureHandler(
   };
   const [lassoSelection, setLassoSelection] = useState([]);
   const [isMovingLasso, setIsMovingLasso] = useState(false);
+  const [isCommittingMove, setIsCommittingMove] = useState(false);
   const [lassoOrigin, setLassoOrigin] = useState(null);
   const [lassoMoveStart, setLassoMoveStart] = useState(null);
+  const [lassoCumulativeOffset, setLassoCumulativeOffset] = useState({
+    dx: 0,
+    dy: 0,
+  });
   const lassoMoveRAF = useRef(false);
   const lassoPendingDelta = useRef({ dx: 0, dy: 0 });
   const [lassoBaseBox, setLassoBaseBox] = useState(null);
@@ -454,6 +460,8 @@ export default function GestureHandler(
   // --- Batching helpers for visual offsets (cheap, updated via RAF) ---
   const visualOffsetsRef = useRef({}); // single source-of-truth for transient offsets (no rerenders)
   const visualFlushRaf = useRef(false); // ensure one RAF flush at a time
+  const lassoDragDelta = useRef({ dx: 0, dy: 0 });
+  const lassoBaseAtReleaseRef = useRef(null);
 
   const dragOriginRef = useRef(null); // base x/y when starting to drag a text-like stroke
   const selectionBoxRaf = useRef(false);
@@ -550,7 +558,7 @@ export default function GestureHandler(
     const rawW = Number.isFinite(r.width) ? r.width : undefined;
     const rawH = Number.isFinite(r.height) ? r.height : undefined;
 
-    let useWidth = Number.isFinite(rawW) && rawW > 0 ? rawW : (page?.w ?? 600);
+    let useWidth = Number.isFinite(rawW) && rawW > 0 ? rawW : page?.w ?? 600;
     let useHeight = Number.isFinite(rawH) && rawH > 0 ? rawH : 60;
 
     const s = zoomMirror?.scale || 1;
@@ -606,7 +614,7 @@ export default function GestureHandler(
     (vals) => {
       runOnJS(setZoomMirror)({ scale: vals.s, x: vals.x, y: vals.y });
       runOnJS(invalidateRulerCache)();
-    },
+    }
   );
 
   useEffect(() => {
@@ -622,16 +630,121 @@ export default function GestureHandler(
   const selectedStroke = useMemo(
     () =>
       Array.isArray(strokes) ? strokes.find((s) => s?.id === selectedId) : null,
-    [strokes, selectedId],
+    [strokes, selectedId]
   );
 
-  const { handleMoveCommit } = useLassoTransform({
-    strokes,
-    lassoSelection,
-    activeLayerId,
-    onModifyStroke,
-    onModifyStrokesBulk,
-  });
+  const handleMoveCommit = useCallback(
+    (dx, dy) => {
+      if (dx === 0 && dy === 0) return;
+
+      const sel = strokes.filter(
+        (s) =>
+          lassoSelection.includes(s.id) &&
+          (!activeLayerId || s.layerId === activeLayerId)
+      );
+      if (!sel.length) return;
+
+      const updates = sel
+        .map((s) => {
+          const i = strokes.findIndex((st) => st.id === s.id);
+          if (i === -1) return null;
+
+          let newChanges = {};
+
+          if (Array.isArray(s.points) && s.points.length && !s.shape) {
+            const newPoints = s.points.map((p) => ({
+              ...p,
+              x: (p.x ?? 0) + dx,
+              y: (p.y ?? 0) + dy,
+            }));
+            newChanges = { points: newPoints };
+          } else if (s.shape) {
+            const sh = s.shape;
+            let newShape = { ...sh };
+
+            if (s.tool === "circle" || s.tool === "oval") {
+              newShape.cx = (sh.cx ?? 0) + dx;
+              newShape.cy = (sh.cy ?? 0) + dy;
+            } else if (s.tool === "rect" || s.tool === "square") {
+              newShape.x = (sh.x ?? 0) + dx;
+              newShape.y = (sh.y ?? 0) + dy;
+            } else if (s.tool === "triangle") {
+              newShape.x1 = (sh.x1 ?? 0) + dx;
+              newShape.y1 = (sh.y1 ?? 0) + dy;
+              newShape.x2 = (sh.x2 ?? 0) + dx;
+              newShape.y2 = (sh.y2 ?? 0) + dy;
+              newShape.x3 = (sh.x3 ?? 0) + dx;
+              newShape.y3 = (sh.y3 ?? 0) + dy;
+            } else if (s.tool === "line" || s.tool === "arrow") {
+              newShape.x1 = (sh.x1 ?? 0) + dx;
+              newShape.y1 = (sh.y1 ?? 0) + dy;
+              newShape.x2 = (sh.x2 ?? 0) + dx;
+              newShape.y2 = (sh.y2 ?? 0) + dy;
+            } else if (s.tool === "polygon" || s.tool === "star") {
+              if (Array.isArray(sh.points)) {
+                newShape.points = sh.points.map((p) => ({
+                  ...p,
+                  x: (p.x ?? 0) + dx,
+                  y: (p.y ?? 0) + dy,
+                }));
+              }
+            }
+            newChanges = { shape: newShape };
+          } else if (
+            [
+              "text",
+              "sticky",
+              "comment",
+              "emoji",
+              "image",
+              "sticker",
+              "table",
+            ].includes(s.tool)
+          ) {
+            newChanges = { x: (s.x ?? 0) + dx, y: (s.y ?? 0) + dy };
+          } else if (typeof s.x === "number" && typeof s.y === "number") {
+            newChanges = { x: s.x + dx, y: s.y + dy };
+          } else {
+            return null;
+          }
+
+          return { id: s.id, index: i, changes: newChanges };
+        })
+        .filter(Boolean);
+
+      if (updates.length) {
+        if (typeof onModifyStrokesBulk === "function") {
+          onModifyStrokesBulk(updates, { transient: false });
+        } else {
+          updates.forEach((u) => onModifyStroke?.(u.index, u.changes));
+        }
+      }
+    },
+    [
+      strokes,
+      lassoSelection,
+      activeLayerId,
+      onModifyStrokesBulk,
+      onModifyStroke,
+    ]
+  );
+
+  // Ref to hold the latest handleMoveCommit function to avoid stale closures in gesture handlers.
+  const handleMoveCommitRef = useRef(handleMoveCommit);
+  useEffect(() => {
+    handleMoveCommitRef.current = handleMoveCommit;
+  }, [handleMoveCommit]);
+
+  useEffect(() => {
+    if (isCommittingMove) {
+      requestAnimationFrame(() => {
+        setLassoVisualOffset({ dx: 0, dy: 0 });
+        setVisualOffsets({});
+        lassoDragDelta.current = { dx: 0, dy: 0 };
+        setIsCommittingMove(false);
+      });
+    }
+  }, [isCommittingMove]);
 
   useEffect(() => {
     if (
@@ -735,7 +848,7 @@ export default function GestureHandler(
       setRealtimeText,
       editorProps.x,
       editorProps.y,
-    ],
+    ]
   );
 
   const hitTestText = (x, y, strokesOrLayers) => {
@@ -894,6 +1007,7 @@ export default function GestureHandler(
     .maxDistance(15)
     .runOnJS(true)
     .onStart((e) => {
+      if (tool === "scroll" || tool === "zoom") return;
       const validStrokes = getActiveStrokes?.() || [];
       const hit = hitTestText(e.x, e.y, validStrokes);
       if (!hit) return;
@@ -939,6 +1053,7 @@ export default function GestureHandler(
   const tap = Gesture.Tap()
     .runOnJS(true)
     .onStart((e) => {
+      if (tool === "scroll" || tool === "zoom") return;
       // Nếu đang dùng các tool vẽ tự do, tạo chấm ngay tại vị trí tap
       const isFreehandTool = [
         "pen",
@@ -977,8 +1092,8 @@ export default function GestureHandler(
             tool === "brush"
               ? brushOpacity
               : tool === "calligraphy"
-                ? calligraphyOpacity
-                : 1,
+              ? calligraphyOpacity
+              : 1,
           ...toolConfig,
           layerId: activeLayerId,
           rotation: 0,
@@ -1015,7 +1130,7 @@ export default function GestureHandler(
             const isShape =
               s.tool &&
               ["rectangle", "circle", "triangle", "star", "polygon"].includes(
-                s.tool,
+                s.tool
               );
             const hasFill = s.fill && s.fillColor;
 
@@ -1083,14 +1198,35 @@ export default function GestureHandler(
 
       // 🧩 Nếu tap ra ngoài và đang có lasso selection → hủy chọn
       if (lassoSelection.length > 0) {
+        // Commit pending moves before deselecting
+        if (
+          (lassoCumulativeOffset.dx !== 0 || lassoCumulativeOffset.dy !== 0) &&
+          !isMovingLasso
+        ) {
+          handleMoveCommitRef.current(
+            lassoCumulativeOffset.dx,
+            lassoCumulativeOffset.dy
+          );
+        }
         setLassoSelection([]);
         setLassoPoints([]);
+        setLassoCumulativeOffset({ dx: 0, dy: 0 });
+        setLassoVisualOffset({ dx: 0, dy: 0 });
         return;
       }
 
       const hitImage = hitTestImage(e.x, e.y, strokes);
       if (hitImage) {
+        const newBox = {
+          x: hitImage.x ?? 0,
+          y: hitImage.y ?? 0,
+          width: hitImage.width ?? 100,
+          height: hitImage.height ?? 100,
+          rotation: hitImage.rotation ?? 0,
+        };
         setSelectedId(hitImage.id);
+        setSelectedBox(newBox);
+        onSelectionChange?.(hitImage.id, newBox);
         setEditorVisible(false);
         return;
       }
@@ -1132,7 +1268,7 @@ export default function GestureHandler(
             const pad = snap.padding || 0;
             const newFont = Math.max(
               8,
-              Math.round((selectedBox.height || 0) - pad * 2),
+              Math.round((selectedBox.height || 0) - pad * 2)
             );
             const tx = (selectedBox.x || 0) + pad;
             const ty = (selectedBox.y || 0) + newFont + pad;
@@ -1145,6 +1281,7 @@ export default function GestureHandler(
         }
         setSelectedId(null);
         setSelectedBox(null);
+        onSelectionChange?.(null, null);
         setRealtimeText(null);
         // After clearing an active selection, do not open editor in the same tap
         if (hadSelection && ["text", "sticky", "comment"].includes(tool))
@@ -1168,8 +1305,8 @@ export default function GestureHandler(
                 tool === "sticky"
                   ? "#FFEB3B"
                   : tool === "comment"
-                    ? "#E3F2FD"
-                    : "transparent",
+                  ? "#E3F2FD"
+                  : "transparent",
               padding: tool === "sticky" || tool === "comment" ? 8 : 0,
               layerId: activeLayerId,
             });
@@ -1258,7 +1395,7 @@ export default function GestureHandler(
                 edges.topEdge.x1,
                 edges.topEdge.y1,
                 edges.topEdge.x2,
-                edges.topEdge.y2,
+                edges.topEdge.y2
               );
               const dBottom = distanceToSegment(
                 px,
@@ -1266,7 +1403,7 @@ export default function GestureHandler(
                 edges.bottomEdge.x1,
                 edges.bottomEdge.y1,
                 edges.bottomEdge.x2,
-                edges.bottomEdge.y2,
+                edges.bottomEdge.y2
               );
 
               const minD = Math.min(dTop, dBottom);
@@ -1300,12 +1437,12 @@ export default function GestureHandler(
                 // Luôn lấy vị trí ruler mới nhất, không sử dụng cache
                 const latestCanvasRuler = screenRulerToCanvasRuler(
                   rulerPosition,
-                  false,
+                  false
                 );
                 const constrained = constrainToRulerBarrier(
                   { x: px, y: py },
                   null,
-                  latestCanvasRuler || canvasRuler,
+                  latestCanvasRuler || canvasRuler
                 );
                 if (
                   constrained &&
@@ -1347,7 +1484,7 @@ export default function GestureHandler(
             const isShape =
               s.tool &&
               ["rectangle", "circle", "triangle", "star", "polygon"].includes(
-                s.tool,
+                s.tool
               );
             const hasFill = s.fill && s.fillColor;
 
@@ -1445,7 +1582,7 @@ export default function GestureHandler(
       // Các logic text/drag init (giữ nguyên) - nhưng dùng px/py thay vì e.x/e.y
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true),
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
           )
         : [];
       if (selectedId && draggingText) {
@@ -1465,6 +1602,30 @@ export default function GestureHandler(
       }
 
       // finally compute push condition and push initial live point if appropriate
+      if (
+        ![
+          "pen",
+          "pencil",
+          "brush",
+          "calligraphy",
+          "highlighter",
+          "marker",
+          "airbrush",
+          "crayon",
+          "eraser",
+          "line",
+          "arrow",
+          "rect",
+          "circle",
+          "triangle",
+          "star",
+          "polygon",
+          "fill",
+          "shape",
+        ].includes(tool)
+      )
+        return;
+
       const last = liveRef.current.at(-1) || { x: 0, y: 0 };
       const dx = px - last.x;
       const dy = py - last.y;
@@ -1476,7 +1637,6 @@ export default function GestureHandler(
         stabilization: 0.2,
       };
 
-      // create the point object that will be pushed; later onUpdate you will apply lock/project for subsequent points
       const initialPoint = {
         x: px,
         y: py,
@@ -1498,7 +1658,17 @@ export default function GestureHandler(
 
     .onUpdate((e) => {
       // Early guards
-      if (["image", "sticker", "camera", "eyedropper", "table"].includes(tool))
+      if (
+        [
+          "image",
+          "sticker",
+          "camera",
+          "eyedropper",
+          "table",
+          "scroll",
+          "zoom",
+        ].includes(tool)
+      )
         return;
       if (!isInsidePage(e.x, e.y, page)) return;
 
@@ -1506,11 +1676,14 @@ export default function GestureHandler(
       if (tool === "lasso" && isMovingLasso && lassoOrigin) {
         const dx = e.x - lassoMoveStart.x;
         const dy = e.y - lassoMoveStart.y;
-        setLassoVisualOffset({ dx, dy });
+        const totalDx = lassoCumulativeOffset.dx + dx;
+        const totalDy = lassoCumulativeOffset.dy + dy;
+
+        setLassoVisualOffset({ dx: totalDx, dy: totalDy });
         setVisualOffsets(() => {
           const next = {};
           lassoSelection.forEach((id) => {
-            next[id] = { dx, dy };
+            next[id] = { dx: totalDx, dy: totalDy };
           });
           return next;
         });
@@ -1534,7 +1707,7 @@ export default function GestureHandler(
       // Các xử lý khác giữ nguyên (text dragging, eraser, normal drawing...)
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true),
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
           )
         : [];
 
@@ -1564,7 +1737,7 @@ export default function GestureHandler(
                     0) -
                   1,
               }
-            : box,
+            : box
         );
 
         setEditorProps((prev) => ({ ...prev, x: newX, y: newY }));
@@ -1608,7 +1781,7 @@ export default function GestureHandler(
 
                 if (hit && typeof onDeleteStroke === "function") {
                   const globalIndex = strokes.findIndex(
-                    (s) => s.id === validStrokes[i].id,
+                    (s) => s.id === validStrokes[i].id
                   );
                   if (globalIndex !== -1) {
                     // Reset ruler lock khi xóa nét vẽ
@@ -1675,7 +1848,29 @@ export default function GestureHandler(
         }
       }
 
-      // Normal drawing path (throttle by distance)
+      if (
+        ![
+          "pen",
+          "pencil",
+          "brush",
+          "calligraphy",
+          "highlighter",
+          "marker",
+          "airbrush",
+          "crayon",
+          "eraser",
+          "line",
+          "arrow",
+          "rect",
+          "circle",
+          "triangle",
+          "star",
+          "polygon",
+          "fill",
+          "shape",
+        ].includes(tool)
+      )
+        return;
       const last = liveRef.current.at(-1) || { x: 0, y: 0 };
       const dx = e.x - last.x;
       const dy = e.y - last.y;
@@ -1707,7 +1902,7 @@ export default function GestureHandler(
               edgeSeg.x1,
               edgeSeg.y1,
               edgeSeg.x2,
-              edgeSeg.y2,
+              edgeSeg.y2
             );
           }
         } catch (err) {
@@ -1721,7 +1916,7 @@ export default function GestureHandler(
             const constrainedPoint = constrainToRulerBarrier(
               point,
               prevPoint,
-              canvasRuler,
+              canvasRuler
             );
             if (
               constrainedPoint &&
@@ -1759,8 +1954,28 @@ export default function GestureHandler(
       setDraggingText(null);
     })
     .onEnd((e) => {
-      if (["image", "sticker", "camera", "eyedropper", "table"].includes(tool))
+      if (
+        [
+          "image",
+          "sticker",
+          "camera",
+          "eyedropper",
+          "table",
+          "scroll",
+          "zoom",
+        ].includes(tool)
+      ) {
+        try {
+          if (typeof rafIdRef.current === "number") {
+            cancelAnimationFrame(rafIdRef.current);
+          }
+        } catch {}
+        rafIdRef.current = null;
+        rafScheduled.current = false;
+        liveRef.current = [];
+        setCurrentPoints([]);
         return;
+      }
       if (tool === "lasso" && !isMovingLasso && lassoPoints.length > 3) {
         const poly = lassoPoints;
         const insideIds = Array.isArray(strokes)
@@ -1769,7 +1984,7 @@ export default function GestureHandler(
                 (s) =>
                   s &&
                   (!activeLayerId || s.layerId === activeLayerId) &&
-                  (s.points || s.x),
+                  (s.points || s.x)
               )
               .filter((s) => {
                 const bbox = getBoundingBoxForStroke(s);
@@ -1786,7 +2001,7 @@ export default function GestureHandler(
             insideIds.map((id) => {
               const s = strokes.find((st) => st.id === id);
               return { id, x: s?.x ?? 0, y: s?.y ?? 0 };
-            }),
+            })
           );
           setLassoSelection(insideIds);
           // set base box once when selection is created
@@ -1856,51 +2071,35 @@ export default function GestureHandler(
         const dx = e.x - lassoMoveStart.x;
         const dy = e.y - lassoMoveStart.y;
 
-        // Clear visual offsets FIRST to prevent jumping
-        setLassoVisualOffset({ dx: 0, dy: 0 });
-        setVisualOffsets({});
+        const newCumulativeDx = lassoCumulativeOffset.dx + dx;
+        const newCumulativeDy = lassoCumulativeOffset.dy + dy;
 
-        // Then commit with captured offset
-        handleMoveCommit?.(dx, dy);
+        // Update both the cumulative offset and the final visual offset
+        setLassoCumulativeOffset({
+          dx: newCumulativeDx,
+          dy: newCumulativeDy,
+        });
+        setLassoVisualOffset({ dx: newCumulativeDx, dy: newCumulativeDy });
 
-        // ✅ Recalculate base box từ strokes mới (không dùng offset cũ)
-        // Đợi một frame để strokes được update
-        requestAnimationFrame(() => {
-          const sel = Array.isArray(strokes)
-            ? strokes.filter((s) => s && lassoSelection.includes(s.id))
-            : [];
-          if (sel.length > 0) {
-            let minX = Infinity,
-              minY = Infinity,
-              maxX = -Infinity,
-              maxY = -Infinity;
-            sel.forEach((s) => {
-              const bbox = getBoundingBoxForStroke(s);
-              if (bbox) {
-                minX = Math.min(minX, bbox.minX);
-                minY = Math.min(minY, bbox.minY);
-                maxX = Math.max(maxX, bbox.maxX);
-                maxY = Math.max(maxY, bbox.maxY);
-              }
-            });
-            setLassoBaseBox({
-              x: minX,
-              y: minY,
-              width: maxX - minX,
-              height: maxY - minY,
-            });
-          }
+        // Ensure per-stroke visual offsets are also set to the final position
+        setVisualOffsets(() => {
+          const next = {};
+          lassoSelection.forEach((id) => {
+            next[id] = { dx: newCumulativeDx, dy: newCumulativeDy };
+          });
+          return next;
         });
 
-        // Clean up
-        lassoPendingDelta.current = { dx: 0, dy: 0 };
-        lassoMoveRAF.current = false;
+        // Commit the move to strokes
+        setIsCommittingMove(true);
+        handleMoveCommitRef.current?.(newCumulativeDx, newCumulativeDy);
+
+        // Reset per-drag state
         setIsMovingLasso(false);
         setLassoMoveStart(null);
         return;
       }
 
-      // Các xử lý cũ cuối cùng (vẽ stroke hoàn tất, eraser pixel / object ... ) - giữ nguyên
       const livePath = canvasRef?.current?.livePath;
       if (livePath) livePath.reset();
 
@@ -1913,7 +2112,7 @@ export default function GestureHandler(
 
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true),
+            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
           )
         : [];
       if (!activeLayerId) return;
@@ -1929,7 +2128,7 @@ export default function GestureHandler(
           if (pointInPolygon(poly, cx, cy)) {
             try {
               const globalIndex = strokes.findIndex(
-                (s) => s.id === validStrokes[i].id,
+                (s) => s.id === validStrokes[i].id
               );
               if (globalIndex !== -1) onDeleteStroke(globalIndex);
             } catch (err) {
@@ -2019,6 +2218,29 @@ export default function GestureHandler(
         return;
       }
 
+      if (
+        ![
+          "pen",
+          "pencil",
+          "brush",
+          "calligraphy",
+          "highlighter",
+          "marker",
+          "airbrush",
+          "crayon",
+          "line",
+          "arrow",
+          "rect",
+          "circle",
+          "triangle",
+          "star",
+          "polygon",
+          "shape",
+          "fill",
+          "eraser",
+        ].includes(tool)
+      )
+        return;
       const w =
         {
           pen: strokeWidth,
@@ -2078,8 +2300,8 @@ export default function GestureHandler(
           tool === "brush"
             ? brushOpacity
             : tool === "calligraphy"
-              ? calligraphyOpacity
-              : 1,
+            ? calligraphyOpacity
+            : 1,
         ...toolConfig,
         layerId: activeLayerId,
         rotation: 0,
@@ -2129,21 +2351,71 @@ export default function GestureHandler(
     };
   }, []);
 
-  const lassoBox = useMemo(() => {
-    // While moving (either via canvas or box), render box as base + visual offset
+  useEffect(() => {
+    const pdx = lassoPendingDelta.current?.dx || 0;
+    const pdy = lassoPendingDelta.current?.dy || 0;
+    const baseAtRelease = lassoBaseAtReleaseRef.current;
     if (
-      lassoBaseBox &&
-      ((lassoVisualOffset?.dx || 0) !== 0 ||
-        (lassoVisualOffset?.dy || 0) !== 0 ||
-        isMovingLasso)
+      !baseAtRelease ||
+      (pdx === 0 && pdy === 0) ||
+      lassoSelection.length === 0
+    )
+      return;
+    const sel = Array.isArray(strokes)
+      ? strokes.filter((s) => s && lassoSelection.includes(s.id))
+      : [];
+    if (!sel.length) return;
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    sel.forEach((s) => {
+      const bbox = getBoundingBoxForStroke(s);
+      if (bbox) {
+        minX = Math.min(minX, bbox.minX);
+        minY = Math.min(minY, bbox.minY);
+        maxX = Math.max(maxX, bbox.maxX);
+        maxY = Math.max(maxY, bbox.maxY);
+      }
+    });
+    if (!isFinite(minX)) return;
+    const movedBox = {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    };
+    const expectX = (baseAtRelease.x || 0) + pdx;
+    const expectY = (baseAtRelease.y || 0) + pdy;
+    const eps = 0.5;
+    if (
+      Math.abs(movedBox.x - expectX) <= eps &&
+      Math.abs(movedBox.y - expectY) <= eps
     ) {
+      setLassoBaseBox(movedBox);
+      lassoPendingDelta.current = { dx: 0, dy: 0 };
+      lassoBaseAtReleaseRef.current = null;
+    }
+  }, [strokes, lassoSelection]);
+
+  const lassoBox = useMemo(() => {
+    if (!lassoSelection || lassoSelection.length === 0) return null;
+
+    // Always prefer the last known base box to avoid jitter on release
+    if (lassoBaseBox) {
+      const pdx = lassoPendingDelta.current?.dx || 0;
+      const pdy = lassoPendingDelta.current?.dy || 0;
+      const vdx = lassoVisualOffset?.dx || 0;
+      const vdy = lassoVisualOffset?.dy || 0;
       return {
-        x: lassoBaseBox.x + (lassoVisualOffset.dx || 0),
-        y: lassoBaseBox.y + (lassoVisualOffset.dy || 0),
+        x: lassoBaseBox.x + pdx + vdx,
+        y: lassoBaseBox.y + pdy + vdy,
         width: lassoBaseBox.width,
         height: lassoBaseBox.height,
       };
     }
+
+    // If no base yet (first render), compute from strokes
     const sel = Array.isArray(strokes)
       ? strokes.filter((s) => s && lassoSelection.includes(s.id))
       : [];
@@ -2167,7 +2439,7 @@ export default function GestureHandler(
       width: maxX - minX,
       height: maxY - minY,
     };
-  }, [isMovingLasso, lassoBaseBox, lassoVisualOffset, lassoSelection, strokes]);
+  }, [lassoBaseBox, lassoVisualOffset, lassoSelection, strokes]);
 
   return (
     <>
@@ -2185,59 +2457,48 @@ export default function GestureHandler(
         <LassoSelectionBox
           box={lassoBox}
           onMove={(dx, dy) => {
-            // accumulate visual offset for box and strokes
-            setLassoVisualOffset((prev) => {
-              const ndx = (prev?.dx || 0) + dx;
-              const ndy = (prev?.dy || 0) + dy;
-              // update offsets for all selected ids
-              setVisualOffsets((prevMap) => {
-                const next = { ...prevMap };
-                lassoSelection.forEach((id) => {
-                  next[id] = { dx: ndx, dy: ndy };
-                });
-                return next;
-              });
-              return { dx: ndx, dy: ndy };
-            });
-          }}
-          onMoveEnd={() => {
-            const { dx, dy } = lassoVisualOffset || { dx: 0, dy: 0 };
+            // Store the latest delta immediately in a ref.
+            lassoDragDelta.current = { dx, dy };
 
-            // Clear visual offsets FIRST (synchronously) to prevent jumping
+            // Schedule a single RAF to apply the latest delta.
+            if (!visualFlushRaf.current) {
+              visualFlushRaf.current = true;
+              requestAnimationFrame(() => {
+                // Apply the most recent delta value from the ref.
+                setLassoVisualOffset(lassoDragDelta.current);
+                setVisualOffsets(() => {
+                  const next = {};
+                  lassoSelection.forEach((id) => {
+                    next[id] = {
+                      dx: lassoDragDelta.current.dx,
+                      dy: lassoDragDelta.current.dy,
+                    };
+                  });
+                  return next;
+                });
+                visualFlushRaf.current = false;
+              });
+            }
+          }}
+          onMoveEnd={(dx, dy) => {
+            const finalDx = dx ?? (lassoDragDelta.current?.dx || 0);
+            const finalDy = dy ?? (lassoDragDelta.current?.dy || 0);
+            if (finalDx === 0 && finalDy === 0) {
+              return;
+            }
+            lassoDragDelta.current = { dx: finalDx, dy: finalDy };
+            lassoPendingDelta.current = { dx: finalDx, dy: finalDy };
+            lassoBaseAtReleaseRef.current = lassoBaseBox;
+            setLassoBaseBox((prev) =>
+              prev
+                ? { ...prev, x: prev.x + finalDx, y: prev.y + finalDy }
+                : prev
+            );
             setLassoVisualOffset({ dx: 0, dy: 0 });
             setVisualOffsets({});
-
-            // Then commit the move with the captured offset
-            handleMoveCommit?.(dx, dy);
-
-            // ✅ Recalculate base box từ strokes mới (không dùng offset cũ)
-            // Đợi một frame để strokes được update
-            requestAnimationFrame(() => {
-              const sel = Array.isArray(strokes)
-                ? strokes.filter((s) => s && lassoSelection.includes(s.id))
-                : [];
-              if (sel.length > 0) {
-                let minX = Infinity,
-                  minY = Infinity,
-                  maxX = -Infinity,
-                  maxY = -Infinity;
-                sel.forEach((s) => {
-                  const bbox = getBoundingBoxForStroke(s);
-                  if (bbox) {
-                    minX = Math.min(minX, bbox.minX);
-                    minY = Math.min(minY, bbox.minY);
-                    maxX = Math.max(maxX, bbox.maxX);
-                    maxY = Math.max(maxY, bbox.maxY);
-                  }
-                });
-                setLassoBaseBox({
-                  x: minX,
-                  y: minY,
-                  width: maxX - minX,
-                  height: maxY - minY,
-                });
-              }
-            });
+            setIsCommittingMove(true);
+            if (typeof setRealtimeText === "function") setRealtimeText(null);
+            handleMoveCommitRef.current?.(finalDx, finalDy);
           }}
           onCopy={() => {
             const selStrokes = Array.isArray(strokes)
@@ -2297,7 +2558,7 @@ export default function GestureHandler(
         selectedId &&
         !editorVisible &&
         ["text", "sticky", "comment", "emoji"].includes(
-          selectedStroke?.tool,
+          selectedStroke?.tool
         ) && (
           <TextSelectionBox
             x={selectedBox.x}
@@ -2318,7 +2579,7 @@ export default function GestureHandler(
             }}
             onMove={(dx, dy) => {
               setSelectedBox((box) =>
-                box ? { ...box, x: box.x + dx, y: box.y + dy } : box,
+                box ? { ...box, x: box.x + dx, y: box.y + dy } : box
               );
 
               if (typeof setRealtimeText === "function") {
@@ -2326,7 +2587,7 @@ export default function GestureHandler(
                   setRealtimeText((prev) =>
                     prev && prev.id === selectedId
                       ? { ...prev, x: prev.x + dx, y: prev.y + dy }
-                      : prev,
+                      : prev
                   );
                 });
               }
@@ -2362,12 +2623,12 @@ export default function GestureHandler(
               const scaleY = h / baseH;
               const scale = Math.max(
                 0.3,
-                Math.min(6, Math.min(scaleX, scaleY)),
+                Math.min(6, Math.min(scaleX, scaleY))
               );
               const pad = snap.padding;
               const newFont = Math.max(
                 8,
-                Math.round((snap.fontSize || 18) * scale),
+                Math.round((snap.fontSize || 18) * scale)
               );
               textResizeRef.current.lastNewFont = newFont;
               // Derive new text position from box: left/top -> x,y
@@ -2377,7 +2638,7 @@ export default function GestureHandler(
               // Recompute box from text metrics to stay consistent with renderer
               const tw = Math.max(
                 20,
-                approxTextWidthLocal(snap.text, newFont) + pad * 2,
+                approxTextWidthLocal(snap.text, newFont) + pad * 2
               );
               const th = Math.max(20, newFont + pad * 2);
 
@@ -2407,8 +2668,8 @@ export default function GestureHandler(
                   : Math.max(
                       8,
                       Math.round(
-                        selectedBox?.height - pad * 2 || snap.fontSize || 18,
-                      ),
+                        selectedBox?.height - pad * 2 || snap.fontSize || 18
+                      )
                     );
 
               const newFont = Math.max(8, Math.round(preferredFont));
@@ -2531,287 +2792,275 @@ export default function GestureHandler(
       />
       {selectedId &&
         selectedBox &&
-        ["image", "sticker", "table"].includes(selectedStroke?.tool) &&
-        (() => {
-          // --- TÍNH SCREEN COORDINATES ---
-          const s = zoomMirror?.scale || 1;
-          const tx = zoomMirror?.x || 0;
-          const ty = zoomMirror?.y || 0;
-          const pageX = page?.x ?? 0;
-          const pageY = page?.y ?? 0;
-          const soY = scrollOffsetY || 0;
-
-          const screenX = (selectedBox.x - pageX) * s + tx;
-          const screenY = (selectedBox.y - pageY) * s + ty - soY;
-          const screenW = (selectedBox.width || 0) * s;
-          const screenH = (selectedBox.height || 0) * s;
-
-          // --- RENDER ---
-          return (
-            <>
-              <ImageTransformBox
-                x={screenX}
-                y={screenY}
-                width={screenW}
-                height={screenH}
-                rotation={selectedBox.rotation ?? 0}
-                scale={s}
-                pan={{ x: 0, y: 0 }}
-                onMoveStart={() => {
-                  const sItem = strokes.find((it) => it.id === selectedId);
-                  if (sItem) {
-                    liveTransformRef.current.origin = {
-                      x: sItem.x ?? 0,
-                      y: sItem.y ?? 0,
-                      rotation: sItem.rotation ?? 0,
-                    };
-                  } else if (selectedBox) {
-                    liveTransformRef.current.origin = {
-                      x: selectedBox.x ?? 0,
-                      y: selectedBox.y ?? 0,
-                      rotation: selectedBox.rotation ?? 0,
-                    };
-                  }
-                  liveTransformRef.current.dx = 0;
-                  liveTransformRef.current.dy = 0;
-                  liveTransformRef.current.dw = 0;
-                  liveTransformRef.current.dh = 0;
-                  liveTransformRef.current.drot = 0;
-                }}
-                onMove={(dx, dy) => {
-                  if (!selectedId) return;
-                  setSelectedBox((b) =>
-                    b ? { ...b, x: b.x + dx, y: b.y + dy } : b,
-                  );
-                  liveTransformRef.current.dx =
-                    (liveTransformRef.current.dx || 0) + dx;
-                  liveTransformRef.current.dy =
-                    (liveTransformRef.current.dy || 0) + dy;
-                  if (
-                    typeof onLiveUpdateStroke === "function" &&
-                    liveTransformRef.current.origin
-                  ) {
-                    const origin = liveTransformRef.current.origin;
-                    onLiveUpdateStroke(selectedId, {
-                      x: (origin.x ?? 0) + (liveTransformRef.current.dx || 0),
-                      y: (origin.y ?? 0) + (liveTransformRef.current.dy || 0),
-                    });
-                  }
-                }}
-                onMoveEnd={() => {
-                  const index = strokes.findIndex((s) => s.id === selectedId);
-                  if (index !== -1) {
-                    const sItem = strokes[index];
-                    const final = {
-                      ...sItem,
-                      x: (sItem.x ?? 0) + (liveTransformRef.current.dx || 0),
-                      y: (sItem.y ?? 0) + (liveTransformRef.current.dy || 0),
-                      width:
-                        (sItem.width ?? 0) + (liveTransformRef.current.dw || 0),
-                      height:
-                        (sItem.height ?? 0) +
-                        (liveTransformRef.current.dh || 0),
-                      rotation:
-                        (sItem.rotation ?? 0) +
-                        (liveTransformRef.current.drot || 0),
-                    };
-                    if (typeof onModifyStroke === "function")
-                      onModifyStroke(index, final);
-                  }
-                  liveTransformRef.current.dx = 0;
-                  liveTransformRef.current.dy = 0;
-                  liveTransformRef.current.dw = 0;
-                  liveTransformRef.current.dh = 0;
-                  liveTransformRef.current.drot = 0;
-                }}
-                onResizeStart={(corner) => {
-                  const sItem = strokes.find((it) => it.id === selectedId);
-                  const base = sItem || selectedBox || {};
-                  const baseWidth =
-                    base.width && base.width > 0
-                      ? base.width
-                      : sItem?.naturalWidth || selectedBox?.width || 100;
-                  const baseHeight =
-                    base.height && base.height > 0
-                      ? base.height
-                      : sItem?.naturalHeight || selectedBox?.height || 100;
-
+        ["image", "sticker", "table"].includes(selectedStroke?.tool) && (
+          <>
+            <ImageTransformBox
+              x={selectedBox.x}
+              y={selectedBox.y}
+              width={selectedBox.width}
+              height={selectedBox.height}
+              rotation={selectedBox.rotation ?? 0}
+              scale={zoomMirror.scale}
+              pan={{ x: 0, y: 0 }}
+              onMoveStart={() => {
+                const sItem = strokes.find((it) => it.id === selectedId);
+                if (sItem) {
                   liveTransformRef.current.origin = {
-                    x: Number.isFinite(base.x) ? base.x : 0,
-                    y: Number.isFinite(base.y) ? base.y : 0,
-                    width: baseWidth,
-                    height: baseHeight,
-                    rotation: base.rotation ?? 0,
+                    x: sItem.x ?? 0,
+                    y: sItem.y ?? 0,
+                    rotation: sItem.rotation ?? 0,
                   };
-                  liveTransformRef.current.corner = corner;
-                  liveTransformRef.current.dw = 0;
-                  liveTransformRef.current.dh = 0;
-                  liveTransformRef.current.dx = 0;
-                  liveTransformRef.current.dy = 0;
-                }}
-                onResize={(corner, dx, dy) => {
-                  const o = liveTransformRef.current.origin;
-                  if (!o) return;
-                  const ratio = (o.width || 1) / (o.height || 1);
-                  let newWidth = o.width;
-                  let newHeight = o.height;
-                  let newX = o.x;
-                  let newY = o.y;
-
-                  switch (corner) {
-                    case "br":
-                      newWidth = Math.max(20, o.width + dx);
-                      newHeight = Math.max(20, newWidth / ratio);
-                      break;
-                    case "tr":
-                      newWidth = Math.max(20, o.width + dx);
-                      newHeight = Math.max(20, newWidth / ratio);
-                      newY = o.y - (newHeight - o.height);
-                      break;
-                    case "bl":
-                      newWidth = Math.max(20, o.width - dx);
-                      newHeight = Math.max(20, newWidth / ratio);
-                      newX = o.x + dx;
-                      break;
-                    case "tl":
-                      newWidth = Math.max(20, o.width - dx);
-                      newHeight = Math.max(20, newWidth / ratio);
-                      newX = o.x + dx;
-                      newY = o.y - (newHeight - o.height);
-                      break;
-                  }
-
-                  liveTransformRef.current.dw = newWidth - o.width;
-                  liveTransformRef.current.dh = newHeight - o.height;
-                  liveTransformRef.current.dx = newX - o.x;
-                  liveTransformRef.current.dy = newY - o.y;
-
-                  setSelectedBox((box) =>
-                    box
-                      ? {
-                          ...box,
-                          x: newX,
-                          y: newY,
-                          width: newWidth,
-                          height: newHeight,
-                        }
-                      : box,
-                  );
-
-                  if (typeof onLiveUpdateStroke === "function" && selectedId) {
-                    onLiveUpdateStroke(selectedId, {
-                      x: newX,
-                      y: newY,
-                      width: newWidth,
-                      height: newHeight,
-                    });
-                    return;
-                  }
-
-                  const index = strokes.findIndex((s) => s.id === selectedId);
-                  if (index !== -1 && typeof onModifyStroke === "function") {
-                    onModifyStroke(index, {
-                      x: newX,
-                      y: newY,
-                      width: newWidth,
-                      height: newHeight,
-                      __transient: true,
-                    });
-                  }
-                }}
-                onResizeEnd={() => {
-                  const index = strokes.findIndex((s) => s.id === selectedId);
-                  if (index !== -1) {
-                    const sItem = strokes[index];
-                    const o = liveTransformRef.current.origin || sItem;
-                    const final = {
-                      ...sItem,
-                      x: (o.x ?? 0) + (liveTransformRef.current.dx || 0),
-                      y: (o.y ?? 0) + (liveTransformRef.current.dy || 0),
-                      width:
-                        (o.width ?? 0) + (liveTransformRef.current.dw || 0),
-                      height:
-                        (o.height ?? 0) + (liveTransformRef.current.dh || 0),
-                    };
-                    if (typeof onModifyStroke === "function")
-                      onModifyStroke(index, final);
-                  }
-                  liveTransformRef.current.dx = 0;
-                  liveTransformRef.current.dy = 0;
-                  liveTransformRef.current.dw = 0;
-                  liveTransformRef.current.dh = 0;
-                }}
-                onRotateStart={() => {
-                  const sItem = strokes.find((it) => it.id === selectedId);
-                  const base = sItem || selectedBox;
+                } else if (selectedBox) {
                   liveTransformRef.current.origin = {
-                    ...(liveTransformRef.current.origin || {}),
-                    rotation: base?.rotation ?? 0,
+                    x: selectedBox.x ?? 0,
+                    y: selectedBox.y ?? 0,
+                    rotation: selectedBox.rotation ?? 0,
                   };
-                  liveTransformRef.current.drot = 0;
-                }}
-                onRotate={(rot) => {
+                }
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+                liveTransformRef.current.drot = 0;
+              }}
+              onMove={(dx, dy) => {
+                if (!selectedId) return;
+                const newBox = {
+                  ...selectedBox,
+                  x: selectedBox.x + dx,
+                  y: selectedBox.y + dy,
+                };
+                setSelectedBox(newBox);
+                onSelectionChange?.(selectedId, newBox);
+
+                liveTransformRef.current.dx =
+                  (liveTransformRef.current.dx || 0) + dx;
+                liveTransformRef.current.dy =
+                  (liveTransformRef.current.dy || 0) + dy;
+                if (
+                  typeof onLiveUpdateStroke === "function" &&
+                  liveTransformRef.current.origin
+                ) {
+                  const origin = liveTransformRef.current.origin;
+                  onLiveUpdateStroke(selectedId, {
+                    x: (origin.x ?? 0) + (liveTransformRef.current.dx || 0),
+                    y: (origin.y ?? 0) + (liveTransformRef.current.dy || 0),
+                  });
+                }
+              }}
+              onMoveEnd={() => {
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1) {
+                  const sItem = strokes[index];
+                  const final = {
+                    ...sItem,
+                    x: (sItem.x ?? 0) + (liveTransformRef.current.dx || 0),
+                    y: (sItem.y ?? 0) + (liveTransformRef.current.dy || 0),
+                    width:
+                      (sItem.width ?? 0) + (liveTransformRef.current.dw || 0),
+                    height:
+                      (sItem.height ?? 0) + (liveTransformRef.current.dh || 0),
+                    rotation:
+                      (sItem.rotation ?? 0) +
+                      (liveTransformRef.current.drot || 0),
+                  };
+                  if (typeof onModifyStroke === "function")
+                    onModifyStroke(index, final);
+                }
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+                liveTransformRef.current.drot = 0;
+              }}
+              onResizeStart={(corner) => {
+                const sItem = strokes.find((it) => it.id === selectedId);
+                const base = sItem || selectedBox || {};
+                const baseWidth =
+                  base.width && base.width > 0
+                    ? base.width
+                    : sItem?.naturalWidth || selectedBox?.width || 100;
+                const baseHeight =
+                  base.height && base.height > 0
+                    ? base.height
+                    : sItem?.naturalHeight || selectedBox?.height || 100;
+
+                liveTransformRef.current.origin = {
+                  x: Number.isFinite(base.x) ? base.x : 0,
+                  y: Number.isFinite(base.y) ? base.y : 0,
+                  width: baseWidth,
+                  height: baseHeight,
+                  rotation: base.rotation ?? 0,
+                };
+                liveTransformRef.current.corner = corner;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
+              }}
+              onResize={(corner, dx, dy) => {
+                const o = liveTransformRef.current.origin;
+                if (!o) return;
+                const ratio = (o.width || 1) / (o.height || 1);
+                let newWidth = o.width;
+                let newHeight = o.height;
+                let newX = o.x;
+                let newY = o.y;
+
+                switch (corner) {
+                  case "br":
+                    newWidth = Math.max(20, o.width + dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    break;
+                  case "tr":
+                    newWidth = Math.max(20, o.width + dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    newY = o.y - (newHeight - o.height);
+                    break;
+                  case "bl":
+                    newWidth = Math.max(20, o.width - dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    newX = o.x + dx;
+                    break;
+                  case "tl":
+                    newWidth = Math.max(20, o.width - dx);
+                    newHeight = Math.max(20, newWidth / ratio);
+                    newX = o.x + dx;
+                    newY = o.y - (newHeight - o.height);
+                    break;
+                }
+                liveTransformRef.current.dw = newWidth - o.width;
+                liveTransformRef.current.dh = newHeight - o.height;
+                liveTransformRef.current.dx = newX - o.x;
+                liveTransformRef.current.dy = newY - o.y;
+
+                const newBox = {
+                  ...selectedBox,
+                  x: newX,
+                  y: newY,
+                  width: newWidth,
+                  height: newHeight,
+                };
+                setSelectedBox(newBox);
+                onSelectionChange?.(selectedId, newBox);
+
+                if (typeof onLiveUpdateStroke === "function" && selectedId) {
+                  onLiveUpdateStroke(selectedId, {
+                    x: newX,
+                    y: newY,
+                    width: newWidth,
+                    height: newHeight,
+                  });
+                  return;
+                }
+
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1 && typeof onModifyStroke === "function") {
+                  onModifyStroke(index, {
+                    x: newX,
+                    y: newY,
+                    width: newWidth,
+                    height: newHeight,
+                    __transient: true,
+                  });
+                }
+              }}
+              onResizeEnd={() => {
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1) {
+                  const sItem = strokes[index];
+                  const o = liveTransformRef.current.origin || sItem;
+                  const final = {
+                    ...sItem,
+                    x: (o.x ?? 0) + (liveTransformRef.current.dx || 0),
+                    y: (o.y ?? 0) + (liveTransformRef.current.dy || 0),
+                    width: (o.width ?? 0) + (liveTransformRef.current.dw || 0),
+                    height:
+                      (o.height ?? 0) + (liveTransformRef.current.dh || 0),
+                  };
+                  if (typeof onModifyStroke === "function")
+                    onModifyStroke(index, final);
+                }
+                liveTransformRef.current.dx = 0;
+                liveTransformRef.current.dy = 0;
+                liveTransformRef.current.dw = 0;
+                liveTransformRef.current.dh = 0;
+              }}
+              onRotateStart={() => {
+                const sItem = strokes.find((it) => it.id === selectedId);
+                const base = sItem || selectedBox;
+                liveTransformRef.current.origin = {
+                  ...(liveTransformRef.current.origin || {}),
+                  rotation: base?.rotation ?? 0,
+                };
+                liveTransformRef.current.drot = 0;
+              }}
+              onRotate={(rot) => {
+                const originRot =
+                  liveTransformRef.current.origin?.rotation || 0;
+                liveTransformRef.current.drot = rot - originRot;
+                const newBox = { ...selectedBox, rotation: rot };
+                setSelectedBox(newBox);
+                onSelectionChange?.(selectedId, newBox);
+                if (typeof onLiveUpdateStroke === "function" && selectedId) {
+                  onLiveUpdateStroke(selectedId, { rotation: rot });
+                }
+              }}
+              onRotateEnd={() => {
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1) {
+                  const sItem = strokes[index];
                   const originRot =
-                    liveTransformRef.current.origin?.rotation || 0;
-                  liveTransformRef.current.drot = rot - originRot;
-                  setSelectedBox((b) => (b ? { ...b, rotation: rot } : b));
-                  if (typeof onLiveUpdateStroke === "function" && selectedId) {
-                    onLiveUpdateStroke(selectedId, { rotation: rot });
-                  }
-                }}
-                onRotateEnd={() => {
-                  const index = strokes.findIndex((s) => s.id === selectedId);
-                  if (index !== -1) {
-                    const sItem = strokes[index];
-                    const originRot =
-                      liveTransformRef.current.origin?.rotation ||
-                      sItem.rotation ||
-                      0;
-                    const finalRot =
-                      originRot + (liveTransformRef.current.drot || 0);
-                    if (typeof onModifyStroke === "function")
-                      onModifyStroke(index, { rotation: finalRot });
-                  }
-                  liveTransformRef.current.drot = 0;
-                }}
-              />
+                    liveTransformRef.current.origin?.rotation ||
+                    sItem.rotation ||
+                    0;
+                  const finalRot =
+                    originRot + (liveTransformRef.current.drot || 0);
+                  if (typeof onModifyStroke === "function")
+                    onModifyStroke(index, { rotation: finalRot });
+                }
+                liveTransformRef.current.drot = 0;
+              }}
+            />
 
-              <ImageSelectionBox
-                x={screenX}
-                y={screenY}
-                width={screenW}
-                height={screenH}
-                onCopy={() => {
-                  const target = strokes.find((s) => s.id === selectedId);
-                  if (!target) return;
-                  const newStroke = {
-                    ...target,
-                    id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
-                    x: target.x + 20,
-                    y: target.y + 20,
-                  };
-                  onAddStroke?.(newStroke);
-                  setSelectedId(null);
-                  setSelectedBox(null);
-                }}
-                onCut={() => {
-                  const index = strokes.findIndex((s) => s.id === selectedId);
-                  if (index !== -1 && typeof onDeleteStroke === "function")
-                    onDeleteStroke(index);
-                  setSelectedId(null);
-                  setSelectedBox(null);
-                }}
-                onDelete={() => {
-                  const index = strokes.findIndex((s) => s.id === selectedId);
-                  if (index !== -1 && typeof onDeleteStroke === "function")
-                    onDeleteStroke(index);
-                  setSelectedId(null);
-                  setSelectedBox(null);
-                }}
-              />
-            </>
-          );
-        })()}
+            <ImageSelectionBox
+              x={selectedBox.x}
+              y={selectedBox.y}
+              width={selectedBox.width}
+              height={selectedBox.height}
+              onCopy={() => {
+                const target = strokes.find((s) => s.id === selectedId);
+                if (!target) return;
+                const newStroke = {
+                  ...target,
+                  id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                  x: target.x + 20,
+                  y: target.y + 20,
+                };
+                onAddStroke?.(newStroke);
+                setSelectedId(null);
+                setSelectedBox(null);
+                onSelectionChange?.(null, null);
+              }}
+              onCut={() => {
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1 && typeof onDeleteStroke === "function")
+                  onDeleteStroke(index);
+                setSelectedId(null);
+                setSelectedBox(null);
+                onSelectionChange?.(null, null);
+              }}
+              onDelete={() => {
+                const index = strokes.findIndex((s) => s.id === selectedId);
+                if (index !== -1 && typeof onDeleteStroke === "function")
+                  onDeleteStroke(index);
+                setSelectedId(null);
+                setSelectedBox(null);
+                onSelectionChange?.(null, null);
+              }}
+            />
+          </>
+        )}
     </>
   );
 }

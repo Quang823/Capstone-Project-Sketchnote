@@ -297,6 +297,38 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const [zoomLocked, setZoomLocked] = useState(false);
   const [showZoomOverlay, setShowZoomOverlay] = useState(false);
 
+  // State for single selection across all pages
+  const [selectedId, setSelectedId] = useState(null);
+  const [selectionPageId, setSelectionPageId] = useState(null);
+  const [selectedBox, setSelectedBox] = useState(null);
+
+  // Callback for GestureHandler to update selection state
+  const handleSelectionChange = useCallback(
+    (pageId, strokeId, box) => {
+      if (strokeId) {
+        setSelectedId(strokeId);
+        setSelectionPageId(pageId);
+        setSelectedBox(box);
+      } else if (selectedId && selectionPageId === pageId) {
+        // Deselect if the change comes from the page with the active selection
+        setSelectedId(null);
+        setSelectionPageId(null);
+        setSelectedBox(null);
+      }
+    },
+    [selectedId, selectionPageId]
+  );
+
+  useEffect(() => {
+    if (tool === "scroll" || tool === "zoom") {
+      projectScale.value = withTiming(1, { duration: 200 });
+      projectTranslateX.value = withTiming(0, { duration: 200 });
+      projectTranslateY.value = withTiming(0, { duration: 200 });
+      setIsZooming(false);
+      setShowZoomOverlay(false);
+    }
+  }, [tool]);
+
   // Zoom/Pan state - áp dụng cho toàn bộ project
   const projectScale = useSharedValue(1);
   const baseProjectScale = useSharedValue(1);
@@ -583,8 +615,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       if (isUnmountedRef.current || isScrollingProgrammaticallyRef.current)
         return;
 
-      // throttle tiny moves to avoid spamming JS (reduced to 1px for better transform box sync)
-      if (Math.abs(offset - lastHandledScrollRef.current) < 1) return;
+      // throttle tiny moves to avoid spamming JS (raise to 3px to reduce JS pressure)
+      if (Math.abs(offset - lastHandledScrollRef.current) < 0.5) return;
 
       lastHandledScrollRef.current = offset;
 
@@ -714,7 +746,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   };
 
   const pinch = Gesture.Pinch()
-    .enabled(!zoomLocked)
+    .enabled(!zoomLocked && tool === "zoom")
     .onStart((e) => {
       "worklet";
       try {
@@ -792,7 +824,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   // Two-finger pan khi đang zoom để di chuyển project mượt mà
   const pan = Gesture.Pan()
     .minPointers(2)
-    .enabled(!zoomLocked)
+    .enabled(!zoomLocked && tool === "zoom")
     .onStart(() => {
       "worklet";
       baseProjectTranslateX.value = projectTranslateX.value;
@@ -1197,11 +1229,17 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 paddingVertical: 20,
               }}
               onScroll={onScrollAnimated}
-              scrollEventThrottle={16}
-              decelerationRate="normal" // Thêm để scroll mượt hơn
+              scrollEventThrottle={12}
+              decelerationRate="normal"
               showsVerticalScrollIndicator={false}
-              // Chỉ cho phép scroll khi không đang zoom & không phóng to
-              scrollEnabled={!isZooming && !isZoomedIn}
+              // Chế độ scroll-only cho phép scroll ngay cả khi đã zoom
+              scrollEnabled={
+                tool === "scroll"
+                  ? true
+                  : tool === "zoom"
+                  ? false
+                  : !isZooming && !isZoomedIn
+              }
               simultaneousHandlers={scrollRef}
               onLayout={(e) => {
                 const h = e?.nativeEvent?.layout?.height;
@@ -1301,6 +1339,14 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                           // Disable ScrollView scroll when pinch gesture is active to prevent crash
                           setIsZooming(isZoomActive);
                         },
+                        // Pass down selection state
+                        selectedId:
+                          selectionPageId === p.id ? selectedId : null,
+                        selectedBox:
+                          selectionPageId === p.id ? selectedBox : null,
+                        onSelectionChange: (strokeId, box) => {
+                          handleSelectionChange(p.id, strokeId, box);
+                        },
                       }}
                       pageId={p?.id != null ? p.id : `page-${i}`}
                       onChangeStrokes={(strokes) => {
@@ -1367,7 +1413,44 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         </Animated.View>
       )}
 
-      {/* Zoom Control Buttons */}
+      {/* Interaction Mode Buttons */}
+      <View
+        style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          flexDirection: "row",
+          gap: 8,
+          zIndex: 100,
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => setTool?.("scroll")}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: tool === "scroll" ? "#34C759" : "#555",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Icon name="swap-vert" size={20} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setTool?.("zoom")}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: tool === "zoom" ? "#007AFF" : "#555",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Icon name="zoom-in" size={20} color="white" />
+        </TouchableOpacity>
+      </View>
       <View
         style={{
           position: "absolute",
