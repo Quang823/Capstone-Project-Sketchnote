@@ -2561,8 +2561,8 @@ export default function GestureHandler(
           selectedStroke?.tool
         ) && (
           <TextSelectionBox
-            x={selectedBox.x}
-            y={selectedBox.y}
+            x={(selectedBox.x || 0) - (page?.x || 0)}
+            y={(selectedBox.y || 0) - (page?.y || 0) + 20}
             width={selectedBox.width}
             height={selectedBox.height}
             onResizeStart={(corner) => {
@@ -2732,8 +2732,8 @@ export default function GestureHandler(
 
       <InlineTextEditor
         visible={editorVisible}
-        x={editorProps.x}
-        y={editorProps.y}
+        x={(editorProps.x || 0) - (page?.x || 0)}
+        y={(editorProps.y || 0) - (page?.y || 0) + 2}
         initialText={editorProps.data?.text || ""}
         initialData={editorProps.data}
         isEditingExisting={!!selectedId}
@@ -2801,7 +2801,7 @@ export default function GestureHandler(
               height={selectedBox.height}
               rotation={selectedBox.rotation ?? 0}
               scale={zoomMirror.scale}
-              pan={{ x: 0, y: 0 }}
+              pan={{ x: -(page?.x || 0), y: -(page?.y || 0) + 20 }}
               onMoveStart={() => {
                 const sItem = strokes.find((it) => it.id === selectedId);
                 if (sItem) {
@@ -3024,8 +3024,8 @@ export default function GestureHandler(
             />
 
             <ImageSelectionBox
-              x={selectedBox.x}
-              y={selectedBox.y}
+              x={(selectedBox.x || 0) - (page?.x || 0)}
+              y={(selectedBox.y || 0) - (page?.y || 0) + 2}
               width={selectedBox.width}
               height={selectedBox.height}
               onCopy={() => {

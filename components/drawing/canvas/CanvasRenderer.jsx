@@ -402,9 +402,14 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       const safeFont = font || fallback.font;
       const hasFont = !!safeFont;
       const scaleFactor = nearest ? fontSize / nearest : 1;
-      const textWidth =
-        approxTextWidth(s.text || "", fontSize) + (s.padding || 0) * 2;
-      const textHeight = fontSize + (s.padding || 0) * 2;
+      const pad = s.padding || 0;
+      const txt = typeof s.text === "string" ? s.text : "";
+      const metrics = safeFont?.getMetrics ? safeFont.getMetrics() : null;
+      const ascentAbs = metrics ? Math.abs(metrics.ascent || 0) : fontSize;
+      const descent = metrics ? Math.abs(metrics.descent || 0) : 0;
+      const exactWidth = safeFont?.getTextWidth ? safeFont.getTextWidth(txt) : approxTextWidth(txt, fontSize);
+      const textWidth = exactWidth + pad * 2;
+      const textHeight = ascentAbs + descent + pad * 2;
 
       if (s.tool === "sticky" || s.tool === "comment") {
         const pad = s.padding || 6;
@@ -498,10 +503,9 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             key={`${s.id}-text`}
             x={(s.x || 0) / scaleFactor}
             y={(s.y || 0) / scaleFactor}
-            text={typeof s.text === "string" ? s.text : ""}
+            text={txt}
             font={safeFont}
             color={s.color || "#000"}
-            transform={[{ scale: scaleFactor }]}
           />
         );
       }
@@ -523,10 +527,10 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         elements.push(
           <Rect
             key={`${s.id}-border`}
-            x={s.x - (s.padding || 0)}
-            y={s.y - fontSize - (s.padding || 0)}
-            width={textWidth}
-            height={textHeight}
+            x={(s.x - pad) / scaleFactor}
+            y={(s.y - ascentAbs - pad) / scaleFactor}
+            width={(exactWidth + pad * 2) / scaleFactor}
+            height={(ascentAbs + descent + pad * 2) / scaleFactor}
             color="transparent"
             strokeWidth={1}
             strokeColor="#2563EB"
@@ -536,7 +540,11 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         );
       }
 
-      return <Group key={`${s.id}-text-group`}>{elements}</Group>;
+      return (
+        <Group key={`${s.id}-text-group`} transform={[{ scale: scaleFactor }]}> 
+          {elements}
+        </Group>
+      );
     }
 
     // shapes (reuse)

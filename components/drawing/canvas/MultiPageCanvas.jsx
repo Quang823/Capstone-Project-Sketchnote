@@ -9,7 +9,14 @@ import React, {
   memo,
 } from "react";
 import { useFont } from "@shopify/react-native-skia";
-import { View, Text, TouchableOpacity, Dimensions, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Dimensions,
+  Alert,
+  Modal,
+} from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -202,6 +209,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   // Sidebar state
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [overviewVisible, setOverviewVisible] = useState(false);
+  const [templateConfirm, setTemplateConfirm] = useState(null);
 
   // Initialize pages based on noteConfig
   const initialPages = useMemo(() => {
@@ -1172,6 +1180,116 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     },
   }));
 
+  const extractTemplateData = (json) => {
+    try {
+      if (!json || typeof json !== "object") return {};
+      let strokesArray = [];
+      let layersMetadata = [];
+      let pageUpdates = null;
+
+      const rootStrokes = Array.isArray(json.strokes) ? json.strokes : [];
+
+      if (Array.isArray(json.layers)) {
+        json.layers.forEach((layer) => {
+          const lid = layer?.id || "layer1";
+          layersMetadata.push({
+            id: lid,
+            name: layer?.name || `Layer ${lid}`,
+            visible: layer?.visible !== false,
+            locked: layer?.locked === true,
+          });
+          const lst = Array.isArray(layer?.strokes) ? layer.strokes : [];
+          lst.forEach((s) => strokesArray.push({ ...s, layerId: lid }));
+        });
+      }
+
+      if (strokesArray.length === 0 && rootStrokes.length > 0) {
+        strokesArray = rootStrokes;
+      }
+
+      if (json.page && typeof json.page === "object") {
+        const bg = json.page.backgroundColor;
+        const tpl = json.page.template;
+        pageUpdates = {
+          ...(bg ? { backgroundColor: bg } : {}),
+          ...(tpl ? { template: tpl } : {}),
+          imageUrl: json.page.imageUrl ?? undefined,
+        };
+      } else {
+        const bg = json.backgroundColor;
+        const tpl = json.template;
+        pageUpdates = {
+          ...(bg ? { backgroundColor: bg } : {}),
+          ...(tpl ? { template: tpl } : {}),
+          imageUrl: json.imageUrl ?? undefined,
+        };
+      }
+
+      return { strokesArray, layersMetadata, pageUpdates };
+    } catch (e) {
+      return {};
+    }
+  };
+
+  const applyTemplateToPage = useCallback(async (pageId, url) => {
+    try {
+      if (!pageId || !url) return;
+      const safeUrl = String(url).trim().replace(/^`|`$/g, "");
+      const resp = await fetch(safeUrl);
+      const json = await resp.json();
+
+      const { strokesArray, layersMetadata, pageUpdates } =
+        extractTemplateData(json);
+      const pageRef = pageRefs.current[pageId];
+      if (pageRef && typeof pageRef.loadStrokes === "function") {
+        pageRef.loadStrokes(strokesArray || [], layersMetadata || []);
+      }
+      if (pageUpdates) {
+        setPages((prev) =>
+          prev.map((pg) => (pg.id === pageId ? { ...pg, ...pageUpdates } : pg))
+        );
+      }
+    } catch (e) {
+      console.warn("[MultiPageCanvas] applyTemplateToPage error:", e);
+    }
+  }, []);
+
+  const handleResourceSelect = useCallback(
+    async (res) => {
+      try {
+        if (!res) return;
+
+        const typeStr = String(res.type || "").toUpperCase();
+
+        if (typeStr.includes("ICON")) {
+          const page = pages[activeIndex];
+          if (!page || page.id == null) return;
+          const pageRef = pageRefs.current[page.id];
+          if (pageRef && typeof pageRef.addImageStroke === "function") {
+            pageRef.addImageStroke({
+              uri: res.itemUrl,
+              width: 240,
+              height: 240,
+            });
+            setOverviewVisible(false);
+          }
+          return;
+        }
+
+        if (typeStr.includes("TEMPLATE")) {
+          setTemplateConfirm({
+            itemUrl: res.itemUrl,
+            name: res.name,
+          });
+          return;
+        }
+      } catch (e) {
+        console.warn("[MultiPageCanvas] handleResourceSelect error:", e);
+      }
+    },
+    [pages, activeIndex]
+  );
+
   return (
     <View style={{ flex: 1, flexDirection: "row" }}>
       {/* Document Sidebar */}
@@ -1193,6 +1311,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         onAddPage={addPage}
         resourceItems={[]}
         onOpenOverview={() => setOverviewVisible(true)}
+        onResourceSelect={handleResourceSelect}
       />
       <DocumentOverviewModal
         visible={overviewVisible}
@@ -1203,8 +1322,160 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           scrollToPageById(pageId);
         }}
         onAddPage={addPage}
-        onResourceSelect={(uri) => {}}
+        onResourceSelect={handleResourceSelect}
       />
+
+      <Modal
+        visible={!!templateConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTemplateConfirm(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              width: 420, // ⬅ tăng size modal lên
+              maxWidth: "95%", // ⬅ fallback để không bị tràn màn
+              backgroundColor: "#FFFFFF",
+              borderRadius: 22,
+              padding: 26,
+              shadowColor: "#000",
+              shadowOpacity: 0.25,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 12,
+            }}
+          >
+            {/* Header */}
+            <View style={{ alignItems: "center", marginBottom: 20 }}>
+              <Text
+                style={{ fontSize: 22, fontWeight: "700", color: "#111827" }}
+              >
+                Apply Template
+              </Text>
+
+              <Text
+                style={{
+                  marginTop: 8,
+                  fontSize: 15,
+                  textAlign: "center",
+                  color: "#4B5563",
+                  lineHeight: 22,
+                }}
+              >
+                Choose how you want to apply this template.
+              </Text>
+
+              {!!templateConfirm?.name && (
+                <Text
+                  style={{
+                    marginTop: 10,
+                    fontSize: 14,
+                    color: "#6B7280",
+                    fontStyle: "italic",
+                  }}
+                >
+                  {templateConfirm.name}
+                </Text>
+              )}
+            </View>
+
+            {/* Action Buttons Row */}
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 14, // ⬅ tăng gap để thoáng hơn
+                marginBottom: 18,
+              }}
+            >
+              <TouchableOpacity
+                onPress={async () => {
+                  const page = pages[activeIndex];
+                  if (!page || page.id == null) return;
+                  await applyTemplateToPage(page.id, templateConfirm.itemUrl);
+                  setTemplateConfirm(null);
+                  setOverviewVisible(false);
+                }}
+                style={{
+                  flex: 1,
+                  paddingVertical: 16,
+                  borderRadius: 14,
+                  backgroundColor: "#3b82f6",
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "white",
+                    fontSize: 15,
+                    fontWeight: "600",
+                  }}
+                >
+                  Current Page
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={async () => {
+                  for (const p of pages) {
+                    if (p && p.id != null) {
+                      await applyTemplateToPage(p.id, templateConfirm.itemUrl);
+                    }
+                  }
+                  setTemplateConfirm(null);
+                  setOverviewVisible(false);
+                }}
+                style={{
+                  flex: 1,
+                  paddingVertical: 16,
+                  borderRadius: 14,
+                  backgroundColor: "#059669",
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "white",
+                    fontSize: 15,
+                    fontWeight: "600",
+                  }}
+                >
+                  All Pages
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Cancel */}
+            <TouchableOpacity
+              onPress={() => setTemplateConfirm(null)}
+              style={{
+                paddingVertical: 16,
+                borderRadius: 14,
+                backgroundColor: "#F3F4F6",
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#374151",
+                  fontSize: 15,
+                  fontWeight: "500",
+                }}
+              >
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Pages - Wrapped with Gesture Detector for project-wide zoom */}
       <View
