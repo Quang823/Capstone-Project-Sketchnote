@@ -81,7 +81,9 @@ export default function CoursesScreen() {
     let filtered = allCourses;
 
     if (selectedCategory !== "all") {
-      filtered = filtered.filter((course) => course.category === selectedCategory);
+      filtered = filtered.filter(
+        (course) => course.category === selectedCategory
+      );
     }
 
     if (searchQuery) {
@@ -156,7 +158,9 @@ export default function CoursesScreen() {
 
               <View style={coursesStyles.metaItem}>
                 <Icon name="play-circle-outline" size={14} color="#4F46E5" />
-                <Text style={coursesStyles.metaText}>{item.lessonsCount} lessons</Text>
+                <Text style={coursesStyles.metaText}>
+                  {item.lessonsCount} lessons
+                </Text>
               </View>
 
               <View style={coursesStyles.metaItem}>
@@ -187,11 +191,10 @@ export default function CoursesScreen() {
     <View style={coursesStyles.container}>
       {/* Header */}
       <View style={coursesStyles.header}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
+        <View style={coursesStyles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+          <Text style={coursesStyles.headerTitle}>Courses</Text>
         </View>
-        <Text style={coursesStyles.headerTitle}>Courses</Text>
-        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView
@@ -262,9 +265,7 @@ export default function CoursesScreen() {
         ) : (
           <View style={coursesStyles.emptyState}>
             <Icon name="inbox" size={80} color="#D1D5DB" />
-            <Text style={coursesStyles.emptyStateText}>
-              No courses found
-            </Text>
+            <Text style={coursesStyles.emptyStateText}>No courses found</Text>
           </View>
         )}
 

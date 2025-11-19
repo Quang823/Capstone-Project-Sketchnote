@@ -38,7 +38,7 @@ export default function ResourceDetailScreen() {
           text1: "Lỗi tải dữ liệu",
           text2: error.message,
         });
-        console.log(error);
+        // console.log(error);
       } finally {
         setLoading(false);
       }
@@ -51,8 +51,8 @@ export default function ResourceDetailScreen() {
     const fetchUserResources = async () => {
       try {
         const resUser = await resourceService.getResourceProjectByUserId();
-        console.log(resUser);
-        const userData = resUser || [];
+        //  console.log(resUser);
+        const userData = Array.isArray(resUser) ? resUser : [];
         // console.log("✅ Resource By User Id:", userData);
         setUserResources(userData);
       } catch (error) {
@@ -66,18 +66,20 @@ export default function ResourceDetailScreen() {
   // ✅ Thêm vào giỏ hàng
   const handleAddToCart = () => {
     if (!resource) return;
-const alreadyOwned = userResources.some(
-    (r) => r.resourceTemplateId === resource.resourceTemplateId
-  );
+    const alreadyOwned =
+      Array.isArray(userResources) &&
+      userResources.some(
+        (r) => r.resourceTemplateId === resource.resourceTemplateId
+      );
 
-  if (alreadyOwned) {
-    Toast.show({
-      type: "info",
-      text1: "Bạn đã sở hữu resource này rồi",
-      text2: "Không thể mua lại.",
-    });
-    return; 
-  }
+    if (alreadyOwned) {
+      Toast.show({
+        type: "info",
+        text1: "Bạn đã sở hữu resource này rồi",
+        text2: "Không thể mua lại.",
+      });
+      return;
+    }
     const newItem = {
       id: resource.resourceTemplateId,
       name: resource.name,
@@ -106,9 +108,11 @@ const alreadyOwned = userResources.some(
   // 🟡 Mua ngay - Add to cart and navigate to cart screen
   const handleBuyNow = () => {
     // Check if user already owns the resource
-    const alreadyOwned = userResources.some(
-      (r) => r.resourceTemplateId === resource.resourceTemplateId
-    );
+    const alreadyOwned =
+      Array.isArray(userResources) &&
+      userResources.some(
+        (r) => r.resourceTemplateId === resource.resourceTemplateId
+      );
 
     if (alreadyOwned) {
       Toast.show({
@@ -116,11 +120,11 @@ const alreadyOwned = userResources.some(
         text1: "Bạn đã sở hữu resource này rồi",
         text2: "Không thể mua lại.",
       });
-      return; 
+      return;
     }
-    
+
     if (!resource) return;
-    
+
     const designerName = resource.designerInfo
       ? `${resource.designerInfo.firstName || ""} ${
           resource.designerInfo.lastName || ""
@@ -132,7 +136,9 @@ const alreadyOwned = userResources.some(
       name: resource.name,
       description: resource.description,
       price: resource.price,
-      image: resource.images?.find((img) => img.isThumbnail)?.imageUrl || resource.images?.[0]?.imageUrl,
+      image:
+        resource.images?.find((img) => img.isThumbnail)?.imageUrl ||
+        resource.images?.[0]?.imageUrl,
       designer: designerName,
       releaseDate: resource.releaseDate,
       isActive: resource.isActive,
@@ -143,14 +149,13 @@ const alreadyOwned = userResources.some(
     // Add to cart and navigate to cart screen
     addToCart(item);
     navigation.navigate("Cart");
-    
+
     Toast.show({
       type: "success",
       text1: "🛒 Đang chuyển đến giỏ hàng",
       text2: `${resource.name} đã được thêm vào giỏ hàng!`,
     });
   };
-
 
   // ✅ Render stars
   const renderStars = (rating = 4.5) => {
@@ -162,16 +167,13 @@ const alreadyOwned = userResources.some(
       stars.push(<Icon key={i} name="star" size={16} color="#FFC107" />);
     }
     if (hasHalfStar) {
-      stars.push(<Icon key="half" name="star-half" size={16} color="#FFC107" />);
+      stars.push(
+        <Icon key="half" name="star-half" size={16} color="#FFC107" />
+      );
     }
     while (stars.length < 5) {
       stars.push(
-        <Icon
-          key={stars.length}
-          name="star-border"
-          size={16}
-          color="#D1D5DB"
-        />
+        <Icon key={stars.length} name="star-border" size={16} color="#D1D5DB" />
       );
     }
     return stars;
@@ -256,7 +258,9 @@ const alreadyOwned = userResources.some(
                       >
                         <Image
                           source={{
-                            uri: item.imageUrl || "https://via.placeholder.com/100",
+                            uri:
+                              item.imageUrl ||
+                              "https://via.placeholder.com/100",
                           }}
                           style={styles.thumbnailImage}
                           resizeMode="cover"
@@ -310,61 +314,65 @@ const alreadyOwned = userResources.some(
               {/* Description */}
               <View style={styles.sectionInner}>
                 <Text style={styles.sectionTitle}>Description</Text>
-                <Text style={styles.descriptionText}>{resource.description}</Text>
+                <Text style={styles.descriptionText}>
+                  {resource.description}
+                </Text>
               </View>
 
               {/* Product Info */}
-            <View style={[styles.sectionInner, styles.sectionInnerLast]}>
-  <Text style={styles.sectionTitle}>Product Info</Text>
+              <View style={[styles.sectionInner, styles.sectionInnerLast]}>
+                <Text style={styles.sectionTitle}>Product Info</Text>
 
-  <View style={styles.infoGrid}>
-    {/* Expired Time */}
-    <View style={styles.infoItem}>
-      <Icon name="event-busy" size={18} color="#F59E0B" />
-      <View style={styles.infoTextContainer}>
-        <Text style={styles.infoLabel}>Expired Time</Text>
-        <Text style={styles.infoValue}>
-          {new Date(resource.expiredTime).toLocaleDateString("vi-VN")}
-        </Text>
-      </View>
-    </View>
+                <View style={styles.infoGrid}>
+                  {/* Expired Time */}
+                  <View style={styles.infoItem}>
+                    <Icon name="event-busy" size={18} color="#F59E0B" />
+                    <View style={styles.infoTextContainer}>
+                      <Text style={styles.infoLabel}>Expired Time</Text>
+                      <Text style={styles.infoValue}>
+                        {new Date(resource.expiredTime).toLocaleDateString(
+                          "vi-VN"
+                        )}
+                      </Text>
+                    </View>
+                  </View>
 
-    {/* Release Date */}
-    <View style={styles.infoItem}>
-      <Icon name="event-available" size={18} color="#10B981" />
-      <View style={styles.infoTextContainer}>
-        <Text style={styles.infoLabel}>Release Date</Text>
-        <Text style={styles.infoValue}>
-          {new Date(resource.releaseDate).toLocaleDateString("vi-VN")}
-        </Text>
-      </View>
-    </View>
+                  {/* Release Date */}
+                  <View style={styles.infoItem}>
+                    <Icon name="event-available" size={18} color="#10B981" />
+                    <View style={styles.infoTextContainer}>
+                      <Text style={styles.infoLabel}>Release Date</Text>
+                      <Text style={styles.infoValue}>
+                        {new Date(resource.releaseDate).toLocaleDateString(
+                          "vi-VN"
+                        )}
+                      </Text>
+                    </View>
+                  </View>
 
-    {/* Download Count */}
-    <View style={styles.infoItem}>
-      <Icon name="file-download" size={18} color="#3B82F6" />
-      <View style={styles.infoTextContainer}>
-        <Text style={styles.infoLabel}>Download Count</Text>
-        <Text style={styles.infoValue}>
-          {resource.downloadCount ?? 120}
-        </Text>
-      </View>
-    </View>
+                  {/* Download Count */}
+                  <View style={styles.infoItem}>
+                    <Icon name="file-download" size={18} color="#3B82F6" />
+                    <View style={styles.infoTextContainer}>
+                      <Text style={styles.infoLabel}>Download Count</Text>
+                      <Text style={styles.infoValue}>
+                        {resource.downloadCount ?? 120}
+                      </Text>
+                    </View>
+                  </View>
 
-    {/* File Size */}
-    <View style={styles.infoItem}>
-      <Icon name="storage" size={18} color="#10B981" />
-      <View style={styles.infoTextContainer}>
-        <Text style={styles.infoLabel}>File Size</Text>
-        <Text style={styles.infoValue}>
-          {resource.size ? `${resource.size} MB` : '15 MB'}
-        </Text>
-      </View>
-    </View>
-  </View>
-</View>
-
-
+                  {/* File Size */}
+                  <View style={styles.infoItem}>
+                    <Icon name="storage" size={18} color="#10B981" />
+                    <View style={styles.infoTextContainer}>
+                      <Text style={styles.infoLabel}>File Size</Text>
+                      <Text style={styles.infoValue}>
+                        {resource.size ? `${resource.size} MB` : "15 MB"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
 
               <View style={styles.actionButtonsContainer}>
                 <Pressable
@@ -379,7 +387,9 @@ const alreadyOwned = userResources.some(
                   onPress={handleBuyNow}
                 >
                   <Icon name="flash-on" size={16} color="#FFFFFF" />
-                  <Text style={[styles.actionButtonText, styles.buyNowButtonText]}>
+                  <Text
+                    style={[styles.actionButtonText, styles.buyNowButtonText]}
+                  >
                     Mua ngqay
                   </Text>
                 </Pressable>
@@ -472,11 +482,11 @@ const alreadyOwned = userResources.some(
       </View>
     ))} */}
 
-                {/* Load More */}
-                <Pressable style={styles.loadMoreButton}>
-                  <Text style={styles.loadMoreText}>Load more reviews</Text>
-                  <Icon name="keyboard-arrow-down" size={20} color="#3B82F6" />
-                </Pressable>
+              {/* Load More */}
+              <Pressable style={styles.loadMoreButton}>
+                <Text style={styles.loadMoreText}>Load more reviews</Text>
+                <Icon name="keyboard-arrow-down" size={20} color="#3B82F6" />
+              </Pressable>
             </View>
           </View>
         </View>

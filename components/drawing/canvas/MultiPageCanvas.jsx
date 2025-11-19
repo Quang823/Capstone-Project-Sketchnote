@@ -9,7 +9,14 @@ import React, {
   memo,
 } from "react";
 import { useFont } from "@shopify/react-native-skia";
-import { View, Text, TouchableOpacity, Dimensions, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Dimensions,
+  Alert,
+  Modal,
+} from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -202,6 +209,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   // Sidebar state
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [overviewVisible, setOverviewVisible] = useState(false);
+  const [templateConfirm, setTemplateConfirm] = useState(null);
 
   // Initialize pages based on noteConfig
   const initialPages = useMemo(() => {
@@ -226,7 +234,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         backgroundColor: noteConfig.cover.color,
         template: noteConfig.cover.template,
         imageUrl: noteConfig.cover.imageUrl,
-        thumbnail: noteConfig.imageUrl,
         snapshotUrl: null,
       });
     }
@@ -243,7 +250,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             imageUrl: noteConfig.cover?.imageUrl,
             pageNumber: p.pageNumber,
             strokeUrl: p.strokeUrl,
-            thumbnail: noteConfig.imageUrl,
             snapshotUrl: p.snapshotUrl || null,
           });
         } else {
@@ -298,6 +304,38 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const [zoomPercent, setZoomPercent] = useState(100);
   const [zoomLocked, setZoomLocked] = useState(false);
   const [showZoomOverlay, setShowZoomOverlay] = useState(false);
+
+  // State for single selection across all pages
+  const [selectedId, setSelectedId] = useState(null);
+  const [selectionPageId, setSelectionPageId] = useState(null);
+  const [selectedBox, setSelectedBox] = useState(null);
+
+  // Callback for GestureHandler to update selection state
+  const handleSelectionChange = useCallback(
+    (pageId, strokeId, box) => {
+      if (strokeId) {
+        setSelectedId(strokeId);
+        setSelectionPageId(pageId);
+        setSelectedBox(box);
+      } else if (selectedId && selectionPageId === pageId) {
+        // Deselect if the change comes from the page with the active selection
+        setSelectedId(null);
+        setSelectionPageId(null);
+        setSelectedBox(null);
+      }
+    },
+    [selectedId, selectionPageId]
+  );
+
+  useEffect(() => {
+    if (tool === "scroll" || tool === "zoom") {
+      projectScale.value = withTiming(1, { duration: 200 });
+      projectTranslateX.value = withTiming(0, { duration: 200 });
+      projectTranslateY.value = withTiming(0, { duration: 200 });
+      setIsZooming(false);
+      setShowZoomOverlay(false);
+    }
+  }, [tool]);
 
   // Zoom/Pan state - áp dụng cho toàn bộ project
   const projectScale = useSharedValue(1);
@@ -585,8 +623,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       if (isUnmountedRef.current || isScrollingProgrammaticallyRef.current)
         return;
 
-      // throttle tiny moves to avoid spamming JS (reduced to 1px for better transform box sync)
-      if (Math.abs(offset - lastHandledScrollRef.current) < 1) return;
+      // throttle tiny moves to avoid spamming JS (raise to 3px to reduce JS pressure)
+      if (Math.abs(offset - lastHandledScrollRef.current) < 0.5) return;
 
       lastHandledScrollRef.current = offset;
 
@@ -716,7 +754,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   };
 
   const pinch = Gesture.Pinch()
-    .enabled(!zoomLocked)
+    .enabled(!zoomLocked && tool === "zoom")
     .onStart((e) => {
       "worklet";
       try {
@@ -794,7 +832,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   // Two-finger pan khi đang zoom để di chuyển project mượt mà
   const pan = Gesture.Pan()
     .minPointers(2)
-    .enabled(!zoomLocked)
+    .enabled(!zoomLocked && tool === "zoom")
     .onStart(() => {
       "worklet";
       baseProjectTranslateX.value = projectTranslateX.value;
@@ -998,8 +1036,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       for (let index = 0; index < pages.length; index++) {
         const page = pages[index];
         if (!page || page.id == null) continue;
-        const strokes =
-          pageRefs.current[page.id]?.getStrokes?.() || [];
+        const strokes = pageRefs.current[page.id]?.getStrokes?.() || [];
         const count = strokes.length;
         const lastId = count > 0 ? strokes[count - 1]?.id : "";
         const sig = `${count}:${lastId}`;
@@ -1023,7 +1060,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         const map = new Map(
           remotePages
             .filter((p) => p && typeof p.pageNumber === "number")
-            .map((p) => [p.pageNumber, p.snapshotUrl || null]),
+            .map((p) => [p.pageNumber, p.snapshotUrl || null])
         );
         setPages((prev) => {
           if (!Array.isArray(prev) || prev.length === 0) return prev;
@@ -1143,6 +1180,116 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     },
   }));
 
+  const extractTemplateData = (json) => {
+    try {
+      if (!json || typeof json !== "object") return {};
+      let strokesArray = [];
+      let layersMetadata = [];
+      let pageUpdates = null;
+
+      const rootStrokes = Array.isArray(json.strokes) ? json.strokes : [];
+
+      if (Array.isArray(json.layers)) {
+        json.layers.forEach((layer) => {
+          const lid = layer?.id || "layer1";
+          layersMetadata.push({
+            id: lid,
+            name: layer?.name || `Layer ${lid}`,
+            visible: layer?.visible !== false,
+            locked: layer?.locked === true,
+          });
+          const lst = Array.isArray(layer?.strokes) ? layer.strokes : [];
+          lst.forEach((s) => strokesArray.push({ ...s, layerId: lid }));
+        });
+      }
+
+      if (strokesArray.length === 0 && rootStrokes.length > 0) {
+        strokesArray = rootStrokes;
+      }
+
+      if (json.page && typeof json.page === "object") {
+        const bg = json.page.backgroundColor;
+        const tpl = json.page.template;
+        pageUpdates = {
+          ...(bg ? { backgroundColor: bg } : {}),
+          ...(tpl ? { template: tpl } : {}),
+          imageUrl: json.page.imageUrl ?? undefined,
+        };
+      } else {
+        const bg = json.backgroundColor;
+        const tpl = json.template;
+        pageUpdates = {
+          ...(bg ? { backgroundColor: bg } : {}),
+          ...(tpl ? { template: tpl } : {}),
+          imageUrl: json.imageUrl ?? undefined,
+        };
+      }
+
+      return { strokesArray, layersMetadata, pageUpdates };
+    } catch (e) {
+      return {};
+    }
+  };
+
+  const applyTemplateToPage = useCallback(async (pageId, url) => {
+    try {
+      if (!pageId || !url) return;
+      const safeUrl = String(url).trim().replace(/^`|`$/g, "");
+      const resp = await fetch(safeUrl);
+      const json = await resp.json();
+
+      const { strokesArray, layersMetadata, pageUpdates } =
+        extractTemplateData(json);
+      const pageRef = pageRefs.current[pageId];
+      if (pageRef && typeof pageRef.loadStrokes === "function") {
+        pageRef.loadStrokes(strokesArray || [], layersMetadata || []);
+      }
+      if (pageUpdates) {
+        setPages((prev) =>
+          prev.map((pg) => (pg.id === pageId ? { ...pg, ...pageUpdates } : pg))
+        );
+      }
+    } catch (e) {
+      console.warn("[MultiPageCanvas] applyTemplateToPage error:", e);
+    }
+  }, []);
+
+  const handleResourceSelect = useCallback(
+    async (res) => {
+      try {
+        if (!res) return;
+
+        const typeStr = String(res.type || "").toUpperCase();
+
+        if (typeStr.includes("ICON")) {
+          const page = pages[activeIndex];
+          if (!page || page.id == null) return;
+          const pageRef = pageRefs.current[page.id];
+          if (pageRef && typeof pageRef.addImageStroke === "function") {
+            pageRef.addImageStroke({
+              uri: res.itemUrl,
+              width: 240,
+              height: 240,
+            });
+            setOverviewVisible(false);
+          }
+          return;
+        }
+
+        if (typeStr.includes("TEMPLATE")) {
+          setTemplateConfirm({
+            itemUrl: res.itemUrl,
+            name: res.name,
+          });
+          return;
+        }
+      } catch (e) {
+        console.warn("[MultiPageCanvas] handleResourceSelect error:", e);
+      }
+    },
+    [pages, activeIndex]
+  );
+
   return (
     <View style={{ flex: 1, flexDirection: "row" }}>
       {/* Document Sidebar */}
@@ -1164,6 +1311,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         onAddPage={addPage}
         resourceItems={[]}
         onOpenOverview={() => setOverviewVisible(true)}
+        onResourceSelect={handleResourceSelect}
       />
       <DocumentOverviewModal
         visible={overviewVisible}
@@ -1174,8 +1322,160 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           scrollToPageById(pageId);
         }}
         onAddPage={addPage}
-        onResourceSelect={(uri) => {}}
+        onResourceSelect={handleResourceSelect}
       />
+
+      <Modal
+        visible={!!templateConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTemplateConfirm(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              width: 420, // ⬅ tăng size modal lên
+              maxWidth: "95%", // ⬅ fallback để không bị tràn màn
+              backgroundColor: "#FFFFFF",
+              borderRadius: 22,
+              padding: 26,
+              shadowColor: "#000",
+              shadowOpacity: 0.25,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 12,
+            }}
+          >
+            {/* Header */}
+            <View style={{ alignItems: "center", marginBottom: 20 }}>
+              <Text
+                style={{ fontSize: 22, fontWeight: "700", color: "#111827" }}
+              >
+                Apply Template
+              </Text>
+
+              <Text
+                style={{
+                  marginTop: 8,
+                  fontSize: 15,
+                  textAlign: "center",
+                  color: "#4B5563",
+                  lineHeight: 22,
+                }}
+              >
+                Choose how you want to apply this template.
+              </Text>
+
+              {!!templateConfirm?.name && (
+                <Text
+                  style={{
+                    marginTop: 10,
+                    fontSize: 14,
+                    color: "#6B7280",
+                    fontStyle: "italic",
+                  }}
+                >
+                  {templateConfirm.name}
+                </Text>
+              )}
+            </View>
+
+            {/* Action Buttons Row */}
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 14, // ⬅ tăng gap để thoáng hơn
+                marginBottom: 18,
+              }}
+            >
+              <TouchableOpacity
+                onPress={async () => {
+                  const page = pages[activeIndex];
+                  if (!page || page.id == null) return;
+                  await applyTemplateToPage(page.id, templateConfirm.itemUrl);
+                  setTemplateConfirm(null);
+                  setOverviewVisible(false);
+                }}
+                style={{
+                  flex: 1,
+                  paddingVertical: 16,
+                  borderRadius: 14,
+                  backgroundColor: "#3b82f6",
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "white",
+                    fontSize: 15,
+                    fontWeight: "600",
+                  }}
+                >
+                  Current Page
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={async () => {
+                  for (const p of pages) {
+                    if (p && p.id != null) {
+                      await applyTemplateToPage(p.id, templateConfirm.itemUrl);
+                    }
+                  }
+                  setTemplateConfirm(null);
+                  setOverviewVisible(false);
+                }}
+                style={{
+                  flex: 1,
+                  paddingVertical: 16,
+                  borderRadius: 14,
+                  backgroundColor: "#059669",
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "white",
+                    fontSize: 15,
+                    fontWeight: "600",
+                  }}
+                >
+                  All Pages
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Cancel */}
+            <TouchableOpacity
+              onPress={() => setTemplateConfirm(null)}
+              style={{
+                paddingVertical: 16,
+                borderRadius: 14,
+                backgroundColor: "#F3F4F6",
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#374151",
+                  fontSize: 15,
+                  fontWeight: "500",
+                }}
+              >
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Pages - Wrapped with Gesture Detector for project-wide zoom */}
       <View
@@ -1200,11 +1500,17 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 paddingVertical: 20,
               }}
               onScroll={onScrollAnimated}
-              scrollEventThrottle={16}
-              decelerationRate="normal" // Thêm để scroll mượt hơn
+              scrollEventThrottle={12}
+              decelerationRate="normal"
               showsVerticalScrollIndicator={false}
-              // Chỉ cho phép scroll khi không đang zoom & không phóng to
-              scrollEnabled={!isZooming && !isZoomedIn}
+              // Chế độ scroll-only cho phép scroll ngay cả khi đã zoom
+              scrollEnabled={
+                tool === "scroll"
+                  ? true
+                  : tool === "zoom"
+                  ? false
+                  : !isZooming && !isZoomedIn
+              }
               simultaneousHandlers={scrollRef}
               onLayout={(e) => {
                 const h = e?.nativeEvent?.layout?.height;
@@ -1304,6 +1610,14 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                           // Disable ScrollView scroll when pinch gesture is active to prevent crash
                           setIsZooming(isZoomActive);
                         },
+                        // Pass down selection state
+                        selectedId:
+                          selectionPageId === p.id ? selectedId : null,
+                        selectedBox:
+                          selectionPageId === p.id ? selectedBox : null,
+                        onSelectionChange: (strokeId, box) => {
+                          handleSelectionChange(p.id, strokeId, box);
+                        },
                       }}
                       pageId={p?.id != null ? p.id : `page-${i}`}
                       onChangeStrokes={(strokes) => {
@@ -1370,7 +1684,44 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         </Animated.View>
       )}
 
-      {/* Zoom Control Buttons */}
+      {/* Interaction Mode Buttons */}
+      <View
+        style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          flexDirection: "row",
+          gap: 8,
+          zIndex: 100,
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => setTool?.("scroll")}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: tool === "scroll" ? "#34C759" : "#555",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Icon name="swap-vert" size={20} color="white" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setTool?.("zoom")}
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: tool === "zoom" ? "#007AFF" : "#555",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Icon name="zoom-in" size={20} color="white" />
+        </TouchableOpacity>
+      </View>
       <View
         style={{
           position: "absolute",

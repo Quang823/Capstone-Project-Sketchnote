@@ -18,6 +18,8 @@ import { Shadow } from "react-native-shadow-2";
 import { blogStyles } from "./BlogScreen.styles";
 import { blogService } from "../../service/blogService";
 import SidebarToggleButton from "../../components/navigation/SidebarToggleButton";
+import loadingAnimation from "../../assets/loading.json";
+import LottieView from "lottie-react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -86,36 +88,33 @@ export default function BlogScreen() {
 
   if (loading) {
     return (
-      <LinearGradient
-        colors={["#E0F2FE", "#FEF3C7"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[
-          blogStyles.container,
-          { justifyContent: "center", alignItems: "center" },
-        ]}
-      >
-        <ActivityIndicator size="large" color="#3B82F6" />
-        <Text style={{ marginTop: 10, color: "#6B7280" }}>
-          Đang tải bài viết...
-        </Text>
-      </LinearGradient>
+      <View style={blogStyles.centerContainer}>
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
+        {/* <Text style={blogStyles.loadingText}>
+          Loading blogs...
+        </Text> */}
+      </View>
     );
   }
 
   return (
     <LinearGradient
-      colors={["#E0F2FE", "#FEF3C7"]}
+      colors={["#F8FAFC", "#F8FAFC"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={blogStyles.container}
     >
       {/* 🔹 Header */}
       <View style={blogStyles.header}>
-      <SidebarToggleButton iconSize={24}  />
-        
-        <Text style={blogStyles.headerTitle}>Blog</Text>
-        <View style={blogStyles.headerRight} />
+        <View style={blogStyles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+          <Text style={blogStyles.headerTitle}>Blog</Text>
+        </View>
       </View>
 
       {/* 🔹 Search */}

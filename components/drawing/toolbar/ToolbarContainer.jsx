@@ -598,6 +598,17 @@ export default function ToolbarContainer({
               ),
             },
             {
+              name: "scroll",
+              label: "Scroll Only",
+              icon: (
+                <MaterialCommunityIcons
+                  name="gesture-swipe-vertical"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
+              ),
+            },
+            {
               name: "move",
               label: "Move Page",
               icon: (

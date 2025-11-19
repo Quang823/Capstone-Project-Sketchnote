@@ -171,7 +171,7 @@ export default function HomeScreen({ navigation }) {
           break;
       }
     },
-    [navigation],
+    [navigation]
   );
 
   // Double tap handler
@@ -194,7 +194,7 @@ export default function HomeScreen({ navigation }) {
     async (project) => {
       try {
         const projectDetails = await projectService.getProjectById(
-          project.projectId,
+          project.projectId
         );
         const meta = await offlineStorage.loadProjectLocally(
           `${projectDetails.projectId}_meta`
@@ -212,10 +212,10 @@ export default function HomeScreen({ navigation }) {
           paperSize: restoredPaperSize,
           cover: projectDetails.imageUrl
             ? {
-              template: "custom_image",
-              color: "#F8FAFC",
-              imageUrl: projectDetails.imageUrl,
-            }
+                template: "custom_image",
+                color: "#F8FAFC",
+                imageUrl: projectDetails.imageUrl,
+              }
             : null,
           paper: { template: "blank" },
           pages: projectDetails.pages || [],
@@ -227,7 +227,7 @@ export default function HomeScreen({ navigation }) {
         Alert.alert("Lỗi", "Không thể tải thông tin dự án. Vui lòng thử lại.");
       }
     },
-    [navigation],
+    [navigation]
   );
 
   //
@@ -292,7 +292,7 @@ export default function HomeScreen({ navigation }) {
         </View>
       </TouchableOpacity>
     ),
-    [handleProjectClick],
+    [handleProjectClick]
   );
 
   //
@@ -371,7 +371,7 @@ export default function HomeScreen({ navigation }) {
                 loop
                 style={{ width: 300, height: 300 }}
               />
-              <Text style={styles.loadingText}>Loading projects...</Text>
+              {/* <Text style={styles.loadingText}>Loading projects...</Text> */}
             </View>
           ) : error ? (
             <View style={styles.centerContainer}>
@@ -452,7 +452,7 @@ export default function HomeScreen({ navigation }) {
                             {page}
                           </Text>
                         </TouchableOpacity>
-                      ),
+                      )
                     )}
                   </View>
 

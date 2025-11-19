@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, ScrollView, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  ScrollView,
+  Pressable,
+} from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { MotiView } from "moti";
 import { LinearGradient } from "expo-linear-gradient";
-import { orderService } from "../../../service/orderService";
+import { orderService } from "../../../../service/orderService";
 import { styles } from "./OrderSuccessScreen.styles";
 
 export default function OrderSuccessScreen() {
@@ -46,7 +52,10 @@ export default function OrderSuccessScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
-        <Pressable style={styles.backButton} onPress={() => navigation.navigate("Home")}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => navigation.navigate("Home")}
+        >
           <Text style={styles.backText}>Go Back</Text>
         </Pressable>
       </View>
@@ -54,12 +63,14 @@ export default function OrderSuccessScreen() {
   }
 
   // Check if payment was successful
-  const isPaymentSuccess = order?.paymentStatus?.toUpperCase() === "PAID" || 
-                          order?.paymentStatus?.toUpperCase() === "SUCCESS" ||
-                          order?.paymentStatus?.toUpperCase() === "COMPLETED";
-  
-  const isPaymentFailed = order?.paymentStatus?.toUpperCase() === "FAILED" ||
-                         order?.orderStatus?.toUpperCase() === "CANCELLED";
+  const isPaymentSuccess =
+    order?.paymentStatus?.toUpperCase() === "PAID" ||
+    order?.paymentStatus?.toUpperCase() === "SUCCESS" ||
+    order?.paymentStatus?.toUpperCase() === "COMPLETED";
+
+  const isPaymentFailed =
+    order?.paymentStatus?.toUpperCase() === "FAILED" ||
+    order?.orderStatus?.toUpperCase() === "CANCELLED";
 
   return (
     <LinearGradient colors={["#EFF6FF", "#DBEAFE"]} style={styles.gradient}>
@@ -87,23 +98,33 @@ export default function OrderSuccessScreen() {
 
             <View style={styles.infoRow}>
               <Text style={styles.label}>Total Amount:</Text>
-              <Text style={styles.value}>{order?.totalAmount?.toLocaleString()} VND</Text>
+              <Text style={styles.value}>
+                {order?.totalAmount?.toLocaleString()} VND
+              </Text>
             </View>
 
             <View style={styles.infoRow}>
               <Text style={styles.label}>Payment Status:</Text>
-              <View style={[
-                styles.statusBadge,
-                isPaymentSuccess ? styles.statusSuccess : 
-                isPaymentFailed ? styles.statusFailed : 
-                styles.statusPending
-              ]}>
-                <Text style={[
-                  styles.statusText,
-                  isPaymentSuccess ? styles.statusTextSuccess : 
-                  isPaymentFailed ? styles.statusTextFailed : 
-                  styles.statusTextPending
-                ]}>
+              <View
+                style={[
+                  styles.statusBadge,
+                  isPaymentSuccess
+                    ? styles.statusSuccess
+                    : isPaymentFailed
+                    ? styles.statusFailed
+                    : styles.statusPending,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    isPaymentSuccess
+                      ? styles.statusTextSuccess
+                      : isPaymentFailed
+                      ? styles.statusTextFailed
+                      : styles.statusTextPending,
+                  ]}
+                >
                   {order?.paymentStatus || "UNKNOWN"}
                 </Text>
               </View>
@@ -111,18 +132,26 @@ export default function OrderSuccessScreen() {
 
             <View style={styles.infoRow}>
               <Text style={styles.label}>Order Status:</Text>
-              <View style={[
-                styles.statusBadge,
-                order?.orderStatus?.toUpperCase() === "CANCELLED" ? styles.statusFailed :
-                order?.orderStatus?.toUpperCase() === "CONFIRMED" ? styles.statusPending :
-                styles.statusSuccess
-              ]}>
-                <Text style={[
-                  styles.statusText,
-                  order?.orderStatus?.toUpperCase() === "CANCELLED" ? styles.statusTextFailed :
-                  order?.orderStatus?.toUpperCase() === "CONFIRMED" ? styles.statusTextPending :
-                  styles.statusTextSuccess
-                ]}>
+              <View
+                style={[
+                  styles.statusBadge,
+                  order?.orderStatus?.toUpperCase() === "CANCELLED"
+                    ? styles.statusFailed
+                    : order?.orderStatus?.toUpperCase() === "CONFIRMED"
+                    ? styles.statusPending
+                    : styles.statusSuccess,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    order?.orderStatus?.toUpperCase() === "CANCELLED"
+                      ? styles.statusTextFailed
+                      : order?.orderStatus?.toUpperCase() === "CONFIRMED"
+                      ? styles.statusTextPending
+                      : styles.statusTextSuccess,
+                  ]}
+                >
                   {order?.orderStatus || "UNKNOWN"}
                 </Text>
               </View>
@@ -133,7 +162,7 @@ export default function OrderSuccessScreen() {
               <Text style={styles.value}>
                 {new Date(order?.createdAt).toLocaleString("en-US", {
                   dateStyle: "medium",
-                  timeStyle: "short"
+                  timeStyle: "short",
                 })}
               </Text>
             </View>
@@ -148,7 +177,8 @@ export default function OrderSuccessScreen() {
               style={styles.warningBox}
             >
               <Text style={styles.warningText}>
-                ⚠️ Your payment could not be processed. Please try again or contact support.
+                ⚠️ Your payment could not be processed. Please try again or
+                contact support.
               </Text>
             </MotiView>
           )}
@@ -172,7 +202,9 @@ export default function OrderSuccessScreen() {
               >
                 <Text style={styles.itemName}>{item.templateName}</Text>
                 <Text style={styles.itemDesc}>{item.templateDescription}</Text>
-                <Text style={styles.itemPrice}>{item.unitPrice?.toLocaleString()} VND</Text>
+                <Text style={styles.itemPrice}>
+                  {item.unitPrice?.toLocaleString()} VND
+                </Text>
               </MotiView>
             ))}
           </View>
@@ -180,15 +212,15 @@ export default function OrderSuccessScreen() {
 
         <View style={styles.buttonContainer}>
           {isPaymentFailed && (
-            <Pressable 
-              style={[styles.button, styles.retryButton]} 
+            <Pressable
+              style={[styles.button, styles.retryButton]}
               onPress={() => navigation.navigate("Checkout", { orderId })}
             >
               <Text style={styles.buttonText}>Try Again</Text>
             </Pressable>
           )}
-          <Pressable 
-            style={[styles.button, styles.backButton]} 
+          <Pressable
+            style={[styles.button, styles.backButton]}
             onPress={() => navigation.navigate("Home")}
           >
             <Text style={styles.buttonText}>Back to Home</Text>

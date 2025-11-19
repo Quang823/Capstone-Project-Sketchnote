@@ -20,26 +20,7 @@ export default function LassoSelectionBox({
 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // --- internal refs for move
-  const lastMove = useRef({ x: 0, y: 0 });
-  const moveBuffer = useRef({ dx: 0, dy: 0 });
-  const rafScheduled = useRef(false);
-
-  // 🌀 Flush batched move transforms per frame
-  const scheduleFlush = () => {
-    if (rafScheduled.current) return;
-    rafScheduled.current = true;
-    requestAnimationFrame(() => {
-      rafScheduled.current = false;
-
-      // MOVE
-      if (moveBuffer.current.dx || moveBuffer.current.dy) {
-        const { dx, dy } = moveBuffer.current;
-        moveBuffer.current = { dx: 0, dy: 0 };
-        onMove?.(dx, dy);
-      }
-    });
-  };
+  const startMove = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -55,22 +36,20 @@ export default function LassoSelectionBox({
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onPanResponderGrant: (_, g) => {
-          lastMove.current = { x: g.x0, y: g.y0 };
+          startMove.current = { x: g.x0, y: g.y0 };
         },
         onPanResponderMove: (_, g) => {
-          const dx = g.moveX - lastMove.current.x;
-          const dy = g.moveY - lastMove.current.y;
-          lastMove.current = { x: g.moveX, y: g.moveY };
-          moveBuffer.current.dx += dx;
-          moveBuffer.current.dy += dy;
-          scheduleFlush();
+          const dx = g.moveX - startMove.current.x;
+          const dy = g.moveY - startMove.current.y;
+          onMove?.(dx, dy);
         },
-        onPanResponderRelease: () => {
-          scheduleFlush();
-          onMoveEnd?.();
+        onPanResponderRelease: (_, g) => {
+          const dx = g.moveX - startMove.current.x;
+          const dy = g.moveY - startMove.current.y;
+          onMoveEnd?.(dx, dy);
         },
       }),
-    [onMove]
+    [onMove, onMoveEnd],
   );
 
   if (!box) return null;

@@ -37,6 +37,15 @@ export default function ImageTransformBox({
   const rotateStart = useRef({ angle: 0, initRot: 0 });
   const rotateFrame = useRef(null);
 
+  useEffect(() => {
+    return () => {
+      try {
+        cancelAnimationFrame(rotateFrame.current);
+      } catch {}
+      rotateFrame.current = null;
+    };
+  }, []);
+
   // Keep stable refs for callbacks to prevent responder re-creation during drag
   const onResizeRef = useRef(onResize);
   const onResizeStartRef = useRef(onResizeStart);
@@ -159,7 +168,6 @@ export default function ImageTransformBox({
           transform: [
             { translateX: pan.x },
             { translateY: pan.y },
-            { scale },
             { rotate: `${rotation}deg` },
           ],
         },

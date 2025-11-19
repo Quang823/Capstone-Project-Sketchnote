@@ -201,7 +201,10 @@ const DocumentBrowserContent = ({
     return (
       <ScrollView
         style={styles.tabContent}
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
       >
         {purchasedTemplates.length === 0 ? (
           <View style={styles.emptyState}>
@@ -230,10 +233,21 @@ const DocumentBrowserContent = ({
                         ? styles.resourceCardList
                         : styles.resourceCardModal
                     }
-                    onPress={() => onResourceSelect?.(item.itemUrl)}
+                    android_ripple={{ color: "#E5E7EB" }}
+                    onPress={() => {
+                      const payload = {
+                        type: template.type,
+                        templateId: template.resourceTemplateId,
+                        name: template.name,
+                        itemUrl: item.itemUrl,
+                        imageUrl: item.imageUrl,
+                        itemId: item.resourceItemId,
+                      };
+                      onResourceSelect?.(payload);
+                    }}
                   >
                     <LazyImage
-                      source={{ uri: item.itemUrl }}
+                      source={{ uri: item.imageUrl || item.itemUrl }}
                       style={styles.resourceImage}
                     />
                   </Pressable>
@@ -475,9 +489,16 @@ const styles = StyleSheet.create({
   resourceCardList: {
     width: "48%",
     aspectRatio: 1,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 
   // Grid Layout (from Modal)
@@ -553,9 +574,17 @@ const styles = StyleSheet.create({
   },
   resourceCardModal: {
     width: (SCREEN_WIDTH * 0.9 - 64) / 3,
-    backgroundColor: "#F9FAFB",
+    aspectRatio: 1,
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    padding: 8,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });
 
