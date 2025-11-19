@@ -56,7 +56,7 @@ export default function WalletScreen() {
       const url = await paymentService.depositWallet(amount);
       //console.log(url)
       setShowDepositModal(false);
-      navigation.navigate("PaymentWebView", { paymentUrl: url.result });
+      navigation.navigate("PaymentWebView", { paymentUrl: url.message });
     } catch (error) {
       console.error("Payment error:", error);
       Toast.show({

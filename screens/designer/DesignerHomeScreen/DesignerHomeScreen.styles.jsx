@@ -16,9 +16,6 @@ export const designerHomeStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 20,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
   },
   menuButton: {
     width: 40,
@@ -33,8 +30,8 @@ export const designerHomeStyles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
+    fontSize: 20,
+    fontWeight: "800",
     color: "#1F2937",
   },
   headerSubtitle: {
@@ -65,6 +62,39 @@ export const designerHomeStyles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+
+  heroCard: {
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+  },
+  heroContent: {
+    marginBottom: 12,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    marginBottom: 6,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
+  },
+  heroButton: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#00000022",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  heroButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
 
   // Wallet Card
@@ -195,7 +225,7 @@ export const designerHomeStyles = StyleSheet.create({
   },
   quickActionCard: {
     width: (SCREEN_WIDTH - 60) / 2,
-    height: 120,
+    height: 140,
     borderRadius: 16,
     marginBottom: 16,
     overflow: "hidden",

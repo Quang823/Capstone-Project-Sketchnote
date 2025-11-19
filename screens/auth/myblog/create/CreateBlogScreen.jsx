@@ -45,59 +45,102 @@ export default function CreateBlogScreen({ navigation }) {
     setContents(newContents);
   };
 
-  const handleCreateBlog = async () => {
-    if (!title || !summary) {
+ const handleCreateBlog = async () => {
+  // Validate basic fields
+  if (!title.trim()) {
+    Toast.show({
+      type: "error",
+      text1: "Missing Title",
+      text2: "Please enter a blog title.",
+    });
+    return;
+  }
+
+  if (!summary.trim()) {
+    Toast.show({
+      type: "error",
+      text1: "Missing Summary",
+      text2: "A summary is required to publish your blog.",
+    });
+    return;
+  }
+
+  if (!imageUrl) {
+    Toast.show({
+      type: "error",
+      text1: "Missing Featured Image",
+      text2: "Please upload a featured image for your blog.",
+    });
+    return;
+  }
+
+  // Validate content sections
+  if (contents.length === 0) {
+    Toast.show({
+      type: "error",
+      text1: "No Content Sections",
+      text2: "Your blog must include at least one content section.",
+    });
+    return;
+  }
+
+  // Validate each section
+  for (let i = 0; i < contents.length; i++) {
+    const section = contents[i];
+
+    if (!section.sectionTitle.trim()) {
       Toast.show({
         type: "error",
-        text1: "Missing Information",
-        text2: "Please fill in title and summary.",
+        text1: `Missing Section Title`,
+        text2: `Section ${i + 1} must include a title.`,
       });
       return;
     }
 
-    const hasContent = contents.some(c => c.content.trim() !== "");
-    if (!hasContent) {
+    if (!section.content.trim()) {
       Toast.show({
         type: "error",
-        text1: "Missing Content",
-        text2: "Please add at least one content section.",
+        text1: `Missing Section Content`,
+        text2: `Section ${i + 1} must include content.`,
       });
       return;
     }
+  }
 
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      const blogData = {
-        title: title.trim(),
-        summary: summary.trim(),
-        imageUrl: imageUrl,
-        contents: contents.map((item, idx) => ({
-          sectionTitle: item.sectionTitle.trim(),
-          content: item.content.trim(),
-          contentUrl: item.contentUrl || "",
-          index: idx
-        }))
-      };
+    const blogData = {
+      title: title.trim(),
+      summary: summary.trim(),
+      imageUrl,
+      contents: contents.map((item, idx) => ({
+        sectionTitle: item.sectionTitle.trim(),
+        content: item.content.trim(),
+        contentUrl: item.contentUrl || "",
+        index: idx
+      }))
+    };
 
-      await blogService.createBlog(blogData);
+    await blogService.createBlog(blogData);
 
-      Toast.show({
-        type: "success",
-        text1: "🎉 Post created successfully!",
-      });
+    Toast.show({
+      type: "success",
+      text1: "🎉 Blog created successfully! Please wait for approval.",
+    });
 
-      navigation.goBack();
-    } catch (err) {
-      Toast.show({
-        type: "error",
-        text1: "Error creating post",
-        text2: err.message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    navigation.goBack();
+  } catch (err) {
+    Toast.show({
+      type: "error",
+      text1: "Error creating post",
+      text2: err.message,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <View style={styles.container}>
