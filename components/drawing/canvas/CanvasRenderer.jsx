@@ -402,14 +402,9 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       const safeFont = font || fallback.font;
       const hasFont = !!safeFont;
       const scaleFactor = nearest ? fontSize / nearest : 1;
-      const pad = s.padding || 0;
-      const txt = typeof s.text === "string" ? s.text : "";
-      const metrics = safeFont?.getMetrics ? safeFont.getMetrics() : null;
-      const ascentAbs = metrics ? Math.abs(metrics.ascent || 0) : fontSize;
-      const descent = metrics ? Math.abs(metrics.descent || 0) : 0;
-      const exactWidth = safeFont?.getTextWidth ? safeFont.getTextWidth(txt) : approxTextWidth(txt, fontSize);
-      const textWidth = exactWidth + pad * 2;
-      const textHeight = ascentAbs + descent + pad * 2;
+      const textWidth =
+        approxTextWidth(s.text || "", fontSize) + (s.padding || 0) * 2;
+      const textHeight = fontSize + (s.padding || 0) * 2;
 
       if (s.tool === "sticky" || s.tool === "comment") {
         const pad = s.padding || 6;
@@ -503,9 +498,10 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             key={`${s.id}-text`}
             x={(s.x || 0) / scaleFactor}
             y={(s.y || 0) / scaleFactor}
-            text={txt}
+            text={typeof s.text === "string" ? s.text : ""}
             font={safeFont}
             color={s.color || "#000"}
+            transform={[{ scale: scaleFactor }]}
           />
         );
       }
@@ -524,13 +520,16 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       }
 
       if (selectedId === s.id) {
+        const scaledPad = (s.padding || 0) * scaleFactor;
+        const scaledTextWidth = textWidth * scaleFactor;
+        const scaledTextHeight = textHeight * scaleFactor;
         elements.push(
           <Rect
             key={`${s.id}-border`}
-            x={(s.x - pad) / scaleFactor}
-            y={(s.y - ascentAbs - pad) / scaleFactor}
-            width={(exactWidth + pad * 2) / scaleFactor}
-            height={(ascentAbs + descent + pad * 2) / scaleFactor}
+            x={s.x - scaledPad}
+            y={s.y - fontSize * scaleFactor - scaledPad}
+            width={scaledTextWidth}
+            height={scaledTextHeight}
             color="transparent"
             strokeWidth={1}
             strokeColor="#2563EB"
@@ -540,11 +539,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         );
       }
 
-      return (
-        <Group key={`${s.id}-text-group`} transform={[{ scale: scaleFactor }]}> 
-          {elements}
-        </Group>
-      );
+      return <Group key={`${s.id}-text-group`}>{elements}</Group>;
     }
 
     // shapes (reuse)
