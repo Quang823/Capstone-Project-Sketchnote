@@ -19,12 +19,13 @@ import Toast from "react-native-toast-message";
 export default function MyBlogScreen({ navigation }) {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
   const fetchBlogs = async () => {
     try {
       setLoading(true);
       const res = await blogService.getBlogByUserId();
-      // console.log("📚 Fetched blogs:", res);
+      console.log("📚 Fetched blogs:", res);
       setBlogs(res.result || []);
     } catch (error) {
       console.error("❌ Error fetching blogs:", error);
@@ -70,6 +71,24 @@ export default function MyBlogScreen({ navigation }) {
       fetchBlogs();
     }, [])
   );
+
+  const statuses = ["ALL", "PUBLISHED", "DRAFT", "ARCHIVED"];
+  const visibleBlogs =
+    statusFilter === "ALL"
+      ? blogs
+      : blogs.filter((b) => (b.status || "").toUpperCase() === statusFilter);
+const getStatusStyle = (status) => {
+  switch (status?.toUpperCase()) {
+    case "PUBLISHED":
+      return { backgroundColor: "#DCFCE7", color: "#16A34A" }; // xanh lá
+    case "DRAFT":
+      return { backgroundColor: "#FEF9C3", color: "#CA8A04" }; // vàng
+    case "ARCHIVED":
+      return { backgroundColor: "#FEE2E2", color: "#DC2626" }; // đỏ nhạt
+    default:
+      return { backgroundColor: "#E5E7EB", color: "#374151" }; // xám
+  }
+};
 
   return (
     <View style={myBlogStyles.container}>
@@ -119,45 +138,89 @@ export default function MyBlogScreen({ navigation }) {
           </Pressable>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={myBlogStyles.listContainer}>
-          {blogs?.map((item) => (
-            <View key={item.id} style={myBlogStyles.blogItem}>
-              <Image
-                source={{
-                  uri: item.imageUrl || "https://i.imgur.com/9Y2w2fQ.jpeg",
-                }}
-                style={myBlogStyles.blogImage}
-              />
-              <View style={myBlogStyles.blogInfo}>
-                <Text style={myBlogStyles.blogTitle} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                <Text style={myBlogStyles.blogDesc} numberOfLines={2}>
-                  {item.summary || "No summary available"}
-                </Text>
-                <View style={myBlogStyles.blogMeta}>
-                  <Text style={myBlogStyles.blogDate}>
-                    🕒 {new Date(item.createdAt).toLocaleDateString()}
+        <>
+          <View style={myBlogStyles.filterBar}>
+            {statuses.map((s) => {
+              const active = statusFilter === s;
+              return (
+                <Pressable
+                  key={s}
+                  onPress={() => setStatusFilter(s)}
+                  style={[
+                    myBlogStyles.filterChip,
+                    active && myBlogStyles.filterChipActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      myBlogStyles.filterChipText,
+                      active && myBlogStyles.filterChipTextActive,
+                    ]}
+                  >
+                    {s}
                   </Text>
-                  {item.contents && item.contents.length > 0 && (
-                    <Text style={myBlogStyles.blogSections}>
-                      📄 {item.contents.length} section
-                      {item.contents.length > 1 ? "s" : ""}
+                </Pressable>
+              );
+            })}
+          </View>
+          <ScrollView contentContainerStyle={myBlogStyles.listContainer}>
+            {visibleBlogs?.map((item) => (
+              <View key={item.id} style={myBlogStyles.blogItem}>
+                <Image
+                  source={{
+                    uri: item.imageUrl || "https://i.imgur.com/9Y2w2fQ.jpeg",
+                  }}
+                  style={myBlogStyles.blogImage}
+                />
+                <View style={myBlogStyles.blogInfo}>
+                  <Text style={myBlogStyles.blogTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={myBlogStyles.blogDesc} numberOfLines={2}>
+                    {item.summary || "No summary available"}
+                  </Text>
+                 {item.status ? (
+  <View
+    style={[
+      myBlogStyles.statusBadge,
+      { backgroundColor: getStatusStyle(item.status).backgroundColor }
+    ]}
+  >
+    <Text
+      style={[
+        myBlogStyles.statusBadgeText,
+        { color: getStatusStyle(item.status).color }
+      ]}
+    >
+      {String(item.status).toUpperCase()}
+    </Text>
+  </View>
+) : null}
+
+                  <View style={myBlogStyles.blogMeta}>
+                    <Text style={myBlogStyles.blogDate}>
+                      🕒 {new Date(item.createdAt).toLocaleDateString()}
                     </Text>
-                  )}
+                    {item.contents && item.contents.length > 0 && (
+                      <Text style={myBlogStyles.blogSections}>
+                        📄 {item.contents.length} section
+                        {item.contents.length > 1 ? "s" : ""}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <View style={myBlogStyles.actionColumn}>
+                  <Pressable onPress={() => handleUpdateBlog(item)}>
+                    <Icon name="edit" size={22} color="#667EEA" />
+                  </Pressable>
+                  <Pressable onPress={() => handleDeleteBlog(item.id)}>
+                    <Icon name="delete-outline" size={22} color="#F5576C" />
+                  </Pressable>
                 </View>
               </View>
-              <View style={myBlogStyles.actionColumn}>
-                <Pressable onPress={() => handleUpdateBlog(item)}>
-                  <Icon name="edit" size={22} color="#667EEA" />
-                </Pressable>
-                <Pressable onPress={() => handleDeleteBlog(item.id)}>
-                  <Icon name="delete-outline" size={22} color="#F5576C" />
-                </Pressable>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
+            ))}
+          </ScrollView>
+        </>
       )}
     </View>
   );

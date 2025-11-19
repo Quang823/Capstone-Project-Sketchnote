@@ -1,3 +1,4 @@
+// DesignerAnalyticsScreen.js
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -8,17 +9,19 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { LinearGradient } from "expo-linear-gradient";
-import { designerAnalyticsStyles } from "./DesignerAnalyticsScreen.styles";
+import { styles } from "./DesignerAnalyticsScreen.styles";
+import { dashboardService } from "../../../service/dashboardService";
+
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerAnalyticsScreen() {
   const navigation = useNavigation();
-  const [timeRange, setTimeRange] = useState("7d"); // 7d, 30d, 90d, 1y
+  const [timeRange, setTimeRange] = useState("7d");
   const [analyticsData, setAnalyticsData] = useState(null);
+const [topTemplates, setTopTemplates] = useState([]);
 
-  // Mock data - thay thế bằng API call thực tế
   const mockAnalyticsData = {
     overview: {
       totalRevenue: 15200000,
@@ -69,96 +72,92 @@ export default function DesignerAnalyticsScreen() {
       { date: "2024-01-21", downloads: 140, revenue: 280000 },
     ],
   };
-
+  const fetchProductAnalytics = async () => {
+    try {
+      const res = await dashboardService.getTopTemplates();
+     setTopTemplates(res);
+    } catch (error) {
+      console.log(error);
+    }
+  };
   useEffect(() => {
-    // Simulate API call
     setAnalyticsData(mockAnalyticsData);
+    fetchProductAnalytics();
   }, [timeRange]);
-
+ 
   const formatCurrency = (amount) => {
-    return (amount ?? 0).toLocaleString("vi-VN") + " VND";
+    return (amount ?? 0).toLocaleString("vi-VN") + "₫";
   };
 
   const formatNumber = (number) => {
+    if (number >= 1000) {
+      return (number / 1000).toFixed(1) + "k";
+    }
     return (number ?? 0).toLocaleString("vi-VN");
   };
 
   const getTimeRangeText = (range) => {
-    switch (range) {
-      case "7d":
-        return "7 ngày qua";
-      case "30d":
-        return "30 ngày qua";
-      case "90d":
-        return "90 ngày qua";
-      case "1y":
-        return "1 năm qua";
-      default:
-        return "7 ngày qua";
-    }
-  };
-
-  const getGrowthColor = (growth) => {
-    return growth >= 0 ? "#10B981" : "#EF4444";
-  };
-
-  const getGrowthIcon = (growth) => {
-    return growth >= 0 ? "trending-up" : "trending-down";
+    const map = {
+      "7d": "7 ngày qua",
+      "30d": "30 ngày qua",
+      "90d": "90 ngày qua",
+      "1y": "1 năm qua",
+    };
+    return map[range] || "7 ngày qua";
   };
 
   if (!analyticsData) {
     return (
-      <View style={designerAnalyticsStyles.container}>
-        <View style={designerAnalyticsStyles.header}>
+      <View style={styles.container}>
+        <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back" size={24} color="#1F2937" />
+            <Icon name="arrow-back" size={22} color="#111827" />
           </Pressable>
-          <Text style={designerAnalyticsStyles.headerTitle}>Thống kê</Text>
-          <View style={{ width: 24 }} />
+          <Text style={styles.headerTitle}>Analytics</Text>
+          <View style={{ width: 22 }} />
         </View>
-        <View style={designerAnalyticsStyles.loadingContainer}>
-          <Text>Đang tải dữ liệu...</Text>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={designerAnalyticsStyles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={designerAnalyticsStyles.header}>
+      <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
+          <Icon name="arrow-back" size={22} color="#111827" />
         </Pressable>
-        <Text style={designerAnalyticsStyles.headerTitle}>Thống kê</Text>
+        <Text style={styles.headerTitle}>Analytics</Text>
         <Pressable>
-          <Icon name="more-vert" size={24} color="#1F2937" />
+          <Icon name="more-horiz" size={22} color="#111827" />
         </Pressable>
       </View>
 
-      <ScrollView style={designerAnalyticsStyles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Time Range Selector */}
-        <View style={designerAnalyticsStyles.timeRangeContainer}>
-          <Text style={designerAnalyticsStyles.sectionTitle}>Khoảng thời gian</Text>
-          <View style={designerAnalyticsStyles.timeRangeTabs}>
+        <View style={styles.timeRangeContainer}>
+          <View style={styles.timeRangeTabs}>
             {[
-              { key: "7d", label: "7 ngày" },
-              { key: "30d", label: "30 ngày" },
-              { key: "90d", label: "90 ngày" },
-              { key: "1y", label: "1 năm" },
+              { key: "7d", label: "7D" },
+              { key: "30d", label: "30D" },
+              { key: "90d", label: "90D" },
+              { key: "1y", label: "1Y" },
             ].map((range) => (
               <Pressable
                 key={range.key}
                 style={[
-                  designerAnalyticsStyles.timeRangeTab,
-                  timeRange === range.key && designerAnalyticsStyles.timeRangeTabActive,
+                  styles.timeRangeTab,
+                  timeRange === range.key && styles.timeRangeTabActive,
                 ]}
                 onPress={() => setTimeRange(range.key)}
               >
                 <Text
                   style={[
-                    designerAnalyticsStyles.timeRangeTabText,
-                    timeRange === range.key && designerAnalyticsStyles.timeRangeTabTextActive,
+                    styles.timeRangeTabText,
+                    timeRange === range.key && styles.timeRangeTabTextActive,
                   ]}
                 >
                   {range.label}
@@ -168,209 +167,138 @@ export default function DesignerAnalyticsScreen() {
           </View>
         </View>
 
-        {/* Overview Cards */}
-        <View style={designerAnalyticsStyles.overviewContainer}>
-          <Text style={designerAnalyticsStyles.sectionTitle}>Tổng quan</Text>
-          <View style={designerAnalyticsStyles.overviewGrid}>
-            <View style={designerAnalyticsStyles.overviewCard}>
-              <LinearGradient
-                colors={["#667EEA", "#764BA2"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={designerAnalyticsStyles.overviewGradient}
-              >
-                <Icon name="attach-money" size={32} color="#FFFFFF" />
-                <Text style={designerAnalyticsStyles.overviewNumber}>
-                  {formatCurrency(analyticsData.overview.totalRevenue)}
-                </Text>
-                <Text style={designerAnalyticsStyles.overviewLabel}>Tổng doanh thu</Text>
-              </LinearGradient>
+        {/* Overview Cards - 2x2 Grid */}
+        <View style={styles.overviewGrid}>
+          <View style={styles.overviewCard}>
+            <View style={styles.overviewHeader}>
+              <Icon name="trending-up" size={18} color="#10B981" />
+              <Text style={styles.overviewLabel}>Revenue</Text>
             </View>
-
-            <View style={designerAnalyticsStyles.overviewCard}>
-              <LinearGradient
-                colors={["#F093FB", "#F5576C"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={designerAnalyticsStyles.overviewGradient}
-              >
-                <Icon name="download" size={32} color="#FFFFFF" />
-                <Text style={designerAnalyticsStyles.overviewNumber}>
-                  {formatNumber(analyticsData.overview.totalDownloads)}
-                </Text>
-                <Text style={designerAnalyticsStyles.overviewLabel}>Tổng lượt tải</Text>
-              </LinearGradient>
+            <Text style={styles.overviewNumber}>
+              {formatCurrency(analyticsData.overview.totalRevenue)}
+            </Text>
+            <View style={styles.overviewFooter}>
+              <Icon name="arrow-upward" size={12} color="#10B981" />
+              <Text style={styles.overviewGrowth}>+18.75%</Text>
             </View>
+          </View>
 
-            <View style={designerAnalyticsStyles.overviewCard}>
-              <LinearGradient
-                colors={["#4FACFE", "#00F2FE"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={designerAnalyticsStyles.overviewGradient}
-              >
-                <Icon name="inventory" size={32} color="#FFFFFF" />
-                <Text style={designerAnalyticsStyles.overviewNumber}>
-                  {analyticsData.overview.totalProducts}
-                </Text>
-                <Text style={designerAnalyticsStyles.overviewLabel}>Sản phẩm</Text>
-              </LinearGradient>
+          <View style={styles.overviewCard}>
+            <View style={styles.overviewHeader}>
+              <Icon name="file-download" size={18} color="#3B82F6" />
+              <Text style={styles.overviewLabel}>Downloads</Text>
             </View>
+            <Text style={styles.overviewNumber}>
+              {formatNumber(analyticsData.overview.totalDownloads)}
+            </Text>
+            <View style={styles.overviewFooter}>
+              <Icon name="arrow-upward" size={12} color="#10B981" />
+              <Text style={styles.overviewGrowth}>+27.55%</Text>
+            </View>
+          </View>
 
-            <View style={designerAnalyticsStyles.overviewCard}>
-              <LinearGradient
-                colors={["#43E97B", "#38F9D7"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={designerAnalyticsStyles.overviewGradient}
-              >
-                <Icon name="star" size={32} color="#FFFFFF" />
-                <Text style={designerAnalyticsStyles.overviewNumber}>
-                  {analyticsData.overview.averageRating}
-                </Text>
-                <Text style={designerAnalyticsStyles.overviewLabel}>Đánh giá TB</Text>
-              </LinearGradient>
+          <View style={styles.overviewCard}>
+            <View style={styles.overviewHeader}>
+              <Icon name="inventory-2" size={18} color="#F59E0B" />
+              <Text style={styles.overviewLabel}>Products</Text>
+            </View>
+            <Text style={styles.overviewNumber}>
+              {analyticsData.overview.totalProducts}
+            </Text>
+            <View style={styles.overviewFooter}>
+              <Text style={styles.overviewSubtext}>Published</Text>
+            </View>
+          </View>
+
+          <View style={styles.overviewCard}>
+            <View style={styles.overviewHeader}>
+              <Icon name="star" size={18} color="#F59E0B" />
+              <Text style={styles.overviewLabel}>Rating</Text>
+            </View>
+            <Text style={styles.overviewNumber}>
+              {analyticsData.overview.averageRating}
+            </Text>
+            <View style={styles.overviewFooter}>
+              <Text style={styles.overviewSubtext}>Average</Text>
             </View>
           </View>
         </View>
 
-        {/* Performance Metrics */}
-        <View style={designerAnalyticsStyles.metricsContainer}>
-          <Text style={designerAnalyticsStyles.sectionTitle}>Hiệu suất</Text>
-          
-          {/* Revenue Performance */}
-          <View style={designerAnalyticsStyles.metricCard}>
-            <View style={designerAnalyticsStyles.metricHeader}>
-              <View style={designerAnalyticsStyles.metricTitleContainer}>
-                <Icon name="attach-money" size={24} color="#3B82F6" />
-                <Text style={designerAnalyticsStyles.metricTitle}>Doanh thu</Text>
-              </View>
-              <View style={designerAnalyticsStyles.metricGrowth}>
-                <Icon
-                  name={getGrowthIcon(analyticsData.revenue.growth)}
-                  size={16}
-                  color={getGrowthColor(analyticsData.revenue.growth)}
-                />
-                <Text
-                  style={[
-                    designerAnalyticsStyles.metricGrowthText,
-                    { color: getGrowthColor(analyticsData.revenue.growth) },
-                  ]}
-                >
-                  {analyticsData.revenue.growth > 0 ? "+" : ""}
-                  {analyticsData.revenue.growth}%
-                </Text>
-              </View>
+        {/* Chart Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Performance Trend</Text>
+          <View style={styles.chartCard}>
+            <View style={styles.chart}>
+              {analyticsData.dailyStats.map((stat, index) => {
+                const maxDownloads = Math.max(...analyticsData.dailyStats.map(s => s.downloads));
+                const heightPercent = (stat.downloads / maxDownloads) * 100;
+                
+                return (
+                  <View key={index} style={styles.chartBar}>
+                    <Text style={styles.chartBarValue}>{stat.downloads}</Text>
+                    <View
+                      style={[
+                        styles.chartBarFill,
+                        {
+                          height: `${heightPercent}%`,
+                          backgroundColor: stat.downloads > 150 ? '#6366F1' : '#E0E7FF',
+                        },
+                      ]}
+                    />
+                    <Text style={styles.chartBarLabel}>
+                      {new Date(stat.date).getDate()}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
-            <Text style={designerAnalyticsStyles.metricValue}>
-              {formatCurrency(analyticsData.revenue.current)}
-            </Text>
-            <Text style={designerAnalyticsStyles.metricPrevious}>
-              So với {getTimeRangeText(timeRange)}: {formatCurrency(analyticsData.revenue.previous)}
-            </Text>
-          </View>
-
-          {/* Downloads Performance */}
-          <View style={designerAnalyticsStyles.metricCard}>
-            <View style={designerAnalyticsStyles.metricHeader}>
-              <View style={designerAnalyticsStyles.metricTitleContainer}>
-                <Icon name="download" size={24} color="#10B981" />
-                <Text style={designerAnalyticsStyles.metricTitle}>Lượt tải</Text>
-              </View>
-              <View style={designerAnalyticsStyles.metricGrowth}>
-                <Icon
-                  name={getGrowthIcon(analyticsData.downloads.growth)}
-                  size={16}
-                  color={getGrowthColor(analyticsData.downloads.growth)}
-                />
-                <Text
-                  style={[
-                    designerAnalyticsStyles.metricGrowthText,
-                    { color: getGrowthColor(analyticsData.downloads.growth) },
-                  ]}
-                >
-                  {analyticsData.downloads.growth > 0 ? "+" : ""}
-                  {analyticsData.downloads.growth}%
-                </Text>
-              </View>
-            </View>
-            <Text style={designerAnalyticsStyles.metricValue}>
-              {formatNumber(analyticsData.downloads.current)}
-            </Text>
-            <Text style={designerAnalyticsStyles.metricPrevious}>
-              So với {getTimeRangeText(timeRange)}: {formatNumber(analyticsData.downloads.previous)}
-            </Text>
           </View>
         </View>
 
         {/* Top Products */}
-        <View style={designerAnalyticsStyles.topProductsContainer}>
-          <Text style={designerAnalyticsStyles.sectionTitle}>Sản phẩm hàng đầu</Text>
-          {analyticsData.topProducts.map((product, index) => (
-            <View key={product.id} style={designerAnalyticsStyles.topProductCard}>
-              <View style={designerAnalyticsStyles.topProductRank}>
-                <Text style={designerAnalyticsStyles.topProductRankText}>#{index + 1}</Text>
-              </View>
-              <View style={designerAnalyticsStyles.topProductInfo}>
-                <Text style={designerAnalyticsStyles.topProductTitle}>{product.title}</Text>
-                <View style={designerAnalyticsStyles.topProductStats}>
-                  <View style={designerAnalyticsStyles.topProductStat}>
-                    <Icon name="download" size={16} color="#6B7280" />
-                    <Text style={designerAnalyticsStyles.topProductStatText}>
-                      {formatNumber(product.downloads)} lượt tải
-                    </Text>
-                  </View>
-                  <View style={designerAnalyticsStyles.topProductStat}>
-                    <Icon name="attach-money" size={16} color="#6B7280" />
-                    <Text style={designerAnalyticsStyles.topProductStatText}>
-                      {formatCurrency(product.revenue)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <View style={designerAnalyticsStyles.topProductGrowth}>
-                <Icon
-                  name={getGrowthIcon(product.growth)}
-                  size={16}
-                  color={getGrowthColor(product.growth)}
-                />
-                <Text
-                  style={[
-                    designerAnalyticsStyles.topProductGrowthText,
-                    { color: getGrowthColor(product.growth) },
-                  ]}
-                >
-                  {product.growth > 0 ? "+" : ""}
-                  {product.growth}%
-                </Text>
-              </View>
-            </View>
-          ))}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Top Products</Text>
+       {topTemplates.map((item, index) => (
+  <View key={item.templateId} style={styles.productCard}>
+    <View style={styles.productRank}>
+      <Text style={styles.productRankText}>{index + 1}</Text>
+    </View>
+
+    <View style={styles.productInfo}>
+      <Text style={styles.productTitle} numberOfLines={1}>
+        {item.templateName}
+      </Text>
+
+      <View style={styles.productStats}>
+        <View style={styles.productStat}>
+          <Icon name="shopping-cart" size={14} color="#6B7280" />
+          <Text style={styles.productStatText}>
+            {item.soldCount}
+          </Text>
         </View>
 
-        {/* Daily Stats Chart */}
-        <View style={designerAnalyticsStyles.chartContainer}>
-          <Text style={designerAnalyticsStyles.sectionTitle}>Biểu đồ 7 ngày qua</Text>
-          <View style={designerAnalyticsStyles.chart}>
-            {analyticsData.dailyStats.map((stat, index) => (
-              <View key={index} style={designerAnalyticsStyles.chartBar}>
-                <View
-                  style={[
-                    designerAnalyticsStyles.chartBarFill,
-                    {
-                      height: (stat.downloads / 200) * 100,
-                      backgroundColor: index % 2 === 0 ? "#3B82F6" : "#10B981",
-                    },
-                  ]}
-                />
-                <Text style={designerAnalyticsStyles.chartBarLabel}>
-                  {new Date(stat.date).getDate()}
-                </Text>
-                <Text style={designerAnalyticsStyles.chartBarValue}>{stat.downloads}</Text>
-              </View>
-            ))}
-          </View>
+        <View style={styles.productStat}>
+          <Icon name="attach-money" size={14} color="#6B7280" />
+          <Text style={styles.productStatText}>
+            {formatCurrency(item.revenue)}
+          </Text>
         </View>
+      </View>
+    </View>
+
+    {/* Không có growth từ API nên để dấu "-" */}
+    <View style={styles.productGrowth}>
+      <Icon name="trending-up" size={14} color="#6B7280" />
+      <Text style={[styles.productGrowthText, { color: "#6B7280" }]}>
+        —
+      </Text>
+    </View>
+  </View>
+))}
+
+        </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );

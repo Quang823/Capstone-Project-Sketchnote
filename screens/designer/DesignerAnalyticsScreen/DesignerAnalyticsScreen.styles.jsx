@@ -1,11 +1,12 @@
+// DesignerAnalyticsScreen.styles.js
 import { StyleSheet, Dimensions } from "react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-export const designerAnalyticsStyles = StyleSheet.create({
+export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FAFAFA",
   },
 
   // Header
@@ -15,21 +16,21 @@ export const designerAnalyticsStyles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 50,
-    paddingBottom: 20,
+    paddingBottom: 16,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    borderBottomColor: "#F3F4F6",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1F2937",
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    letterSpacing: -0.3,
   },
 
   // Content
   content: {
     flex: 1,
-    paddingHorizontal: 20,
   },
 
   // Loading
@@ -38,227 +39,118 @@ export const designerAnalyticsStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  loadingText: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
 
   // Time Range
   timeRangeContainer: {
-    paddingVertical: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#1F2937",
-    marginBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
   timeRangeTabs: {
     flexDirection: "row",
-    backgroundColor: "#F3F4F6",
-    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
     padding: 4,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   timeRangeTab: {
     flex: 1,
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: 6,
     alignItems: "center",
   },
   timeRangeTabActive: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: "#6366F1",
   },
   timeRangeTabText: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "500",
     color: "#6B7280",
   },
   timeRangeTabTextActive: {
-    color: "#1F2937",
+    color: "#FFFFFF",
   },
 
-  // Overview
-  overviewContainer: {
-    marginBottom: 32,
-  },
+  // Overview Grid
   overviewGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    gap: 12,
+    marginBottom: 24,
   },
   overviewCard: {
-    width: (SCREEN_WIDTH - 60) / 2,
-    height: 120,
-    borderRadius: 16,
-    marginBottom: 16,
-    overflow: "hidden",
-  },
-  overviewGradient: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    width: (SCREEN_WIDTH - 52) / 2,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
     padding: 16,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
-  overviewNumber: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginTop: 8,
-    marginBottom: 4,
-    textAlign: "center",
+  overviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 6,
   },
   overviewLabel: {
     fontSize: 12,
-    color: "#FFFFFF",
-    opacity: 0.9,
-    textAlign: "center",
-  },
-
-  // Metrics
-  metricsContainer: {
-    marginBottom: 32,
-  },
-  metricCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  metricHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  metricTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  metricTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
-    marginLeft: 8,
-  },
-  metricGrowth: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  metricGrowthText: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 4,
-  },
-  metricValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1F2937",
-    marginBottom: 4,
-  },
-  metricPrevious: {
-    fontSize: 14,
+    fontWeight: "500",
     color: "#6B7280",
   },
-
-  // Top Products
-  topProductsContainer: {
-    marginBottom: 32,
-  },
-  topProductCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  topProductRank: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  topProductRankText: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#1F2937",
-  },
-  topProductInfo: {
-    flex: 1,
-  },
-  topProductTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1F2937",
+  overviewNumber: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
-  topProductStats: {
-    flexDirection: "row",
-  },
-  topProductStat: {
+  overviewFooter: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: 16,
+    gap: 4,
   },
-  topProductStatText: {
+  overviewGrowth: {
     fontSize: 12,
-    color: "#6B7280",
-    marginLeft: 4,
-  },
-  topProductGrowth: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  topProductGrowthText: {
-    fontSize: 14,
     fontWeight: "600",
-    marginLeft: 4,
+    color: "#10B981",
+  },
+  overviewSubtext: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+
+  // Section
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 16,
+    letterSpacing: -0.3,
   },
 
   // Chart
-  chartContainer: {
-    marginBottom: 32,
+  chartCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   chart: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    height: 200,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    height: 140,
   },
   chartBar: {
     flex: 1,
@@ -266,20 +158,78 @@ export const designerAnalyticsStyles = StyleSheet.create({
     justifyContent: "flex-end",
     marginHorizontal: 2,
   },
-  chartBarFill: {
-    width: 20,
-    borderRadius: 10,
-    marginBottom: 8,
-    minHeight: 20,
-  },
-  chartBarLabel: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginBottom: 4,
-  },
   chartBarValue: {
     fontSize: 10,
-    color: "#1F2937",
+    color: "#6B7280",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  chartBarFill: {
+    width: "80%",
+    borderRadius: 4,
+    marginBottom: 8,
+    minHeight: 4,
+  },
+  chartBarLabel: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+
+  // Top Products
+  productCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+  },
+  productRank: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F9FAFB",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  productRankText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#6366F1",
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 6,
+  },
+  productStats: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  productStat: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  productStatText: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  productGrowth: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginLeft: 12,
+  },
+  productGrowthText: {
+    fontSize: 12,
     fontWeight: "600",
   },
 });

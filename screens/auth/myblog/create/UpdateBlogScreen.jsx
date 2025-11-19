@@ -122,72 +122,116 @@ export default function UpdateBlogScreen({ route, navigation }) {
 
   // --- Handle Update Blog ---
   const handleUpdateBlog = async () => {
-    if (!title.trim() || !summary.trim()) {
+  // --- Validate main fields ---
+  if (!title.trim()) {
+    Toast.show({
+      type: "error",
+      text1: "Missing Title",
+      text2: "Blog must have a title.",
+    });
+    return;
+  }
+
+  if (!summary.trim()) {
+    Toast.show({
+      type: "error",
+      text1: "Missing Summary",
+      text2: "Summary cannot be empty.",
+    });
+    return;
+  }
+
+  if (!imageUrl) {
+    Toast.show({
+      type: "error",
+      text1: "Missing Featured Image",
+      text2: "Please upload a featured image.",
+    });
+    return;
+  }
+
+  // --- Validate content list ---
+  if (contents.length === 0) {
+    Toast.show({
+      type: "error",
+      text1: "No Content",
+      text2: "Your blog must have at least one content section.",
+    });
+    return;
+  }
+
+  // --- Validate each section ---
+  for (let i = 0; i < contents.length; i++) {
+    const section = contents[i];
+
+    if (!section.sectionTitle.trim()) {
       Toast.show({
         type: "error",
-        text1: "Missing information",
-        text2: "Please fill in title and summary.",
+        text1: "Section Title Missing",
+        text2: `Section ${i + 1} must have a title.`,
       });
       return;
     }
 
-    const hasContent = contents.some((c) => c.content.trim() !== "");
-    if (!hasContent) {
+    if (!section.content.trim()) {
       Toast.show({
         type: "error",
-        text1: "Missing content",
-        text2: "Please add at least one content section.",
+        text1: "Section Content Missing",
+        text2: `Section ${i + 1} must include content.`,
       });
       return;
     }
+  }
 
-    try {
-      setLoading(true);
+  // --- If all valid, proceed update ---
+  try {
+    setLoading(true);
 
-      // --- 1️⃣ Update blog chính ---
-      const blogData = {
-        title: title.trim(),
-        summary: summary.trim(),
-        imageUrl: imageUrl || "https://via.placeholder.com/400",
+    // Update main blog
+    const blogData = {
+      title: title.trim(),
+      summary: summary.trim(),
+      imageUrl: imageUrl,
+    };
+
+    await blogService.updateBlog(blog.id, blogData);
+
+    // Update or create content
+    const updatePromises = contents.map((section, i) => {
+      const contentData = {
+        sectionTitle: section.sectionTitle.trim(),
+        content: section.content.trim(),
+        contentUrl: section.contentUrl || "",
+        index: i,
       };
 
-      await blogService.updateBlog(blog.id, blogData);
+      if (section.id) {
+        return blogService.updateContent(section.id, contentData);
+      } else {
+        return blogService.createContent(blog.id, contentData);
+      }
+    });
 
-      // --- 2️⃣ Update hoặc Create content ---
-      const updatePromises = contents.map((section, i) => {
-        const contentData = {
-          sectionTitle: section.sectionTitle.trim(),
-          content: section.content.trim(),
-          contentUrl: section.contentUrl || "",
-          index: i,
-        };
+    await Promise.all(updatePromises);
 
-        if (section.id) {
-          return blogService.updateContent(section.id, contentData);
-        } else {
-          return blogService.createContent(blog.id, contentData);
-        }
-      });
+    Toast.show({
+      type: "success",
+      text1: "🎉 Blog updated successfully!",
+    });
 
-      await Promise.all(updatePromises);
+    navigation.goBack();
+  } catch (err) {
+    console.error("❌ Update error:", err);
+    Toast.show({
+      type: "error",
+      text1: "Update failed",
+      text2: err.message,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
-      Toast.show({
-        type: "success",
-        text1: "🎉 Blog updated successfully!",
-      });
-
-      navigation.goBack();
-    } catch (err) {
-      console.error("❌ Update error:", err);
-      Toast.show({
-        type: "error",
-        text1: "Update failed",
-        text2: err.message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // --- Loading State ---
   if (initialLoading) {
