@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, Animated, ScrollView } from "react-native";
+import React, { useContext } from "react";
+import { View, Text, Pressable, Animated, ScrollView, Image } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { designerDrawerStyles } from "./DesignerNavigationDrawer.styles";
-import { useNavigation } from "@react-navigation/native";
-import { getUserFromToken } from "../../../utils/AuthUtils";
-import { authService } from "../../../service/authService";
+import { CommonActions, useNavigation } from "@react-navigation/native";
+import { AuthContext } from "../../../context/AuthContext";
 
 export default function DesignerNavigationDrawer({
   drawerOpen,
@@ -14,40 +13,37 @@ export default function DesignerNavigationDrawer({
   onToggleDrawer,
   onNavPress,
 }) {
-  const [user, setUser] = useState(null);
   const navigation = useNavigation();
-  
-  useEffect(() => {
-    const getUser = async () => {
-      const user = await getUserFromToken();
-      setUser(user);
-    };
-    getUser();
-  }, []);
-  
+  const { user, logout } = useContext(AuthContext);
+
+  const displayName = user
+    ? user.name || `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Designer"
+    : "Guest";
+
   const handleLogout = async () => {
-    const ok = await authService.logout();
-    if (ok) {
-      navigation.replace("Login");
-    }
+    await logout();
+    onToggleDrawer?.();
+    navigation.dispatch(
+      CommonActions.reset({ index: 0, routes: [{ name: "Login" }] })
+    );
   };
 
   const mainNavItems = [
-    { icon: "dashboard", label: "Bảng điều khiển", id: "home" },
-    { icon: "inventory", label: "Quản lý sản phẩm", id: "products" },
-    { icon: "analytics", label: "Thống kê & Báo cáo", id: "analytics" },
+    { icon: "dashboard", label: "Dashboard", id: "home" },
+    { icon: "inventory", label: "Product Management", id: "products" },
+    { icon: "analytics", label: "Analytics & Reports", id: "analytics" },
   ];
 
   const workspaceNavItems = [
-    { icon: "upload", label: "Đăng nhanh template", id: "quickUpload" },
-    { icon: "create", label: "Tạo mới", id: "create" },
-    { icon: "photo-library", label: "Thư viện", id: "gallery" },
+    { icon: "upload", label: "Quick Template Upload", id: "quickUpload" },
+    { icon: "create", label: "Create New", id: "create" },
+    { icon: "photo-library", label: "Library", id: "gallery" },
   ];
 
   const accountNavItems = [
-    { icon: "account-balance-wallet", label: "Ví Designer", id: "wallet" },
-    { icon: "person", label: "Hồ sơ", id: "profile" },
-    { icon: "settings", label: "Cài đặt", id: "settings" },
+    { icon: "account-balance-wallet", label: "Designer Wallet", id: "wallet" },
+    { icon: "person", label: "Profile", id: "profile" },
+    { icon: "settings", label: "Settings", id: "settings" },
   ];
 
   const renderNavItems = (items) =>
@@ -72,7 +68,7 @@ export default function DesignerNavigationDrawer({
             <Icon
               name={item.icon}
               size={20}
-              color={isActive ? "#4F46E5" : "#6B7280"}
+              color={isActive ? "#FFFFFF" : "#64748B"}
             />
           </View>
           <Text
@@ -118,28 +114,41 @@ export default function DesignerNavigationDrawer({
         {/* Header */}
         <View style={designerDrawerStyles.drawerHeader}>
           <View style={designerDrawerStyles.logoContainer}>
-            <Icon name="palette" size={28} color="#4F46E5" />
+            <Image
+              source={{
+                uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
+              }}
+              style={designerDrawerStyles.logoImage}
+            />
             <Text style={designerDrawerStyles.drawerTitle}>SketchNote</Text>
           </View>
           <Pressable onPress={onToggleDrawer} style={designerDrawerStyles.closeButton}>
             <Icon name="close" size={24} color="#6B7280" />
           </Pressable>
         </View>
-        
+
         {/* User Info */}
         <View style={designerDrawerStyles.userInfo}>
           <View style={designerDrawerStyles.avatar}>
-            <Icon name="account-circle" size={48} color="#4F46E5" />
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={designerDrawerStyles.avatarImage} />
+            ) : (
+              <Icon name="account-circle" size={56} color="#4F46E5" />
+            )}
           </View>
-          <Text style={designerDrawerStyles.userName}>{user?.name || "Designer"}</Text>
+          <Text style={designerDrawerStyles.userName}>{displayName}</Text>
           <Text style={designerDrawerStyles.userEmail}>{user?.email || "designer@example.com"}</Text>
-          <View style={designerDrawerStyles.roleBadge}>
-            <Text style={designerDrawerStyles.roleText}>DESIGNER</Text>
-          </View>
+          {(user?.role || user) && (
+            <View style={designerDrawerStyles.roleBadge}>
+              <Text style={designerDrawerStyles.roleText}>
+                {(user?.role || "Designer").toString().toUpperCase()}
+              </Text>
+            </View>
+          )}
         </View>
         
         {/* Navigation Items */}
-        <ScrollView style={designerDrawerStyles.drawerItems}>
+        <ScrollView style={designerDrawerStyles.drawerItems} showsVerticalScrollIndicator={false}>
           {renderNavSection("MAIN", mainNavItems)}
           {renderNavSection("WORKSPACE", workspaceNavItems)}
           {renderNavSection("ACCOUNT", accountNavItems, true)}
@@ -149,7 +158,7 @@ export default function DesignerNavigationDrawer({
         <View style={designerDrawerStyles.drawerFooter}>
           <Pressable style={designerDrawerStyles.logoutButton} onPress={handleLogout}>
             <Icon name="logout" size={20} color="#EF4444" />
-            <Text style={designerDrawerStyles.logoutText}>Đăng xuất</Text>
+            <Text style={designerDrawerStyles.logoutText}>Sign Out</Text>
           </Pressable>
           
           <Text style={designerDrawerStyles.versionText}>Designer v1.0.0</Text>

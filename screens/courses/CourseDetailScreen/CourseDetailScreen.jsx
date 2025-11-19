@@ -45,6 +45,7 @@ export default function CourseDetailScreen() {
   const [error, setError] = useState(null);
   const [expandedModules, setExpandedModules] = useState({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
 
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
@@ -83,6 +84,7 @@ export default function CourseDetailScreen() {
   };
 
   const handleBuyCourse = async () => {
+    setShowPurchaseModal(false);
     try {
       console.log("Buying course:", course.price);
       const res = await courseService.buyCourse(course.price);
@@ -143,6 +145,14 @@ export default function CourseDetailScreen() {
 
   const handleCancelGoToWallet = () => {
     setShowConfirmModal(false);
+  };
+
+  const handleOpenPurchaseModal = () => {
+    setShowPurchaseModal(true);
+  };
+
+  const handleCancelPurchase = () => {
+    setShowPurchaseModal(false);
   };
 
   const toggleLesson = (lessonId) => {
@@ -302,7 +312,7 @@ export default function CourseDetailScreen() {
                     </LinearGradient>
                   </Pressable>
                 ) : (
-                  <Pressable style={courseDetailStyles.primaryButton} onPress={handleBuyCourse}>
+                  <Pressable style={courseDetailStyles.primaryButton} onPress={handleOpenPurchaseModal}>
                     <LinearGradient
                       colors={["#3B82F6", "#2563EB"]}
                       start={{ x: 0, y: 0 }}
@@ -359,6 +369,47 @@ export default function CourseDetailScreen() {
           </View>
         </ReanimatedView>
       </ScrollView>
+
+      {/* Modal Confirm - Purchase */}
+      <Modal
+        visible={showPurchaseModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancelPurchase}
+      >
+        <View style={courseDetailStyles.modalOverlay}>
+          <View style={courseDetailStyles.modalContent}>
+            <Icon name="shopping-cart" size={48} color="#3B82F6" />
+            <Text style={courseDetailStyles.modalTitle}>Confirm Purchase</Text>
+            <Text style={courseDetailStyles.modalMessage}>
+              Do you want to purchase "{course.title}" for {course.price?.toLocaleString("vi-VN") || "0"} đ?
+            </Text>
+
+            <View style={courseDetailStyles.modalButtons}>
+              <Pressable
+                style={courseDetailStyles.cancelButton}
+                onPress={handleCancelPurchase}
+              >
+                <Text style={courseDetailStyles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={courseDetailStyles.confirmButton}
+                onPress={handleBuyCourse}
+              >
+                <LinearGradient
+                  colors={["#3B82F6", "#2563EB"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={courseDetailStyles.confirmButtonGradient}
+                >
+                  <Text style={courseDetailStyles.confirmButtonText}>Confirm</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal Confirm - Insufficient Balance */}
       <Modal
