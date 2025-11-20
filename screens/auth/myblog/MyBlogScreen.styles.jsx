@@ -88,6 +88,34 @@ export const myBlogStyles = StyleSheet.create({
   listContainer: {
     padding: 16,
   },
+  filterBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  filterChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#CBD5E1",
+    backgroundColor: "#FFFFFF",
+  },
+  filterChipActive: {
+    backgroundColor: "#667EEA",
+    borderColor: "#667EEA",
+  },
+  filterChipText: {
+    fontSize: 12,
+    color: "#334155",
+    fontWeight: "600",
+  },
+  filterChipTextActive: {
+    color: "#FFFFFF",
+  },
   blogItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -124,6 +152,20 @@ export const myBlogStyles = StyleSheet.create({
     fontSize: 12,
     color: "#999",
     marginTop: 4,
+  },
+  statusBadge: {
+    marginTop: 4,
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    backgroundColor: "#E5E7EB",
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#374151",
+    textTransform: "uppercase",
   },
   actionColumn: {
     alignItems: "center",
