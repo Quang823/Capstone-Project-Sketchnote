@@ -137,6 +137,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     zoomState,
     zoomSnapshot,
     scrollOffsetY = 0,
+    isCover = false,
   },
   ref
 ) {
@@ -158,29 +159,21 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     };
   }, []);
 
-  // Safe image loading with error handling
-  let backgroundImage = null;
-  try {
-    // Only attempt to load if URL is valid
-    if (
-      backgroundImageUrl &&
-      typeof backgroundImageUrl === "string" &&
-      backgroundImageUrl.trim()
-    ) {
-      backgroundImage = useImage(backgroundImageUrl);
-    }
-  } catch (err) {
-    console.warn("[CanvasRenderer] Failed to load background image:", err);
-    backgroundImage = null;
-  }
+  // Safe image loading at top-level to satisfy Rules of Hooks
+  const bgUrl =
+    typeof backgroundImageUrl === "string" && backgroundImageUrl.trim()
+      ? backgroundImageUrl.trim()
+      : null;
+  const backgroundImage = useImage(bgUrl || undefined);
 
   // ✨ FIX: Add cleanup effect for Skia Image object
   useEffect(() => {
     return () => {
-      if (backgroundImage) {
-        // Dispose of the native Skia object to free up GPU memory
-        backgroundImage.dispose();
-      }
+      try {
+        if (backgroundImage && typeof backgroundImage.dispose === "function") {
+          backgroundImage.dispose();
+        }
+      } catch {}
     };
   }, [backgroundImage]);
 
@@ -851,6 +844,9 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
       // === CALLIGRAPHY (distinct) ===
       if (s.tool === "calligraphy") {
+        const smoothed = Array.isArray(s.points)
+          ? smoothPoints(s.points, dynamicStab)
+          : [];
         const w = effWidth;
         const dx =
           (smoothed[smoothed.length - 1]?.x || 0) - (smoothed[0]?.x || 0);
@@ -978,8 +974,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         </>
       )}
 
-      {/* Paper guides */}
-      {safePage.w > 0 && safePage.h > 0 && (
+      {/* Paper guides - disabled for cover pages */}
+      {safePage.w > 0 && safePage.h > 0 && !isCover && (
         <PaperGuides
           paperStyle={paperStyle}
           pageTemplate={pageTemplate}

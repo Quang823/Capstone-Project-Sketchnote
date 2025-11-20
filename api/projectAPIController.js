@@ -88,4 +88,30 @@ export const projectAPIController = {
       throw err;
     }
   },
+
+  inviteCollaborator: async ({ projectId, email, edited }) => {
+    try {
+      const res = await privateApi2.post(`/api/collaborations/invite`, {
+        projectId,
+        email,
+        edited,
+      });
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  updateCollaboratorPermission: async ({ projectId, email, edited }) => {
+    try {
+      const res = await privateApi2.put(`/api/collaborations/permission`, {
+        projectId,
+        email,
+        edited,
+      });
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  },
 };

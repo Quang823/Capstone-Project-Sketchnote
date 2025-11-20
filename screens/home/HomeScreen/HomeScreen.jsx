@@ -181,7 +181,19 @@ export default function HomeScreen({ navigation }) {
       const now = Date.now();
       if (now - lastTap < 300) {
         setPopoverVisible(false);
-        navigation?.navigate?.("DrawingScreen", { quick: true });
+        const quickNoteConfig = {
+          projectId: Date.now(),
+          title: "Quick Note",
+          description: "",
+          hasCover: false,
+          orientation: "portrait",
+          paperSize: "A4",
+          cover: null,
+          paper: { template: "blank", color: "#FFFFFF" },
+          pages: [],
+          projectDetails: null,
+        };
+        navigation?.navigate?.("DrawingScreen", { noteConfig: quickNoteConfig });
       }
       lastTap = now;
     };

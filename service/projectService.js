@@ -295,4 +295,171 @@ export const projectService = {
       throw err;
     }
   },
+
+  inviteCollaborator: async (projectId, email, edited = true) => {
+    try {
+      const response = await projectAPIController.inviteCollaborator({
+        projectId,
+        email,
+        edited,
+      });
+      return response?.data?.result;
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.message || "Invite failed";
+      throw new Error(message);
+    }
+  },
+
+  updateCollaboratorPermission: async (projectId, email, edited = true) => {
+    try {
+      const response = await projectAPIController.updateCollaboratorPermission({
+        projectId,
+        email,
+        edited,
+      });
+      return response?.data?.result;
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.message || "Update permission failed";
+      throw new Error(message);
+    }
+  },
+
+  realtime: (() => {
+    let socket = null;
+    let isConnected = false;
+    let activeProjectId = null;
+    let onMessageCb = null;
+    let heartbeatTimer = null;
+
+    const buildFrame = (command, headers = {}, body = "") => {
+      const lines = [command];
+      Object.keys(headers).forEach((k) => {
+        const v = headers[k] != null ? String(headers[k]) : "";
+        lines.push(`${k}:${v}`);
+      });
+      lines.push("");
+      lines.push(body);
+      return lines.join("\n") + "\0";
+    };
+
+    const parseFrame = (data) => {
+      if (typeof data !== "string") return null;
+      const nulIdx = data.indexOf("\0");
+      const raw = nulIdx >= 0 ? data.slice(0, nulIdx) : data;
+      const parts = raw.split("\n\n");
+      const headerPart = parts[0] || "";
+      const body = parts[1] || "";
+      const headerLines = headerPart.split("\n");
+      const command = headerLines.shift() || "";
+      const headers = {};
+      headerLines.forEach((line) => {
+        const idx = line.indexOf(":");
+        if (idx > 0) headers[line.slice(0, idx)] = line.slice(idx + 1);
+      });
+      return { command, headers, body };
+    };
+
+    const connect = async (projectId, userId, onMessage) => {
+      try {
+        if (isConnected && activeProjectId === projectId) return true;
+        activeProjectId = projectId;
+        onMessageCb = onMessage;
+        socket = new WebSocket("wss://sketchnote.litecsys.com/ws");
+        socket.onopen = () => {
+          const frame = buildFrame("CONNECT", {
+            "accept-version": "1.2",
+            "heart-beat": "0,0",
+          });
+          socket.send(frame);
+        };
+        socket.onmessage = (ev) => {
+          const frame = parseFrame(ev.data);
+          if (!frame) return;
+          if (frame.command === "CONNECTED") {
+            isConnected = true;
+            const sub = buildFrame("SUBSCRIBE", {
+              destination: `/topic/project/${projectId}`,
+              id: `sub-${projectId}`,
+              ack: "auto",
+            });
+            socket.send(sub);
+            heartbeatTimer = setInterval(() => {
+              try {
+                socket.send("\n");
+              } catch {}
+            }, 20000);
+          } else if (frame.command === "MESSAGE") {
+            try {
+              const json = JSON.parse(frame.body || "{}");
+              if (typeof onMessageCb === "function") onMessageCb(json);
+            } catch {}
+          }
+        };
+        socket.onerror = () => {};
+        socket.onclose = () => {
+          isConnected = false;
+          activeProjectId = null;
+          if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+          }
+        };
+        return true;
+      } catch (err) {
+        throw err;
+      }
+    };
+
+    const disconnect = () => {
+      try {
+        if (socket && isConnected) {
+          try {
+            const frame = buildFrame("DISCONNECT");
+            socket.send(frame);
+          } catch {}
+        }
+      } finally {
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
+        try {
+          socket?.close?.();
+        } catch {}
+        socket = null;
+        isConnected = false;
+        activeProjectId = null;
+        onMessageCb = null;
+      }
+    };
+
+    const sendAction = (projectId, userId, actionType, payload = {}) => {
+      try {
+        if (!socket || !isConnected) return;
+        const body = JSON.stringify({
+          type: actionType,
+          tool: payload.tool || "pen",
+          projectId,
+          userId,
+          payload,
+        });
+        const frame = buildFrame("SEND", {
+          destination: `/app/project/${projectId}/action`,
+          "content-type": "application/json",
+        }, body);
+        socket.send(frame);
+      } catch {}
+    };
+
+    const sendDraw = (projectId, userId, tool, points = []) => {
+      const pts = Array.isArray(points)
+        ? points.map((p) => (Array.isArray(p) ? p : [p.x, p.y]))
+        : [];
+      sendAction(projectId, userId, "DRAW", { tool, points: pts });
+    };
+
+    return { connect, disconnect, sendAction, sendDraw };
+  })(),
 };
