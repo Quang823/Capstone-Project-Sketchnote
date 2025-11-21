@@ -12,6 +12,15 @@ export const projectAPIController = {
       throw err;
     }
   },
+  // 🔹 Lấy danh sách project được share cho tôi
+  getSharedProjects: async () => {
+    try {
+      const res = await privateApi2.get(`/api/projects/me/shared`);
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  },
   // 🔹 Lấy presigned URL (đổi sang privateApi)
   getPresign: async (fileName, contentType) => {
     try {
@@ -85,6 +94,33 @@ export const projectAPIController = {
     } catch (err) {
       console.error("❌ Error creating page:", err);
       console.error("❌ Error response:", err.response?.data);
+      throw err;
+    }
+  },
+
+  inviteCollaborator: async ({ projectId, userId, edited }) => {
+    try {
+      const res = await privateApi2.post(`/api/collaborations/invite`, {
+        projectId,
+        userId,
+        edited,
+      });
+      console.log("✅ Invite collaborator response:", res.data);
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  },
+
+  updateCollaboratorPermission: async ({ projectId, email, edited }) => {
+    try {
+      const res = await privateApi2.put(`/api/collaborations/permission`, {
+        projectId,
+        email,
+        edited,
+      });
+      return res;
+    } catch (err) {
       throw err;
     }
   },

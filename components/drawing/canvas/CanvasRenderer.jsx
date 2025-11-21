@@ -137,6 +137,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     zoomState,
     zoomSnapshot,
     scrollOffsetY = 0,
+    isCover = false,
   },
   ref
 ) {
@@ -158,29 +159,21 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     };
   }, []);
 
-  // Safe image loading with error handling
-  let backgroundImage = null;
-  try {
-    // Only attempt to load if URL is valid
-    if (
-      backgroundImageUrl &&
-      typeof backgroundImageUrl === "string" &&
-      backgroundImageUrl.trim()
-    ) {
-      backgroundImage = useImage(backgroundImageUrl);
-    }
-  } catch (err) {
-    console.warn("[CanvasRenderer] Failed to load background image:", err);
-    backgroundImage = null;
-  }
+  // Safe image loading at top-level to satisfy Rules of Hooks
+  const bgUrl =
+    typeof backgroundImageUrl === "string" && backgroundImageUrl.trim()
+      ? backgroundImageUrl.trim()
+      : null;
+  const backgroundImage = useImage(bgUrl || undefined);
 
   // ✨ FIX: Add cleanup effect for Skia Image object
   useEffect(() => {
     return () => {
-      if (backgroundImage) {
-        // Dispose of the native Skia object to free up GPU memory
-        backgroundImage.dispose();
-      }
+      try {
+        if (backgroundImage && typeof backgroundImage.dispose === "function") {
+          backgroundImage.dispose();
+        }
+      } catch {}
     };
   }, [backgroundImage]);
 
@@ -402,14 +395,9 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       const safeFont = font || fallback.font;
       const hasFont = !!safeFont;
       const scaleFactor = nearest ? fontSize / nearest : 1;
-      const pad = s.padding || 0;
-      const txt = typeof s.text === "string" ? s.text : "";
-      const metrics = safeFont?.getMetrics ? safeFont.getMetrics() : null;
-      const ascentAbs = metrics ? Math.abs(metrics.ascent || 0) : fontSize;
-      const descent = metrics ? Math.abs(metrics.descent || 0) : 0;
-      const exactWidth = safeFont?.getTextWidth ? safeFont.getTextWidth(txt) : approxTextWidth(txt, fontSize);
-      const textWidth = exactWidth + pad * 2;
-      const textHeight = ascentAbs + descent + pad * 2;
+      const textWidth =
+        approxTextWidth(s.text || "", fontSize) + (s.padding || 0) * 2;
+      const textHeight = fontSize + (s.padding || 0) * 2;
 
       if (s.tool === "sticky" || s.tool === "comment") {
         const pad = s.padding || 6;
@@ -503,9 +491,10 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
             key={`${s.id}-text`}
             x={(s.x || 0) / scaleFactor}
             y={(s.y || 0) / scaleFactor}
-            text={txt}
+            text={typeof s.text === "string" ? s.text : ""}
             font={safeFont}
             color={s.color || "#000"}
+            transform={[{ scale: scaleFactor }]}
           />
         );
       }
@@ -524,13 +513,16 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       }
 
       if (selectedId === s.id) {
+        const scaledPad = (s.padding || 0) * scaleFactor;
+        const scaledTextWidth = textWidth * scaleFactor;
+        const scaledTextHeight = textHeight * scaleFactor;
         elements.push(
           <Rect
             key={`${s.id}-border`}
-            x={(s.x - pad) / scaleFactor}
-            y={(s.y - ascentAbs - pad) / scaleFactor}
-            width={(exactWidth + pad * 2) / scaleFactor}
-            height={(ascentAbs + descent + pad * 2) / scaleFactor}
+            x={s.x - scaledPad}
+            y={s.y - fontSize * scaleFactor - scaledPad}
+            width={scaledTextWidth}
+            height={scaledTextHeight}
             color="transparent"
             strokeWidth={1}
             strokeColor="#2563EB"
@@ -540,11 +532,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         );
       }
 
-      return (
-        <Group key={`${s.id}-text-group`} transform={[{ scale: scaleFactor }]}> 
-          {elements}
-        </Group>
-      );
+      return <Group key={`${s.id}-text-group`}>{elements}</Group>;
     }
 
     // shapes (reuse)
@@ -856,6 +844,9 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
       // === CALLIGRAPHY (distinct) ===
       if (s.tool === "calligraphy") {
+        const smoothed = Array.isArray(s.points)
+          ? smoothPoints(s.points, dynamicStab)
+          : [];
         const w = effWidth;
         const dx =
           (smoothed[smoothed.length - 1]?.x || 0) - (smoothed[0]?.x || 0);
@@ -983,8 +974,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         </>
       )}
 
-      {/* Paper guides */}
-      {safePage.w > 0 && safePage.h > 0 && (
+      {/* Paper guides - disabled for cover pages */}
+      {safePage.w > 0 && safePage.h > 0 && !isCover && (
         <PaperGuides
           paperStyle={paperStyle}
           pageTemplate={pageTemplate}

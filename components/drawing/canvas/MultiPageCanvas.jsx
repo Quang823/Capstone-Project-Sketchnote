@@ -154,7 +154,9 @@ function getNearestFont(loadedFonts, family, bold, italic, size = 18) {
 
 const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   {
-    noteConfig, // Add noteConfig to props
+    noteConfig = null, // Add noteConfig to props
+    projectId,
+    userId,
     tool,
     color,
     setColor,
@@ -210,6 +212,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [overviewVisible, setOverviewVisible] = useState(false);
   const [templateConfirm, setTemplateConfirm] = useState(null);
+  const [applyMode, setApplyMode] = useState("append");
+  const [placeTemplateOnNewLayer, setPlaceTemplateOnNewLayer] = useState(true);
 
   // Initialize pages based on noteConfig
   const initialPages = useMemo(() => {
@@ -349,6 +353,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const scrollRef = useRef(null);
   const lastAddedRef = useRef(null);
   const pageRefs = useRef({});
+  const templateHistoryRef = useRef(new Map());
 
   // --- Reanimated scroll shared value + refs ---
   const scrollNativeRef = useRef(null); // native gesture handler ref
@@ -1231,27 +1236,133 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     }
   };
 
-  const applyTemplateToPage = useCallback(async (pageId, url) => {
+  const fetchTemplateJson = useCallback(async (safeUrl) => {
+    const resp = await fetch(safeUrl, {
+      headers: { Accept: "application/json, text/plain, */*" },
+    });
+    const ct = (resp.headers && resp.headers.get && resp.headers.get("content-type")) || "";
+    if (ct.includes("application/json")) {
+      return await resp.json();
+    }
+    const text = await resp.text();
+    const raw = String(text).trim().replace(/^\uFEFF/, "");
+    let candidate = raw;
+    const idxBrace = raw.indexOf("{");
+    const idxBracket = raw.indexOf("[");
+    const startIdx = idxBrace >= 0 && idxBracket >= 0 ? Math.min(idxBrace, idxBracket) : Math.max(idxBrace, idxBracket);
+    const endBrace = raw.lastIndexOf("}");
+    const endBracket = raw.lastIndexOf("]");
+    const endIdx = endBrace >= 0 && endBracket >= 0 ? Math.max(endBrace, endBracket) : Math.max(endBrace, endBracket);
+    if (startIdx >= 0 && endIdx > startIdx) {
+      candidate = raw.slice(startIdx, endIdx + 1);
+    }
+    return JSON.parse(candidate);
+  }, []);
+
+  const applyTemplateToPage = useCallback(async (pageId, url, mode = "append") => {
     try {
       if (!pageId || !url) return;
       const safeUrl = String(url).trim().replace(/^`|`$/g, "");
-      const resp = await fetch(safeUrl);
-      const json = await resp.json();
+      let json;
+      try {
+        json = await fetchTemplateJson(safeUrl);
+      } catch (e) {
+        Alert.alert("Template lỗi", "Không thể đọc dữ liệu template từ URL đã chọn.");
+        return;
+      }
 
       const { strokesArray, layersMetadata, pageUpdates } =
         extractTemplateData(json);
+      const prevPage = pages.find((pg) => pg.id === pageId) || {};
       const pageRef = pageRefs.current[pageId];
-      if (pageRef && typeof pageRef.loadStrokes === "function") {
-        pageRef.loadStrokes(strokesArray || [], layersMetadata || []);
+      if (placeTemplateOnNewLayer) {
+        setPageLayers?.((prev) => {
+          const curr = prev[pageId] || [
+            { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+          ];
+          const hasTemplateLayer = curr.some((l) => l.id === "template");
+          return {
+            ...prev,
+            [pageId]: hasTemplateLayer
+              ? curr
+              : [
+                  ...curr,
+                  {
+                    id: "template",
+                    name: "Template",
+                    visible: true,
+                    locked: false,
+                    strokes: [],
+                  },
+                ],
+          };
+        });
+      }
+      if (pageRef) {
+        if (mode === "replace" && typeof pageRef.loadStrokes === "function") {
+          const toLoad = Array.isArray(strokesArray) ? strokesArray : [];
+          pageRef.loadStrokes(toLoad, layersMetadata || []);
+        } else if (typeof pageRef.appendStrokes === "function") {
+          const toAppend = Array.isArray(strokesArray)
+            ? strokesArray.map((s) => ({
+                ...s,
+                __templateSource: safeUrl,
+                layerId: placeTemplateOnNewLayer ? "template" : s.layerId || "layer1",
+              }))
+            : [];
+          pageRef.appendStrokes(toAppend);
+        }
       }
       if (pageUpdates) {
         setPages((prev) =>
           prev.map((pg) => (pg.id === pageId ? { ...pg, ...pageUpdates } : pg))
         );
       }
+      const stack = templateHistoryRef.current.get(pageId) || [];
+      const prevStrokes = pageRef?.getStrokes?.() || [];
+      const prevLayersMetadata = pageRef?.getLayersMetadata?.() || [];
+      stack.push({
+        source: safeUrl,
+        mode,
+        prevBackgroundColor: prevPage.backgroundColor,
+        prevTemplate: prevPage.template,
+        prevImageUrl: prevPage.imageUrl,
+        prevStrokes,
+        prevLayersMetadata,
+      });
+      templateHistoryRef.current.set(pageId, stack);
     } catch (e) {
       console.warn("[MultiPageCanvas] applyTemplateToPage error:", e);
     }
+  }, []);
+
+  const unapplyLastTemplate = useCallback((pageId) => {
+    const stack = templateHistoryRef.current.get(pageId) || [];
+    if (stack.length === 0) return;
+    const last = stack.pop();
+    templateHistoryRef.current.set(pageId, stack);
+    const pageRef = pageRefs.current[pageId];
+    if (last.mode === "replace") {
+      if (pageRef && typeof pageRef.loadStrokes === "function") {
+        pageRef.loadStrokes(last.prevStrokes || [], last.prevLayersMetadata || []);
+      }
+    } else {
+      if (pageRef && typeof pageRef.removeStrokesByTemplateSource === "function") {
+        pageRef.removeStrokesByTemplateSource(last.source);
+      }
+    }
+    setPages((prev) =>
+      prev.map((pg) =>
+        pg.id === pageId
+          ? {
+              ...pg,
+              backgroundColor: last.prevBackgroundColor,
+              template: last.prevTemplate,
+              imageUrl: last.prevImageUrl,
+            }
+          : pg
+      )
+    );
   }, []);
 
   const handleResourceSelect = useCallback(
@@ -1388,6 +1499,82 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               )}
             </View>
 
+            {/* Mode Toggle */}
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 10,
+                marginBottom: 18,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <TouchableOpacity
+                onPress={() => setApplyMode("append")}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  borderRadius: 12,
+                  backgroundColor: applyMode === "append" ? "#2563EB" : "#E5E7EB",
+                }}
+              >
+                <Text style={{ color: applyMode === "append" ? "white" : "#111827" }}>
+                  Append (Preserve)
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setApplyMode("replace")}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  borderRadius: 12,
+                  backgroundColor: applyMode === "replace" ? "#2563EB" : "#E5E7EB",
+                }}
+              >
+                <Text style={{ color: applyMode === "replace" ? "white" : "#111827" }}>
+                  Replace (Overwrite)
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Placement Toggle */}
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 10,
+                marginBottom: 18,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <TouchableOpacity
+                onPress={() => setPlaceTemplateOnNewLayer(true)}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  borderRadius: 12,
+                  backgroundColor: placeTemplateOnNewLayer ? "#2563EB" : "#E5E7EB",
+                }}
+              >
+                <Text style={{ color: placeTemplateOnNewLayer ? "white" : "#111827" }}>
+                  Place on new layer
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setPlaceTemplateOnNewLayer(false)}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  borderRadius: 12,
+                  backgroundColor: !placeTemplateOnNewLayer ? "#2563EB" : "#E5E7EB",
+                }}
+              >
+                <Text style={{ color: !placeTemplateOnNewLayer ? "white" : "#111827" }}>
+                  Merge into layer
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Action Buttons Row */}
             <View
               style={{
@@ -1400,7 +1587,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 onPress={async () => {
                   const page = pages[activeIndex];
                   if (!page || page.id == null) return;
-                  await applyTemplateToPage(page.id, templateConfirm.itemUrl);
+                  await applyTemplateToPage(page.id, templateConfirm.itemUrl, applyMode);
                   setTemplateConfirm(null);
                   setOverviewVisible(false);
                 }}
@@ -1427,7 +1614,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 onPress={async () => {
                   for (const p of pages) {
                     if (p && p.id != null) {
-                      await applyTemplateToPage(p.id, templateConfirm.itemUrl);
+                      await applyTemplateToPage(p.id, templateConfirm.itemUrl, applyMode);
                     }
                   }
                   setTemplateConfirm(null);
@@ -1452,6 +1639,33 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 </Text>
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                const page = pages[activeIndex];
+                if (!page || page.id == null) return;
+                unapplyLastTemplate(page.id);
+                setTemplateConfirm(null);
+                setOverviewVisible(false);
+              }}
+              style={{
+                paddingVertical: 16,
+                borderRadius: 14,
+                backgroundColor: "#F59E0B",
+                alignItems: "center",
+                marginBottom: 18,
+              }}
+            >
+              <Text
+                style={{
+                  color: "white",
+                  fontSize: 15,
+                  fontWeight: "600",
+                }}
+              >
+                Undo Last Apply
+              </Text>
+            </TouchableOpacity>
 
             {/* Cancel */}
             <TouchableOpacity
@@ -1548,6 +1762,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                       loadedFonts={loadedFonts}
                       getNearestFont={getNearestFont}
                       {...{
+                        projectId,
+                        userId,
                         tool,
                         color,
                         setColor,
@@ -1559,52 +1775,53 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                         brushWidth,
                         brushOpacity,
                         calligraphyWidth,
-                        calligraphyOpacity,
-                        paperStyle,
-                        shapeType,
-                        onRequestTextInput,
-                        toolConfigs,
-                        pressure,
-                        thickness,
-                        stabilization,
-                        layers: pageLayers?.[p.id] || [
-                          {
-                            id: "layer1",
-                            name: "Layer 1",
-                            visible: true,
-                            strokes: [],
-                          },
-                        ], // 👈 Pass page-specific layers
-                        activeLayerId,
-                        setLayers: (updater) => {
-                          if (p?.id == null) return;
-                          setPageLayers?.((prev) => ({
-                            ...prev,
-                            [p.id]:
-                              typeof updater === "function"
-                                ? updater(
-                                    prev[p.id] || [
-                                      {
-                                        id: "layer1",
-                                        name: "Layer 1",
-                                        visible: true,
-                                        strokes: [],
-                                      },
-                                    ]
-                                  )
-                                : updater,
-                          }));
-                        }, // 👈 Update page-specific layers
-                        rulerPosition,
-                        onColorPicked,
-                        scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
-                        scrollYShared, // ✅ Animated scroll value
-                        pageOffsetY: offsets[i] ?? 0, // ✅ Page offset trong project
-                        backgroundColor: p.backgroundColor,
-                        pageTemplate: p.template,
-                        backgroundImageUrl: p.imageUrl,
-                        pageWidth: pageDimensions.width,
-                        pageHeight: pageDimensions.height,
+                      calligraphyOpacity,
+                      paperStyle,
+                      shapeType,
+                      onRequestTextInput,
+                      toolConfigs,
+                      pressure,
+                      thickness,
+                      stabilization,
+                      layers: pageLayers?.[p.id] || [
+                        {
+                          id: "layer1",
+                          name: "Layer 1",
+                          visible: true,
+                          strokes: [],
+                        },
+                      ], // 👈 Pass page-specific layers
+                      activeLayerId,
+                      setLayers: (updater) => {
+                        if (p?.id == null) return;
+                        setPageLayers?.((prev) => ({
+                          ...prev,
+                          [p.id]:
+                            typeof updater === "function"
+                              ? updater(
+                                  prev[p.id] || [
+                                    {
+                                      id: "layer1",
+                                      name: "Layer 1",
+                                      visible: true,
+                                      strokes: [],
+                                    },
+                                  ]
+                                )
+                              : updater,
+                        }));
+                      }, // 👈 Update page-specific layers
+                      rulerPosition,
+                      onColorPicked,
+                      scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
+                      scrollYShared, // ✅ Animated scroll value
+                      pageOffsetY: offsets[i] ?? 0, // ✅ Page offset trong project
+                      backgroundColor: p.backgroundColor,
+                      pageTemplate: p.template,
+                      backgroundImageUrl: p.imageUrl,
+                      isCover: p.type === "cover",
+                      pageWidth: pageDimensions.width,
+                      pageHeight: pageDimensions.height,
                         onZoomChange: (isZoomActive) => {
                           // Update zoom state: true when pinch gesture starts, false when ends
                           // Disable ScrollView scroll when pinch gesture is active to prevent crash

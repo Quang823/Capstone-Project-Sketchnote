@@ -83,6 +83,17 @@ export const authService = {
       throw new Error(message);
     }
   },
+  getUserByEmail: async (email) => {
+    try {
+      if (!email || !email.trim()) throw new Error("Missing email");
+      const res = await authApiController.getUserByEmail(email.trim());
+      if (res?.data?.result) return res.data.result;
+      throw new Error("User not found");
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || "Failed to get user by email.";
+      throw new Error(message);
+    }
+  },
   updateUser: async (id, payload) => {
     try {
       if (!id && id !== 0) throw new Error("Missing user id");

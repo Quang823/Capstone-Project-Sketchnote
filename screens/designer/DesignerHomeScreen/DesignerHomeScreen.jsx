@@ -7,7 +7,11 @@ import {
   Animated,
   Dimensions,
   StatusBar,
+  ImageBackground,
+  StyleSheet,
+  Image,
 } from "react-native";
+
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,7 +21,7 @@ import { dashboardService } from "../../../service/dashboardService";
 import { formatCurrencyVN } from "../../../common/formatCurrencyVN";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
+const HEADER_HEIGHT = 180;
 export default function DesignerHomeScreen() {
   const navigation = useNavigation();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -119,7 +123,7 @@ export default function DesignerHomeScreen() {
   const fetchTopTemplates = async () => {
     try {
       const res = await dashboardService.getTopTemplates();
-      console.log(res)
+      console.log(res);
       setTopTemplates(res);
     } catch (error) {
       console.log("Error fetching top templates:", error);
@@ -132,411 +136,565 @@ export default function DesignerHomeScreen() {
     return "Good evening";
   };
   const fetchSashboardSummary = async () => {
-    try {
-      const res = await dashboardService.getDashboardSummaryDesigner();
-      console.log(res)
-      setDashboardSummary(res);
-    } catch (error) {
-      console.log(error)
-    }
-  };
-  useEffect(() => {
-    fetchSashboardSummary();
-    fetchTopTemplates();
-  }, []);
-  return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+    const fetchSashboardSummary = async () => {
+      try {
+        const res = await dashboardService.getDashboardSummaryDesigner();
+        console.log(res);
+        setDashboardSummary(res);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    useEffect(() => {
+      fetchSashboardSummary();
+      fetchTopTemplates();
+    }, []);
 
-      <DesignerNavigationDrawer
-        drawerOpen={drawerOpen}
-        drawerAnimation={drawerAnimation}
-        overlayAnimation={overlayAnimation}
-        activeNavItem={activeNavItem}
-        onToggleDrawer={toggleDrawer}
-        onNavPress={handleNavPress}
-      />
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
-      {/* Header - Minimalist */}
-      <View style={styles.header}>
-        <Pressable onPress={toggleDrawer} style={styles.menuButton}>
-          <Icon name="menu" size={22} color="#111827" />
-        </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Dashboard</Text>
+        <DesignerNavigationDrawer
+          drawerOpen={drawerOpen}
+          drawerAnimation={drawerAnimation}
+          overlayAnimation={overlayAnimation}
+          activeNavItem={activeNavItem}
+          onToggleDrawer={toggleDrawer}
+          onNavPress={handleNavPress}
+        />
+
+        {/* Header - Updated */}
+        <View style={styles.header}>
+          <Pressable onPress={toggleDrawer} style={styles.menuButton}>
+            <Icon name="menu" size={24} color="#084F8C" />
+          </Pressable>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Designer Homepage</Text>
+          </View>
+          <Pressable style={styles.notificationButton}>
+            <Icon name="notifications-none" size={24} color="#084F8C" />
+            <View style={styles.notificationBadge} />
+          </Pressable>
         </View>
-        <Pressable style={styles.notificationButton}>
-          <Icon name="notifications-none" size={22} color="#111827" />
-          <View style={styles.notificationBadge} />
-        </Pressable>
+
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Welcome Section - Updated */}
+
+          {/* Thay thế toàn bộ phần Welcome Section cũ bằng đoạn này */}
+          <ImageBackground
+            source={{
+              uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763710026/w3ykeckpumfg9vjbmxhs.jpg",
+            }}
+            style={styles.heroBackground}
+            imageStyle={{
+              borderBottomLeftRadius: 32,
+              borderBottomRightRadius: 32,
+            }}
+            resizeMode="cover"
+          >
+            {/* Lớp tối nhẹ để chữ và card vẫn đọc được */}
+            <View style={styles.heroOverlay} />
+
+            <View style={styles.heroContent}>
+              {/* Cột trái: Greeting */}
+              <View style={styles.greetingColumn}>
+                <Text style={styles.greetingText}>{getGreeting()}</Text>
+                <Text style={styles.subGreetingText}>
+                  Track your business performance
+                </Text>
+              </View>
+
+              {/* Cột phải: Wallet Card */}
+              <Pressable
+                style={styles.walletCard}
+                onPress={() => navigation.navigate("DesignerWallet")}
+              >
+                <LinearGradient
+                  colors={["rgba(255,255,255,0.95)", "rgba(255,255,255,0.85)"]}
+                  style={styles.walletGradient}
+                >
+                  <View style={styles.walletHeaderRow}>
+                    <View>
+                      <Text style={styles.walletLabel}>Available Balance</Text>
+                      <Text style={styles.walletAmount}>
+                        {formatCurrencyVN(
+                          dashboardSummary?.availableBalance || 25000000
+                        )}
+                      </Text>
+                    </View>
+                    <View style={styles.walletIconBg}>
+                      <Icon
+                        name="account-balance-wallet"
+                        size={28}
+                        color="#084F8C"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.walletDivider} />
+
+                  <View style={styles.walletFooterRow}>
+                    <Text style={styles.walletFooterText}>Manage wallet</Text>
+                    <Icon name="arrow-forward-ios" size={18} color="#084F8C" />
+                  </View>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </ImageBackground>
+          {/* Stats Grid - Updated */}
+          <View style={styles.statsGrid}>
+            {/* Ô 1: Products */}
+            <View style={styles.statCard}>
+              <View style={styles.statContent}>
+                <View>
+                  <Text style={styles.statNumber}>12</Text>
+                  <Text style={styles.statLabel}>Products</Text>
+                  <Text style={styles.statChange}>+2 this month</Text>
+                </View>
+                <Image
+                  source={{
+                    uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763710804/qyyn2oa2ui2dlefqdnft.jpg",
+                  }}
+                  // hoặc dùng link online:
+                  // source={{ uri: "https://res.cloudinary.com/.../products-illust.png" }}
+                  style={styles.statIllustration}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+
+            {/* Ô 2: Purchases */}
+            <View style={styles.statCard}>
+              <View style={styles.statContent}>
+                <View>
+                  <Text style={styles.statNumber}>
+                    {dashboardSummary?.totalSoldCount || 0}
+                  </Text>
+                  <Text style={styles.statLabel}>Purchases</Text>
+                </View>
+                <Image
+                  source={{
+                    uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763710803/p0ah0qr3hh643s1mg09f.jpg",
+                  }}
+                  style={styles.statIllustration}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+
+            {/* Ô 3: Revenue */}
+            <View style={styles.statCard}>
+              <View style={styles.statContent}>
+                <View>
+                  <Text style={styles.statNumber}>
+                    {formatCurrencyVN(dashboardSummary?.totalRevenue || 0)}
+                  </Text>
+                  <Text style={styles.statLabel}>Revenue</Text>
+                </View>
+                <Image
+                  source={{
+                    uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763710803/lf1ojyeoboo61kabcrrm.jpg",
+                  }}
+                  style={styles.statIllustration}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+          </View>
+          {/* Quick Actions - Updated Grid */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.actionsGrid}>
+              <Pressable
+                style={styles.actionCard}
+                onPress={() => handleQuickAction("quickUpload")}
+              >
+                <View
+                  style={[styles.actionIcon, { backgroundColor: "#EFF6FF" }]}
+                >
+                  <Icon name="add" size={24} color="#084F8C" />
+                </View>
+                <Text style={styles.actionText}>Upload</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.actionCard}
+                onPress={() => handleQuickAction("products")}
+              >
+                <View
+                  style={[styles.actionIcon, { backgroundColor: "#FEF3C7" }]}
+                >
+                  <Icon name="inventory-2" size={24} color="#F59E0B" />
+                </View>
+                <Text style={styles.actionText}>Products</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.actionCard}
+                onPress={() => handleQuickAction("analytics")}
+              >
+                <View
+                  style={[styles.actionIcon, { backgroundColor: "#DBEAFE" }]}
+                >
+                  <Icon name="bar-chart" size={24} color="#3B82F6" />
+                </View>
+                <Text style={styles.actionText}>Analytics</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.actionCard}
+                onPress={() => navigation.navigate("DrawingScreen")}
+              >
+                <View
+                  style={[styles.actionIcon, { backgroundColor: "#D1FAE5" }]}
+                >
+                  <Icon name="create" size={24} color="#10B981" />
+                </View>
+                <Text style={styles.actionText}>Create</Text>
+              </Pressable>
+            </View>
+          </View>
+          {/* Recent Activity - Updated List */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Top template</Text>
+            <View style={styles.activityList}>
+              <View style={styles.activityItem}>
+                <View style={styles.activityIconWrap}>
+                  <Icon name="check-circle" size={20} color="#10B981" />
+                </View>
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityTitle}>Template published</Text>
+                  <Text style={styles.activityTime}>2 hours ago</Text>
+                </View>
+              </View>
+
+              <View style={styles.activityItem}>
+                <View style={styles.activityIconWrap}>
+                  <Icon name="file-download" size={20} color="#3B82F6" />
+                </View>
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityTitle}>150 new downloads</Text>
+                  <Text style={styles.activityTime}>5 hours ago</Text>
+                </View>
+              </View>
+
+              <View style={styles.activityItem}>
+                <View style={styles.activityIconWrap}>
+                  <Icon name="payments" size={20} color="#F59E0B" />
+                </View>
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityTitle}>
+                    Payment received: 500,000₫
+                  </Text>
+                  <Text style={styles.activityTime}>1 day ago</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+          <View style={{ height: 40 }} />
+        </ScrollView>
       </View>
+    );
+  };
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Welcome Section - Subtle */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.welcomeText}>Track your business performance</Text>
-        </View>
+  const styles = {
+    container: {
+      flex: 1,
+      backgroundColor: "#cde6ff2b",
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      backgroundColor: "rgba(255,255,255,0.96)",
+      borderBottomWidth: 1,
+      borderBottomColor: "#E2E8F0",
+      shadowColor: "#000",
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    menuButton: {
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 22,
+      backgroundColor: "#F8FAFC",
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+    headerCenter: {
+      flex: 1,
+      alignItems: "center",
+    },
+    headerTitle: {
+      fontSize: 26,
+      fontFamily: "Pacifico-Regular",
+      color: "#084F8C",
+      letterSpacing: -0.5,
+    },
+    notificationButton: {
+      width: 44,
+      height: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+      borderRadius: 22,
+      backgroundColor: "#F8FAFC",
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+    notificationBadge: {
+      position: "absolute",
+      top: 10,
+      right: 10,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: "#EF4444",
+      borderWidth: 2,
+      borderColor: "#FFFFFF",
+    },
+    content: {
+      flex: 1,
+    },
+    heroBackground: {
+      width: "100%",
+      height: 260, // tăng chiều cao lên một chút cho đẹp
+      marginBottom: 20,
+      overflow: "hidden",
+    },
+    heroOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(6, 40, 71, 0.19)", // lớp mờ xanh đậm của brand bạn
+    },
+    heroContent: {
+      flex: 1,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      paddingHorizontal: 24,
+      paddingTop: 20,
+    },
+    greetingColumn: {
+      flex: 1,
+      paddingRight: 20,
+    },
+    greetingText: {
+      fontSize: 34,
+      fontWeight: "800",
+      color: "#FFFFFF",
+      letterSpacing: -0.5,
 
-        {/* Wallet Card - Refined Design */}
-        <Pressable
-          style={styles.walletCard}
-          onPress={() => navigation.navigate("DesignerWallet")}
-        >
-          <View style={styles.walletHeader}>
-            <View>
-              <Text style={styles.walletLabel}>Available Balance</Text>
-              <Text style={styles.walletBalance}>25,000,000₫</Text>
-            </View>
-            <View style={styles.walletIconContainer}>
-              <Icon name="account-balance-wallet" size={20} color="#6366F1" />
-            </View>
-          </View>
-          <View style={styles.walletDivider} />
-          <View style={styles.walletFooter}>
-            <Text style={styles.walletFooterText}>Manage wallet</Text>
-            <Icon name="arrow-forward" size={16} color="#6B7280" />
-          </View>
-        </Pressable>
+      // Viền chữ bằng shadow
+      textShadowColor: "#000",
+      textShadowOffset: { width: 1, height: 2 },
+      textShadowRadius: 4,
+    },
 
-        {/* Stats Grid - Compact */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <View style={styles.statHeader}>
-              <Icon name="inventory-2" size={18} color="#6366F1" />
-              <Text style={styles.statLabel}>Products</Text>
-            </View>
-            <Text style={styles.statNumber}>12</Text>
-            <Text style={styles.statChange}>+2 this month</Text>
-          </View>
+    subGreetingText: {
+      fontSize: 16,
+      color: "#E0E7FF",
+      marginTop: 6,
+      fontWeight: "500",
+      textShadowColor: "#000",
+      textShadowOffset: { width: 1, height: 2 },
+      textShadowRadius: 4,
+    },
+    walletCard: {
+      width: 280,
+      borderRadius: 24,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.2,
+      shadowRadius: 20,
+      elevation: 12,
+    },
+    walletGradient: {
+      padding: 18,
+    },
+    walletHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 16,
+    },
+    walletLabel: {
+      fontSize: 13,
+      color: "#475569",
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    walletAmount: {
+      fontSize: 28,
+      fontWeight: "800",
+      color: "#084F8C",
+      letterSpacing: -0.5,
+    },
+    walletIconBg: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: "rgba(8, 79, 140, 0.15)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    walletDivider: {
+      height: 1,
+      backgroundColor: "rgba(8, 79, 140, 0.2)",
+      marginVertical: 12,
+    },
+    walletFooterRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    walletFooterText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: "#084F8C",
+    },
+    statsGrid: {
+      flexDirection: "row",
+      paddingHorizontal: 20,
+      marginBottom: 24,
+      gap: 12,
+    },
+    statCard: {
+      flex: 1,
+      backgroundColor: "#FFFFFF",
+      borderRadius: 20,
+      padding: 18,
+      borderWidth: 2,
+      borderColor: "#E0E7FF",
+      shadowColor: "#084F8C",
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+    statHeader: {
+      marginBottom: 12,
+    },
 
-          <View style={styles.statCard}>
-            <View style={styles.statHeader}>
-              <Icon name="file-download" size={18} color="#10B981" />
-              <Text style={styles.statLabel}>Purchases</Text>
-            </View>
-            <Text style={styles.statNumber}>{dashboardSummary?.totalSoldCount || 0}</Text>
-            {/* <Text style={styles.statChange}>+18% this week</Text> */}
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statHeader}>
-              <Icon name="trending-up" size={18} color="#F59E0B" />
-              <Text style={styles.statLabel}>Revenue</Text>
-            </View>
-            <Text style={styles.statNumber}>{formatCurrencyVN(dashboardSummary?.totalRevenue || 0)}</Text>
-            {/* <Text style={styles.statChange}>+12% this month</Text> */}
-          </View>
-        </View>
-
-        {/* Quick Actions - Compact Grid */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsGrid}>
-            <Pressable
-              style={styles.actionCard}
-              onPress={() => handleQuickAction("quickUpload")}
-            >
-              <View style={[styles.actionIcon, { backgroundColor: '#EEF2FF' }]}>
-                <Icon name="add" size={20} color="#6366F1" />
-              </View>
-              <Text style={styles.actionText}>Upload</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.actionCard}
-              onPress={() => handleQuickAction("products")}
-            >
-              <View style={[styles.actionIcon, { backgroundColor: '#FEF3C7' }]}>
-                <Icon name="inventory-2" size={20} color="#F59E0B" />
-              </View>
-              <Text style={styles.actionText}>Products</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.actionCard}
-              onPress={() => handleQuickAction("analytics")}
-            >
-              <View style={[styles.actionIcon, { backgroundColor: '#DBEAFE' }]}>
-                <Icon name="bar-chart" size={20} color="#3B82F6" />
-              </View>
-              <Text style={styles.actionText}>Analytics</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.actionCard}
-              onPress={() => navigation.navigate("DrawingScreen")}
-            >
-              <View style={[styles.actionIcon, { backgroundColor: '#D1FAE5' }]}>
-                <Icon name="create" size={20} color="#10B981" />
-              </View>
-              <Text style={styles.actionText}>Create</Text>
-            </Pressable>
-          </View>
-        </View>
-
-        {/* Recent Activity - Clean List */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Top template</Text>
-          <View style={styles.activityList}>
-            <View style={styles.activityItem}>
-              <View style={[styles.activityDot, { backgroundColor: '#10B981' }]} />
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Template published</Text>
-                <Text style={styles.activityTime}>2 hours ago</Text>
-              </View>
-            </View>
-
-            <View style={styles.activityItem}>
-              <View style={[styles.activityDot, { backgroundColor: '#3B82F6' }]} />
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>150 new downloads</Text>
-                <Text style={styles.activityTime}>5 hours ago</Text>
-              </View>
-            </View>
-
-            <View style={styles.activityItem}>
-              <View style={[styles.activityDot, { backgroundColor: '#F59E0B' }]} />
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Payment received: 500,000₫</Text>
-                <Text style={styles.activityTime}>1 day ago</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </View>
-  );
+    statLabel: {
+      fontSize: 13,
+      color: "#64748B",
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    statNumber: {
+      fontSize: 22,
+      fontWeight: "800",
+      color: "#084F8C",
+      marginBottom: 8,
+      letterSpacing: -0.3,
+    },
+    statChange: {
+      fontSize: 12,
+      color: "#10B981",
+      fontWeight: "600",
+    },
+    section: {
+      paddingHorizontal: 20,
+      marginBottom: 24,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: "#084F8C",
+      marginBottom: 16,
+      letterSpacing: -0.3,
+    },
+    statContent: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      flex: 1,
+    },
+    statIllustration: {
+      width: 130,
+      height: 130,
+      opacity: 1, // mờ nhẹ cho tinh tế
+      marginRight: -10, // kéo sát mép phải một chút
+    },
+    actionsGrid: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    actionCard: {
+      flex: 1,
+      backgroundColor: "#FFFFFF",
+      borderRadius: 20,
+      padding: 18,
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: "#E0E7FF",
+      shadowColor: "#084F8C",
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+    actionIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 12,
+    },
+    actionText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: "#084F8C",
+    },
+    activityList: {
+      backgroundColor: "#FFFFFF",
+      borderRadius: 20,
+      borderWidth: 2,
+      borderColor: "#E0E7FF",
+      padding: 20,
+      shadowColor: "#084F8C",
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+    activityItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: "#F1F5F9",
+    },
+    activityIconWrap: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: "#F8FAFC",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    activityContent: {
+      flex: 1,
+    },
+    activityTitle: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: "#084F8C",
+      marginBottom: 2,
+    },
+    activityTime: {
+      fontSize: 13,
+      color: "#94A3B8",
+      fontWeight: "500",
+    },
+  };
 }
-
-const styles = {
-  container: {
-    flex: 1,
-    backgroundColor: '#FAFAFA',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  menuButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    letterSpacing: -0.3,
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#EF4444',
-  },
-  content: {
-    flex: 1,
-  },
-  welcomeSection: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 20,
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-    letterSpacing: -0.5,
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  walletCard: {
-    marginHorizontal: 20,
-    marginBottom: 24,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  walletHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  walletLabel: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  walletBalance: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
-    letterSpacing: -0.5,
-  },
-  walletIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#EEF2FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  walletDivider: {
-    height: 1,
-    backgroundColor: '#F3F4F6',
-    marginBottom: 12,
-  },
-  walletFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  walletFooterText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  statHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 6,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-    letterSpacing: -0.3,
-  },
-  statChange: {
-    fontSize: 11,
-    color: '#10B981',
-    fontWeight: '500',
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 16,
-    letterSpacing: -0.3,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  actionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  actionText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  activityList: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    padding: 16,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F9FAFB',
-  },
-  activityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  activityTime: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-};

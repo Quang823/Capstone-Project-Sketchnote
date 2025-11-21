@@ -17,6 +17,9 @@ export const authApiController = {
   getUserById: async (id) => {
     return await privateApi.get(`/api/users/${id}`);
   },
+  getUserByEmail: async (email) => {
+    return await privateApi.get(`/api/users/email/${encodeURIComponent(email)}`);
+  },
   updateUser: async (id, data) => {
     return await privateApi.put(`/api/users/${id}`, data);
   },

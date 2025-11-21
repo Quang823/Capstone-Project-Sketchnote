@@ -1,192 +1,576 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
+  StyleSheet,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { LinearGradient } from "expo-linear-gradient";
+import Toast from "react-native-toast-message";
 import { useNavigation } from "@react-navigation/native";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
-import { styles } from "./SketchDesignerApp.styles";
+import { subscriptionService } from "../../../service/subscriptionService";
 
 const { width } = Dimensions.get("window");
+const isTablet = width >= 768;
 
-export default function SketchDesignerApp() {
+export default function SubscriptionPlansScreen() {
   const navigation = useNavigation();
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [buyingPlanId, setBuyingPlanId] = useState(null);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [activePlanId, setActivePlanId] = useState(null);
 
-  const features = [
-    { text: "10,000+ Templates học thuật", icon: "library-books", color: "#EFF6FF" },
-    { text: "AI vẽ biểu đồ thông minh", icon: "auto-awesome", color: "#DBEAFE" },
-    { text: "Xuất file 4K/8K chất lượng cao", icon: "high-quality", color: "#EFF6FF" },
-    { text: "500GB Cloud lưu trữ", icon: "cloud-upload", color: "#DBEAFE" },
-    { text: "Cộng tác nhóm realtime", icon: "groups", color: "#EFF6FF" },
-    { text: "Hỗ trợ kỹ thuật 24/7", icon: "support-agent", color: "#DBEAFE" },
-  ];
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const res = await subscriptionService.getSubscriptionPlans();
+        const data = Array.isArray(res?.result) ? res.result : [];
+        setPlans(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPlans();
+  }, []);
 
-  const steps = [
-    {
-      title: "Bước 1: Chọn gói nâng cấp",
-      description: "Chọn gói Designer Pro để mở khóa toàn bộ tính năng chuyên nghiệp cho sketchnote.",
-      icon: "shopping-cart",
-      color: "#3B82F6",
-    },
-    {
-      title: "Bước 2: Thanh toán an toàn",
-      description: "Hỗ trợ đa dạng phương thức: thẻ quốc tế, ví điện tử, Momo, ZaloPay và nhiều hơn nữa.",
-      icon: "payment",
-      color: "#60A5FA",
-    },
-    {
-      title: "Bước 3: Kích hoạt tức thì",
-      description: "Sau khi thanh toán thành công, tài khoản Designer của bạn được kích hoạt ngay lập tức.",
-      icon: "bolt",
-      color: "#2563EB",
-    },
-  ];
+  const loadUserSubscriptions = async () => {
+    try {
+      const res = await subscriptionService.getUserSubscriptions();
+      const list = Array.isArray(res?.result) ? res.result : [];
+      const activeItem = list.find(
+        (s) => s?.isCurrentlyActive || String(s?.status || "").toUpperCase() === "ACTIVE"
+      );
+      const pid = activeItem?.plan?.planId ?? null;
+      setActivePlanId(pid);
+      setHasActiveSubscription(!!pid);
+    } catch (err) {
+      setActivePlanId(null);
+      setHasActiveSubscription(false);
+    }
+  };
 
-  const benefits = [
-    "Truy cập không giới hạn mọi template",
-    "Sử dụng AI để tạo biểu đồ tự động",
-    "Xuất file với chất lượng 4K & 8K",
-    "Lưu trữ cloud 500GB",
-    "Công cụ cộng tác nhóm mạnh mẽ",
-    "Priority support 24/7",
-  ];
+  useEffect(() => {
+    loadUserSubscriptions();
+  }, []);
 
+  const popularPlanId = plans.find(
+    (p) => p.isPopular || p.planName.toLowerCase().includes("pro")
+  )?.planId;
+
+  const confirmBuy = async (plan) => {
+    if (!plan?.planId) return;
+    if (buyingPlanId) return;
+    setBuyingPlanId(plan.planId);
+    try {
+      const res = await subscriptionService.createUserSubscription({
+        planId: plan.planId,
+        autoRenew: true,
+      });
+      Toast.show({ type: "success", text1: "Subscription activated", text2: `${plan.planName}` });
+      await loadUserSubscriptions();
+    } catch (e) {
+      Toast.show({ type: "error", text1: "Purchase failed", text2: e.message });
+    } finally {
+      setBuyingPlanId(null);
+    }
+  };
+
+  const handleChoosePlan = (plan) => {
+    Toast.show({
+      type: "success",
+      text1: "Confirm to buy",
+      text2: "Tap this to BUY",
+      position: "top",
+      onPress: () => confirmBuy(plan),
+    });
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header - Xanh da trời nhẹ */}
+
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-            <SidebarToggleButton iconSize={24} iconColor="#1F2937" />
-          
+          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+          <Text style={styles.headerTitle}>Subscription Plans</Text>
         </View>
-        <Text style={styles.headerTitle}>Designer Pro</Text>
-        <View style={styles.headerRight} />
       </View>
 
-      {/* Main Scroll */}
       <ScrollView
-        contentContainerStyle={styles.mainScroll}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
       >
         {/* Hero Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Chào mừng đến Designer Hub</Text>
-          <Text style={{ 
-            fontSize: width >= 768 ? 20 : 18, 
-            color: "#4A5568", 
-            lineHeight: width >= 768 ? 32 : 28,
-            fontWeight: "600",
-            marginBottom: 24,
-          }}>
-            Nâng cấp lên Designer Pro để bắt đầu việc kinh doanh template sketchnote của bạn. Tạo, bán và kiếm tiền từ những thiết kế độc đáo!
+        <View style={styles.hero}>
+          <Text style={styles.heroTitle}>
+            Unlock Your {"\n"} Full Creative Power
+          </Text>
+          <Text style={styles.heroSubtitle}>
+            Choose the perfect plan to create, sell & grow your sketchnote
+            business
           </Text>
         </View>
 
-        {/* Giới thiệu tính năng */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Lợi ích Designer Pro</Text>
-          <View style={styles.featureGrid}>
-            {features.map((item, idx) => (
-              <View
-                key={idx}
-                style={[styles.featureBox, { backgroundColor: item.color }]}
+        {/* Features */}
+        <View style={styles.featuresGrid}>
+          {[
+            { icon: "auto-awesome", text: "AI Smart Charts" },
+            { icon: "4k", text: "8K Export Quality" },
+            { icon: "cloud-upload", text: "500GB Cloud" },
+            { icon: "groups", text: "Team Collaboration" },
+            { icon: "support-agent", text: "24/7 Support" },
+            { icon: "library-books", text: "10,000+ Templates" },
+          ].map((f, i) => (
+            <View key={i} style={styles.featureBox}>
+              <LinearGradient
+                colors={["#E0F2FE", "#BAE6FD"]}
+                style={styles.featureIcon}
               >
-                <Icon name={item.icon} size={40} color="#2563EB" />
-                <Text style={styles.featureText}>{item.text}</Text>
-              </View>
-            ))}
-          </View>
+                <Icon name={f.icon} size={32} color="#136bb8ff" />
+              </LinearGradient>
+              <Text style={styles.featureText}>{f.text}</Text>
+            </View>
+          ))}
         </View>
 
-        {/* Các bước nâng cấp */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quy trình nâng cấp đơn giản</Text>
-          <View style={styles.stepList}>
-            {steps.map((step, idx) => (
-              <View key={idx} style={styles.stepItem}>
-                <View style={[styles.stepIconContainer, { backgroundColor: step.color }]}>
-                  <Icon name={step.icon} size={32} color="#FFFFFF" />
-                </View>
-                <View style={styles.stepTextWrap}>
-                  <Text style={styles.stepTitle}>{step.title}</Text>
-                  <Text style={styles.stepDesc}>{step.description}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Phần giá và CTA */}
-        <View style={styles.priceSection}>
-          <View style={styles.priceCard}>
-            <View style={styles.decorativeDots} />
-            <View style={styles.priceHeader}>
-              <Text style={styles.planName}>Designer Pro</Text>
-              <View style={styles.saveBadge}>
-                <Icon name="local-offer" size={16} color="#FFFFFF" />
-                <Text style={styles.saveText}>Giảm 40%</Text>
-              </View>
-            </View>
-            <View style={styles.priceTag}>
-              <Text style={styles.priceValue}>299K</Text>
-              <Text style={styles.priceSub}>/tháng</Text>
-            </View>
-            <View style={styles.trialBadge}>
-              <Icon name="card-giftcard" size={20} color="#2563EB" />
-              <Text style={styles.trialText}>Dùng thử miễn phí 7 ngày đầu tiên</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.buyBtn} activeOpacity={0.9}>
-            <Text style={styles.buyText}>Nâng cấp ngay</Text>
-            <Icon name="arrow-forward" size={24} color="#fff" />
-          </TouchableOpacity>
-
-          <View style={styles.securityRow}>
-            <Icon name="verified-user" size={20} color="#6366F1" />
-            <Text style={styles.securityText}>
-              Thanh toán an toàn & bảo mật 100%
-            </Text>
-          </View>
-        </View>
-
-        {/* Additional Info */}
-        <View style={{ 
-          marginTop: 48, 
-          padding: width >= 768 ? 32 : 24, 
-          backgroundColor: "#F9FAFB",
-          borderRadius: 20,
-          borderWidth: 2,
-          borderColor: "#E5E7EB",
-        }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <Icon name="info" size={24} color="#2563EB" />
-            <Text style={{ 
-              fontSize: width >= 768 ? 20 : 18, 
-              fontWeight: "800", 
-              color: "#1E40AF",
-            }}>
-              Lưu ý quan trọng
-            </Text>
-          </View>
-          <Text style={{ 
-            fontSize: width >= 768 ? 16 : 14, 
-            color: "#4A5568",
-            lineHeight: width >= 768 ? 24 : 22,
-            fontWeight: "500",
-          }}>
-            • Gói Designer Pro được tự động gia hạn hàng tháng{"\n"}
-            • Bạn có thể hủy bất cứ lúc nào mà không mất phí{"\n"}
-            • Dùng thử 7 ngày đầu hoàn toàn miễn phí{"\n"}
-            • Hỗ trợ hoàn tiền trong 14 ngày nếu không hài lòng
+        {/* Pricing Plans - ĐẸP NHẤT TỪ TRƯỚC ĐẾN NAY */}
+        {/* Thay toàn bộ phần Pricing Plans bằng đoạn này */}
+        <View style={styles.plansContainer}>
+          <Text style={styles.plansMainTitle}>Choose Your Perfect Plan</Text>
+          <Text style={styles.plansSubTitle}>
+            Start free. Scale when you're ready.
           </Text>
+
+          {loading ? (
+            <ActivityIndicator
+              size="large"
+              color="#136bb8ff"
+              style={{ marginTop: 40 }}
+            />
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{
+                paddingHorizontal: 20,
+                paddingVertical: 10,
+              }}
+              snapToInterval={300} // Vuốt mượt từng card
+              decelerationRate="fast"
+            >
+              <View style={styles.plansGridCompact}>
+                {plans.map((plan) => {
+                  const isPopular = plan.planId === popularPlanId;
+                  const isActivePlan = hasActiveSubscription && plan.planId === activePlanId;
+                  return (
+                    <TouchableOpacity
+                      key={plan.planId}
+                      activeOpacity={0.92}
+                      style={styles.planWrapperCompact}
+                    >
+                      <LinearGradient
+                        colors={
+                          isActivePlan
+                            ? ["#136bb8ff", "#0251c7ff"]
+                            : ["#FFFFFF", "#FFFFFF"]
+                        }
+                        style={[
+                          styles.planCardCompact,
+                          isActivePlan
+                            ? styles.planCardActiveCompact
+                            : styles.planCardInactiveCompact,
+                        ]}
+                      >
+                        {/* Badge Popular */}
+                        {isPopular && (
+                          <View style={styles.popularBadgeCompact}>
+                            <Text style={styles.popularTextCompact}>
+                              MOST POPULAR
+                            </Text>
+                          </View>
+                        )}
+
+                        {isActivePlan && (
+                          <View style={styles.activeBadgeCompact}>
+                            <Text style={styles.activeTextCompact}>ACTIVE PLAN</Text>
+                          </View>
+                        )}
+
+                        <Text
+                          style={[
+                            styles.planNameCompact,
+                            isActivePlan && { color: "#FFF" },
+                          ]}
+                        >
+                          {plan.planName}
+                        </Text>
+
+                        <Text
+                          style={[
+                            styles.planDescCompact,
+                            isActivePlan && { color: "#E0F2FE" },
+                          ]}
+                        >
+                          {plan.description}
+                        </Text>
+
+                        <View style={styles.priceBoxCompact}>
+                          <Text
+                            style={[
+                              styles.priceCompact,
+                              isActivePlan && { color: "#FFF" },
+                            ]}
+                          >
+                            {plan.price === 0
+                              ? "Free"
+                              : `${plan.price.toLocaleString("vi-VN")}đ`}
+                          </Text>
+                          {plan.price > 0 && (
+                            <Text
+                              style={[
+                                styles.periodCompact,
+                                isActivePlan && { color: "#BAE6FD" },
+                              ]}
+                            >
+                              /month
+                            </Text>
+                          )}
+                        </View>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.chooseBtnCompact,
+                            hasActiveSubscription
+                              ? styles.chooseBtnDisabledCompact
+                              : isPopular
+                              ? styles.chooseBtnPopularCompact
+                              : styles.chooseBtnNormalCompact,
+                          ]}
+                          disabled={!!hasActiveSubscription || !!buyingPlanId}
+                          onPress={() => handleChoosePlan(plan)}
+                        >
+                          <Text
+                            style={[
+                              styles.chooseBtnTextCompact,
+                              hasActiveSubscription
+                                ? { color: "#9CA3AF" }
+                                : { color: "#136bb8ff" },
+                            ]}
+                          >
+                            {isActivePlan ? "Current Plan" : "Choose Plan"}
+                          </Text>
+                        </TouchableOpacity>
+
+                        <View style={styles.featuresListCompact}>
+                          {plan.features?.slice(0, 4).map((feat, i) => (
+                            <View key={i} style={styles.featureRowCompact}>
+                              <Icon
+                                name="check"
+                                size={14}
+                                color={isPopular ? "#BAE6FD" : "#136bb8ff"}
+                              />
+                              <Text
+                                style={[
+                                  styles.featureItemCompact,
+                                  isPopular && { color: "#E0F2FE" },
+                                ]}
+                              >
+                                {feat}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          )}
         </View>
+
+        {/* Trust Section */}
+        <LinearGradient
+          colors={["#136bb8ff", "#0251c7ff"]}
+          style={styles.trustSection}
+        >
+          <Icon name="verified" size={48} color="#FFFFFF" />
+          <Text style={styles.trustTitle}>100% Safe & Secure</Text>
+          <Text style={styles.trustText}>
+            7-day free trial • Cancel anytime • Full refund in 14 days
+          </Text>
+        </LinearGradient>
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#F0F9FF" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#FFFFFF",
+    paddingTop: 60,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+    letterSpacing: -0.5,
+  },
+  scrollContent: { paddingBottom: 40 },
+  hero: {
+    alignItems: "center",
+    padding: 32,
+    paddingTop: 20,
+  },
+  heroTitle: {
+    fontSize: isTablet ? 58 : 50,
+    fontFamily: "Pacifico-Regular",
+    color: "#136bb8ff",
+    textAlign: "center",
+    lineHeight: isTablet ? 58 : 48,
+    marginBottom: 16,
+  },
+  heroSubtitle: {
+    fontSize: 18,
+    color: "#475569",
+    textAlign: "center",
+    fontWeight: "500",
+    lineHeight: 28,
+    maxWidth: 700,
+  },
+  featuresGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    gap: 16,
+    marginVertical: 32,
+  },
+  featureBox: {
+    width: isTablet ? 180 : (width - 56) / 2,
+    backgroundColor: "#FFFFFF",
+    padding: 20,
+    borderRadius: 24,
+    alignItems: "center",
+    shadowColor: "#0EA5E9",
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  featureIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  featureText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0369A1",
+    textAlign: "center",
+  },
+  plansContainer: { paddingHorizontal: 20, alignItems: "center" },
+  plansMainTitle: {
+    fontSize: 32,
+    fontFamily: "Pacifico-Regular",
+    color: "#136bb8ff",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  plansSubTitle: {
+    fontSize: 18,
+    color: "#475569",
+    marginBottom: 40,
+    fontWeight: "500",
+  },
+  plansGridCompact: {
+    flexDirection: "row",
+    gap: 14,
+    alignItems: "center",
+  },
+  planWrapperCompact: {
+    width: 280, // Đúng kích thước để 4 card vừa màn hình
+    marginHorizontal: 8,
+  },
+  planCardCompact: {
+    borderRadius: 24,
+    padding: 20,
+    height: 350,
+    borderWidth: 2,
+    borderColor: "transparent",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 10,
+    justifyContent: "space-between",
+  },
+  planCardPopularCompact: {
+    borderColor: "#1887e8ff",
+    shadowColor: "#136bb8ff",
+    shadowOpacity: 0.25,
+    elevation: 16,
+    transform: [{ scale: 1.04 }],
+  },
+  planCardActiveCompact: {
+    borderColor: "#1887e8ff",
+    shadowColor: "#136bb8ff",
+    shadowOpacity: 0.25,
+    elevation: 16,
+    transform: [{ scale: 1.05 }],
+  },
+  planCardInactiveCompact: {
+    opacity: 0.6,
+  },
+  popularBadgeCompact: {
+    position: "absolute",
+    top: 4,
+    alignSelf: "center",
+    backgroundColor: "#F59E0B",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  popularTextCompact: {
+    color: "#FFF",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  activeBadgeCompact: {
+    position: "absolute",
+    top: 8,
+    right: 12,
+    backgroundColor: "#10B981",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    zIndex: 10,
+  },
+  activeTextCompact: {
+    color: "#FFF",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  planNameCompact: {
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
+    color: "#084F8C",
+    marginTop: 16,
+  },
+  planDescCompact: {
+    fontSize: 13,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 18,
+    flex: 1,
+    marginVertical: 8,
+  },
+  priceBoxCompact: {
+    alignItems: "center",
+    marginVertical: 16,
+  },
+  priceCompact: {
+    fontSize: 30,
+    fontWeight: "900",
+    color: "#084F8C",
+  },
+  periodCompact: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 4,
+  },
+  chooseBtnCompact: {
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+  },
+  chooseBtnPopularCompact: {
+    backgroundColor: "#FFFFFF",
+  },
+  chooseBtnNormalCompact: {
+    backgroundColor: "#E0F2FE",
+    borderWidth: 2,
+    borderColor: "#084F8C",
+  },
+  chooseBtnDisabledCompact: {
+    backgroundColor: "#E5E7EB",
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+  },
+  chooseBtnTextCompact: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  featuresListCompact: {
+    marginTop: 20,
+    gap: 10,
+  },
+  featureRowCompact: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  featureItemCompact: {
+    fontSize: 12.5,
+    color: "#475569",
+    flex: 1,
+  },
+  trustSection: {
+    marginHorizontal: 20,
+    marginTop: 60,
+
+    padding: 20,
+    borderRadius: 32,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    elevation: 15,
+  },
+  trustTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    marginTop: 16,
+    fontFamily: "Pacifico-Regular",
+  },
+  trustText: {
+    color: "#E0F2FE",
+    textAlign: "center",
+    marginTop: 12,
+    fontSize: 16,
+    lineHeight: 24,
+  },
+});

@@ -6,41 +6,44 @@ import {
   Pressable,
   TextInput,
   Alert,
-  Dimensions,
   Image,
   TouchableOpacity,
   StyleSheet,
-  Modal
+  Modal,
+  useWindowDimensions,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "expo-linear-gradient";
 import { paymentService } from "../../../service/paymentService";
-import Toast from "react-native-toast-message";
+import { useToast } from "../../../hooks/use-toast";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
 export default function DesignerWalletScreen() {
   const navigation = useNavigation();
+  const { toast } = useToast();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [walletData, setWalletData] = useState({
     balance: 0,
     transactions: [],
     totalEarnings: 0,
     pendingWithdrawals: 0,
-    totalWithdrawn: 0
+    totalWithdrawn: 0,
   });
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [bankInfo, setBankInfo] = useState({
     bankName: "",
     accountNumber: "",
-    accountName: ""
+    accountName: "",
   });
 
   // Format helpers
-  const formatCurrency = (amount) =>
-    (amount ?? 0).toLocaleString("vi-VN") + " VND";
+  const formatCurrency = (amount) => {
+    if (!amount) return "0 đ";
+    return new Intl.NumberFormat("vi-VN").format(amount) + " đ";
+  };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -63,14 +66,15 @@ export default function DesignerWalletScreen() {
         ...data.result,
         totalEarnings: 12500000, // Example value
         pendingWithdrawals: 2500000, // Example value
-        totalWithdrawn: 8500000 // Example value
+        totalWithdrawn: 8500000, // Example value
       });
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
-      Toast.show({
-        type: "error",
-        text1: "Lỗi",
-        text2: "Không thể tải thông tin ví. Vui lòng thử lại sau.",
+
+      toast({
+        title: "Error",
+        description: "Cannot fetch wallet data. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -79,28 +83,32 @@ export default function DesignerWalletScreen() {
   const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount);
     if (!amount || amount < 100000) {
-      Toast.show({
-        type: "error",
-        text1: "Lỗi",
-        text2: "Số tiền rút tối thiểu là 100,000 VND",
+      toast({
+        title: "Error",
+        description: "Minimum withdraw amount is 100,000 VND",
+        variant: "destructive",
       });
       return;
     }
 
     if (amount > walletData.balance) {
-      Toast.show({
-        type: "error",
-        text1: "Lỗi",
-        text2: "Số dư không đủ để thực hiện giao dịch",
+      toast({
+        title: "Error",
+        description: "Insufficient balance to withdraw this amount.",
+        variant: "destructive",
       });
       return;
     }
 
-    if (!bankInfo.bankName || !bankInfo.accountNumber || !bankInfo.accountName) {
-      Toast.show({
-        type: "error",
-        text1: "Lỗi",
-        text2: "Vui lòng nhập đầy đủ thông tin ngân hàng",
+    if (
+      !bankInfo.bankName ||
+      !bankInfo.accountNumber ||
+      !bankInfo.accountName
+    ) {
+      toast({
+        title: "Error",
+        description: "Please fill in all bank information.",
+        variant: "destructive",
       });
       return;
     }
@@ -108,24 +116,26 @@ export default function DesignerWalletScreen() {
     try {
       // In a real app, you would call your API to process the withdrawal
       // await paymentService.withdraw(amount, bankInfo);
-      
+
       setShowWithdrawModal(false);
       setWithdrawAmount("");
-      
-      Toast.show({
-        type: "success",
-        text1: "Thành công",
-        text2: `Yêu cầu rút ${formatCurrency(amount)} đã được ghi nhận`,
+
+      toast({
+        title: "Success",
+        description: `Withdrawal request of ${formatCurrency(
+          amount
+        )} has been submitted.`,
+        variant: "success",
       });
-      
+
       // Refresh wallet data
       fetchWallet();
     } catch (error) {
       console.error("Withdrawal error:", error);
-      Toast.show({
-        type: "error",
-        text1: "Lỗi",
-        text2: "Rút tiền thất bại. Vui lòng thử lại sau.",
+      toast({
+        title: "Error",
+        description: "Withdrawal failed. Please try again later.",
+        variant: "destructive",
       });
     }
   };
@@ -138,167 +148,210 @@ export default function DesignerWalletScreen() {
 
   // Recent transactions (last 5)
   const recentTransactions = walletData.transactions.slice(0, 5);
+  const isLandscape = windowWidth > windowHeight;
+  const isPortrait = !isLandscape;
+  const isWide = windowWidth > 900;
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#1E293B" />
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Icon name="arrow-back" size={24} color="#084F8C" />
         </Pressable>
-        <Text style={styles.headerTitle}> Designer Wallet</Text>
+        <Text style={styles.headerTitle}>Designer Wallet</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView 
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Balance Card */}
-        <LinearGradient
-          colors={['#4F46E5', '#7C3AED']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.balanceCard}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* TOP SECTION LAYOUT */}
+        <View
+          style={[
+            styles.topWrapper,
+            isLandscape && styles.topWrapperRow,
+            isWide && styles.topWrapperLimit,
+          ]}
         >
-          <View style={styles.balanceHeader}>
-            <View>
-              <Text style={styles.balanceLabel}>SAvailable Balance</Text>
-              <Text style={styles.balanceAmount}>
-                {formatCurrency(walletData.balance)}
-              </Text>
-            </View>
-            <View style={styles.walletIconContainer}>
-              <Icon name="account-balance-wallet" size={28} color="#FFFFFF" />
-            </View>
-          </View>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{formatCurrency(walletData.totalEarnings)}</Text>
-              <Text style={styles.statLabel}>Total Earnings</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{formatCurrency(walletData.pendingWithdrawals)}</Text>
-              <Text style={styles.statLabel}>Pending Withdrawals</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{formatCurrency(walletData.totalWithdrawn)}</Text>
-              <Text style={styles.statLabel}>Total Withdrawn</Text>
-            </View>
-          </View>
-          
-          <TouchableOpacity 
-            style={styles.withdrawButton}
-            onPress={() => setShowWithdrawModal(true)}
+          {/* LEFT – BALANCE CARD */}
+          <View
+            style={[
+              styles.balanceCardNew,
+              isLandscape && { flex: 1, maxWidth: "100%", marginRight: 16 },
+            ]}
           >
-            <Text style={styles.withdrawButtonText}>Withdraw</Text>
-            <Icon name="arrow-forward" size={20} color="#4F46E5" />
-          </TouchableOpacity>
-        </LinearGradient>
+            <Text style={styles.balanceLabelNew}>Available Balance</Text>
+            <Text style={styles.balanceAmountNew}>
+              {formatCurrency(walletData.balance)}
+            </Text>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <Pressable 
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("TransactionHistory")}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
-              <Icon name="history" size={24} color="#6366F1" />
+            <View style={styles.statsRowNew}>
+              <View style={styles.statBox}>
+                <Text style={styles.statValueNew}>
+                  {formatCurrency(walletData.totalEarnings)}
+                </Text>
+                <Text style={styles.statLabelNew}>Total Earnings</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statValueNew}>
+                  {formatCurrency(walletData.pendingWithdrawals)}
+                </Text>
+                <Text style={styles.statLabelNew}>Pending</Text>
+              </View>
+              <View style={styles.statDivider} />
+              <View style={styles.statBox}>
+                <Text style={styles.statValueNew}>
+                  {formatCurrency(walletData.totalWithdrawn)}
+                </Text>
+                <Text style={styles.statLabelNew}>Total Withdrawn</Text>
+              </View>
             </View>
-            <Text style={styles.actionText}>Transaction History</Text>
-          </Pressable>
-          
-          <Pressable 
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("WithdrawalHistory")}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: 'rgba(168, 85, 247, 0.1)' }]}>
-              <Icon name="swap-horiz" size={24} color="#A855F7" />
-            </View>
-            <Text style={styles.actionText}>Withdrawal History</Text>
-          </Pressable>
-          
-          <Pressable 
-            style={styles.actionButton}
-            onPress={() => navigation.navigate("BankAccounts")}
-          >
-            <View style={[styles.actionIcon, { backgroundColor: 'rgba(236, 72, 153, 0.1)' }]}>
-              <Icon name="account-balance" size={24} color="#EC4899" />
-            </View>
-            <Text style={styles.actionText}>Bank Accounts</Text>
-          </Pressable>
-        </View>
 
-        {/* Recent Transactions */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Transactions</Text>
-            {walletData.transactions.length > 5 && (
+            <TouchableOpacity
+              style={styles.withdrawButtonNew}
+              onPress={() => setShowWithdrawModal(true)}
+            >
+              <Icon name="account-balance-wallet" size={20} color="#FFFFFF" />
+              <Text style={styles.withdrawButtonTextNew}>Withdraw Funds</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* RIGHT – ACTION CARD */}
+          <View style={[styles.actionCard, isLandscape && styles.rightCol]}>
+            <Text style={styles.actionCardTitle}>Quick Actions</Text>
+
+            <View
+              style={[
+                styles.actionList,
+                isPortrait
+                  ? {
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      justifyContent: "space-between",
+                    }
+                  : { flexDirection: "column", gap: 16 },
+              ]}
+            >
               <Pressable
+                style={[styles.oneActionItem, isPortrait && { width: "48%" }]}
                 onPress={() => navigation.navigate("TransactionHistory")}
               >
-                <Text style={styles.viewAllText}>View All</Text>
+                <View
+                  style={[
+                    styles.actionCircle,
+                    isLandscape && { width: 40, height: 40, borderRadius: 20 },
+                  ]}
+                >
+                  <Icon name="history" size={24} color="#084F8C" />
+                </View>
+                <Text
+                  style={[styles.actionName, isLandscape && { fontSize: 14 }]}
+                >
+                  Transaction History
+                </Text>
               </Pressable>
-            )}
+
+              <Pressable
+                style={[styles.oneActionItem, isPortrait && { width: "48%" }]}
+                onPress={() => navigation.navigate("WithdrawalHistory")}
+              >
+                <View
+                  style={[
+                    styles.actionCircle,
+                    isLandscape && { width: 40, height: 40, borderRadius: 20 },
+                  ]}
+                >
+                  <Icon name="swap-horiz" size={24} color="#084F8C" />
+                </View>
+                <Text
+                  style={[styles.actionName, isLandscape && { fontSize: 14 }]}
+                >
+                  Withdraw History
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.oneActionItem, isPortrait && { width: "48%" }]}
+                onPress={() => navigation.navigate("BankAccounts")}
+              >
+                <View
+                  style={[
+                    styles.actionCircle,
+                    isLandscape && { width: 40, height: 40, borderRadius: 20 },
+                  ]}
+                >
+                  <Icon name="account-balance" size={24} color="#084F8C" />
+                </View>
+                <Text
+                  style={[styles.actionName, isLandscape && { fontSize: 14 }]}
+                >
+                  Bank Accounts
+                </Text>
+              </Pressable>
+            </View>
           </View>
-          
+        </View>
+
+        {/* RECENT TRANSACTIONS */}
+        <View style={[styles.recentCard, isWide && styles.recentCardLimit]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          </View>
+
           {recentTransactions.length > 0 ? (
-            <View style={styles.transactionList}>
-              {recentTransactions.map((transaction) => (
-                <View key={transaction.id} style={styles.transactionItem}>
-                  <View style={styles.transactionIconContainer}>
-                    <Icon 
-                      name={
-                        transaction.type === 'DEPOSIT' ? 
-                        'arrow-downward' : 
-                        transaction.type === 'WITHDRAWAL' ? 
-                        'arrow-upward' : 
-                        'shopping-cart'
-                      } 
-                      size={20} 
-                      color={
-                        transaction.type === 'DEPOSIT' ? 
-                        '#10B981' : 
-                        transaction.type === 'WITHDRAWAL' ? 
-                        '#EF4444' : 
-                        '#3B82F6'
-                      } 
-                    />
-                  </View>
-                  <View style={styles.transactionInfo}>
-                    <Text style={styles.transactionTitle}>
-                      {transaction.type === 'DEPOSIT' ? 'Deposit' : 
-                       transaction.type === 'WITHDRAWAL' ? 'Withdrawal' : 
-                       'Purchase'}
-                    </Text>
-                    <Text style={styles.transactionDate}>
-                      {formatDate(transaction.createdAt)}
-                    </Text>
-                  </View>
-                  <Text 
-                    style={[
-                      styles.transactionAmount,
-                      {
-                        color: transaction.amount > 0 ? '#10B981' : '#1F2937',
-                        fontWeight: '600',
-                      }
-                    ]}
-                  >
-                    {transaction.amount > 0 ? '+' : ''}{formatCurrency(transaction.amount)}
+            recentTransactions.map((transaction) => (
+              <View key={transaction.id} style={styles.transactionItemNew}>
+                <View style={styles.transIconWrap}>
+                  <Icon
+                    name={
+                      transaction.type === "DEPOSIT"
+                        ? "arrow-downward"
+                        : transaction.type === "WITHDRAWAL"
+                        ? "arrow-upward"
+                        : "shopping-cart"
+                    }
+                    size={20}
+                    color={
+                      transaction.type === "DEPOSIT"
+                        ? "#16A34A"
+                        : transaction.type === "WITHDRAWAL"
+                        ? "#DC2626"
+                        : "#084F8C"
+                    }
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.transactionTitleNew}>
+                    {transaction.type === "DEPOSIT"
+                      ? "Deposit"
+                      : transaction.type === "WITHDRAWAL"
+                      ? "Withdrawal"
+                      : "Purchase"}
+                  </Text>
+                  <Text style={styles.transactionDateNew}>
+                    {formatDate(transaction.createdAt)}
                   </Text>
                 </View>
-              ))}
-            </View>
+
+                <Text
+                  style={[
+                    styles.transactionAmountNew,
+                    { color: transaction.amount > 0 ? "#16A34A" : "#1E293B" },
+                  ]}
+                >
+                  {transaction.amount > 0 ? "+" : ""}
+                  {formatCurrency(transaction.amount)}
+                </Text>
+              </View>
+            ))
           ) : (
             <View style={styles.emptyState}>
               <Icon name="receipt" size={48} color="#CBD5E1" />
               <Text style={styles.emptyStateText}>No recent transactions</Text>
-              <Text style={styles.emptyStateSubtext}>
-                Recent transactions will appear here
-              </Text>
             </View>
           )}
         </View>
@@ -316,12 +369,13 @@ export default function DesignerWalletScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Withdrawal</Text>
               <Pressable onPress={() => setShowWithdrawModal(false)}>
-                <Icon name="close" size={24} color="#64748B" />
+                <Icon name="close" size={26} color="#0F172A" />
               </Pressable>
             </View>
-            
+
             <ScrollView style={styles.modalBody}>
-              <Text style={styles.inputLabel}>Withdrawal Amount (VND)</Text>
+              {/* AMOUNT INPUT */}
+              <Text style={styles.inputLabel}>Withdrawal Amount</Text>
               <View style={styles.amountInputContainer}>
                 <Text style={styles.currencySymbol}>₫</Text>
                 <TextInput
@@ -332,89 +386,108 @@ export default function DesignerWalletScreen() {
                   onChangeText={setWithdrawAmount}
                 />
               </View>
-              
+
+              {/* QUICK AMOUNTS */}
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>
                 Quick Amounts
               </Text>
-              <View style={styles.quickAmounts}>
+              <View style={styles.quickAmountsNew}>
                 {quickAmounts.map((amount) => (
-                  <Pressable
+                  <TouchableOpacity
                     key={amount}
-                    style={({ pressed }) => [
-                      styles.quickAmountButton,
-                      pressed && { opacity: 0.8 },
-                    ]}
+                    style={styles.quickAmountButtonNew}
                     onPress={() => setWithdrawAmount(amount.toString())}
                   >
-                    <Text style={styles.quickAmountText}>
+                    <Text style={styles.quickAmountTextNew}>
                       {amount.toLocaleString()}
                     </Text>
-                  </Pressable>
+                  </TouchableOpacity>
                 ))}
               </View>
-              
+
+              {/* BANK INFO TITLE */}
               <Text style={[styles.inputLabel, { marginTop: 24 }]}>
                 Bank Information
               </Text>
-              <View style={styles.bankInfoContainer}>
-                <View style={styles.bankInfoItem}>
+
+              {/* 2-COLUMN BANK INPUTS */}
+              <View style={styles.bankGrid}>
+                <View style={styles.bankGridItem}>
                   <Text style={styles.bankInfoLabel}>Bank Name</Text>
                   <TextInput
-                    style={styles.bankInfoInput}
+                    style={styles.bankInfoInputNew}
                     placeholder="Enter bank name"
                     value={bankInfo.bankName}
-                    onChangeText={(text) => setBankInfo({...bankInfo, bankName: text})}
+                    onChangeText={(text) =>
+                      setBankInfo({ ...bankInfo, bankName: text })
+                    }
                   />
                 </View>
-                <View style={styles.bankInfoItem}>
+
+                <View style={styles.bankGridItem}>
                   <Text style={styles.bankInfoLabel}>Account Number</Text>
                   <TextInput
-                    style={styles.bankInfoInput}
+                    style={styles.bankInfoInputNew}
                     placeholder="Enter account number"
                     keyboardType="numeric"
                     value={bankInfo.accountNumber}
-                    onChangeText={(text) => setBankInfo({...bankInfo, accountNumber: text})}
-                  />
-                </View>
-                <View style={styles.bankInfoItem}>
-                  <Text style={styles.bankInfoLabel}>Account Name</Text>
-                  <TextInput
-                    style={styles.bankInfoInput}
-                    placeholder="Enter account name"  
-                    value={bankInfo.accountName}
-                    onChangeText={(text) => setBankInfo({...bankInfo, accountName: text})}
+                    onChangeText={(text) =>
+                      setBankInfo({ ...bankInfo, accountNumber: text })
+                    }
                   />
                 </View>
               </View>
-              
-              <View style={styles.noteContainer}>
-                <Icon name="info" size={16} color="#64748B" />
-                <Text style={styles.noteText}>
-                  Processing Time: 1-3 business days. Withdrawal Fee: 1.1% (minimum 5,000 VND).
+
+              <View style={[styles.bankGridItem, { marginTop: 12 }]}>
+                <Text style={styles.bankInfoLabel}>Account Name</Text>
+                <TextInput
+                  style={styles.bankInfoInputNew}
+                  placeholder="Enter account name"
+                  value={bankInfo.accountName}
+                  onChangeText={(text) =>
+                    setBankInfo({ ...bankInfo, accountName: text })
+                  }
+                />
+              </View>
+
+              {/* NOTE BOX */}
+              <View style={styles.noteContainerNew}>
+                <Icon name="info" size={18} color="#0F172A" />
+                <Text style={styles.noteTextNew}>
+                  Payouts take 1–3 business days. Fee: 1.1% (min 5,000 VND).
                 </Text>
               </View>
             </ScrollView>
-            
-            <View style={styles.modalFooter}>
+
+            {/* FOOTER BUTTONS */}
+            <View style={styles.modalFooterNew}>
               <Pressable
-                style={[styles.button, styles.cancelButton]}
+                style={[styles.buttonNew, styles.cancelButtonNew]}
                 onPress={() => setShowWithdrawModal(false)}
               >
-                <Text style={[styles.buttonText, { color: '#64748B' }]}>Hủy</Text>
+                <Text style={[styles.buttonTextNew, { color: "#64748B" }]}>
+                  Cancel
+                </Text>
               </Pressable>
+
               <Pressable
-                style={[styles.button, styles.confirmButton]}
+                style={[styles.buttonNew, styles.confirmButtonNew]}
                 onPress={handleWithdraw}
-                disabled={!withdrawAmount || !bankInfo.bankName || !bankInfo.accountNumber || !bankInfo.accountName}
+                disabled={
+                  !withdrawAmount ||
+                  !bankInfo.bankName ||
+                  !bankInfo.accountNumber ||
+                  !bankInfo.accountName
+                }
               >
-                <Text style={[styles.buttonText, { color: '#FFFFFF' }]}>Confirm</Text>
+                <Text style={[styles.buttonTextNew, { color: "#FFFFFF" }]}>
+                  Confirm
+                </Text>
               </Pressable>
             </View>
           </View>
         </View>
       </Modal>
-      
-      <Toast />
     </View>
   );
 }
@@ -422,348 +495,422 @@ export default function DesignerWalletScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   scrollView: {
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center", // căn giữa tuyệt đối
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    paddingTop: 16,
+    paddingBottom: 16,
+    backgroundColor: "rgba(255,255,255,0.96)",
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingTop: 60,
+    borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
   },
+
   backButton: {
-    padding: 8,
-    marginLeft: -8,
+    position: "absolute",
+    left: 20,
+    padding: 12, // vùng chạm lớn hơn
+    borderRadius: 30,
+    backgroundColor: "#F8FAFC",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
   },
+
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontSize: 26,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
     letterSpacing: -0.5,
   },
-  balanceCard: {
-    margin: 20,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
+
+  /* TOP 2 COLUMNS */
+  topWrapper: { padding: 20 },
+  topWrapperRow: {
+    flexDirection: "row",
+    gap: 20,
+    alignItems: "stretch",
   },
-  balanceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+  topWrapperLimit: {
+    width: "90%",
+    alignSelf: "center",
   },
-  balanceLabel: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  balanceAmount: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  walletIconContainer: {
-    width: 48,
-    height: 48,
+
+  leftCol: { flex: 60 },
+  rightCol: { flex: 1, maxWidth: 370 },
+
+  /* BALANCE CARD */
+  balanceCardNew: {
+    backgroundColor: "#FFFFFF",
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 24,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  statItem: {
-    alignItems: 'center',
+    padding: 24,
+    shadowColor: "#084F8C",
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: "#E0E7FF",
     flex: 1,
   },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 4,
+
+  balanceLabelNew: {
+    fontSize: 15,
+    color: "#64748B",
+    fontWeight: "600",
   },
-  statLabel: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
-    textAlign: 'center',
+
+  balanceAmountNew: {
+    fontSize: 38,
+    fontWeight: "800",
+    color: "#084F8C",
+    marginTop: 6,
+  },
+  statsRowNew: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#E0E7FF",
+  },
+  statBox: {
+    alignItems: "center",
+    flex: 1,
+    paddingHorizontal: 8,
   },
   statDivider: {
     width: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    marginHorizontal: 8,
+    height: 40,
+    backgroundColor: "#E0E7FF",
   },
-  withdrawButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+  statValueNew: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#084F8C",
+  },
+
+  statLabelNew: {
+    fontSize: 12,
+    color: "#94A3B8",
+    marginTop: 4,
+  },
+
+  withdrawButtonNew: {
+    backgroundColor: "#084F8C",
+    borderRadius: 16,
     paddingVertical: 14,
     marginTop: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "45%",
+    flexDirection: "row",
+    shadowColor: "#062b7cff",
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+
+    // 👇 THÊM DÒNG NÀY
+    alignSelf: "center",
   },
-  withdrawButtonText: {
-    color: '#4F46E5',
+
+  withdrawButtonTextNew: {
     fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginLeft: 8,
   },
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 24,
+
+  /* ACTION CARD */
+  actionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: "#084F8C",
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: "#E0E7FF",
   },
-  actionButton: {
-    alignItems: 'center',
-    width: '30%',
+  actionCardTitle: {
+    fontSize: 15,
+    color: "#084F8C",
+    fontWeight: "600",
+    marginBottom: 16,
   },
-  actionIcon: {
-    width: 56,
-    height: 56,
+
+  actionList: { gap: 16 },
+  oneActionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 5,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  actionText: {
-    fontSize: 12,
-    color: '#64748B',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  section: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 24,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    backgroundColor: "#F8FAFF",
+    // width sẽ được override trong JSX
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
     elevation: 2,
   },
+
+  actionCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EFF6FF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#084F8C",
+  },
+
+  /* RECENT TRANSACTIONS */
+  recentCard: {
+    margin: 20,
+    backgroundColor: "#FFFFFF",
+    padding: 20,
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  recentCardLimit: {
+    alignSelf: "center",
+    width: "88%",
+  },
+
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: "700",
+    color: "#084F8C",
   },
-  viewAllText: {
-    color: '#4F46E5',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  transactionList: {
-    marginTop: 8,
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
+
+  transactionItemNew: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: "#E2E8F0",
   },
-  transactionIconContainer: {
-    width: 40,
-    height: 40,
+  transIconWrap: {
+    width: 42,
+    height: 42,
     borderRadius: 12,
-    backgroundColor: '#F8FAFC',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#F1F5F9",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 2,
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  transactionAmount: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  transactionTitleNew: { fontSize: 15, fontWeight: "600", color: "#1E293B" },
+  transactionDateNew: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
+  transactionAmountNew: { fontSize: 15, fontWeight: "700" },
+
   emptyState: {
-    alignItems: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 40,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#64748B',
-    marginTop: 12,
-    fontWeight: '500',
-  },
-  emptyStateSubtext: {
     fontSize: 14,
-    color: '#94A3B8',
-    marginTop: 4,
+    color: "#94A3B8",
+    marginTop: 12,
   },
+
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
   },
+
   modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '90%',
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    maxHeight: "92%",
+    paddingBottom: 10,
+    shadowColor: "#084F8C",
+    shadowOpacity: 0.15,
+    shadowRadius: 25,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: "#E0E7FF",
   },
+
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: "#E6E9F5",
   },
+
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#084F8C",
   },
+
   modalBody: {
-    padding: 20,
+    padding: 24,
+    flexGrow: 1, // cho ScrollView chiếm đủ không gian
   },
+
+  /* INPUT LABEL */
   inputLabel: {
     fontSize: 14,
-    color: '#64748B',
-    marginBottom: 8,
-    fontWeight: '500',
+    fontWeight: "600",
+    color: "#475569",
+    marginBottom: 6,
   },
+
+  /* AMOUNT INPUT */
   amountInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
     height: 56,
+    paddingHorizontal: 18,
+    borderWidth: 1.5,
+    borderColor: "#D4DAF3",
+    backgroundColor: "#F8FAFF",
+    borderRadius: 16,
   },
   currencySymbol: {
-    fontSize: 20,
-    color: '#1E293B',
-    fontWeight: '600',
-    marginRight: 8,
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginRight: 10,
   },
   amountInput: {
     flex: 1,
     fontSize: 18,
-    color: '#1E293B',
-    fontWeight: '600',
+    fontWeight: "700",
+    color: "#0F172A",
     padding: 0,
-    height: '100%',
   },
-  quickAmounts: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -6,
-    marginBottom: 8,
+
+  /* QUICK AMOUNTS */
+  quickAmountsNew: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 4,
   },
-  quickAmountButton: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    margin: 6,
+  quickAmountButtonNew: {
+    backgroundColor: "#F1F5FF",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E0E7FF",
   },
-  quickAmountText: {
+  quickAmountTextNew: {
+    color: "#084F8C",
+    fontWeight: "700",
     fontSize: 14,
-    color: '#1E293B',
-    fontWeight: '500',
   },
-  bankInfoContainer: {
-    marginTop: 8,
+
+  /* BANK GRID */
+  bankGrid: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 12,
   },
-  bankInfoItem: {
-    marginBottom: 16,
+  bankGridItem: {
+    flex: 1,
   },
   bankInfoLabel: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 8,
-    fontWeight: '500',
-  },
-  bankInfoInput: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1E293B',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  noteContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-  },
-  noteText: {
-    flex: 1,
     fontSize: 13,
-    color: '#64748B',
-    marginLeft: 8,
-    lineHeight: 20,
+    color: "#475569",
+    marginBottom: 6,
+    fontWeight: "600",
   },
-  modalFooter: {
-    flexDirection: 'row',
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+  bankInfoInputNew: {
+    backgroundColor: "#F8FAFF",
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1.5,
+    borderColor: "#D4DAF3",
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#0F172A",
   },
-  button: {
+
+  /* NOTE BOX */
+  noteContainerNew: {
+    flexDirection: "row",
+    backgroundColor: "#F1F5FF",
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 20,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#E0E7FF",
+  },
+  noteTextNew: {
     flex: 1,
-    borderRadius: 12,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#475569",
+    fontWeight: "500",
+  },
+
+  /* FOOTER */
+  modalFooterNew: {
+    flexDirection: "row",
+    justifyContent: "center", // canh giữa
+    paddingHorizontal: 20,
+    gap: 60, // khoảng cách giữa 2 nút
+  },
+
+  buttonNew: {
+    width: "28%", // mỗi nút khoảng 50%
     paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  cancelButton: {
-    backgroundColor: '#F1F5F9',
-    marginRight: 12,
+
+  cancelButtonNew: {
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
-  confirmButton: {
-    backgroundColor: '#4F46E5',
+
+  confirmButtonNew: {
+    backgroundColor: "#084F8C",
+    shadowColor: "#084F8C",
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  buttonText: {
+
+  buttonTextNew: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "700",
   },
 });

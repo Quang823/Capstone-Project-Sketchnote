@@ -26,6 +26,7 @@ import Animated, {
   useAnimatedReaction,
 } from "react-native-reanimated";
 import { File } from "expo-file-system";
+import { projectService } from "../../../service/projectService";
 import { ImageFormat } from "@shopify/react-native-skia";
 import { Dimensions } from "react-native";
 
@@ -37,6 +38,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   {
     tool,
     layers,
+    pageId,
     activeLayerId,
     setLayers,
     color,
@@ -66,6 +68,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     pageHeight = null, // 👈 Page height from noteConfig
     loadedFonts, // 👈 Pass down preloaded fonts
     getNearestFont, // 👈 Pass down font helper
+    projectId,
+    userId,
+    isCover = false,
   },
   ref
 ) {
@@ -507,6 +512,38 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       ) {
         setSelectedId(stroke.id);
       }
+
+      try {
+        if (projectId && userId) {
+          const layerSummaries = Array.isArray(internalLayers)
+            ? internalLayers.map((l) => ({
+                id: l?.id,
+                name: l?.name || (typeof l?.id === "string" ? l.id : "Layer"),
+                visible: l?.visible !== false,
+                locked: !!l?.locked,
+              }))
+            : [{ id: "layer1", name: "Layer 1", visible: true, locked: false }];
+
+          const pageChunk = {
+            id: pageId,
+            createdAt: new Date().toISOString(),
+            type: isCover ? "cover" : "paper",
+            backgroundColor: backgroundColor,
+            template: pageTemplate,
+            imageUrl: backgroundImageUrl,
+            strokes: [stroke],
+            layers: layerSummaries,
+          };
+
+          projectService.realtime.sendStroke(
+            projectId,
+            userId,
+            pageId,
+            stroke,
+            JSON.stringify(pageChunk),
+          );
+        }
+      } catch {}
     } catch (e) {
       console.error("[CanvasContainer] addStrokeInternal error:", e);
     }
@@ -914,6 +951,38 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       }
     },
 
+    removeStrokesByIds: (ids = []) => {
+      const idSet = new Set(Array.isArray(ids) ? ids : []);
+      if (idSet.size === 0) return;
+      setInternalLayers((prev) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map((l) => ({
+          ...l,
+          strokes: Array.isArray(l.strokes)
+            ? l.strokes.filter((s) => !idSet.has(s?.id))
+            : [],
+        }));
+      });
+      setUndoStack([]);
+      setRedoStack([]);
+    },
+
+    removeStrokesByTemplateSource: (source) => {
+      const key = typeof source === "string" ? source : null;
+      if (!key) return;
+      setInternalLayers((prev) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map((l) => ({
+          ...l,
+          strokes: Array.isArray(l.strokes)
+            ? l.strokes.filter((s) => s?.__templateSource !== key)
+            : [],
+        }));
+      });
+      setUndoStack([]);
+      setRedoStack([]);
+    },
+
     modifyStrokeAt,
 
     // Thêm ảnh / sticker / text (giữ logic layer)
@@ -1140,16 +1209,36 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           );
           Object.keys(newStrokesByLayer).forEach((layerId) => {
             const newStrokes = newStrokesByLayer[layerId];
+            const existingIds = new Set();
+            layerMap.forEach((ly) => {
+              (ly.strokes || []).forEach((s) => {
+                if (s?.id) existingIds.add(s.id);
+              });
+            });
+            const uniqueStrokes = newStrokes.map((s) => {
+              let id = s?.id;
+              if (!id || existingIds.has(id)) {
+                id = nextId();
+              }
+              existingIds.add(id);
+              return { ...s, id, layerId };
+            });
+            const hasTemplate = uniqueStrokes.some((s) => s?.__templateSource);
+
             if (layerMap.has(layerId)) {
               const existingLayer = layerMap.get(layerId);
-              existingLayer.strokes.push(...newStrokes);
+              if (hasTemplate) {
+                existingLayer.strokes = [...uniqueStrokes, ...(existingLayer.strokes || [])];
+              } else {
+                existingLayer.strokes.push(...uniqueStrokes);
+              }
             } else {
               layerMap.set(layerId, {
                 id: layerId,
                 name: `Layer ${layerId}`,
                 visible: true,
                 locked: false,
-                strokes: newStrokes,
+                strokes: uniqueStrokes,
               });
             }
           });
@@ -1269,6 +1358,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               backgroundImageUrl={backgroundImageUrl}
               pageWidth={PAGE_WIDTH}
               pageHeight={PAGE_HEIGHT}
+              isCover={isCover}
               // ⬇️ Virtual rendering props
               zoomState={zoomStateMemo}
               // Dùng số thuần để tránh đọc .value trong render của CanvasRenderer

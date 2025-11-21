@@ -168,6 +168,7 @@ export default function ImageTransformBox({
           transform: [
             { translateX: pan.x },
             { translateY: pan.y },
+            { scale },
             { rotate: `${rotation}deg` },
           ],
         },
