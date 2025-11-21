@@ -17,7 +17,7 @@ import { styles } from "./ResourceDetailScreen.styles";
 export default function ResourceDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { addToCart } = useCart();
+  const { addToCart, cart } = useCart();
 
   const { resourceId } = route.params;
   const [resource, setResource] = useState(null);
@@ -31,11 +31,12 @@ export default function ResourceDetailScreen() {
     const fetchResource = async () => {
       try {
         const data = await resourceService.getResourceById(resourceId);
+        console.log(data)
         setResource(data);
       } catch (error) {
         Toast.show({
           type: "error",
-          text1: "Lỗi tải dữ liệu",
+          text1: "Load resource failed",
           text2: error.message,
         });
         // console.log(error);
@@ -75,8 +76,21 @@ export default function ResourceDetailScreen() {
     if (alreadyOwned) {
       Toast.show({
         type: "info",
-        text1: "Bạn đã sở hữu resource này rồi",
-        text2: "Không thể mua lại.",
+        text1: "You already own this resource",
+        text2: "You cannot buy it again.",
+      });
+      return;
+    }
+
+    const alreadyInCart = cart?.some(
+      (item) => item.id === resource.resourceTemplateId
+    );
+
+    if (alreadyInCart) {
+      Toast.show({
+        type: "info",
+        text1: "Resource already in cart",
+        text2: `${resource.name} is waiting for payment.`,
       });
       return;
     }
@@ -84,6 +98,7 @@ export default function ResourceDetailScreen() {
       id: resource.resourceTemplateId,
       name: resource.name,
       price: resource.price,
+      type: resource.type,
       image:
         resource.images?.find((img) => img.isThumbnail)?.imageUrl ||
         resource.images?.[0]?.imageUrl ||
@@ -100,8 +115,8 @@ export default function ResourceDetailScreen() {
 
     Toast.show({
       type: "success",
-      text1: "🛒 Đã thêm vào giỏ hàng",
-      text2: `${resource.name} đã được thêm thành công!`,
+      text1: "🛒 added to cart",
+      text2: `${resource.name} added to cart!`,
     });
   };
 
@@ -117,13 +132,27 @@ export default function ResourceDetailScreen() {
     if (alreadyOwned) {
       Toast.show({
         type: "info",
-        text1: "Bạn đã sở hữu resource này rồi",
-        text2: "Không thể mua lại.",
+        text1: "You already own this resource",
+        text2: "You cannot buy it again.",
       });
       return;
     }
 
     if (!resource) return;
+
+    const alreadyInCart = cart?.some(
+      (item) => item.id === resource.resourceTemplateId
+    );
+
+    if (alreadyInCart) {
+      navigation.navigate("Cart");
+      Toast.show({
+        type: "info",
+        text1: "Resource đã có trong giỏ",
+        text2: `${resource.name} đang chờ thanh toán.`,
+      });
+      return;
+    }
 
     const designerName = resource.designerInfo
       ? `${resource.designerInfo.firstName || ""} ${
@@ -136,6 +165,7 @@ export default function ResourceDetailScreen() {
       name: resource.name,
       description: resource.description,
       price: resource.price,
+      type: resource.type,
       image:
         resource.images?.find((img) => img.isThumbnail)?.imageUrl ||
         resource.images?.[0]?.imageUrl,
@@ -152,8 +182,8 @@ export default function ResourceDetailScreen() {
 
     Toast.show({
       type: "success",
-      text1: "🛒 Đang chuyển đến giỏ hàng",
-      text2: `${resource.name} đã được thêm vào giỏ hàng!`,
+      text1: "🛒 go to cart",
+      text2: `${resource.name} added to cart!`,
     });
   };
 
@@ -192,7 +222,7 @@ export default function ResourceDetailScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Icon name="inbox" size={80} color="#D1D5DB" />
-        <Text style={styles.emptyText}>Không tìm thấy tài nguyên.</Text>
+        <Text style={styles.emptyText}>Not found resource.</Text>
       </View>
     );
   }
@@ -297,7 +327,14 @@ export default function ResourceDetailScreen() {
           {/* Right Side: Details */}
           <View style={styles.rightColumn}>
             <View style={styles.rightColumnContainer}>
+              <View style={styles.resourceHeaderRow}>
               <Text style={styles.resourceName}>{resource.name}</Text>
+              {resource.type && (
+                <View style={styles.typeBadge}>
+                  <Text style={styles.typeBadgeText}>{resource.type}</Text>
+                </View>
+              )}
+            </View>
               <Text style={styles.price}>
                 {resource.price.toLocaleString()} đ
               </Text>
@@ -390,7 +427,7 @@ export default function ResourceDetailScreen() {
                   <Text
                     style={[styles.actionButtonText, styles.buyNowButtonText]}
                   >
-                    Mua ngqay
+                   Buy now
                   </Text>
                 </Pressable>
               </View>

@@ -165,12 +165,12 @@ export const styles = StyleSheet.create({
     right: 16,
   },
   typeBadge: {
-    backgroundColor: "#1E293B",
+    backgroundColor: "#07dec9ff",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#14b2daff",
   },
   typeBadgeText: {
     fontSize: 12,
@@ -190,6 +190,12 @@ export const styles = StyleSheet.create({
   // Title Section
   titleSection: {
     marginBottom: 16,
+  },
+  resourceHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
   },
   resourceName: {
     fontSize: 24,

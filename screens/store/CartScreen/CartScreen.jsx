@@ -7,6 +7,8 @@ import {
   Pressable,
   TextInput,
   Alert,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -27,6 +29,7 @@ export default function CartScreen() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discount, setDiscount] = useState(0);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const applyCoupon = () => {
     if (coupon.trim().toLowerCase() === "sale10") {
@@ -42,9 +45,9 @@ export default function CartScreen() {
     }
   };
 
-  const createOrder = async () => {
+  const handleCreateOrder = async () => {
     try {
-      setLoading(true);
+      setIsCreatingOrder(true);
       const orderData = {
         subscriptionId: null,
         items: cart.map((item) => ({
@@ -61,13 +64,18 @@ export default function CartScreen() {
       // Clear cart
       cart.forEach((item) => removeFromCart(item.id));
 
+      setShowConfirmModal(false);
+
       Toast.show({
-        type: "info",
-        text1: "Redirecting to payment...",
+        type: "success",
+        text1: "Order created successfully",
+        text2: "Redirecting to payment...",
       });
 
       // Navigate to OrderSuccess screen with orderId
-      navigation.navigate("OrderSuccess", { orderId });
+      setTimeout(() => {
+        navigation.navigate("OrderSuccess", { orderId });
+      }, 500);
     } catch (err) {
       Toast.show({
         type: "error",
@@ -75,17 +83,169 @@ export default function CartScreen() {
         text2: err.message,
       });
     } finally {
-      setLoading(false);
+      setIsCreatingOrder(false);
     }
   };
 
+  const createOrder = () => {
+    setShowConfirmModal(true);
+  };
+
   const finalTotal = total - discount;
+
+  const ConfirmPaymentModal = () => {
+    return (
+      <Modal
+        visible={showConfirmModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !isCreatingOrder && setShowConfirmModal(false)}
+      >
+        <View style={cartStyles.modalOverlay}>
+          <View style={cartStyles.modalContent}>
+            {/* Header */}
+            <View style={cartStyles.modalHeader}>
+              <View style={cartStyles.iconContainer}>
+                <Icon name="shopping-cart" size={32} color="#1E40AF" />
+              </View>
+              <Text style={cartStyles.modalTitle}>Confirm Payment</Text>
+              <Text style={cartStyles.modalSubtitle}>
+                Please review your order before confirming
+              </Text>
+            </View>
+
+            {/* Order Summary */}
+            <ScrollView
+              style={cartStyles.modalBody}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Items Summary */}
+              <View style={cartStyles.modalSection}>
+                <Text style={cartStyles.modalSectionTitle}>Order Items</Text>
+                <View style={cartStyles.itemsListContainer}>
+                  {cart.map((item, index) => (
+                    <View key={item.id} style={cartStyles.modalItemRow}>
+                      <View style={cartStyles.modalItemInfo}>
+                        <Text style={cartStyles.modalItemName}>
+                          {item.name}
+                        </Text>
+                        {item.type && (
+                          <Text style={cartStyles.modalItemType}>
+                            {item.type}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={cartStyles.modalItemPrice}>
+                        {item.price.toLocaleString()} đ
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* Price Breakdown */}
+              <View style={cartStyles.modalSection}>
+                <Text style={cartStyles.modalSectionTitle}>Price Details</Text>
+                <View style={cartStyles.priceBreakdown}>
+                  <View style={cartStyles.priceRow}>
+                    <Text style={cartStyles.priceLabel}>Subtotal</Text>
+                    <Text style={cartStyles.priceValue}>
+                      {subtotal.toLocaleString()} đ
+                    </Text>
+                  </View>
+
+                  {appliedCoupon && (
+                    <View style={[cartStyles.priceRow, cartStyles.discountPriceRow]}>
+                      <View style={cartStyles.discountPriceLabel}>
+                        <Icon
+                          name="local-offer"
+                          size={14}
+                          color="#10B981"
+                        />
+                        <Text style={cartStyles.discountPriceText}>
+                          Discount ({appliedCoupon})
+                        </Text>
+                      </View>
+                      <Text style={cartStyles.discountPriceValue}>
+                        -{discount.toLocaleString()} đ
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={cartStyles.priceDivider} />
+
+                  <View style={cartStyles.totalPriceRow}>
+                    <Text style={cartStyles.totalPriceLabel}>Total Amount</Text>
+                    <Text style={cartStyles.totalPriceValue}>
+                      {finalTotal.toLocaleString()} đ
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Payment Method Info */}
+              <View style={cartStyles.modalSection}>
+                <View style={cartStyles.paymentMethodBox}>
+                  <Icon name="account-balance-wallet" size={20} color="#8B5CF6" />
+                  <View style={{ marginLeft: 12, flex: 1 }}>
+                    <Text style={cartStyles.paymentMethodTitle}>
+                      Payment Method
+                    </Text>
+                    <Text style={cartStyles.paymentMethodText}>
+                      Payment via Digital Wallet
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Footer Buttons */}
+            <View style={cartStyles.modalFooter}>
+              <Pressable
+                style={[
+                  cartStyles.cancelBtn,
+                  isCreatingOrder && { opacity: 0.6 },
+                ]}
+                onPress={() => setShowConfirmModal(false)}
+                disabled={isCreatingOrder}
+              >
+                <Text style={cartStyles.cancelBtnText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  cartStyles.confirmBtn,
+                  isCreatingOrder && { opacity: 0.6 },
+                ]}
+                onPress={handleCreateOrder}
+                disabled={isCreatingOrder}
+              >
+                {isCreatingOrder ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Icon name="lock" size={18} color="#FFFFFF" />
+                    <Text style={cartStyles.confirmBtnText}>
+                      Confirm Payment
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   if (cart.length === 0) {
     return (
       <SafeAreaView style={cartStyles.container}>
         <View style={cartStyles.header}>
-          <Pressable onPress={() => navigation.goBack()} style={cartStyles.backBtn}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={cartStyles.backBtn}
+          >
             <Icon name="arrow-back" size={24} color="#1F2937" />
           </Pressable>
           <Text style={cartStyles.headerTitle}>Your Cart</Text>
@@ -112,7 +272,10 @@ export default function CartScreen() {
   return (
     <SafeAreaView style={cartStyles.container}>
       <View style={cartStyles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={cartStyles.backBtn}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={cartStyles.backBtn}
+        >
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={cartStyles.headerTitle}>Cart ({cart.length})</Text>
@@ -157,7 +320,10 @@ export default function CartScreen() {
                   </View>
                 </View>
 
-                <Pressable onPress={() => removeFromCart(item.id)} style={cartStyles.removeBtn}>
+                <Pressable
+                  onPress={() => removeFromCart(item.id)}
+                  style={cartStyles.removeBtn}
+                >
                   <Icon name="delete-outline" size={20} color="#EF4444" />
                 </Pressable>
               </View>
@@ -171,7 +337,9 @@ export default function CartScreen() {
           <View style={cartStyles.summaryCard}>
             <View style={cartStyles.summaryRow}>
               <Text style={cartStyles.label}>Subtotal</Text>
-              <Text style={cartStyles.value}>{subtotal.toLocaleString()} đ</Text>
+              <Text style={cartStyles.value}>
+                {subtotal.toLocaleString()} đ
+              </Text>
             </View>
 
             {appliedCoupon && (
@@ -192,7 +360,9 @@ export default function CartScreen() {
 
             <View style={cartStyles.summaryRow}>
               <Text style={cartStyles.totalLabel}>Total</Text>
-              <Text style={cartStyles.totalValue}>{finalTotal.toLocaleString()} đ</Text>
+              <Text style={cartStyles.totalValue}>
+                {finalTotal.toLocaleString()} đ
+              </Text>
             </View>
           </View>
 
@@ -213,18 +383,18 @@ export default function CartScreen() {
           </View>
 
           <Pressable
-            style={[cartStyles.checkoutBtn, isCreatingOrder && { opacity: 0.6 }]}
+            style={cartStyles.checkoutBtn}
             onPress={createOrder}
             disabled={isCreatingOrder}
           >
             <Icon name="lock" size={20} color="#FFFFFF" />
-            <Text style={cartStyles.checkoutText}>
-              {isCreatingOrder ? "Creating Order..." : "Checkout Now"}
-            </Text>
+            <Text style={cartStyles.checkoutText}>Checkout Now</Text>
             <Icon name="arrow-forward" size={20} color="#FFFFFF" />
           </Pressable>
         </View>
       </View>
+
+      <ConfirmPaymentModal />
     </SafeAreaView>
   );
 }

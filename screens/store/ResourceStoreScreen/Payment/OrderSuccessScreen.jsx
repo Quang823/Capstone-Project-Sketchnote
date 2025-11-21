@@ -91,10 +91,7 @@ export default function OrderSuccessScreen() {
           )}
 
           <View style={styles.infoBox}>
-            <View style={styles.infoRow}>
-              <Text style={styles.label}>Order ID:</Text>
-              <Text style={styles.value}>{order?.orderId}</Text>
-            </View>
+           
 
             <View style={styles.infoRow}>
               <Text style={styles.label}>Total Amount:</Text>
@@ -160,11 +157,12 @@ export default function OrderSuccessScreen() {
             <View style={styles.infoRow}>
               <Text style={styles.label}>Created At:</Text>
               <Text style={styles.value}>
-                {new Date(order?.createdAt).toLocaleString("en-US", {
-                  dateStyle: "medium",
-                  timeStyle: "short",
-                })}
-              </Text>
+  {new Date(order?.createdAt).toLocaleDateString("vi-VN", {
+  dateStyle: "medium",
+})
+}
+</Text>
+
             </View>
           </View>
 
@@ -177,8 +175,7 @@ export default function OrderSuccessScreen() {
               style={styles.warningBox}
             >
               <Text style={styles.warningText}>
-                ⚠️ Your payment could not be processed. Please try again or
-                contact support.
+               ⚠️ Your payment could not be processed. Please try again in your order history or check your wallet.
               </Text>
             </MotiView>
           )}
@@ -190,7 +187,7 @@ export default function OrderSuccessScreen() {
           transition={{ delay: 300 }}
           style={styles.itemsSection}
         >
-          <Text style={styles.subTitle}>🛍️ Order Items</Text>
+          <Text style={styles.subTitle}>🛍️ Order </Text>
           <View style={styles.itemsGrid}>
             {order?.items?.map((item, index) => (
               <MotiView
@@ -214,9 +211,9 @@ export default function OrderSuccessScreen() {
           {isPaymentFailed && (
             <Pressable
               style={[styles.button, styles.retryButton]}
-              onPress={() => navigation.navigate("Checkout", { orderId })}
+              onPress={() => navigation.navigate("Wallet")}
             >
-              <Text style={styles.buttonText}>Try Again</Text>
+              <Text style={styles.buttonText}>Go to Wallet</Text>
             </Pressable>
           )}
           <Pressable
