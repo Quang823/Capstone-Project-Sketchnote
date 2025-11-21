@@ -1,4 +1,4 @@
-import { StyleSheet, Dimensions, Platform } from "react-native";
+import { StyleSheet, Dimensions, Platform, StatusBar } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -64,39 +64,50 @@ export const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#DBEAFE",
+    borderColor: "#a1c3efff",
   },
-  filterButton: {
+  premiumWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#DBEAFE",
+    marginRight: 12,
   },
-  filterText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1E40AF",
-  },
-  subscriptionButton: {
+
+  premiumContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#FFFBEB",
+    backgroundColor: "#fef9c3",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#FEF3C7",
+    borderColor: "#FBBF24",
   },
-  subscriptionText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#D97706",
+
+  premiumLottie: {
+    width: 50,
+    height: 50,
+    marginRight: 4,
+  },
+
+  premiumTextBox: {
+    flexDirection: "column",
+    marginRight: 6,
+  },
+
+  premiumTitle: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#92400E",
+  },
+
+  premiumSubtitle: {
+    fontSize: 10,
+    color: "#B45309",
+  },
+
+  arrowLottie: {
+    width: 50,
+    height: 50,
   },
   createButton: {
     borderRadius: 12,
@@ -124,7 +135,7 @@ export const styles = StyleSheet.create({
   popoverContainer: {
     position: "absolute",
     right: CONTENT_PADDING,
-    top: Platform.OS === "ios" ? 100 : 90,
+    top: (StatusBar.currentHeight || 0) + 100,
     zIndex: 100,
   },
   popover: {

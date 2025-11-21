@@ -23,6 +23,7 @@ import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import LazyImage from "../../../common/LazyImage";
 import * as offlineStorage from "../../../utils/offlineStorage";
+import TypeFloatText from "./TypeFloatText";
 //
 // 🔹 Helper: format date
 //
@@ -114,6 +115,7 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
 //
 export default function HomeScreen({ navigation }) {
   const [projects, setProjects] = useState([]);
+  const [sharedProjects, setSharedProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
@@ -137,8 +139,12 @@ export default function HomeScreen({ navigation }) {
     try {
       setLoading(true);
       setError(null);
-      const response = await projectService.getUserProjects();
-      setProjects(response);
+      const [myProjects, shared] = await Promise.all([
+        projectService.getUserProjects(),
+        projectService.getSharedProjects(),
+      ]);
+      setProjects(myProjects);
+      setSharedProjects(shared);
     } catch (err) {
       console.error("❌ Error fetching projects:", err);
       setError("Không thể tải danh sách dự án. Vui lòng thử lại sau.");
@@ -193,7 +199,9 @@ export default function HomeScreen({ navigation }) {
           pages: [],
           projectDetails: null,
         };
-        navigation?.navigate?.("DrawingScreen", { noteConfig: quickNoteConfig });
+        navigation?.navigate?.("DrawingScreen", {
+          noteConfig: quickNoteConfig,
+        });
       }
       lastTap = now;
     };
@@ -318,10 +326,45 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+
               <Text style={styles.headerTitle}>My Projects</Text>
+              <LottieView
+                source={require("../../../assets/cat.json")}
+                autoPlay
+                loop
+                resizeMode="contain"
+                style={{ width: 80, height: 70 }} // size lớn hơn
+              />
             </View>
 
             <View style={styles.headerRight}>
+              {/* PRO BUTTON + TEXT + ARROW ANIMATION */}
+              <TouchableOpacity
+                style={styles.premiumWrapper}
+                onPress={() => navigation.navigate("DesignerSubscription")}
+              >
+                <View style={styles.premiumContent}>
+                  <View style={styles.premiumTextBox}>
+                    <TypeFloatText
+                      text="Become a Designer"
+                      style={styles.premiumTitle}
+                      speed={40}
+                    />
+                    <TypeFloatText
+                      text="Click here to upgrade"
+                      style={styles.premiumSubtitle}
+                      speed={35}
+                    />
+                  </View>
+
+                  <LottieView
+                    source={require("../../../assets/premium.json")}
+                    autoPlay
+                    loop
+                    style={styles.premiumLottie}
+                  />
+                </View>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.iconButton}
                 onPress={() => navigation.navigate("Wallet")}
@@ -336,19 +379,7 @@ export default function HomeScreen({ navigation }) {
                 <Icon name="shopping-cart" size={22} color="#1E40AF" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.filterButton}>
-                <Icon name="filter-list" size={20} color="#1E40AF" />
-                <Text style={styles.filterText}>Date</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.subscriptionButton}
-                onPress={() => navigation.navigate("DesignerSubscription")}
-              >
-                <Icon name="workspace-premium" size={20} color="#FBBF24" />
-                <Text style={styles.subscriptionText}>Pro</Text>
-              </TouchableOpacity>
-
+              {/* CREATE NEW BUTTON */}
               <TouchableOpacity
                 style={styles.createButton}
                 onPress={() => setPopoverVisible((p) => !p)}
@@ -397,7 +428,7 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.retryButtonText}>Try Again</Text>
               </TouchableOpacity>
             </View>
-          ) : projects.length === 0 ? (
+          ) : projects.length === 0 && sharedProjects.length === 0 ? (
             <View style={styles.centerContainer}>
               <Icon name="folder-open" size={64} color="#BFDBFE" />
               <Text style={styles.emptyTitle}>No Projects Yet</Text>
@@ -415,17 +446,54 @@ export default function HomeScreen({ navigation }) {
             </View>
           ) : (
             <>
-              <FlatList
-                data={paginatedProjects}
-                keyExtractor={(item) => item.projectId?.toString()}
-                renderItem={renderItem}
-                numColumns={columns}
-                columnWrapperStyle={styles.gridRow}
-                contentContainerStyle={styles.gridContainer}
-                showsVerticalScrollIndicator={false}
-              />
+              {projects.length > 0 && (
+                <FlatList
+                  data={paginatedProjects}
+                  keyExtractor={(item) => item.projectId?.toString()}
+                  renderItem={renderItem}
+                  numColumns={columns}
+                  columnWrapperStyle={styles.gridRow}
+                  contentContainerStyle={styles.gridContainer}
+                  showsVerticalScrollIndicator={false}
+                />
+              )}
 
-              {totalPages > 1 && (
+              {sharedProjects.length > 0 && (
+                <View style={{ paddingTop: 8 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 12,
+                      paddingHorizontal: 4,
+                    }}
+                  >
+                    <Icon name="groups" size={20} color="#1E40AF" />
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: "700",
+                        color: "#084F8C",
+                      }}
+                    >
+                      Shared Projects
+                    </Text>
+                  </View>
+
+                  <FlatList
+                    data={sharedProjects}
+                    keyExtractor={(item) => item.projectId?.toString()}
+                    renderItem={renderItem}
+                    numColumns={columns}
+                    columnWrapperStyle={styles.gridRow}
+                    contentContainerStyle={{ paddingBottom: 40 }}
+                    showsVerticalScrollIndicator={false}
+                  />
+                </View>
+              )}
+
+              {projects.length > 0 && totalPages > 1 && (
                 <View style={styles.paginationContainer}>
                   <TouchableOpacity
                     style={[

@@ -12,6 +12,15 @@ export const projectAPIController = {
       throw err;
     }
   },
+  // 🔹 Lấy danh sách project được share cho tôi
+  getSharedProjects: async () => {
+    try {
+      const res = await privateApi2.get(`/api/projects/me/shared`);
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  },
   // 🔹 Lấy presigned URL (đổi sang privateApi)
   getPresign: async (fileName, contentType) => {
     try {
@@ -89,13 +98,14 @@ export const projectAPIController = {
     }
   },
 
-  inviteCollaborator: async ({ projectId, email, edited }) => {
+  inviteCollaborator: async ({ projectId, userId, edited }) => {
     try {
       const res = await privateApi2.post(`/api/collaborations/invite`, {
         projectId,
-        email,
+        userId,
         edited,
       });
+      console.log("✅ Invite collaborator response:", res.data);
       return res;
     } catch (err) {
       throw err;

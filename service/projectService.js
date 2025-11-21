@@ -1,4 +1,6 @@
 import { projectAPIController } from "../api/projectAPIController";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Client as StompClient } from "@stomp/stompjs";
 import * as FileSystem from "expo-file-system";
 import { parseJsonInBackground } from "../utils/jsonUtils";
 import * as offlineStorage from "../utils/offlineStorage";
@@ -210,6 +212,20 @@ export const projectService = {
     }
   },
 
+  getSharedProjects: async () => {
+    try {
+      const response = await projectAPIController.getSharedProjects();
+      if (response?.data?.result?.projects) {
+        return response.data.result.projects;
+      }
+      console.log("getSharedProjects response:", response);
+      return [];
+    } catch (error) {
+      console.error("Error in getSharedProjects:", error);
+      throw error;
+    }
+  },
+
   getPresign: async (fileName, contentType = "JSON") => {
     try {
       const response = await projectAPIController.getPresign(
@@ -296,13 +312,14 @@ export const projectService = {
     }
   },
 
-  inviteCollaborator: async (projectId, email, edited = true) => {
+  inviteCollaborator: async (projectId, userId, edited = true) => {
     try {
       const response = await projectAPIController.inviteCollaborator({
         projectId,
-        email,
+        userId,
         edited,
       });
+      console.log("✅ Invite collaborator response:", response?.data?.result);
       return response?.data?.result;
     } catch (err) {
       const message =
@@ -321,7 +338,9 @@ export const projectService = {
       return response?.data?.result;
     } catch (err) {
       const message =
-        err.response?.data?.message || err.message || "Update permission failed";
+        err.response?.data?.message ||
+        err.message ||
+        "Update permission failed";
       throw new Error(message);
     }
   },
@@ -332,6 +351,10 @@ export const projectService = {
     let activeProjectId = null;
     let onMessageCb = null;
     let heartbeatTimer = null;
+    let pendingQueue = [];
+    let connectUrl = "wss://sketchnote.litecsys.com/ws";
+    let triedSockJs = false;
+    let stompClient = null;
 
     const buildFrame = (command, headers = {}, body = "") => {
       const lines = [command];
@@ -366,59 +389,82 @@ export const projectService = {
         if (isConnected && activeProjectId === projectId) return true;
         activeProjectId = projectId;
         onMessageCb = onMessage;
-        socket = new WebSocket("wss://sketchnote.litecsys.com/ws");
-        socket.onopen = () => {
-          const frame = buildFrame("CONNECT", {
-            "accept-version": "1.2",
-            "heart-beat": "0,0",
-          });
-          socket.send(frame);
-        };
-        socket.onmessage = (ev) => {
-          const frame = parseFrame(ev.data);
-          if (!frame) return;
-          if (frame.command === "CONNECTED") {
-            isConnected = true;
-            const sub = buildFrame("SUBSCRIBE", {
-              destination: `/topic/project/${projectId}`,
-              id: `sub-${projectId}`,
-              ack: "auto",
-            });
-            socket.send(sub);
-            heartbeatTimer = setInterval(() => {
-              try {
-                socket.send("\n");
-              } catch {}
-            }, 20000);
-          } else if (frame.command === "MESSAGE") {
+        console.log("[Realtime] CONNECT", { projectId, userId });
+        const token = await AsyncStorage.getItem("accessToken");
+        stompClient = new StompClient({
+          webSocketFactory: () => new WebSocket("wss://sketchnote.litecsys.com/ws/websocket"),
+          debug: (str) => console.log(str),
+          reconnectDelay: 5000,
+          heartbeatIncoming: 4000,
+          heartbeatOutgoing: 4000,
+          connectHeaders: token
+            ? { Authorization: `Bearer ${token}` }
+            : undefined,
+          onConnect: () => {
             try {
-              const json = JSON.parse(frame.body || "{}");
-              if (typeof onMessageCb === "function") onMessageCb(json);
+              isConnected = true;
+              console.log("[Realtime] STOMP CONNECTED (SockJS)");
+              const sub = stompClient.subscribe(
+                `/topic/project/${projectId}`,
+                (message) => {
+                  try {
+                    const json = JSON.parse(message.body || "{}");
+                    console.log("[Realtime] INBOUND", json);
+                    if (typeof onMessageCb === "function") onMessageCb(json);
+                  } catch {}
+                },
+              );
+              console.log("[Realtime] SUBSCRIBE SENT", `/topic/project/${projectId}`);
+              if (pendingQueue.length > 0) {
+                try {
+                  pendingQueue.forEach((f) => {
+                    try {
+                      const parsed = parseFrame(f);
+                      if (parsed?.command === "SEND") {
+                        stompClient.publish({
+                          destination: parsed.headers?.destination,
+                          body: parsed.body || "",
+                          headers: { "content-type": "application/json" },
+                        });
+                      }
+                    } catch {}
+                  });
+                } catch {}
+                pendingQueue = [];
+              }
             } catch {}
-          }
-        };
-        socket.onerror = () => {};
-        socket.onclose = () => {
-          isConnected = false;
-          activeProjectId = null;
-          if (heartbeatTimer) {
-            clearInterval(heartbeatTimer);
-            heartbeatTimer = null;
-          }
-        };
+          },
+          onStompError: (frame) => {
+            try {
+              console.error("[Realtime] STOMP ERROR", frame?.headers || frame);
+            } catch {}
+          },
+          onWebSocketClose: (e) => {
+            try {
+              console.log("[Realtime] WS CLOSE (SockJS)", { code: e?.code, reason: e?.reason });
+            } catch {}
+            isConnected = false;
+            activeProjectId = null;
+            if (heartbeatTimer) {
+              clearInterval(heartbeatTimer);
+              heartbeatTimer = null;
+            }
+            pendingQueue = [];
+          },
+        });
+        stompClient.activate();
         return true;
       } catch (err) {
+        console.error("[Realtime] CONNECT ERROR", err);
         throw err;
       }
     };
 
     const disconnect = () => {
       try {
-        if (socket && isConnected) {
-          try {
-            const frame = buildFrame("DISCONNECT");
-            socket.send(frame);
-          } catch {}
+        console.log("[Realtime] DISCONNECT");
+        if (stompClient) {
+          try { stompClient.deactivate(); } catch {}
         }
       } finally {
         if (heartbeatTimer) {
@@ -432,12 +478,12 @@ export const projectService = {
         isConnected = false;
         activeProjectId = null;
         onMessageCb = null;
+        pendingQueue = [];
       }
     };
 
     const sendAction = (projectId, userId, actionType, payload = {}) => {
       try {
-        if (!socket || !isConnected) return;
         const body = JSON.stringify({
           type: actionType,
           tool: payload.tool || "pen",
@@ -445,11 +491,30 @@ export const projectService = {
           userId,
           payload,
         });
-        const frame = buildFrame("SEND", {
-          destination: `/app/project/${projectId}/action`,
-          "content-type": "application/json",
-        }, body);
-        socket.send(frame);
+        const destination = `/app/project/${projectId}/action`;
+        const frame = buildFrame("SEND", { destination, "content-type": "application/json" }, body);
+        const pointsLen = Array.isArray(payload?.points)
+          ? payload.points.length
+          : Array.isArray(payload?.pointsDetailed)
+          ? payload.pointsDetailed.length
+          : 0;
+        if (stompClient && stompClient.active) {
+          console.log("[Realtime] OUTBOUND SEND", {
+            projectId,
+            userId,
+            actionType,
+            pointsLen,
+          });
+          stompClient.publish({ destination, body, headers: { "content-type": "application/json" } });
+        } else {
+          console.log("[Realtime] QUEUE SEND", {
+            projectId,
+            userId,
+            actionType,
+            pointsLen,
+          });
+          pendingQueue.push(frame);
+        }
       } catch {}
     };
 
@@ -460,6 +525,33 @@ export const projectService = {
       sendAction(projectId, userId, "DRAW", { tool, points: pts });
     };
 
-    return { connect, disconnect, sendAction, sendDraw };
+    const sendStroke = (projectId, userId, pageId, stroke = {}, pageJsonString) => {
+      const detailed = Array.isArray(stroke.points)
+        ? stroke.points.map((p) => ({
+            x: p?.x ?? 0,
+            y: p?.y ?? 0,
+            pressure: p?.pressure,
+            thickness: p?.thickness,
+            stabilization: p?.stabilization,
+          }))
+        : [];
+      const simple = detailed.map((p) => [p.x, p.y]);
+      const payload = {
+        tool: stroke.tool || "pen",
+        pageId,
+        points: simple,
+        pointsDetailed: detailed,
+        color: stroke.color,
+        width: stroke.width,
+        opacity: stroke.opacity,
+        layerId: stroke.layerId,
+        rotation: stroke.rotation,
+        strokeJson: JSON.stringify({ ...stroke, points: detailed }),
+        pageJson: typeof pageJsonString === "string" ? pageJsonString : undefined,
+      };
+      sendAction(projectId, userId, "DRAW", payload);
+    };
+
+    return { connect, disconnect, sendAction, sendDraw, sendStroke };
   })(),
 };

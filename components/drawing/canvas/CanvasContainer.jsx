@@ -38,6 +38,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   {
     tool,
     layers,
+    pageId,
     activeLayerId,
     setLayers,
     color,
@@ -514,12 +515,32 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
       try {
         if (projectId && userId) {
-          const pts = Array.isArray(stroke.points) ? stroke.points : [];
-          projectService.realtime.sendDraw(
+          const layerSummaries = Array.isArray(internalLayers)
+            ? internalLayers.map((l) => ({
+                id: l?.id,
+                name: l?.name || (typeof l?.id === "string" ? l.id : "Layer"),
+                visible: l?.visible !== false,
+                locked: !!l?.locked,
+              }))
+            : [{ id: "layer1", name: "Layer 1", visible: true, locked: false }];
+
+          const pageChunk = {
+            id: pageId,
+            createdAt: new Date().toISOString(),
+            type: isCover ? "cover" : "paper",
+            backgroundColor: backgroundColor,
+            template: pageTemplate,
+            imageUrl: backgroundImageUrl,
+            strokes: [stroke],
+            layers: layerSummaries,
+          };
+
+          projectService.realtime.sendStroke(
             projectId,
             userId,
-            stroke.tool || "pen",
-            pts
+            pageId,
+            stroke,
+            JSON.stringify(pageChunk),
           );
         }
       } catch {}
@@ -1202,10 +1223,15 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               existingIds.add(id);
               return { ...s, id, layerId };
             });
+            const hasTemplate = uniqueStrokes.some((s) => s?.__templateSource);
 
             if (layerMap.has(layerId)) {
               const existingLayer = layerMap.get(layerId);
-              existingLayer.strokes.push(...uniqueStrokes);
+              if (hasTemplate) {
+                existingLayer.strokes = [...uniqueStrokes, ...(existingLayer.strokes || [])];
+              } else {
+                existingLayer.strokes.push(...uniqueStrokes);
+              }
             } else {
               layerMap.set(layerId, {
                 id: layerId,

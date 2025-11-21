@@ -8,9 +8,13 @@ import {
   Text,
   TextInput,
   Switch,
+  Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
 import { projectService } from "../../../service/projectService";
+import { authService } from "../../../service/authService";
+import Toast from "react-native-toast-message";
 
 export default function HeaderToolbar({
   onBack,
@@ -26,6 +30,9 @@ export default function HeaderToolbar({
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteEdit, setInviteEdit] = useState(true);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [foundUser, setFoundUser] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   const renderButton = (
     icon,
@@ -100,15 +107,65 @@ export default function HeaderToolbar({
             <Text style={styles.modalTitle}>Mời thành viên</Text>
             <View style={styles.inputRow}>
               <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="user@example.com"
-                value={inviteEmail}
-                onChangeText={setInviteEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-              />
+              <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="user@example.com"
+                  value={inviteEmail}
+                  onChangeText={setInviteEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+                <TouchableOpacity
+                  style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: "#1E40AF", borderRadius: 10 }}
+                  disabled={searching || !inviteEmail.trim()}
+                  onPress={async () => {
+                    if (!inviteEmail.trim()) return;
+                    try {
+                      setSearching(true);
+                      const user = await authService.getUserByEmail(inviteEmail.trim());
+                      setFoundUser(user);
+                      setSelectedUserId(null);
+                    } catch (err) {
+                      setFoundUser(null);
+                      setSelectedUserId(null);
+                      Toast.show({ type: "error", text1: "Không tìm thấy", text2: err.message });
+                    } finally {
+                      setSearching(false);
+                    }
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontWeight: "600" }}>Tìm</Text>
+                </TouchableOpacity>
+              </View>
             </View>
+            {searching ? (
+              <View style={{ marginBottom: 12 }}>
+                <ActivityIndicator size="small" color="#1E40AF" />
+              </View>
+            ) : null}
+            {foundUser ? (
+              <TouchableOpacity
+                style={styles.userItem}
+                onPress={() => setSelectedUserId(foundUser.id)}
+              >
+                <Image
+                  source={{ uri: foundUser.avatarUrl || undefined }}
+                  style={styles.avatar}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.userName}>
+                    {`${foundUser.firstName || ""} ${foundUser.lastName || ""}`.trim() || foundUser.email}
+                  </Text>
+                  <Text style={styles.userEmail}>{foundUser.email}</Text>
+                </View>
+                <Ionicons
+                  name={selectedUserId === foundUser.id ? "radio-button-on" : "radio-button-off"}
+                  size={22}
+                  color="#1E40AF"
+                />
+              </TouchableOpacity>
+            ) : null}
             <View style={[styles.inputRow, { justifyContent: "space-between" }]}>
               <Text style={styles.label}>Quyền chỉnh sửa</Text>
               <Switch value={inviteEdit} onValueChange={setInviteEdit} />
@@ -116,18 +173,17 @@ export default function HeaderToolbar({
             <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: "#3B82F6" }]}
-                disabled={inviteLoading}
+                disabled={inviteLoading || !selectedUserId}
                 onPress={async () => {
-                  if (!projectId || !inviteEmail.trim()) return;
+                  if (!projectId || !selectedUserId) return;
                   try {
                     setInviteLoading(true);
-                    await projectService.inviteCollaborator(
-                      projectId,
-                      inviteEmail.trim(),
-                      inviteEdit
-                    );
+                    await projectService.inviteCollaborator(projectId, selectedUserId, inviteEdit);
                     setInviteVisible(false);
                     setInviteEmail("");
+                    setFoundUser(null);
+                    setSelectedUserId(null);
+                    Toast.show({ type: "success", text1: "Invite successful" });
                   } catch {} finally {
                     setInviteLoading(false);
                   }
@@ -224,5 +280,30 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 14,
     fontWeight: "600",
+  },
+  userItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#E5E7EB",
+  },
+  userName: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  userEmail: {
+    fontSize: 12,
+    color: "#6B7280",
   },
 });

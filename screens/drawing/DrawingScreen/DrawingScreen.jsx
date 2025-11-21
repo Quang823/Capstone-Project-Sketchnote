@@ -1081,23 +1081,75 @@ export default function DrawingScreen({ route }) {
     if (!pid || !uid) return;
     const handler = (msg) => {
       try {
+        console.log("[Realtime] MESSAGE", msg);
         if (!msg || msg.projectId !== pid) return;
-        if (msg.type === "DRAW" && msg.payload?.points) {
-          const pts = Array.isArray(msg.payload.points)
-            ? msg.payload.points
-                .map((p) => (Array.isArray(p) ? { x: p[0], y: p[1] } : null))
-                .filter(Boolean)
-            : [];
+        if (msg.type === "DRAW") {
+          let pts = [];
+          // Prefer pageJson if provided (string JSON of page chunk)
+          if (typeof msg.payload?.pageJson === "string") {
+            try {
+              const data = JSON.parse(msg.payload.pageJson);
+              const incomingStrokes = Array.isArray(data?.strokes)
+                ? data.strokes
+                : [];
+              if (incomingStrokes.length > 0) {
+                const pageId = data?.id || msg.payload?.pageId || activePageId;
+                const sanitized = incomingStrokes.map((s) => ({
+                  id: s?.id || `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                  tool: s?.tool || "pen",
+                  color: s?.color || "#2563EB",
+                  width: s?.width || 2,
+                  opacity: s?.opacity ?? 1,
+                  points: Array.isArray(s?.points)
+                    ? s.points.map((p) => ({
+                        x: Number(p?.x) || 0,
+                        y: Number(p?.y) || 0,
+                        pressure: p?.pressure,
+                        thickness: p?.thickness,
+                        stabilization: p?.stabilization,
+                      }))
+                    : [],
+                  layerId: s?.layerId || "layer1",
+                  rotation: s?.rotation || 0,
+                }));
+                if (sanitized.length > 0) {
+                  multiPageCanvasRef.current?.appendStrokesToPage(pageId, sanitized);
+                  return;
+                }
+              }
+            } catch {}
+          }
+          if (Array.isArray(msg.payload?.pointsDetailed)) {
+            pts = msg.payload.pointsDetailed
+              .map((p) =>
+                p && typeof p === "object"
+                  ? {
+                      x: Number(p.x) || 0,
+                      y: Number(p.y) || 0,
+                      pressure: p.pressure,
+                      thickness: p.thickness,
+                      stabilization: p.stabilization,
+                    }
+                  : null,
+              )
+              .filter(Boolean);
+          } else if (Array.isArray(msg.payload?.points)) {
+            pts = msg.payload.points
+              .map((p) => (Array.isArray(p) ? { x: p[0], y: p[1] } : null))
+              .filter(Boolean);
+          }
           if (pts.length < 2) return;
           const stroke = {
             id: `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-            tool: msg.tool || "pen",
-            color: "#2563EB",
-            width: 2,
+            tool: msg.tool || msg.payload?.tool || "pen",
+            color: msg.payload?.color || "#2563EB",
+            width: msg.payload?.width || 2,
+            opacity: msg.payload?.opacity ?? 1,
             points: pts,
-            layerId: "layer1",
+            layerId: msg.payload?.layerId || "layer1",
+            rotation: msg.payload?.rotation || 0,
           };
-          const pageId = activePageId;
+          const pageId = msg.payload?.pageId || activePageId;
           multiPageCanvasRef.current?.appendStrokesToPage(pageId, [stroke]);
         }
       } catch {}
@@ -1109,7 +1161,7 @@ export default function DrawingScreen({ route }) {
         projectService.realtime.disconnect();
       } catch {}
     };
-  }, [noteConfig?.projectId, user?.id, activePageId]);
+  }, [noteConfig?.projectId, user?.id]);
 
   // 📤 EXPORT (local PDF/PNG)
   const handleExportFile = async (options) => {

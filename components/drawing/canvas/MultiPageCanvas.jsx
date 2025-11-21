@@ -213,6 +213,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const [overviewVisible, setOverviewVisible] = useState(false);
   const [templateConfirm, setTemplateConfirm] = useState(null);
   const [applyMode, setApplyMode] = useState("append");
+  const [placeTemplateOnNewLayer, setPlaceTemplateOnNewLayer] = useState(true);
 
   // Initialize pages based on noteConfig
   const initialPages = useMemo(() => {
@@ -1274,13 +1275,40 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         extractTemplateData(json);
       const prevPage = pages.find((pg) => pg.id === pageId) || {};
       const pageRef = pageRefs.current[pageId];
+      if (placeTemplateOnNewLayer) {
+        setPageLayers?.((prev) => {
+          const curr = prev[pageId] || [
+            { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+          ];
+          const hasTemplateLayer = curr.some((l) => l.id === "template");
+          return {
+            ...prev,
+            [pageId]: hasTemplateLayer
+              ? curr
+              : [
+                  ...curr,
+                  {
+                    id: "template",
+                    name: "Template",
+                    visible: true,
+                    locked: false,
+                    strokes: [],
+                  },
+                ],
+          };
+        });
+      }
       if (pageRef) {
         if (mode === "replace" && typeof pageRef.loadStrokes === "function") {
           const toLoad = Array.isArray(strokesArray) ? strokesArray : [];
           pageRef.loadStrokes(toLoad, layersMetadata || []);
         } else if (typeof pageRef.appendStrokes === "function") {
           const toAppend = Array.isArray(strokesArray)
-            ? strokesArray.map((s) => ({ ...s, __templateSource: safeUrl }))
+            ? strokesArray.map((s) => ({
+                ...s,
+                __templateSource: safeUrl,
+                layerId: placeTemplateOnNewLayer ? "template" : s.layerId || "layer1",
+              }))
             : [];
           pageRef.appendStrokes(toAppend);
         }
@@ -1505,6 +1533,44 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               >
                 <Text style={{ color: applyMode === "replace" ? "white" : "#111827" }}>
                   Replace (Overwrite)
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Placement Toggle */}
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 10,
+                marginBottom: 18,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <TouchableOpacity
+                onPress={() => setPlaceTemplateOnNewLayer(true)}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  borderRadius: 12,
+                  backgroundColor: placeTemplateOnNewLayer ? "#2563EB" : "#E5E7EB",
+                }}
+              >
+                <Text style={{ color: placeTemplateOnNewLayer ? "white" : "#111827" }}>
+                  Place on new layer
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setPlaceTemplateOnNewLayer(false)}
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  borderRadius: 12,
+                  backgroundColor: !placeTemplateOnNewLayer ? "#2563EB" : "#E5E7EB",
+                }}
+              >
+                <Text style={{ color: !placeTemplateOnNewLayer ? "white" : "#111827" }}>
+                  Merge into layer
                 </Text>
               </TouchableOpacity>
             </View>
