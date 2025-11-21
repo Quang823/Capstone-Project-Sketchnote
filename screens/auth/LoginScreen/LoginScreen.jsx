@@ -83,8 +83,7 @@ export default function LoginScreen({ onBack }) {
       toast({ title: "Login successfully! 🎉", variant: "success" });
 
       const { roles } = loginResult;
-      if (roles.includes("ADMIN")) navigation.navigate("AdminDashboard");
-      else if (roles.includes("DESIGNER"))
+       if (roles.includes("DESIGNER"))
         navigation.navigate("DesignerDashboard");
       else if (roles.includes("CUSTOMER")) navigation.navigate("Home");
     } catch (error) {

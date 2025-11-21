@@ -16,12 +16,17 @@ import { styles } from "./OrderHistoryScreen.styles";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import loadingAnimation from "../../../assets/loading.json";
 import LottieView from "lottie-react-native";
+import Toast from "react-native-toast-message";
+
+const ITEMS_PER_PAGE = 5;
+
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
-  const [orders, setOrders] = useState([]);
+  const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [retryingOrderId, setRetryingOrderId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchOrders();
@@ -31,11 +36,19 @@ export default function OrderHistoryScreen() {
     try {
       setLoading(true);
       const response = await orderService.getOrderByUserId();
-      console.log("response:", response);
-      setOrders(response || []);
+     
+      
+      // Sắp xếp orders theo ngày mới nhất lên trên
+      const sortedOrders = (response || []).sort((a, b) => {
+        const dateA = new Date(a.issueDate);
+        const dateB = new Date(b.issueDate);
+        return dateB - dateA; // Mới nhất lên trên
+      });
+      
+      setAllOrders(sortedOrders);
+      setCurrentPage(1); // Reset về trang 1
     } catch (error) {
       console.error("Error fetching orders:", error);
-      Alert.alert("Error", "Failed to load orders. Please try again.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -47,48 +60,50 @@ export default function OrderHistoryScreen() {
     fetchOrders();
   };
 
-  const handleRetryPayment = async (orderId, invoiceNumber, totalAmount) => {
-    try {
-      setRetryingOrderId(orderId);
-      await orderService.createOrderRetry(orderId);
+ const handleRetryPayment = async (orderId, invoiceNumber, totalAmount) => {
+  try {
+    setRetryingOrderId(orderId);
 
-      // Sau khi retry thành công, chuyển đến trang thanh toán
-      navigation.navigate("PaymentSuccess", {
-        orderId,
-        invoiceNumber,
-        totalAmount,
-      });
+    await orderService.createOrderRetry(orderId);
+    await fetchOrders(); // ✅ Chờ xong rồi mới tiếp tục
 
-      // Refresh lại danh sách orders
-      await fetchOrders();
-    } catch (error) {
-      console.error("Error retrying payment:", error);
-      Alert.alert(
-        "Retry Failed",
-        error.message || "Failed to retry payment. Please try again."
-      );
-    } finally {
-      setRetryingOrderId(null);
-    }
-  };
+    // 🔥 Hiện Alert thay vì Toast
+    Alert.alert(
+      "Retry Successful",
+      "Payment has been retried successfully.",
+      [{ text: "OK" }],
+      { cancelable: true }
+    );
 
-  // 🎨 Màu trạng thái pastel đồng nhất
+  } catch (error) {
+    Alert.alert(
+      "Retry Failed",
+      error.message || "Insufficient balance in wallet",
+      [{ text: "OK" }],
+      { cancelable: true }
+    );
+  } finally {
+    setRetryingOrderId(null);
+  }
+};
+
+
   const getStatusColor = (status) => {
     switch (status) {
       case "PENDING":
-        return "#FFD54F"; // Vàng pastel
+        return "#FFD54F";
       case "COMPLETED":
-        return "#81C784"; // Xanh lá dịu
+        return "#81C784";
       case "CANCELLED":
-        return "#E57373"; // Đỏ nhẹ
+        return "#E57373";
       case "CONFIRMED":
-        return "#64B5F6"; // Xanh dương sáng
+        return "#64B5F6";
       case "PAID":
-        return "#9575CD"; // Tím nhẹ
+        return "#9575CD";
       case "FAILED":
-        return "#FF8A80"; // Đỏ cam nhạt
+        return "#FF8A80";
       default:
-        return "#BA68C8"; // Dự phòng
+        return "#BA68C8";
     }
   };
 
@@ -109,16 +124,13 @@ export default function OrderHistoryScreen() {
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+ 
+
+  // Tính toán phân trang
+  const totalPages = Math.ceil(allOrders.length / ITEMS_PER_PAGE);
+  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIdx = startIdx + ITEMS_PER_PAGE;
+  const ordersToDisplay = allOrders.slice(startIdx, endIdx);
 
   if (loading) {
     return (
@@ -129,14 +141,11 @@ export default function OrderHistoryScreen() {
           loop
           style={{ width: 300, height: 300 }}
         />
-        {/* <Text style={styles.loadingText}>
-          Loading orders...
-        </Text> */}
       </View>
     );
   }
 
-  if (orders.length === 0) {
+  if (allOrders.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
@@ -178,7 +187,7 @@ export default function OrderHistoryScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {orders?.map((order) => (
+        {ordersToDisplay?.map((order) => (
           <View key={order.orderId} style={styles.orderCard}>
             {/* Header */}
             <View style={styles.orderHeader}>
@@ -208,7 +217,7 @@ export default function OrderHistoryScreen() {
               <View style={styles.infoRow}>
                 <Icon name="event" size={16} color="#90A4AE" />
                 <Text style={styles.infoText}>
-                  {formatDate(order.issueDate)}
+                  {new Date(order.issueDate).toLocaleDateString()}
                 </Text>
               </View>
               <View style={styles.infoRow}>
@@ -285,7 +294,6 @@ export default function OrderHistoryScreen() {
                   </Text>
                 </View>
 
-                {/* Nút Pay Now cho PENDING */}
                 {order.paymentStatus === "PENDING" && (
                   <Pressable
                     style={styles.checkoutBtn}
@@ -302,7 +310,6 @@ export default function OrderHistoryScreen() {
                   </Pressable>
                 )}
 
-                {/* Nút Retry Payment cho FAILED & CANCELLED */}
                 {order.paymentStatus === "FAILED" &&
                   order.orderStatus === "CANCELLED" && (
                     <Pressable
@@ -336,6 +343,67 @@ export default function OrderHistoryScreen() {
             </View>
           </View>
         ))}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <View style={styles.paginationContainer}>
+            <Pressable
+              style={[
+                styles.paginationBtn,
+                currentPage === 1 && styles.paginationBtnDisabled,
+              ]}
+              onPress={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <Icon
+                name="chevron-left"
+                size={20}
+                color={currentPage === 1 ? "#BDC3C7" : "#1E40AF"}
+              />
+            </Pressable>
+
+            <View style={styles.pageIndicator}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <Pressable
+                    key={page}
+                    style={[
+                      styles.pageDot,
+                      currentPage === page && styles.pageDotActive,
+                    ]}
+                    onPress={() => setCurrentPage(page)}
+                  >
+                    <Text
+                      style={[
+                        styles.pageNumber,
+                        currentPage === page && styles.pageNumberActive,
+                      ]}
+                    >
+                      {page}
+                    </Text>
+                  </Pressable>
+                )
+              )}
+            </View>
+
+            <Pressable
+              style={[
+                styles.paginationBtn,
+                currentPage === totalPages && styles.paginationBtnDisabled,
+              ]}
+              onPress={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              <Icon
+                name="chevron-right"
+                size={20}
+                color={currentPage === totalPages ? "#BDC3C7" : "#1E40AF"}
+              />
+            </Pressable>
+          </View>
+        )}
+
+        <View style={{ height: 20 }} />
       </ScrollView>
     </SafeAreaView>
   );
