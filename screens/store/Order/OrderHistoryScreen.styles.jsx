@@ -304,4 +304,47 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+  paginationContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingVertical: 20,
+  marginHorizontal: 16,
+},
+paginationBtn: {
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+},
+paginationBtnDisabled: {
+  opacity: 0.5,
+},
+pageIndicator: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flex: 1,
+  marginHorizontal: 12,
+},
+pageDot: {
+  width: 32,
+  height: 32,
+  borderRadius: 16,
+  marginHorizontal: 4,
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderWidth: 1,
+  borderColor: '#E0E0E0',
+},
+pageDotActive: {
+  backgroundColor: '#1E40AF',
+  borderColor: '#1E40AF',
+},
+pageNumber: {
+  fontSize: 12,
+  fontWeight: '600',
+  color: '#1E40AF',
+},
+pageNumberActive: {
+  color: '#FFFFFF',
+},
 });

@@ -6,118 +6,272 @@ import {
   ScrollView,
   Pressable,
   Dimensions,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { LineChart, BarChart } from "react-native-chart-kit";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { styles } from "./DesignerAnalyticsScreen.styles";
 import { dashboardService } from "../../../service/dashboardService";
-
-
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerAnalyticsScreen() {
   const navigation = useNavigation();
-  const [timeRange, setTimeRange] = useState("7d");
-  const [analyticsData, setAnalyticsData] = useState(null);
-const [topTemplates, setTopTemplates] = useState([]);
+  const [groupBy, setGroupBy] = useState("month");
+  const [salesData, setSalesData] = useState(null);
+  const [topTemplates, setTopTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState(null);
 
-  const mockAnalyticsData = {
-    overview: {
-      totalRevenue: 15200000,
-      totalDownloads: 12500,
-      totalProducts: 12,
-      averageRating: 4.8,
-    },
-    revenue: {
-      current: 15200000,
-      previous: 12800000,
-      growth: 18.75,
-    },
-    downloads: {
-      current: 12500,
-      previous: 9800,
-      growth: 27.55,
-    },
-    topProducts: [
-      {
-        id: 1,
-        title: "Business Presentation Template",
-        downloads: 3200,
-        revenue: 6400000,
-        growth: 15.2,
-      },
-      {
-        id: 2,
-        title: "Social Media Post Template",
-        downloads: 2800,
-        revenue: 5600000,
-        growth: 22.1,
-      },
-      {
-        id: 3,
-        title: "Infographic Template",
-        downloads: 2100,
-        revenue: 4200000,
-        growth: 8.5,
-      },
-    ],
-    dailyStats: [
-      { date: "2024-01-15", downloads: 120, revenue: 240000 },
-      { date: "2024-01-16", downloads: 95, revenue: 190000 },
-      { date: "2024-01-17", downloads: 150, revenue: 300000 },
-      { date: "2024-01-18", downloads: 180, revenue: 360000 },
-      { date: "2024-01-19", downloads: 200, revenue: 400000 },
-      { date: "2024-01-20", downloads: 165, revenue: 330000 },
-      { date: "2024-01-21", downloads: 140, revenue: 280000 },
-    ],
-  };
-  const fetchProductAnalytics = async () => {
+  // Date range states
+  const [startDate, setStartDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date;
+  });
+  const [endDate, setEndDate] = useState(new Date());
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+
+  // Fetch sales report from API
+  const fetchSalesReport = async () => {
     try {
-      const res = await dashboardService.getTopTemplates();
-     setTopTemplates(res);
+      setLoading(true);
+
+      const startStr = startDate.toISOString().slice(0, 10);
+      const endStr = endDate.toISOString().slice(0, 10);
+
+      console.log("🔄 Fetching Sales Report...");
+      console.log("📅 Parameters:", { startStr, endStr, groupBy });
+
+      const result = await dashboardService.getSalesReport(startStr, endStr, groupBy);
+
+      console.log("✅ API Response:", result.data);
+
+      setSalesData(result);
     } catch (error) {
-      console.log(error);
+      console.error("❌ Error fetching sales report:", error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Fetch top templates
+  const fetchTopTemplates = async () => {
+    try {
+      const res = await dashboardService.getTopTemplates();
+      setTopTemplates(res);
+    } catch (error) {
+      console.log("Error fetching top templates:", error);
+    }
+  };
+
+  // Fetch dashboard summary
+  const fetchSummary = async () => {
+    try {
+      const res = await dashboardService.getDashboardSummaryDesigner();
+      setSummary(res);
+    } catch (error) {
+      console.log("Error fetching summary:", error);
+    }
+  };
+
   useEffect(() => {
-    setAnalyticsData(mockAnalyticsData);
-    fetchProductAnalytics();
-  }, [timeRange]);
- 
+    fetchSalesReport();
+  }, [groupBy, startDate, endDate]);
+
+  useEffect(() => {
+    fetchTopTemplates();
+    fetchSummary();
+  }, []);
+
   const formatCurrency = (amount) => {
     return (amount ?? 0).toLocaleString("vi-VN") + "₫";
   };
 
-  const formatNumber = (number) => {
-    if (number >= 1000) {
-      return (number / 1000).toFixed(1) + "k";
+  const formatCurrencyCompact = (value) => {
+    const amount = Number(value) || 0;
+    if (amount >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(1)}B`;
+    if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;
+    if (amount >= 1_000) return `${(amount / 1_000).toFixed(1)}K`;
+    return `${Math.round(amount)}`;
+  };
+
+  const formatDate = (date) => {
+    return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  };
+
+  const handleStartDateChange = (event, selectedDate) => {
+    setShowStartPicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setStartDate(selectedDate);
     }
-    return (number ?? 0).toLocaleString("vi-VN");
   };
 
-  const getTimeRangeText = (range) => {
-    const map = {
-      "7d": "7 ngày qua",
-      "30d": "30 ngày qua",
-      "90d": "90 ngày qua",
-      "1y": "1 năm qua",
+  const handleEndDateChange = (event, selectedDate) => {
+    setShowEndPicker(Platform.OS === "ios");
+    if (selectedDate) {
+      setEndDate(selectedDate);
+    }
+  };
+
+  // Prepare chart data
+  const processedCharts = React.useMemo(() => {
+    if (!salesData?.data || salesData.data.length === 0) {
+      return { timeline: null, ranking: null, insights: null };
+    }
+
+    const type = salesData.type;
+
+    const formatEntry = (entry) => {
+      const revenue = Number(entry.revenue) || 0;
+      if (type === "monthly" || type === "month") {
+        const monthValue = entry.month;
+        if (!monthValue) return null;
+        const [year, month] = monthValue.split("-");
+        const monthNumber = parseInt(month, 10);
+        return {
+          shortLabel: `T${monthNumber}`,
+          longLabel: `Month ${monthNumber} ${year}`,
+          sortKey: `${monthValue}-01`,
+          value: revenue,
+        };
+      }
+
+      if (type === "daily" || type === "day") {
+        const dateValue = entry.date;
+        if (!dateValue) return null;
+        const [year, month, day] = dateValue.split("-");
+        return {
+          shortLabel: `${day}/${month}`,
+          longLabel: `${day}/${month}/${year}`,
+          sortKey: dateValue,
+          value: revenue,
+        };
+      }
+
+      if (type === "yearly" || type === "year") {
+        const yearValue = entry.year ?? entry.date ?? entry.period;
+        if (!yearValue) return null;
+        const yearText = String(yearValue);
+        return {
+          shortLabel: yearText.slice(-2),
+          longLabel: `Year ${yearText}`,
+          sortKey: `${yearText}-01-01`,
+          value: revenue,
+        };
+      }
+
+      return null;
     };
-    return map[range] || "7 ngày qua";
-  };
 
-  if (!analyticsData) {
+    const mapped = salesData.data
+      .map(formatEntry)
+      .filter(Boolean)
+      .sort((a, b) => (a.sortKey > b.sortKey ? 1 : -1));
+
+    if (mapped.length === 0) {
+      return { timeline: null, ranking: null, insights: null };
+    }
+
+    const timelinePoints = mapped;
+
+    const rankingPoints = [...mapped].sort((a, b) => b.value - a.value).slice(0, 5);
+
+    const timeline = {
+      labels: timelinePoints.map(point => point.shortLabel),
+      datasets: [
+        {
+          data: timelinePoints.map(point => point.value),
+          color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+          strokeWidth: 2,
+        },
+      ],
+      legend: ["Revenue"],
+    };
+
+    const ranking = rankingPoints.length
+      ? {
+          labels: rankingPoints.map(point => point.shortLabel),
+          datasets: [
+            {
+              data: rankingPoints.map(point => point.value),
+            },
+          ],
+        }
+      : null;
+
+    const insights = rankingPoints.length
+      ? {
+          bestPeriod: rankingPoints[0]?.longLabel || null,
+          bestValue: rankingPoints[0]?.value || 0,
+          lowestPeriod:
+            rankingPoints.length > 1 ? rankingPoints[rankingPoints.length - 1]?.longLabel || null : null,
+          lowestValue:
+            rankingPoints.length > 1 ? rankingPoints[rankingPoints.length - 1]?.value || 0 : null,
+        }
+      : null;
+
+    return { timeline, ranking, insights, rankingDetails: rankingPoints };
+  }, [salesData]);
+
+  const timelineChartData = processedCharts.timeline;
+  const comparisonChartData = processedCharts.ranking;
+  const chartInsights = processedCharts.insights;
+  const comparisonDetails = processedCharts.rankingDetails || [];
+
+  const hasTimelineData = Boolean(
+    timelineChartData?.datasets?.[0]?.data && timelineChartData.datasets[0].data.some(value => value > 0)
+  );
+  const hasComparisonData = Boolean(
+    comparisonChartData?.datasets?.[0]?.data && comparisonChartData.datasets[0].data.some(value => value > 0)
+  );
+
+  // Calculate statistics
+  const stats = React.useMemo(() => {
+    if (!salesData?.data || salesData.data.length === 0) {
+      return {
+        totalRevenue: 0,
+        avgRevenue: 0,
+        maxRevenue: 0,
+        trend: 0,
+      };
+    }
+
+    const revenues = salesData.data.map(d => Number(d.revenue) || 0);
+    const totalRevenue = revenues.reduce((sum, r) => sum + r, 0);
+    const avgRevenue = totalRevenue / revenues.length;
+    const maxRevenue = Math.max(...revenues);
+
+    // Calculate trend (last vs previous)
+    let trend = 0;
+    if (revenues.length >= 2) {
+      const current = revenues[revenues.length - 1];
+      const previous = revenues[revenues.length - 2];
+      if (previous > 0) {
+        trend = ((current - previous) / previous) * 100;
+      }
+    }
+
+    return { totalRevenue, avgRevenue, maxRevenue, trend };
+  }, [salesData]);
+
+  if (loading && !salesData) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
           <Pressable onPress={() => navigation.goBack()}>
             <Icon name="arrow-back" size={22} color="#111827" />
           </Pressable>
-          <Text style={styles.headerTitle}>Analytics</Text>
+          <Text style={styles.headerTitle}>Sales Analytics</Text>
           <View style={{ width: 22 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+          <ActivityIndicator size="large" color="#6366F1" />
+          <Text style={styles.loadingText}>Loading data...</Text>
         </View>
       </View>
     );
@@ -130,173 +284,239 @@ const [topTemplates, setTopTemplates] = useState([]);
         <Pressable onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={22} color="#111827" />
         </Pressable>
-        <Text style={styles.headerTitle}>Analytics</Text>
+        <Text style={styles.headerTitle}>Sales Analytics</Text>
         <Pressable>
           <Icon name="more-horiz" size={22} color="#111827" />
         </Pressable>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Time Range Selector */}
-        <View style={styles.timeRangeContainer}>
-          <View style={styles.timeRangeTabs}>
-            {[
-              { key: "7d", label: "7D" },
-              { key: "30d", label: "30D" },
-              { key: "90d", label: "90D" },
-              { key: "1y", label: "1Y" },
-            ].map((range) => (
-              <Pressable
-                key={range.key}
-                style={[
-                  styles.timeRangeTab,
-                  timeRange === range.key && styles.timeRangeTabActive,
-                ]}
-                onPress={() => setTimeRange(range.key)}
-              >
-                <Text
-                  style={[
-                    styles.timeRangeTabText,
-                    timeRange === range.key && styles.timeRangeTabTextActive,
-                  ]}
-                >
-                  {range.label}
-                </Text>
-              </Pressable>
-            ))}
+        {/* Date Range Selector */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Date Range</Text>
+          <View style={styles.dateRangeContainer}>
+            <Pressable
+              style={styles.dateButton}
+              onPress={() => setShowStartPicker(true)}
+            >
+              <Icon name="calendar-today" size={16} color="#6366F1" />
+              <Text style={styles.dateButtonText}>{formatDate(startDate)}</Text>
+            </Pressable>
+
+            <Icon name="arrow-forward" size={16} color="#9CA3AF" />
+
+            <Pressable
+              style={styles.dateButton}
+              onPress={() => setShowEndPicker(true)}
+            >
+              <Icon name="calendar-today" size={16} color="#6366F1" />
+              <Text style={styles.dateButtonText}>{formatDate(endDate)}</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Date Pickers */}
+        {showStartPicker && (
+          <DateTimePicker
+            value={startDate}
+            mode="date"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={handleStartDateChange}
+            maximumDate={endDate}
+          />
+        )}
+        {showEndPicker && (
+          <DateTimePicker
+            value={endDate}
+            mode="date"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={handleEndDateChange}
+            minimumDate={startDate}
+            maximumDate={new Date()}
+          />
+        )}
+
+        {/* Group By Selector */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterLabel}>Group By</Text>
+          <View style={styles.filterButtons}>
+            <Pressable
+              style={[styles.filterButton, groupBy === "day" && styles.filterButtonActive]}
+              onPress={() => setGroupBy("day")}
+            >
+              <Text style={[styles.filterButtonText, groupBy === "day" && styles.filterButtonTextActive]}>
+                Daily
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterButton, groupBy === "month" && styles.filterButtonActive]}
+              onPress={() => setGroupBy("month")}
+            >
+              <Text style={[styles.filterButtonText, groupBy === "month" && styles.filterButtonTextActive]}>
+                Monthly
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.filterButton, groupBy === "year" && styles.filterButtonActive]}
+              onPress={() => setGroupBy("year")}
+            >
+              <Text style={[styles.filterButtonText, groupBy === "year" && styles.filterButtonTextActive]}>
+                Yearly
+              </Text>
+            </Pressable>
           </View>
         </View>
 
         {/* Overview Cards - 2x2 Grid */}
         <View style={styles.overviewGrid}>
-          <View style={styles.overviewCard}>
+          <View style={[styles.overviewCard, { backgroundColor: '#F59E0B' }]}>
             <View style={styles.overviewHeader}>
-              <Icon name="trending-up" size={18} color="#10B981" />
-              <Text style={styles.overviewLabel}>Revenue</Text>
+              <Icon name="trending-up" size={18} color="#FFF" />
+              <Text style={[styles.overviewLabel, { color: '#FFF' }]}>Total Revenue</Text>
             </View>
-            <Text style={styles.overviewNumber}>
-              {formatCurrency(analyticsData.overview.totalRevenue)}
+            <Text style={[styles.overviewNumber, { color: '#FFF' }]}>
+              {formatCurrency(stats.totalRevenue)}
             </Text>
             <View style={styles.overviewFooter}>
-              <Icon name="arrow-upward" size={12} color="#10B981" />
-              <Text style={styles.overviewGrowth}>+18.75%</Text>
+              <Icon name={stats.trend >= 0 ? "arrow-upward" : "arrow-downward"} size={12} color="#FFF" />
+              <Text style={[styles.overviewGrowth, { color: '#FFF' }]}>
+                {stats.trend >= 0 ? '+' : ''}{stats.trend.toFixed(1)}%
+              </Text>
             </View>
           </View>
 
-          <View style={styles.overviewCard}>
+          <View style={[styles.overviewCard, { backgroundColor: '#10B981' }]}>
             <View style={styles.overviewHeader}>
-              <Icon name="file-download" size={18} color="#3B82F6" />
-              <Text style={styles.overviewLabel}>Downloads</Text>
+              <Icon name="show-chart" size={18} color="#FFF" />
+              <Text style={[styles.overviewLabel, { color: '#FFF' }]}>Average</Text>
             </View>
-            <Text style={styles.overviewNumber}>
-              {formatNumber(analyticsData.overview.totalDownloads)}
+            <Text style={[styles.overviewNumber, { color: '#FFF' }]}>
+              {formatCurrency(stats.avgRevenue)}
             </Text>
             <View style={styles.overviewFooter}>
-              <Icon name="arrow-upward" size={12} color="#10B981" />
-              <Text style={styles.overviewGrowth}>+27.55%</Text>
+              <Text style={[styles.overviewSubtext, { color: '#FFF' }]}>Per Period</Text>
             </View>
           </View>
 
-          <View style={styles.overviewCard}>
-            <View style={styles.overviewHeader}>
-              <Icon name="inventory-2" size={18} color="#F59E0B" />
-              <Text style={styles.overviewLabel}>Products</Text>
-            </View>
-            <Text style={styles.overviewNumber}>
-              {analyticsData.overview.totalProducts}
-            </Text>
-            <View style={styles.overviewFooter}>
-              <Text style={styles.overviewSubtext}>Published</Text>
-            </View>
-          </View>
-
-          <View style={styles.overviewCard}>
-            <View style={styles.overviewHeader}>
-              <Icon name="star" size={18} color="#F59E0B" />
-              <Text style={styles.overviewLabel}>Rating</Text>
-            </View>
-            <Text style={styles.overviewNumber}>
-              {analyticsData.overview.averageRating}
-            </Text>
-            <View style={styles.overviewFooter}>
-              <Text style={styles.overviewSubtext}>Average</Text>
-            </View>
-          </View>
         </View>
 
-        {/* Chart Section */}
+        {/* Revenue Chart */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Performance Trend</Text>
+          <Text style={styles.sectionTitle}>Revenue Over Time</Text>
           <View style={styles.chartCard}>
-            <View style={styles.chart}>
-              {analyticsData.dailyStats.map((stat, index) => {
-                const maxDownloads = Math.max(...analyticsData.dailyStats.map(s => s.downloads));
-                const heightPercent = (stat.downloads / maxDownloads) * 100;
-                
-                return (
-                  <View key={index} style={styles.chartBar}>
-                    <Text style={styles.chartBarValue}>{stat.downloads}</Text>
-                    <View
-                      style={[
-                        styles.chartBarFill,
-                        {
-                          height: `${heightPercent}%`,
-                          backgroundColor: stat.downloads > 150 ? '#6366F1' : '#E0E7FF',
-                        },
-                      ]}
-                    />
-                    <Text style={styles.chartBarLabel}>
-                      {new Date(stat.date).getDate()}
-                    </Text>
+            {loading ? (
+              <View style={styles.chartLoading}>
+                <ActivityIndicator size="small" color="#6366F1" />
+              </View>
+            ) : timelineChartData && hasTimelineData ? (
+              <>
+                <LineChart
+                  data={timelineChartData}
+                  width={SCREEN_WIDTH - 48}
+                  height={220}
+                  formatYLabel={formatCurrencyCompact}
+                  fromZero
+                  chartConfig={{
+                    backgroundGradientFromOpacity: 0,
+                    backgroundGradientToOpacity: 0,
+                    decimalPlaces: 0,
+                    color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+                    propsForDots: {
+                      r: "4",
+                      strokeWidth: "2",
+                      stroke: "#4338CA",
+                    },
+                    fillShadowGradient: "#6366F1",
+                    fillShadowGradientOpacity: 0.12,
+                    propsForBackgroundLines: {
+                      stroke: "#E5E7EB",
+                      strokeDasharray: "",
+                    },
+                  }}
+                  bezier
+                  yLabelsOffset={12}
+                  segments={4}
+                  style={{
+                    marginVertical: 8,
+                    borderRadius: 16,
+                  }}
+                />
+                {chartInsights?.bestPeriod && (
+                  <View style={styles.chartInsightRow}>
+                    <View style={styles.chartInsightCard}>
+                      <Text style={styles.chartInsightLabel}>Highest Revenue</Text>
+                      <Text style={styles.chartInsightValue}>{formatCurrency(chartInsights.bestValue)}</Text>
+                      <Text style={styles.chartInsightSub}>{chartInsights.bestPeriod}</Text>
+                    </View>
+                    {chartInsights.lowestPeriod && (
+                      <View style={[styles.chartInsightCard, styles.chartInsightCardSecondary]}>
+                        <Text style={[styles.chartInsightLabel, styles.chartInsightLabelSecondary]}>Lowest Revenue</Text>
+                        <Text style={styles.chartInsightValue}>{formatCurrency(chartInsights.lowestValue)}</Text>
+                        <Text style={styles.chartInsightSub}>{chartInsights.lowestPeriod}</Text>
+                      </View>
+                    )}
                   </View>
-                );
-              })}
-            </View>
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyChart}>
+                <Icon name="insert-chart" size={48} color="#D1D5DB" />
+                <Text style={styles.emptyChartText}>No data available</Text>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* Top Products */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Top Products</Text>
-       {topTemplates.map((item, index) => (
-  <View key={item.templateId} style={styles.productCard}>
-    <View style={styles.productRank}>
-      <Text style={styles.productRankText}>{index + 1}</Text>
-    </View>
+        {/* Bar Chart */}
+        {comparisonChartData && hasComparisonData && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Revenue Comparison</Text>
+            <View style={styles.chartCard}>
+              <BarChart
+                data={comparisonChartData}
+                width={SCREEN_WIDTH - 48}
+                height={220}
+                fromZero
+                yAxisLabel=""
+                yAxisSuffix=""
+                chartConfig={{
+                  backgroundGradientFromOpacity: 0,
+                  backgroundGradientToOpacity: 0,
+                  decimalPlaces: 0,
+                  color: (opacity = 1) => `rgba(129, 140, 248, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+                  formatYLabel: value => formatCurrencyCompact(value),
+                  formatXLabel: value => value,
+                  style: {
+                    borderRadius: 16,
+                  },
+                  propsForBackgroundLines: {
+                    stroke: "#E5E7EB",
+                  },
+                }}
+                style={{
+                  marginVertical: 8,
+                  borderRadius: 16,
+                }}
+              />
 
-    <View style={styles.productInfo}>
-      <Text style={styles.productTitle} numberOfLines={1}>
-        {item.templateName}
-      </Text>
-
-      <View style={styles.productStats}>
-        <View style={styles.productStat}>
-          <Icon name="shopping-cart" size={14} color="#6B7280" />
-          <Text style={styles.productStatText}>
-            {item.soldCount}
-          </Text>
-        </View>
-
-        <View style={styles.productStat}>
-          <Icon name="attach-money" size={14} color="#6B7280" />
-          <Text style={styles.productStatText}>
-            {formatCurrency(item.revenue)}
-          </Text>
-        </View>
-      </View>
-    </View>
-
-    {/* Không có growth từ API nên để dấu "-" */}
-    <View style={styles.productGrowth}>
-      <Icon name="trending-up" size={14} color="#6B7280" />
-      <Text style={[styles.productGrowthText, { color: "#6B7280" }]}>
-        —
-      </Text>
-    </View>
-  </View>
-))}
-
-        </View>
+              {comparisonDetails.length > 0 && (
+                <View style={styles.chartLegendList}>
+                  {comparisonDetails.map(detail => (
+                    <View key={detail.shortLabel} style={styles.chartLegendItem}>
+                      <View style={styles.chartLegendLabelRow}>
+                        <Icon name="calendar-today" size={14} color="#6366F1" />
+                        <Text style={styles.chartLegendLabel}>{detail.longLabel || detail.shortLabel}</Text>
+                      </View>
+                      <Text style={styles.chartLegendValue}>{formatCurrency(detail.value)}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>

@@ -29,7 +29,7 @@ export default function DesignerHomeScreen() {
   const [dashboardSummary, setDashboardSummary] = useState({});
   const drawerAnimation = useRef(new Animated.Value(-320)).current;
   const overlayAnimation = useRef(new Animated.Value(0)).current;
-
+  const [topTemplates, setTopTemplates] = useState([]);
   const toggleDrawer = () => {
     if (drawerOpen) {
       Animated.parallel([
@@ -120,13 +120,22 @@ export default function DesignerHomeScreen() {
         break;
     }
   };
-
+  const fetchTopTemplates = async () => {
+    try {
+      const res = await dashboardService.getTopTemplates();
+      console.log(res)
+      setTopTemplates(res);
+    } catch (error) {
+      console.log("Error fetching top templates:", error);
+    }
+  };
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   };
+  const fetchSashboardSummary = async () => {
   const fetchSashboardSummary = async () => {
     try {
       const res = await dashboardService.getDashboardSummaryDesigner();
@@ -138,6 +147,7 @@ export default function DesignerHomeScreen() {
   };
   useEffect(() => {
     fetchSashboardSummary();
+    fetchTopTemplates();
   }, []);
 
   return (
@@ -338,7 +348,7 @@ export default function DesignerHomeScreen() {
         </View>
         {/* Recent Activity - Updated List */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Activity</Text>
+          <Text style={styles.sectionTitle}>Top template</Text>
           <View style={styles.activityList}>
             <View style={styles.activityItem}>
               <View style={styles.activityIconWrap}>

@@ -113,6 +113,21 @@ export default function ResourceStoreScreen() {
       });
       return;
     }
+    const alreadyInCart = cart?.some(
+      (item) => item.id === resource.resourceTemplateId
+    );
+
+    if (alreadyInCart) {
+      if (navigateToCart) navigation.navigate("Cart");
+      else
+        Toast.show({
+          type: "info",
+          text1: "Resource already in cart",
+          text2: `${resource.name} is waiting for payment.`,
+        });
+      return;
+    }
+
     const designerName = resource.designerInfo
       ? `${resource.designerInfo.firstName || ""} ${
           resource.designerInfo.lastName || ""
@@ -124,6 +139,7 @@ export default function ResourceStoreScreen() {
       name: resource.name,
       description: resource.description,
       price: resource.price,
+      type: resource.type,
       image: resource.images?.[0]?.imageUrl || resource.images?.[0]?.url,
       designer: {
         name: designerName,

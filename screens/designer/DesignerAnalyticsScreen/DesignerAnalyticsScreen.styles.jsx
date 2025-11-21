@@ -42,38 +42,88 @@ export const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     color: "#6B7280",
+    marginTop: 12,
   },
 
-  // Time Range
-  timeRangeContainer: {
+  // Filter Section
+  filterSection: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
   },
-  timeRangeTabs: {
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 12,
+  },
+  filterButtons: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
     borderRadius: 8,
     padding: 4,
     borderWidth: 1,
     borderColor: "#F3F4F6",
+    gap: 4,
   },
-  timeRangeTab: {
+  filterButton: {
     flex: 1,
     paddingVertical: 8,
     borderRadius: 6,
     alignItems: "center",
   },
-  timeRangeTabActive: {
+  filterButtonActive: {
     backgroundColor: "#6366F1",
   },
-  timeRangeTabText: {
+  filterButtonText: {
     fontSize: 13,
     fontWeight: "500",
     color: "#6B7280",
   },
-  timeRangeTabTextActive: {
+  filterButtonTextActive: {
     color: "#FFFFFF",
+  },
+
+  // Chart States
+  chartLoading: {
+    height: 220,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyChart: {
+    height: 220,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyChartText: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    marginTop: 12,
+  },
+
+  // Date Range Picker
+  dateRangeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  dateButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  dateButtonText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#111827",
   },
 
   // Overview Grid
@@ -146,33 +196,68 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F3F4F6",
   },
-  chart: {
+  chartInsightRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    height: 140,
+    gap: 12,
+    marginTop: 16,
   },
-  chartBar: {
+  chartInsightCard: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    marginHorizontal: 2,
+    backgroundColor: "#EEF2FF",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#E0E7FF",
   },
-  chartBarValue: {
-    fontSize: 10,
-    color: "#6B7280",
+  chartInsightCardSecondary: {
+    backgroundColor: "#F9FAFB",
+    borderColor: "#E5E7EB",
+  },
+  chartInsightLabel: {
+    fontSize: 12,
     fontWeight: "600",
+    color: "#4338CA",
     marginBottom: 4,
   },
-  chartBarFill: {
-    width: "80%",
-    borderRadius: 4,
-    marginBottom: 8,
-    minHeight: 4,
+  chartInsightLabelSecondary: {
+    color: "#6B7280",
   },
-  chartBarLabel: {
-    fontSize: 11,
-    color: "#9CA3AF",
+  chartInsightValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 2,
+  },
+  chartInsightSub: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
+  chartLegendList: {
+    marginTop: 16,
+    gap: 12,
+  },
+  chartLegendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  chartLegendLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  chartLegendLabel: {
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "500",
+  },
+  chartLegendValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
   },
 
   // Top Products
