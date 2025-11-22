@@ -302,8 +302,15 @@ export default function DesignerWalletScreen() {
           </View>
 
           {recentTransactions.length > 0 ? (
-            recentTransactions.map((transaction) => (
-              <View key={transaction.id} style={styles.transactionItemNew}>
+            recentTransactions.map((transaction, idx) => (
+              <View
+                key={
+                  transaction?.transactionId ??
+                  transaction?.id ??
+                  `${transaction?.type || 'TX'}-${transaction?.createdAt || ''}-${idx}`
+                }
+                style={styles.transactionItemNew}
+              >
                 <View style={styles.transIconWrap}>
                   <Icon
                     name={

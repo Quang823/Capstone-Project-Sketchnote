@@ -41,7 +41,7 @@ const ProfileScreen = () => {
       try {
         if (!user?.id) return;
         const data = await authService.getUserById(user.id);
-
+        console.log(data);
         setProfile((prev) => ({
           ...data,
           avatarUrl: prev?.avatarUrl || data.avatarUrl,

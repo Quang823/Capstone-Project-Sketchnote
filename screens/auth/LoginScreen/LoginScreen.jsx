@@ -83,8 +83,7 @@ export default function LoginScreen({ onBack }) {
       toast({ title: "Login successfully! 🎉", variant: "success" });
 
       const { roles } = loginResult;
-       if (roles.includes("DESIGNER"))
-        navigation.navigate("DesignerDashboard");
+      if (roles.includes("DESIGNER")) navigation.navigate("DesignerDashboard");
       else if (roles.includes("CUSTOMER")) navigation.navigate("Home");
     } catch (error) {
       toast({
@@ -197,7 +196,8 @@ export default function LoginScreen({ onBack }) {
                         Share & Inspire
                       </Text>
                       <Text style={loginStyles.featureDesc}>
-                        Post sketches, follow other creators, and get inspired {"!!"}.  
+                        Post sketches, follow other creators, and get inspired{" "}
+                        {"!!"}.
                       </Text>
                     </View>
                   </MotiView>
