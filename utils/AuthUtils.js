@@ -28,6 +28,7 @@ export const getUserFromToken = async () => {
     if (!sub) return null;
 
     const user = await authService.getCurrentUser(sub);
+    console.log(user);
     return user || null;
   } catch (e) {
     if (e.message?.includes("Unauthenticated")) {

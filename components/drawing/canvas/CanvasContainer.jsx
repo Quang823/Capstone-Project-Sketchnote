@@ -77,16 +77,14 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   const imageRefs = useRef(new Map());
   const [internalLayers, setInternalLayers] = useState(layers);
 
-  // Sync metadata from props while preserving existing strokes
   useEffect(() => {
     if (!Array.isArray(layers)) return;
     setInternalLayers((prev) => {
-      if (!Array.isArray(prev) || prev.length === 0) return layers;
-      const map = new Map(prev.map((l) => [l.id, { ...l }]));
-      layers.forEach((inLayer) => {
-        const ex = map.get(inLayer.id);
+      const prevMap = new Map((Array.isArray(prev) ? prev : []).map((l) => [l.id, { ...l }]));
+      const next = layers.map((inLayer) => {
+        const ex = prevMap.get(inLayer.id);
         if (ex) {
-          map.set(inLayer.id, {
+          return {
             ...ex,
             name: inLayer.name ?? ex.name,
             visible: inLayer.visible ?? ex.visible,
@@ -95,12 +93,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               Array.isArray(inLayer.strokes) && inLayer.strokes.length > 0
                 ? inLayer.strokes
                 : ex.strokes || [],
-          });
-        } else {
-          map.set(inLayer.id, { ...inLayer });
+          };
         }
+        return { ...inLayer };
       });
-      return Array.from(map.values());
+      return next;
     });
   }, [layers]);
 
@@ -540,7 +537,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             userId,
             pageId,
             stroke,
-            JSON.stringify(pageChunk),
+            pageChunk,
           );
         }
       } catch {}

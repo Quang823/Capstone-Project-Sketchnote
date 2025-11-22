@@ -54,15 +54,14 @@ export const projectService = {
 
     const presignData = await projectService.getPresign(fileName, "JSON");
 
-    const finalUrl = await projectService.uploadToPresignedUrl(
+    await projectService.uploadToPresignedUrl(
       dataObject,
       presignData.uploadUrl
     );
 
-    // console.log(
-    //   `✅ [Service] S3 Upload successful for page ${pageNumber}, URL: ${finalUrl}`
-    // );
-    return { pageNumber, url: finalUrl };
+    // Use strokeUrl provided by backend (may be signed or proxied for GET)
+    const getUrl = presignData.strokeUrl;
+    return { pageNumber, url: getUrl };
   },
 
   /**
@@ -88,23 +87,38 @@ export const projectService = {
   },
 
   /**
-   * Loads a single page's data with a cache-first strategy.
+   * Loads a single page's data. Supports remote-first for collab sessions.
    */
   loadPageData: async (projectId, pageNumber, remoteUrl, options = {}) => {
     const localKey = getPageLocalKey(projectId, pageNumber);
+    const preferRemote = options.preferRemote === true;
+    const skipLocal = options.skipLocal === true;
 
-    const localData = await offlineStorage.loadProjectLocally(localKey);
-    if (localData) {
-      return localData;
+    try {
+      if (preferRemote) {
+        const remoteData = await projectService.getProjectFile(remoteUrl, options);
+        if (remoteData) {
+          try { await offlineStorage.saveProjectLocally(localKey, remoteData); } catch {}
+        }
+        return remoteData;
+      }
+    } catch (e) {
+      if (e.name !== "AbortError") {
+        console.warn(`[Service] Remote load failed for page ${pageNumber}:`, e?.message || e);
+      }
+    }
+
+    if (!skipLocal) {
+      const localData = await offlineStorage.loadProjectLocally(localKey);
+      if (localData) {
+        return localData;
+      }
     }
 
     try {
-      const remoteData = await projectService.getProjectFile(
-        remoteUrl,
-        options
-      );
+      const remoteData = await projectService.getProjectFile(remoteUrl, options);
       if (remoteData) {
-        await offlineStorage.saveProjectLocally(localKey, remoteData);
+        try { await offlineStorage.saveProjectLocally(localKey, remoteData); } catch {}
       }
       return remoteData;
     } catch (error) {
@@ -392,14 +406,15 @@ export const projectService = {
         console.log("[Realtime] CONNECT", { projectId, userId });
         const token = await AsyncStorage.getItem("accessToken");
         stompClient = new StompClient({
-          webSocketFactory: () => new WebSocket("wss://sketchnote.litecsys.com/ws/websocket"),
+          webSocketFactory: () => {
+            console.log("[Realtime] Using RN WebSocket transport");
+            return new WebSocket("wss://sketchnote.litecsys.com/ws");
+          },
           debug: (str) => console.log(str),
           reconnectDelay: 5000,
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
-          connectHeaders: token
-            ? { Authorization: `Bearer ${token}` }
-            : undefined,
+          connectHeaders: undefined,
           onConnect: () => {
             try {
               isConnected = true;
@@ -432,6 +447,11 @@ export const projectService = {
                 } catch {}
                 pendingQueue = [];
               }
+            } catch {}
+          },
+          onWebSocketError: (e) => {
+            try {
+              console.error("[Realtime] WS ERROR", e);
             } catch {}
           },
           onStompError: (frame) => {
@@ -484,35 +504,17 @@ export const projectService = {
 
     const sendAction = (projectId, userId, actionType, payload = {}) => {
       try {
-        const body = JSON.stringify({
-          type: actionType,
-          tool: payload.tool || "pen",
-          projectId,
-          userId,
-          payload,
-        });
+        const body = JSON.stringify({ projectId, userId, ...payload });
         const destination = `/app/project/${projectId}/action`;
         const frame = buildFrame("SEND", { destination, "content-type": "application/json" }, body);
-        const pointsLen = Array.isArray(payload?.points)
-          ? payload.points.length
-          : Array.isArray(payload?.pointsDetailed)
-          ? payload.pointsDetailed.length
-          : 0;
         if (stompClient && stompClient.active) {
-          console.log("[Realtime] OUTBOUND SEND", {
-            projectId,
-            userId,
-            actionType,
-            pointsLen,
-          });
+          console.log("[Realtime] OUTBOUND SEND", { projectId, userId });
+          try {
+            console.log("[Realtime] OUTBOUND BODY", String(body).slice(0, 500));
+          } catch {}
           stompClient.publish({ destination, body, headers: { "content-type": "application/json" } });
         } else {
-          console.log("[Realtime] QUEUE SEND", {
-            projectId,
-            userId,
-            actionType,
-            pointsLen,
-          });
+          console.log("[Realtime] QUEUE SEND", { projectId, userId });
           pendingQueue.push(frame);
         }
       } catch {}
@@ -525,29 +527,57 @@ export const projectService = {
       sendAction(projectId, userId, "DRAW", { tool, points: pts });
     };
 
-    const sendStroke = (projectId, userId, pageId, stroke = {}, pageJsonString) => {
-      const detailed = Array.isArray(stroke.points)
+    const sendStroke = (projectId, userId, pageId, stroke = {}, pagePayload) => {
+      const normalizedPoints = Array.isArray(stroke.points)
         ? stroke.points.map((p) => ({
-            x: p?.x ?? 0,
-            y: p?.y ?? 0,
+            x: Number(p?.x) || 0,
+            y: Number(p?.y) || 0,
             pressure: p?.pressure,
             thickness: p?.thickness,
             stabilization: p?.stabilization,
           }))
         : [];
-      const simple = detailed.map((p) => [p.x, p.y]);
-      const payload = {
+      const fullStroke = {
+        id: stroke.id,
         tool: stroke.tool || "pen",
-        pageId,
-        points: simple,
-        pointsDetailed: detailed,
-        color: stroke.color,
+        x: stroke.x,
+        y: stroke.y,
         width: stroke.width,
-        opacity: stroke.opacity,
-        layerId: stroke.layerId,
+        height: stroke.height,
         rotation: stroke.rotation,
-        strokeJson: JSON.stringify({ ...stroke, points: detailed }),
-        pageJson: typeof pageJsonString === "string" ? pageJsonString : undefined,
+        opacity: stroke.opacity,
+        color: stroke.color,
+        layerId: stroke.layerId,
+        text: stroke.text,
+        fontSize: stroke.fontSize,
+        padding: stroke.padding,
+        uri: stroke.uri,
+        rows: stroke.rows,
+        cols: stroke.cols,
+        points: normalizedPoints,
+      };
+      const payload = {
+        pageId,
+        tool: fullStroke.tool,
+        stroke: fullStroke,
+        points: normalizedPoints.map((p) => [p.x, p.y]),
+        pointsDetailed: normalizedPoints,
+        color: fullStroke.color,
+        width: fullStroke.width,
+        opacity: fullStroke.opacity,
+        layerId: fullStroke.layerId,
+        rotation: fullStroke.rotation,
+        strokeJson: JSON.stringify(fullStroke),
+        page:
+          pagePayload && typeof pagePayload === "object"
+            ? pagePayload
+            : undefined,
+        pageJson:
+          typeof pagePayload === "string"
+            ? pagePayload
+            : pagePayload && typeof pagePayload === "object"
+            ? JSON.stringify(pagePayload)
+            : undefined,
       };
       sendAction(projectId, userId, "DRAW", payload);
     };

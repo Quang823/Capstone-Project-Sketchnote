@@ -11,6 +11,10 @@ export const authApiController = {
     return await publicApi.post(`/api/auth/refresh-token`, { refreshToken });
   },
 
+  sendVerifyEmail: async (email) => {
+    return await publicApi.post(`/api/auth/send-verify-email`, { email });
+  },
+
   getCurrentUser: async (sub) => {
     return await privateApi.get(`/api/users/keycloak/${sub}`);
   },

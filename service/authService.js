@@ -38,6 +38,18 @@ export const authService = {
     }
   },
 
+  sendVerifyEmail: async (email) => {
+    try {
+      if (!email || !email.trim()) throw new Error("Missing email");
+      const res = await authApiController.sendVerifyEmail(email.trim());
+      return res.data;
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.message || "Failed to send verify email.";
+      throw new Error(message);
+    }
+  },
+
   refreshToken: async (refreshToken) => {
     try {
       const res = await authApiController.refreshToken(refreshToken);
@@ -79,7 +91,8 @@ export const authService = {
       if (res?.data?.result) return res.data.result;
       throw new Error("User not found");
     } catch (err) {
-      const message = err.response?.data?.message || err.message || "Failed to get user.";
+      const message =
+        err.response?.data?.message || err.message || "Failed to get user.";
       throw new Error(message);
     }
   },
@@ -90,7 +103,10 @@ export const authService = {
       if (res?.data?.result) return res.data.result;
       throw new Error("User not found");
     } catch (err) {
-      const message = err.response?.data?.message || err.message || "Failed to get user by email.";
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to get user by email.";
       throw new Error(message);
     }
   },
@@ -101,9 +117,9 @@ export const authService = {
       if (res?.data?.result) return res.data.result;
       throw new Error("Update failed");
     } catch (err) {
-      const message = err.response?.data?.message || err.message || "Failed to update user.";
+      const message =
+        err.response?.data?.message || err.message || "Failed to update user.";
       throw new Error(message);
     }
   },
 };
-

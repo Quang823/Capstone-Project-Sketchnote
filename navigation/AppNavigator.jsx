@@ -32,6 +32,7 @@ import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadSc
 import DesignerSubscription from "../screens/store/DesignerSubscription/DesignerSubscription";
 import DesignerWalletScreen from "../screens/designer/DesignerWalletScreen/DesignerWalletScreen";
 import ProfileScreen from "../screens/auth/ProfileScreen/ProfileScreen";
+import VerifyEmailScreen from "../screens/auth/VerifyEmailScreen/VerifyEmailScreen";
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -42,6 +43,7 @@ export default function AppNavigator() {
     >
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="NoteSetupScreen" component={NoteSetupScreen} />

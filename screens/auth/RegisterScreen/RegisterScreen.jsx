@@ -114,7 +114,7 @@ export default function RegisterScreen({ onBack }) {
         variant: "success",
       });
 
-      navigation.navigate("Login");
+      navigation.navigate("VerifyEmail", { email });
     } catch (error) {
       toast({
         title: "Registration failed",

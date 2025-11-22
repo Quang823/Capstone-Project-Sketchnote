@@ -707,6 +707,8 @@ export default function DrawingScreen({ route }) {
   );
 
   const multiPageCanvasRef = useRef();
+  const inboundQueueRef = useRef(new Map());
+  const inboundFlushScheduledRef = useRef(false);
   const [isLoadingProject, setIsLoadingProject] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // New state for saving indicator
   const [isUploadingAsset, setIsUploadingAsset] = useState(false); // New state for asset uploads
@@ -741,7 +743,7 @@ export default function DrawingScreen({ route }) {
           return;
         }
 
-        const chunkSize = 50;
+        const chunkSize = 25;
         let i = 0;
 
         const processChunk = () => {
@@ -813,7 +815,7 @@ export default function DrawingScreen({ route }) {
               projectId,
               p.pageNumber,
               p.strokeUrl,
-              { signal: controller.signal },
+              { signal: controller.signal, preferRemote: true, skipLocal: true },
             );
 
             if (controller.signal.aborted || !data) continue;
@@ -1079,12 +1081,121 @@ export default function DrawingScreen({ route }) {
     const pid = noteConfig?.projectId;
     const uid = user?.id;
     if (!pid || !uid) return;
+    const flushInbound = () => {
+      if (!multiPageCanvasRef.current) {
+        inboundFlushScheduledRef.current = false;
+        return;
+      }
+      let hasMore = false;
+      inboundQueueRef.current.forEach((arr, pageId) => {
+        if (Array.isArray(arr) && arr.length > 0) {
+          const chunk = arr.splice(0, 50);
+          if (chunk.length > 0) {
+            multiPageCanvasRef.current.appendStrokesToPage(pageId, chunk);
+          }
+          if (arr.length > 0) hasMore = true;
+        }
+      });
+      if (hasMore) {
+        requestAnimationFrame(flushInbound);
+      } else {
+        inboundFlushScheduledRef.current = false;
+      }
+    };
+
+    const scheduleFlush = () => {
+      if (inboundFlushScheduledRef.current) return;
+      inboundFlushScheduledRef.current = true;
+      requestAnimationFrame(flushInbound);
+    };
+
     const handler = (msg) => {
       try {
         console.log("[Realtime] MESSAGE", msg);
-        if (!msg || msg.projectId !== pid) return;
-        if (msg.type === "DRAW") {
+        if (!msg) return;
+        {
+          // Prefer a full stroke payload if present
+          if (msg.payload?.stroke && typeof msg.payload.stroke === "object") {
+            const s = msg.payload.stroke;
+            const sanitized = {
+              id: s.id || `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+              tool: s.tool || "pen",
+              color: s.color || "#2563EB",
+              width: s.width || 2,
+              opacity: s.opacity ?? 1,
+              x: Number(s.x) || 0,
+              y: Number(s.y) || 0,
+              rotation: s.rotation || 0,
+              layerId: s.layerId || "layer1",
+              points: Array.isArray(s.points)
+                ? s.points
+                    .map((p) =>
+                      p && typeof p === "object"
+                        ? {
+                            x: Number(p.x) || 0,
+                            y: Number(p.y) || 0,
+                            pressure: p.pressure,
+                            thickness: p.thickness,
+                            stabilization: p.stabilization,
+                          }
+                        : null,
+                    )
+                    .filter(Boolean)
+                : [],
+              text: s.text,
+              fontSize: s.fontSize,
+              padding: s.padding,
+              uri: s.uri,
+              rows: s.rows,
+              cols: s.cols,
+            };
+            const pageId = msg.payload?.pageId || activePageId;
+            if (sanitized.points?.length >= 2 || sanitized.tool !== "pen") {
+              const q = inboundQueueRef.current.get(pageId) || [];
+              q.push(sanitized);
+              inboundQueueRef.current.set(pageId, q);
+              scheduleFlush();
+              return;
+            }
+          }
           let pts = [];
+          // Prefer structured page object (page + strokes)
+          if (msg.payload?.page && typeof msg.payload.page === "object") {
+            try {
+              const data = msg.payload.page;
+              const incomingStrokes = Array.isArray(data?.strokes)
+                ? data.strokes
+                : [];
+              if (incomingStrokes.length > 0) {
+                const pageId = data?.id || msg.payload?.pageId || activePageId;
+                const sanitized = incomingStrokes.map((s) => ({
+                  id: s?.id || `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                  tool: s?.tool || "pen",
+                  color: s?.color || "#2563EB",
+                  width: s?.width || 2,
+                  opacity: s?.opacity ?? 1,
+                  points: Array.isArray(s?.points)
+                    ? s.points.map((p) => ({
+                        x: Number(p?.x) || 0,
+                        y: Number(p?.y) || 0,
+                        pressure: p?.pressure,
+                        thickness: p?.thickness,
+                        stabilization: p?.stabilization,
+                      }))
+                    : [],
+                  layerId: s?.layerId || "layer1",
+                  rotation: s?.rotation || 0,
+                }));
+                if (sanitized.length > 0) {
+                  const q = inboundQueueRef.current.get(pageId) || [];
+                  q.push(...sanitized);
+                  inboundQueueRef.current.set(pageId, q);
+                  scheduleFlush();
+                  return;
+                }
+              }
+            } catch {}
+          }
           // Prefer pageJson if provided (string JSON of page chunk)
           if (typeof msg.payload?.pageJson === "string") {
             try {
@@ -1113,7 +1224,10 @@ export default function DrawingScreen({ route }) {
                   rotation: s?.rotation || 0,
                 }));
                 if (sanitized.length > 0) {
-                  multiPageCanvasRef.current?.appendStrokesToPage(pageId, sanitized);
+                  const q = inboundQueueRef.current.get(pageId) || [];
+                  q.push(...sanitized);
+                  inboundQueueRef.current.set(pageId, q);
+                  scheduleFlush();
                   return;
                 }
               }
@@ -1137,6 +1251,14 @@ export default function DrawingScreen({ route }) {
             pts = msg.payload.points
               .map((p) => (Array.isArray(p) ? { x: p[0], y: p[1] } : null))
               .filter(Boolean);
+          } else if (
+            typeof msg.payload?.x === "number" && typeof msg.payload?.y === "number"
+          ) {
+            // BE test payload: {x, y} only
+            pts = [
+              { x: Number(msg.payload.x) || 0, y: Number(msg.payload.y) || 0 },
+              { x: Number(msg.payload.x) || 0, y: Number(msg.payload.y) || 0 },
+            ];
           }
           if (pts.length < 2) return;
           const stroke = {
@@ -1150,7 +1272,10 @@ export default function DrawingScreen({ route }) {
             rotation: msg.payload?.rotation || 0,
           };
           const pageId = msg.payload?.pageId || activePageId;
-          multiPageCanvasRef.current?.appendStrokesToPage(pageId, [stroke]);
+          const q = inboundQueueRef.current.get(pageId) || [];
+          q.push(stroke);
+          inboundQueueRef.current.set(pageId, q);
+          scheduleFlush();
         }
       } catch {}
     };

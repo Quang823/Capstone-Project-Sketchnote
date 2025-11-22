@@ -8,10 +8,10 @@ import {
   Alert,
   Dimensions,
   Modal,
+  Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { LinearGradient } from "expo-linear-gradient";
 import { walletStyles } from "./WalletScreen.styles";
 import { paymentService } from "../../../service/paymentService";
 import Toast from "react-native-toast-message";
@@ -70,7 +70,7 @@ export default function WalletScreen() {
   const fetchWallet = async () => {
     try {
       const data = await paymentService.getWallet();
-      console.log(data)
+      console.log(data);
       setWalletData(data.result);
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
@@ -106,32 +106,44 @@ export default function WalletScreen() {
     const typeConfig = {
       DEPOSIT: {
         icon: "account-balance-wallet",
-        color: transaction.status === "SUCCESS" ? "#10B981" : transaction.status === "PENDING" ? "#F59E0B" : "#EF4444",
+        color:
+          transaction.status === "SUCCESS"
+            ? "#10B981"
+            : transaction.status === "PENDING"
+            ? "#F59E0B"
+            : "#EF4444",
         sign: "+",
-        label: transaction.status === "SUCCESS" ? "Deposit Success" : transaction.status === "PENDING" ? "Pending Deposit" : "Deposit Failed",
-        description: `Deposit to wallet${transaction.orderCode ? ` • #${transaction.orderCode}` : ""}`
+        label:
+          transaction.status === "SUCCESS"
+            ? "Deposit Success"
+            : transaction.status === "PENDING"
+            ? "Pending Deposit"
+            : "Deposit Failed",
+        description: `Deposit to wallet${
+          transaction.orderCode ? ` • #${transaction.orderCode}` : ""
+        }`,
       },
       COURSE_FEE: {
         icon: "school",
         color: "#8B5CF6",
         sign: "-",
         label: "Course Fee",
-        description: "Course enrollment payment"
+        description: "Course enrollment payment",
       },
       PAYMENT: {
         icon: "payment",
         color: "#EF4444",
         sign: "-",
         label: "Payment",
-        description: "Payment transaction"
+        description: "Payment transaction",
       },
       PURCHASE: {
         icon: "shopping-cart",
         color: "#EF4444",
         sign: "-",
         label: "Purchase",
-        description: "Product purchase"
-      }
+        description: "Product purchase",
+      },
     };
 
     return typeConfig[transaction.type] || typeConfig.PURCHASE;
@@ -154,48 +166,65 @@ export default function WalletScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* 💰 Balance Card */}
-        <LinearGradient
-          colors={["#667EEA", "#764BA2"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={walletStyles.balanceCard}
-        >
-          <View style={walletStyles.balanceHeader}>
-            <Text style={walletStyles.balanceLabel}>Current Balance</Text>
-            <View style={walletStyles.walletIconContainer}>
-              <Text style={walletStyles.walletIcon}>💎</Text>
+        <View style={walletStyles.walletOverview}>
+          {/* Left Column - Balance Info */}
+          <View style={walletStyles.balanceInfoCard}>
+            <View style={walletStyles.balanceHeaderRow}>
+              <View>
+                <Text style={walletStyles.balanceLabel}>Available Balance</Text>
+                <Text style={walletStyles.balanceAmount}>
+                  {formatCurrency(walletData.balance)}
+                </Text>
+              </View>
+              <View style={walletStyles.walletIconLarge}>
+                <Text style={{ fontSize: 36 }}>Wallet</Text>
+              </View>
             </View>
+
+            <View style={walletStyles.miniStats}>
+              <View style={walletStyles.miniStat}>
+                <Text style={walletStyles.miniStatLabel}>Deposited</Text>
+                <Text style={walletStyles.miniStatValue}>
+                  {formatCurrency(totalDeposit)}
+                </Text>
+              </View>
+              <View style={walletStyles.miniStatDivider} />
+              <View style={walletStyles.miniStat}>
+                <Text style={walletStyles.miniStatLabel}>Spent</Text>
+                <Text style={walletStyles.miniStatValueNegative}>
+                  {formatCurrency(totalSpent)}
+                </Text>
+              </View>
+            </View>
+
+            <Pressable
+              style={walletStyles.depositButtonNew}
+              onPress={() => setShowDepositModal(true)}
+            >
+              <Icon name="add-circle" size={18} color="#FFF" />
+              <Text style={walletStyles.depositButtonTextNew}>
+                Deposit Funds
+              </Text>
+            </Pressable>
           </View>
 
-          <Text style={walletStyles.balanceAmount}>
-            {formatCurrency(walletData.balance)}
-          </Text>
-
-          {/* Stats */}
-          <View style={walletStyles.statsRow}>
-            <View style={walletStyles.statItem}>
-              <Text style={walletStyles.statLabel}>Total Deposits</Text>
-              <Text style={walletStyles.statValue}>
-                {formatCurrency(totalDeposit)}
-              </Text>
-            </View>
-            <View style={walletStyles.statDivider} />
-            <View style={walletStyles.statItem}>
-              <Text style={walletStyles.statLabel}>Total Spent</Text>
-              <Text style={walletStyles.statValue}>
-                {formatCurrency(totalSpent)}
+          {/* Right Column - Decorative Image */}
+          <View style={walletStyles.imageCard}>
+            <Image
+              source={{
+                uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763710026/w3ykeckpumfg9vjbmxhs.jpg",
+              }}
+              style={walletStyles.decorativeImage}
+              resizeMode="cover"
+            />
+            <View style={walletStyles.imageOverlay}>
+              <Text style={walletStyles.imageText}>Secure & Fast</Text>
+              <Text style={walletStyles.imageSubtext}>
+                Your money, always ready
               </Text>
             </View>
           </View>
-
-          <Pressable
-            style={walletStyles.depositButton}
-            onPress={() => setShowDepositModal(true)}
-          >
-            <Icon name="add-circle-outline" size={20} color="#FFFFFF" />
-            <Text style={walletStyles.depositButtonText}>Deposit Funds</Text>
-          </Pressable>
-        </LinearGradient>
+        </View>
 
         {/* 🧾 Transaction History */}
         <View style={walletStyles.historySection}>
@@ -226,47 +255,53 @@ export default function WalletScreen() {
                 const style = getTransactionStyle(transaction);
                 return (
                   <View
-                    key={transaction.transactionId}
-                    style={styles.transactionItem}
+                    key={
+                      transaction.transactionId ??
+                      transaction.id ??
+                      `${transaction.type}-${transaction.createdAt}`
+                    }
+                    style={walletStyles.transactionItem}
                   >
                     <View
                       style={[
-                        styles.transactionIcon,
+                        walletStyles.transactionIcon,
                         { backgroundColor: `${style.color}15` },
                       ]}
                     >
                       <Icon name={style.icon} size={24} color={style.color} />
                     </View>
 
-                    <View style={styles.transactionInfo}>
-                      <Text style={styles.transactionLabel}>{style.label}</Text>
-                      <Text style={styles.transactionDate}>
+                    <View style={walletStyles.transactionInfo}>
+                      <Text style={walletStyles.transactionLabel}>
+                        {style.label}
+                      </Text>
+                      <Text style={walletStyles.transactionDate}>
                         {formatDate(transaction.createdAt)}
                       </Text>
                       {transaction.orderCode && (
-                        <Text style={styles.transactionCode}>
+                        <Text style={walletStyles.transactionCode}>
                           Order: {transaction.orderCode}
                         </Text>
                       )}
                     </View>
 
-                <View style={styles.transactionRight}>
+                    <View style={walletStyles.transactionRight}>
                       <Text
                         style={[
-                          styles.transactionAmount,
+                          walletStyles.transactionAmount,
                           { color: style.color },
                         ]}
                       >
                         {style.sign}
                         {formatCurrency(transaction.amount)}
                       </Text>
-                      <Text style={styles.balanceAfter}>
+                      <Text style={walletStyles.balanceAfter}>
                         Balance: {formatCurrency(transaction.balance)}
                       </Text>
                       {transaction.status && (
                         <View
                           style={[
-                            styles.statusBadge,
+                            walletStyles.statusBadge,
                             {
                               backgroundColor:
                                 transaction.status === "SUCCESS"
@@ -279,7 +314,7 @@ export default function WalletScreen() {
                         >
                           <Text
                             style={[
-                              styles.statusText,
+                              walletStyles.statusText,
                               {
                                 color:
                                   transaction.status === "SUCCESS"
@@ -298,12 +333,13 @@ export default function WalletScreen() {
                   </View>
                 );
               })}
-
             </>
           ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateIcon}>📭</Text>
-              <Text style={styles.emptyStateText}>No transactions yet</Text>
+            <View style={walletStyles.emptyState}>
+              <Text style={walletStyles.emptyStateIcon}>📭</Text>
+              <Text style={walletStyles.emptyStateText}>
+                No transactions yet
+              </Text>
             </View>
           )}
         </View>
@@ -406,95 +442,3 @@ export default function WalletScreen() {
     </View>
   );
 }
-
-const styles = {
-  transactionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    padding: 14,
-    marginBottom: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  transactionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1F2937",
-    marginBottom: 4,
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  transactionCode: {
-    fontSize: 11,
-    color: "#9CA3AF",
-    marginTop: 2,
-  },
-  transactionRight: {
-    alignItems: "flex-end",
-    justifyContent: "center",
-    minWidth: 120,
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  balanceAfter: {
-    fontSize: 11,
-    color: "#6B7280",
-    marginBottom: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  viewAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 12,
-    paddingVertical: 14,
-    backgroundColor: "#EFF6FF",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#DBEAFE",
-  },
-  viewAllText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#3B82F6",
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  emptyStateIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: "#9CA3AF",
-  },
-};
