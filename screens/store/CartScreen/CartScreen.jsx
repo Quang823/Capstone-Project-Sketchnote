@@ -17,6 +17,7 @@ import { useCart } from "../../../context/CartContext";
 import { cartStyles } from "./CartScreen.styles";
 import Toast from "react-native-toast-message";
 import { orderService } from "../../../service/orderService";
+import LottieView from "lottie-react-native";
 
 export default function CartScreen() {
   const navigation = useNavigation();
@@ -155,13 +156,11 @@ export default function CartScreen() {
                   </View>
 
                   {appliedCoupon && (
-                    <View style={[cartStyles.priceRow, cartStyles.discountPriceRow]}>
+                    <View
+                      style={[cartStyles.priceRow, cartStyles.discountPriceRow]}
+                    >
                       <View style={cartStyles.discountPriceLabel}>
-                        <Icon
-                          name="local-offer"
-                          size={14}
-                          color="#10B981"
-                        />
+                        <Icon name="local-offer" size={14} color="#10B981" />
                         <Text style={cartStyles.discountPriceText}>
                           Discount ({appliedCoupon})
                         </Text>
@@ -186,7 +185,11 @@ export default function CartScreen() {
               {/* Payment Method Info */}
               <View style={cartStyles.modalSection}>
                 <View style={cartStyles.paymentMethodBox}>
-                  <Icon name="account-balance-wallet" size={20} color="#8B5CF6" />
+                  <Icon
+                    name="account-balance-wallet"
+                    size={20}
+                    color="#8B5CF6"
+                  />
                   <View style={{ marginLeft: 12, flex: 1 }}>
                     <Text style={cartStyles.paymentMethodTitle}>
                       Payment Method
@@ -244,20 +247,28 @@ export default function CartScreen() {
         <View style={cartStyles.header}>
           <Pressable
             onPress={() => navigation.goBack()}
-            style={cartStyles.backBtn}
+            style={cartStyles.backButton}
           >
-            <Icon name="arrow-back" size={24} color="#1F2937" />
+            <Icon name="arrow-back" size={24} color="#084F8C" />
           </Pressable>
           <Text style={cartStyles.headerTitle}>Your Cart</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <View style={cartStyles.emptyContainer}>
-          <Icon name="shopping-cart" size={100} color="#D1D5DB" />
+          <LottieView
+            source={require("../../../assets/cart.json")}
+            autoPlay
+            loop
+            style={{ width: 150, height: 150 }}
+          />
+
           <Text style={cartStyles.emptyTitle}>Your cart is empty</Text>
+
           <Text style={cartStyles.emptyText}>
             You haven't added any products yet
           </Text>
+
           <Pressable
             style={cartStyles.shopNowBtn}
             onPress={() => navigation.navigate("ResourceStore")}
