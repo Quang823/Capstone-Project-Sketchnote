@@ -122,4 +122,16 @@ export const authService = {
       throw new Error(message);
     }
   },
+  getMyProfile: async (accessToken) => {
+    try {
+      const res = await authApiController.getMyProfile({
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+      });
+      return res?.data?.result || null;
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.message || "Failed to get profile.";
+      throw new Error(message);
+    }
+  },
 };

@@ -11,6 +11,7 @@ import {
   Animated,
   ImageBackground,
   useWindowDimensions,
+  Easing,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -31,6 +32,7 @@ const ProfileScreen = () => {
 
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scaleAnim = useState(new Animated.Value(0.9))[0];
+  const rotateAnim = useState(new Animated.Value(0))[0];
   const { toast } = useToast();
   const { width, height } = useWindowDimensions();
   const isLargeScreen = width >= 768;
@@ -39,9 +41,9 @@ const ProfileScreen = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        if (!user?.id) return;
-        const data = await authService.getUserById(user.id);
-        console.log(data);
+        if (!user) return;
+        const data = await authService.getMyProfile();
+
         setProfile((prev) => ({
           ...data,
           avatarUrl: prev?.avatarUrl || data.avatarUrl,
@@ -72,6 +74,20 @@ const ProfileScreen = () => {
     };
     fetchProfile();
   }, [user]);
+
+  useEffect(() => {
+    if (profile?.hasActiveSubscription) {
+      rotateAnim.setValue(0);
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 6000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    }
+  }, [profile?.hasActiveSubscription]);
 
   // --- Handle Avatar Upload ---
   const handleChooseAvatar = async () => {
@@ -211,6 +227,30 @@ const ProfileScreen = () => {
           {/* LEFT - BIG AVATAR */}
           <View style={styles.leftColumn}>
             <View style={styles.avatarContainer}>
+              {profile?.hasActiveSubscription && (
+                <Animated.View
+                  style={[
+                    styles.premiumRing,
+                    {
+                      transform: [
+                        {
+                          rotate: rotateAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ["0deg", "360deg"],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <LinearGradient
+                    colors={["#F59E0B", "#EF4444", "#8B5CF6", "#3B82F6"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.premiumRingGradient}
+                  />
+                </Animated.View>
+              )}
               <TouchableOpacity
                 onPress={handleChooseAvatar}
                 style={styles.avatarWrapper}
@@ -278,14 +318,18 @@ const ProfileScreen = () => {
                 editable={false}
               />
 
-              <Text style={styles.inputLabel}>Avatar URL</Text>
-              <TextInput
-                style={[styles.input, styles.disabledInput]}
-                value={profile.avatarUrl}
-                editable={false}
-              />
-            </View>
+              <Text style={styles.inputLabel}>Subscription Type</Text>
+              <Text style={styles.input}>
+                {profile.subscriptionType || "None"}
+              </Text>
 
+              <Text style={styles.inputLabel}>Expiration</Text>
+              <Text style={styles.input}>
+                {profile.subscriptionEndDate
+                  ? new Date(profile.subscriptionEndDate).toLocaleString()
+                  : "-"}
+              </Text>
+            </View>
             <TouchableOpacity activeOpacity={0.8} onPress={handleSave}>
               <LinearGradient
                 colors={
@@ -314,7 +358,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   toggleButton: {
     position: "absolute",
-    top: 16,
+    top: 40,
     left: 16,
     zIndex: 10,
   },
@@ -332,8 +376,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 40, fontWeight: "700", color: "#fff" },
-  headerSubtitle: { fontSize: 25, color: "#E2E8F0", marginTop: 4 },
+  headerTitle: { fontSize: 40, fontFamily: "Pacifico-Regular", color: "#fff" },
+  headerSubtitle: {
+    fontSize: 25,
+    fontFamily: "Pacifico-Regular",
+    color: "#E2E8F0",
+    marginTop: 4,
+  },
 
   // TWO COLUMNS
   twoColumnContainer: {
@@ -384,6 +433,22 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
   },
   cameraIcon: { color: "#fff", fontSize: 34 },
+
+  premiumRing: {
+    position: "absolute",
+    width: 460,
+    height: 460,
+    borderRadius: 230,
+    top: -20,
+    left: -20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  premiumRingGradient: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 230,
+  },
 
   userName: {
     fontSize: 30,
