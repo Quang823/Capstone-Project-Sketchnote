@@ -1,5 +1,14 @@
-import { useContext } from "react";
-import { View, Text, Pressable, ScrollView, Image } from "react-native";
+import { useContext, useRef, useEffect } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  Image,
+  Animated,
+  Easing,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { drawerStyles } from "./GlobalSidebar.styles";
@@ -20,6 +29,7 @@ export default function GlobalSidebar() {
     overlayAnimation,
   } = useNavigation();
   const { user, logout } = useContext(AuthContext);
+  const rotateAnim = useRef(new Animated.Value(0)).current;
   const navigation = useReactNavigation();
 
   const handleLogout = async () => {
@@ -75,6 +85,20 @@ export default function GlobalSidebar() {
     transform: [{ translateX: sidebarAnimation.value }],
   }));
 
+  useEffect(() => {
+    if (user?.hasActiveSubscription) {
+      rotateAnim.setValue(0);
+      Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 6000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    }
+  }, [user?.hasActiveSubscription]);
+
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayAnimation.value,
   }));
@@ -117,15 +141,50 @@ export default function GlobalSidebar() {
 
         {/* User Info */}
         <View style={drawerStyles.userInfo}>
-          <View style={drawerStyles.avatar}>
-            {user?.avatarUrl ? (
-              <Image
-                source={{ uri: user.avatarUrl }}
-                style={drawerStyles.avatarImage}
-              />
-            ) : (
-              <Icon name="account-circle" size={64} color="#3B82F6" />
+          <View
+            style={{
+              position: "relative",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {user?.hasActiveSubscription && (
+              <Animated.View
+                style={{
+                  position: "absolute",
+                  width: 96,
+                  height: 96,
+                  borderRadius: 48,
+                  top: -8,
+                  left: -8,
+                  transform: [
+                    {
+                      rotate: rotateAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ["0deg", "360deg"],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <LinearGradient
+                  colors={["#F59E0B", "#EF4444", "#8B5CF6", "#3B82F6"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ width: "100%", height: "100%", borderRadius: 48 }}
+                />
+              </Animated.View>
             )}
+            <View style={drawerStyles.avatar}>
+              {user?.avatarUrl ? (
+                <Image
+                  source={{ uri: user.avatarUrl }}
+                  style={drawerStyles.avatarImage}
+                />
+              ) : (
+                <Icon name="account-circle" size={64} color="#3B82F6" />
+              )}
+            </View>
           </View>
 
           <Text style={drawerStyles.userName}>
@@ -140,8 +199,20 @@ export default function GlobalSidebar() {
           </Text>
 
           {user?.role && (
-            <View style={drawerStyles.roleBadge}>
-              <Text style={drawerStyles.roleText}>{user.role}</Text>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+              <View style={drawerStyles.roleBadge}>
+                <Text style={drawerStyles.roleText}>{user.role}</Text>
+              </View>
+              {user?.hasActiveSubscription && (
+                <View
+                  style={[
+                    drawerStyles.roleBadge,
+                    { backgroundColor: "#F59E0B" },
+                  ]}
+                >
+                  <Text style={drawerStyles.roleText}>PRO</Text>
+                </View>
+              )}
             </View>
           )}
         </View>

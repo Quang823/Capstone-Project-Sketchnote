@@ -17,19 +17,8 @@ export const getUserFromToken = async () => {
     if (!token) {
       return null;
     }
-    const decoded = decodeToken(token);
-
-    if (!decoded) {
-      return null;
-    }
-
-    const sub = decoded?.sub;
-
-    if (!sub) return null;
-
-    const user = await authService.getCurrentUser(sub);
-    console.log(user);
-    return user || null;
+    const profile = await authService.getMyProfile(token);
+    return profile || null;
   } catch (e) {
     if (e.message?.includes("Unauthenticated")) {
       console.warn("⚠️ User not authenticated (token expired or invalid)");

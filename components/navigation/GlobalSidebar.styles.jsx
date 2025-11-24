@@ -50,7 +50,7 @@ export const drawerStyles = StyleSheet.create({
   drawerTitle: {
     fontSize: 20,
     fontFamily: "Pacifico-Regular",
-     color: "#084F8C",
+    color: "#084F8C",
     letterSpacing: -0.5,
   },
 
@@ -64,62 +64,61 @@ export const drawerStyles = StyleSheet.create({
   },
 
   // User Info Section
- // User Info Section
-userInfo: {
-  alignItems: "center",
-  paddingVertical: 24,
-  paddingHorizontal: 20,
-  backgroundColor: "#F8FAFC",
-  borderBottomWidth: 1,
-  borderBottomColor: "#E2E8F0",
-},
+  // User Info Section
+  userInfo: {
+    alignItems: "center",
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    backgroundColor: "#F8FAFC",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
 
-avatar: {
-  width: 80,
-  height: 80,
-  borderRadius: 40,
-  backgroundColor: "#EFF6FF",
-  justifyContent: "center",
-  alignItems: "center",
-  marginBottom: 12,
-  overflow: "hidden",   // quan trọng để bo tròn ảnh
-},
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+    overflow: "hidden", // quan trọng để bo tròn ảnh
+  },
 
-avatarImage: {
-  width: "100%",
-  height: "100%",
-  resizeMode: "cover",
-},
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
 
-userName: {
-  fontSize: 18,
-  fontWeight: "600",
-  color: "#1E293B",
-  marginBottom: 4,
-},
+  userName: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#052440ff",
+    marginBottom: 4,
+  },
 
-userEmail: {
-  fontSize: 13,
-  color: "#64748B",
-  fontWeight: "400",
-},
+  userEmail: {
+    fontSize: 13,
+    color: "#64748B",
+    fontWeight: "400",
+  },
 
-// Role Badge
-roleBadge: {
-  marginTop: 8,
-  borderRadius: 16,
-  paddingVertical: 4,
-  paddingHorizontal: 10,
-  backgroundColor: "#3B82F6",
-},
+  // Role Badge
+  roleBadge: {
+    marginTop: 8,
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    backgroundColor: "#1168b4ff",
+  },
 
-roleText: {
-  fontSize: 12,
-  fontWeight: "600",
-  color: "#FFFFFF",
-  textTransform: "capitalize",
-},
-
+  roleText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textTransform: "capitalize",
+  },
 
   // Navigation Items Section
   drawerItems: {
@@ -162,7 +161,7 @@ roleText: {
   },
 
   iconContainerActive: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#1168b4ff",
   },
 
   drawerText: {

@@ -5,6 +5,7 @@ import * as FileSystem from "expo-file-system";
 import { parseJsonInBackground } from "../utils/jsonUtils";
 import * as offlineStorage from "../utils/offlineStorage";
 import NetInfo from "@react-native-community/netinfo";
+import SockJS from "sockjs-client";
 
 const getPageLocalKey = (projectId, pageNumber) =>
   `${projectId}_page_${pageNumber}`;
@@ -325,7 +326,34 @@ export const projectService = {
       throw err;
     }
   },
+  updateProject: async (projectId, projectData) => {
+    try {
+      const response = await projectAPIController.updateProject(
+        projectId,
+        projectData
+      );
+      if (response?.data?.result) {
+        return response.data.result;
+      }
+      throw new Error("Update failed");
+    } catch (err) {
+      console.error("Failed to update project:", err);
+      throw err;
+    }
+  },
 
+  deleteProject: async (projectId) => {
+    try {
+      const response = await projectAPIController.deleteProject(projectId);
+      if (response?.data?.code === 200 || response?.status === 200) {
+        return { success: true };
+      }
+      throw new Error("Delete failed");
+    } catch (err) {
+      console.error("Failed to delete project:", err);
+      throw err;
+    }
+  },
   getProjectById: async (projectId) => {
     try {
       const response = await projectAPIController.getProjectById(projectId);
@@ -380,8 +408,9 @@ export const projectService = {
     let heartbeatTimer = null;
     let pendingQueue = [];
     let stompClient = null;
-    const WS_GATEWAY_URL = "wss://sketchnote.litecsys.com/ws";
-    const WS_DIRECT_URL = "wss://sketchnote.litecsys.com/ws";
+    // Try SockJS endpoint instead of native WebSocket
+    const WS_GATEWAY_URL = "https://sketchnote.litecsys.com/ws"; // SockJS base URL (no wss://)
+    const WS_DIRECT_URL = "https://sketchnote.litecsys.com/ws";
     let currentWsUrl = WS_GATEWAY_URL;
     let triedDirect = false;
 
@@ -415,146 +444,128 @@ export const projectService = {
 
     const connect = async (projectId, userId, onMessage) => {
       try {
-        if (isConnected && activeProjectId === projectId) return true;
+        console.log("🔵 [Realtime] ========== CONNECT START ==========");
+        console.log("🔵 [Realtime] projectId:", projectId);
+        console.log("🔵 [Realtime] userId:", userId);
+        console.log("🔵 [Realtime] isConnected:", isConnected);
+        console.log("🔵 [Realtime] activeProjectId:", activeProjectId);
+
+        if (isConnected && activeProjectId === projectId) {
+          console.log("✅ [Realtime] Already connected to this project");
+          return true;
+        }
+
         activeProjectId = projectId;
         onMessageCb = onMessage;
-        console.log("[Realtime] CONNECT", { projectId, userId });
-        console.log("[Realtime] WS URL", currentWsUrl);
+
+        console.log("🔵 [Realtime] WS URL:", currentWsUrl);
+
         const token = await AsyncStorage.getItem("accessToken");
+        console.log("🔵 [Realtime] Token exists:", !!token);
+
+        console.log("🔵 [Realtime] Creating StompClient with SockJS...");
+
         stompClient = new StompClient({
-          brokerURL: currentWsUrl,
+          // brokerURL is NOT used with webSocketFactory
+
           webSocketFactory: () => {
-            console.log("[Realtime] Using RN WebSocket transport");
-            return new WebSocket(currentWsUrl);
+            console.log(
+              "🟢 [Realtime] Creating SockJS connection to:",
+              currentWsUrl
+            );
+            return new SockJS(currentWsUrl);
           },
-          debug: (str) => console.log(str),
+
+          debug: (str) => {
+            console.log("🔍 [STOMP Debug]", str);
+          },
+
           reconnectDelay: 5000,
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
-          connectHeaders: undefined,
-          onConnect: () => {
-            try {
-              isConnected = true;
-              console.log("[Realtime] STOMP CONNECTED (RN WebSocket)");
-              const sub = stompClient.subscribe(
-                `/topic/project/${projectId}`,
-                (message) => {
-                  try {
-                    const json = JSON.parse(message.body || "{}");
-                    console.log("[Realtime] INBOUND", json);
-                    if (typeof onMessageCb === "function") onMessageCb(json);
-                  } catch {}
-                }
-              );
-              console.log(
-                "[Realtime] SUBSCRIBE SENT",
-                `/topic/project/${projectId}`
-              );
-              if (pendingQueue.length > 0) {
-                try {
-                  pendingQueue.forEach((f) => {
-                    try {
-                      const parsed = parseFrame(f);
-                      if (parsed?.command === "SEND") {
-                        stompClient.publish({
-                          destination: parsed.headers?.destination,
-                          body: parsed.body || "",
-                          headers: { "content-type": "application/json" },
-                        });
-                      }
-                    } catch {}
-                  });
-                } catch {}
-                pendingQueue = [];
+          connectHeaders: token
+            ? {
+                Authorization: `Bearer ${token}`,
               }
-            } catch {}
+            : undefined,
+
+          beforeConnect: () => {
+            console.log("🟡 [Realtime] beforeConnect - About to connect...");
           },
-          onWebSocketError: (e) => {
-            try {
-              console.error("[Realtime] WS ERROR", e);
-            } catch {}
-          },
-          onStompError: (frame) => {
-            try {
-              console.error("[Realtime] STOMP ERROR", frame?.headers || frame);
-            } catch {}
-          },
-          onWebSocketClose: (e) => {
-            try {
-              console.log("[Realtime] WS CLOSE (RN WebSocket)", {
-                code: e?.code,
-                reason: e?.reason,
+
+          onConnect: (frame) => {
+            console.log("✅✅✅ [Realtime] STOMP CONNECTED ✅✅✅");
+            console.log("✅ [Realtime] Connection frame:", frame);
+
+            isConnected = true;
+
+            const topicPath = `/topic/project/${projectId}`;
+            console.log("🔵 [Realtime] Subscribing to:", topicPath);
+
+            const sub = stompClient.subscribe(topicPath, (message) => {
+              try {
+                console.log("📥📥📥 [Realtime] MESSAGE RECEIVED 📥📥📥");
+                const json = JSON.parse(message.body || "{}");
+                if (typeof onMessageCb === "function") {
+                  onMessageCb(json);
+                }
+              } catch (err) {
+                console.error("❌ [Realtime] Error processing message:", err);
+              }
+            });
+
+            console.log("✅ [Realtime] Subscription created ID:", sub?.id);
+
+            // Flush pending queue
+            if (pendingQueue.length > 0) {
+              console.log(
+                "🔵 [Realtime] Flushing pending queue:",
+                pendingQueue.length
+              );
+              pendingQueue.forEach((f) => {
+                try {
+                  const parsed = parseFrame(f);
+                  if (parsed?.command === "SEND") {
+                    stompClient.publish({
+                      destination: parsed.headers?.destination,
+                      body: parsed.body || "",
+                      headers: { "content-type": "application/json" },
+                    });
+                  }
+                } catch (err) {
+                  console.error("❌ [Realtime] Error flushing message:", err);
+                }
               });
-            } catch {}
+              pendingQueue = [];
+            }
+          },
+
+          onWebSocketError: (e) => {
+            console.error("❌❌❌ [Realtime] WebSocket ERROR ❌❌❌", e);
+          },
+
+          onStompError: (frame) => {
+            console.error("❌❌❌ [Realtime] STOMP ERROR ❌❌❌", frame);
+          },
+
+          onWebSocketClose: (e) => {
+            console.log("🔴🔴🔴 [Realtime] WebSocket CLOSED 🔴🔴🔴", e);
             isConnected = false;
             activeProjectId = null;
-            if (heartbeatTimer) {
-              clearInterval(heartbeatTimer);
-              heartbeatTimer = null;
-            }
-            pendingQueue = [];
-            if (!triedDirect) {
-              try {
-                console.log("[Realtime] Switching to DIRECT WS URL");
-                triedDirect = true;
-                currentWsUrl = WS_DIRECT_URL;
-                try {
-                  stompClient?.deactivate?.();
-                } catch {}
-                setTimeout(() => {
-                  try {
-                    console.log("[Realtime] Reconnecting", currentWsUrl);
-                    stompClient = new StompClient({
-                      brokerURL: currentWsUrl,
-                      webSocketFactory: () => new WebSocket(currentWsUrl),
-                      debug: (str) => console.log(str),
-                      reconnectDelay: 5000,
-                      heartbeatIncoming: 4000,
-                      heartbeatOutgoing: 4000,
-                      onConnect: () => {
-                        try {
-                          isConnected = true;
-                          console.log(
-                            "[Realtime] STOMP CONNECTED (RN WebSocket)"
-                          );
-                          stompClient.subscribe(
-                            `/topic/project/${projectId}`,
-                            (message) => {
-                              try {
-                                const json = JSON.parse(message.body || "{}");
-                                console.log("[Realtime] INBOUND", json);
-                                if (typeof onMessageCb === "function")
-                                  onMessageCb(json);
-                              } catch {}
-                            }
-                          );
-                        } catch {}
-                      },
-                      onWebSocketError: (err) => {
-                        try {
-                          console.error("[Realtime] WS ERROR", err);
-                        } catch {}
-                      },
-                      onStompError: (fr) => {
-                        try {
-                          console.error(
-                            "[Realtime] STOMP ERROR",
-                            fr?.headers || fr
-                          );
-                        } catch {}
-                      },
-                    });
-                    stompClient.activate();
-                  } catch {}
-                }, 300);
-              } catch {}
-            }
+
+            // Simple reconnect logic if needed, but StompJS handles reconnects automatically
+            // if reconnectDelay is set.
+            // We only need manual fallback if we want to switch URLs.
           },
         });
+
+        console.log("🔵 [Realtime] Activating StompClient...");
         stompClient.activate();
+        console.log("🔵 [Realtime] StompClient activated");
+
         return true;
       } catch (err) {
-        console.error("[Realtime] CONNECT ERROR", err);
+        console.error("❌❌❌ [Realtime] CONNECT ERROR ❌❌❌", err);
         throw err;
       }
     };
@@ -589,7 +600,7 @@ export const projectService = {
           projectId,
           userId,
           type: actionType,
-          ...payload,
+          payload: payload,
         });
         const destination = `/app/project/${projectId}/action`;
         const frame = buildFrame(
