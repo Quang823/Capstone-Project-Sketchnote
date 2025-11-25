@@ -258,7 +258,11 @@ export default function HomeScreen({ navigation }) {
         };
         navigation.navigate("DrawingScreen", { noteConfig: config });
       } catch {
-        Alert.alert("Lỗi", "Không thể mở dự án");
+        toast({
+          title: "Error",
+          description: "Failed to open project",
+          variant: "destructive",
+        });
       }
     },
     [navigation]

@@ -17,6 +17,7 @@ import { paymentService } from "../../../service/paymentService";
 import Toast from "react-native-toast-message";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import LottieView from "lottie-react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
@@ -346,7 +347,12 @@ export default function WalletScreen() {
             </>
           ) : (
             <View style={walletStyles.emptyState}>
-              <Text style={walletStyles.emptyStateIcon}>📭</Text>
+              <LottieView
+                source={require("../../../assets/transaction.json")}
+                autoPlay
+                loop
+                style={{ width: 180, height: 180 }}
+              />
               <Text style={walletStyles.emptyStateText}>
                 No transactions yet
               </Text>

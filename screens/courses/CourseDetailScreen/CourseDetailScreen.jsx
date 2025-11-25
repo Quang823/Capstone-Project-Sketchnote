@@ -21,6 +21,8 @@ import Reanimated, {
 import { courseDetailStyles } from "./CourseDetailScreen.styles";
 import { courseService } from "../../../service/courseService";
 import Toast from "react-native-toast-message";
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 
@@ -30,7 +32,7 @@ const formatDuration = (seconds) => {
   const minutes = Math.floor((seconds % 3600) / 60);
 
   if (hours > 0) {
-    return `${hours} giờ ${minutes > 0 ? minutes + ' phút' : ''}`;
+    return `${hours} giờ ${minutes > 0 ? minutes + " phút" : ""}`;
   }
   return `${minutes} phút`;
 };
@@ -117,7 +119,7 @@ export default function CourseDetailScreen() {
           text1: "Buy Success",
           text2: "Course purchased successfully!",
         });
-        
+
         // Refresh course data to update isEnrolled status
         await fetchCourseDetail(courseId);
         handleStartLearning();
@@ -214,9 +216,19 @@ export default function CourseDetailScreen() {
 
   if (loading) {
     return (
-      <View style={courseDetailStyles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={courseDetailStyles.loadingText}>Đang tải khóa học...</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
       </View>
     );
   }
@@ -225,20 +237,29 @@ export default function CourseDetailScreen() {
     return (
       <View style={courseDetailStyles.errorContainer}>
         <Icon name="error-outline" size={64} color="#EF4444" />
-        <Text style={courseDetailStyles.errorText}>{error || "Không tìm thấy khóa học"}</Text>
-        <Pressable style={courseDetailStyles.retryButton} onPress={() => fetchCourseDetail(courseId)}>
+        <Text style={courseDetailStyles.errorText}>
+          {error || "Không tìm thấy khóa học"}
+        </Text>
+        <Pressable
+          style={courseDetailStyles.retryButton}
+          onPress={() => fetchCourseDetail(courseId)}
+        >
           <Text style={courseDetailStyles.retryButtonText}>Thử lại</Text>
         </Pressable>
       </View>
     );
   }
 
-  const imageUrl = course.imageUrl || "https://via.placeholder.com/400x200?text=Course+Image";
+  const imageUrl =
+    course.imageUrl || "https://via.placeholder.com/400x200?text=Course+Image";
 
   return (
     <View style={courseDetailStyles.container}>
       <View style={courseDetailStyles.header}>
-        <Pressable style={courseDetailStyles.backButton} onPress={handleBackPress}>
+        <Pressable
+          style={courseDetailStyles.backButton}
+          onPress={handleBackPress}
+        >
           <Icon name="arrow-back" size={24} color="#1F2937" />
         </Pressable>
         <Text style={courseDetailStyles.headerTitle}>Course Details</Text>
@@ -246,40 +267,61 @@ export default function CourseDetailScreen() {
       </View>
 
       <ScrollView style={courseDetailStyles.scrollView}>
-        <ReanimatedView style={[courseDetailStyles.twoColumnContainer, animatedStyle]}>
+        <ReanimatedView
+          style={[courseDetailStyles.twoColumnContainer, animatedStyle]}
+        >
           {/* LEFT COLUMN - Info & Content */}
           <View style={courseDetailStyles.leftColumn}>
             <View style={courseDetailStyles.mainCard}>
-              <Image source={{ uri: imageUrl }} style={courseDetailStyles.courseImage} />
-              
+              <Image
+                source={{ uri: imageUrl }}
+                style={courseDetailStyles.courseImage}
+              />
+
               <View style={courseDetailStyles.courseInfo}>
-                <Text style={courseDetailStyles.courseTitle}>{course.title}</Text>
-                <Text style={courseDetailStyles.subtitle}>{course.subtitle || course.description}</Text>
-                
+                <Text style={courseDetailStyles.courseTitle}>
+                  {course.title}
+                </Text>
+                <Text style={courseDetailStyles.subtitle}>
+                  {course.subtitle || course.description}
+                </Text>
+
                 <View style={courseDetailStyles.metaRow}>
                   <View style={courseDetailStyles.metaItem}>
                     <Icon name="person-outline" size={16} color="#6B7280" />
-                    <Text style={courseDetailStyles.metaText}>{course.instructor}</Text>
+                    <Text style={courseDetailStyles.metaText}>
+                      {course.instructor}
+                    </Text>
                   </View>
                   <View style={courseDetailStyles.metaItem}>
                     <Icon name="star" size={16} color="#F59E0B" />
-                    <Text style={courseDetailStyles.metaText}>{course.rating}</Text>
+                    <Text style={courseDetailStyles.metaText}>
+                      {course.rating}
+                    </Text>
                   </View>
                   <View style={courseDetailStyles.metaItem}>
                     <Icon name="people-outline" size={16} color="#6B7280" />
-                    <Text style={courseDetailStyles.metaText}>{course.students}</Text>
+                    <Text style={courseDetailStyles.metaText}>
+                      {course.students}
+                    </Text>
                   </View>
                   <View style={courseDetailStyles.metaItem}>
-                    <Text style={courseDetailStyles.levelBadge}>{course.level}</Text>
+                    <Text style={courseDetailStyles.levelBadge}>
+                      {course.level}
+                    </Text>
                   </View>
                 </View>
 
                 <View style={courseDetailStyles.descriptionText}>
-                  <Text style={courseDetailStyles.descriptionContent}>{course.description}</Text>
+                  <Text style={courseDetailStyles.descriptionContent}>
+                    {course.description}
+                  </Text>
                 </View>
 
                 <View style={courseDetailStyles.includesSection}>
-                  <Text style={courseDetailStyles.includesTitle}>What you'll learn:</Text>
+                  <Text style={courseDetailStyles.includesTitle}>
+                    What you'll learn:
+                  </Text>
                   {course.includes.map((item, index) => (
                     <View key={index} style={courseDetailStyles.includeItem}>
                       <Icon name="check" size={18} color="#10B981" />
@@ -298,9 +340,12 @@ export default function CourseDetailScreen() {
                 <Text style={courseDetailStyles.priceText}>
                   {course.price?.toLocaleString("vi-VN") || "0"} đ
                 </Text>
-                
+
                 {course.isEnrolled ? (
-                  <Pressable style={courseDetailStyles.primaryButton} onPress={handleStartLearning}>
+                  <Pressable
+                    style={courseDetailStyles.primaryButton}
+                    onPress={handleStartLearning}
+                  >
                     <LinearGradient
                       colors={["#10B981", "#059669"]}
                       start={{ x: 0, y: 0 }}
@@ -308,11 +353,16 @@ export default function CourseDetailScreen() {
                       style={courseDetailStyles.buttonGradient}
                     >
                       <Icon name="play-arrow" size={22} color="white" />
-                      <Text style={courseDetailStyles.buttonText}>Start Learning</Text>
+                      <Text style={courseDetailStyles.buttonText}>
+                        Start Learning
+                      </Text>
                     </LinearGradient>
                   </Pressable>
                 ) : (
-                  <Pressable style={courseDetailStyles.primaryButton} onPress={handleOpenPurchaseModal}>
+                  <Pressable
+                    style={courseDetailStyles.primaryButton}
+                    onPress={handleOpenPurchaseModal}
+                  >
                     <LinearGradient
                       colors={["#3B82F6", "#2563EB"]}
                       start={{ x: 0, y: 0 }}
@@ -329,29 +379,42 @@ export default function CourseDetailScreen() {
               <View style={courseDetailStyles.curriculumSection}>
                 <View style={courseDetailStyles.curriculumHeader}>
                   <Icon name="format-list-bulleted" size={24} color="#3B82F6" />
-                  <Text style={courseDetailStyles.curriculumTitle}>Course Curriculum</Text>
+                  <Text style={courseDetailStyles.curriculumTitle}>
+                    Course Curriculum
+                  </Text>
                 </View>
                 <Text style={courseDetailStyles.curriculumMeta}>
                   {course.totalLessons} lessons • {course.duration}
                 </Text>
 
                 {course.lessons.map((lesson, index) => (
-                  <View key={lesson.lessonId} style={courseDetailStyles.lessonItem}>
+                  <View
+                    key={lesson.lessonId}
+                    style={courseDetailStyles.lessonItem}
+                  >
                     <Pressable
                       style={courseDetailStyles.lessonHeader}
                       onPress={() => toggleLesson(lesson.lessonId)}
                     >
                       <View style={courseDetailStyles.lessonHeaderLeft}>
-                        <Text style={courseDetailStyles.lessonIndex}>{index + 1}</Text>
+                        <Text style={courseDetailStyles.lessonIndex}>
+                          {index + 1}
+                        </Text>
                         <View style={courseDetailStyles.lessonInfo}>
-                          <Text style={courseDetailStyles.lessonTitle}>{lesson.title}</Text>
+                          <Text style={courseDetailStyles.lessonTitle}>
+                            {lesson.title}
+                          </Text>
                           <Text style={courseDetailStyles.lessonDuration}>
                             {formatDuration(lesson.duration)}
                           </Text>
                         </View>
                       </View>
                       <Icon
-                        name={expandedModules[lesson.lessonId] ? "expand-less" : "expand-more"}
+                        name={
+                          expandedModules[lesson.lessonId]
+                            ? "expand-less"
+                            : "expand-more"
+                        }
                         size={24}
                         color="#9CA3AF"
                       />
@@ -359,7 +422,9 @@ export default function CourseDetailScreen() {
 
                     {expandedModules[lesson.lessonId] && lesson.content && (
                       <View style={courseDetailStyles.lessonContent}>
-                        <Text style={courseDetailStyles.lessonContentText}>{lesson.content}</Text>
+                        <Text style={courseDetailStyles.lessonContentText}>
+                          {lesson.content}
+                        </Text>
                       </View>
                     )}
                   </View>
@@ -382,7 +447,8 @@ export default function CourseDetailScreen() {
             <Icon name="shopping-cart" size={48} color="#3B82F6" />
             <Text style={courseDetailStyles.modalTitle}>Confirm Purchase</Text>
             <Text style={courseDetailStyles.modalMessage}>
-              Do you want to purchase "{course.title}" for {course.price?.toLocaleString("vi-VN") || "0"} đ?
+              Do you want to purchase "{course.title}" for{" "}
+              {course.price?.toLocaleString("vi-VN") || "0"} đ?
             </Text>
 
             <View style={courseDetailStyles.modalButtons}>
@@ -403,7 +469,9 @@ export default function CourseDetailScreen() {
                   end={{ x: 1, y: 0 }}
                   style={courseDetailStyles.confirmButtonGradient}
                 >
-                  <Text style={courseDetailStyles.confirmButtonText}>Confirm</Text>
+                  <Text style={courseDetailStyles.confirmButtonText}>
+                    Confirm
+                  </Text>
                 </LinearGradient>
               </Pressable>
             </View>
@@ -421,21 +489,24 @@ export default function CourseDetailScreen() {
         <View style={courseDetailStyles.modalOverlay}>
           <View style={courseDetailStyles.modalContent}>
             <Icon name="account-balance-wallet" size={48} color="#EF4444" />
-            <Text style={courseDetailStyles.modalTitle}>Insufficient Balance</Text>
-            <Text style={courseDetailStyles.modalMessage}>
-              You don't have enough balance to purchase this course. Would you like to go to your wallet to deposit funds?
+            <Text style={courseDetailStyles.modalTitle}>
+              Insufficient Balance
             </Text>
-            
+            <Text style={courseDetailStyles.modalMessage}>
+              You don't have enough balance to purchase this course. Would you
+              like to go to your wallet to deposit funds?
+            </Text>
+
             <View style={courseDetailStyles.modalButtons}>
-              <Pressable 
-                style={courseDetailStyles.cancelButton} 
+              <Pressable
+                style={courseDetailStyles.cancelButton}
                 onPress={handleCancelGoToWallet}
               >
                 <Text style={courseDetailStyles.cancelButtonText}>Cancel</Text>
               </Pressable>
-              
-              <Pressable 
-                style={courseDetailStyles.confirmButton} 
+
+              <Pressable
+                style={courseDetailStyles.confirmButton}
                 onPress={handleConfirmGoToWallet}
               >
                 <LinearGradient
@@ -444,7 +515,9 @@ export default function CourseDetailScreen() {
                   end={{ x: 1, y: 0 }}
                   style={courseDetailStyles.confirmButtonGradient}
                 >
-                  <Text style={courseDetailStyles.confirmButtonText}>Go to Wallet</Text>
+                  <Text style={courseDetailStyles.confirmButtonText}>
+                    Go to Wallet
+                  </Text>
                 </LinearGradient>
               </Pressable>
             </View>

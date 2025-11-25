@@ -12,7 +12,8 @@ import { myCoursesStyles } from "./MyCoursesScreen.styles";
 import { courseService } from "../../../service/courseService";
 import { useNavigation as useReactNavigation } from "@react-navigation/native";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
-
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 export default function MyCoursesScreen() {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -132,9 +133,13 @@ export default function MyCoursesScreen() {
 
   if (loading) {
     return (
-      <View style={myCoursesStyles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={myCoursesStyles.loadingText}>Loading courses...</Text>
+      <View style={myCoursesStyles.centerContainer}>
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
       </View>
     );
   }
@@ -156,7 +161,12 @@ export default function MyCoursesScreen() {
       >
         {enrollments.length === 0 ? (
           <View style={myCoursesStyles.emptyContainer}>
-            <Icon name="school" size={64} color="#D1D5DB" />
+            <LottieView
+              source={require("../../../assets/course.json")}
+              autoPlay
+              loop
+              style={{ width: 170, height: 170 }}
+            />
             <Text style={myCoursesStyles.emptyTitle}>No Courses Yet</Text>
             <Text style={myCoursesStyles.emptyDescription}>
               You haven't enrolled in any courses yet. Start exploring and

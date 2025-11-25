@@ -83,7 +83,6 @@ export const myBlogStyles = StyleSheet.create({
   createButtonText: {
     color: "#fff",
     fontWeight: "600",
-    
   },
   listContainer: {
     padding: 16,
