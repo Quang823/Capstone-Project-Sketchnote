@@ -284,25 +284,6 @@ export const walletStyles = StyleSheet.create({
     color: "#EF4444",
   },
 
-  // Empty State
-  emptyState: {
-    alignItems: "center",
-    padding: 48,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  emptyStateIcon: {
-    fontSize: 56,
-    marginBottom: 16,
-  },
-  emptyStateText: {
-    fontSize: 15,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-
   // Modal
   modalOverlay: {
     flex: 1,

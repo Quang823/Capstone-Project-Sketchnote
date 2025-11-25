@@ -26,7 +26,6 @@ export default function MyBlogScreen({ navigation }) {
     try {
       setLoading(true);
       const res = await blogService.getBlogByUserId();
-      console.log("📚 Fetched blogs:", res);
       setBlogs(res.result || []);
     } catch (error) {
       console.error("❌ Error fetching blogs:", error);
@@ -78,18 +77,18 @@ export default function MyBlogScreen({ navigation }) {
     statusFilter === "ALL"
       ? blogs
       : blogs.filter((b) => (b.status || "").toUpperCase() === statusFilter);
-const getStatusStyle = (status) => {
-  switch (status?.toUpperCase()) {
-    case "PUBLISHED":
-      return { backgroundColor: "#DCFCE7", color: "#16A34A" }; // xanh lá
-    case "DRAFT":
-      return { backgroundColor: "#FEF9C3", color: "#CA8A04" }; // vàng
-    case "ARCHIVED":
-      return { backgroundColor: "#FEE2E2", color: "#DC2626" }; // đỏ nhạt
-    default:
-      return { backgroundColor: "#E5E7EB", color: "#374151" }; // xám
-  }
-};
+  const getStatusStyle = (status) => {
+    switch (status?.toUpperCase()) {
+      case "PUBLISHED":
+        return { backgroundColor: "#DCFCE7", color: "#16A34A" }; // xanh lá
+      case "DRAFT":
+        return { backgroundColor: "#FEF9C3", color: "#CA8A04" }; // vàng
+      case "ARCHIVED":
+        return { backgroundColor: "#FEE2E2", color: "#DC2626" }; // đỏ nhạt
+      default:
+        return { backgroundColor: "#E5E7EB", color: "#374151" }; // xám
+    }
+  };
 
   return (
     <View style={myBlogStyles.container}>
@@ -116,7 +115,12 @@ const getStatusStyle = (status) => {
         </View>
       ) : blogs.length === 0 ? (
         <View style={myBlogStyles.emptyContainer}>
-          <Icon name="article" size={60} color="#667EEA" />
+          <LottieView
+            source={require("../../../assets/blog.json")}
+            autoPlay
+            loop
+            style={{ width: 180, height: 180 }}
+          />
           <Text style={myBlogStyles.emptyTitle}>No blogs found</Text>
           <Text style={myBlogStyles.emptySubtitle}>
             Create your first blog post to get started
@@ -126,7 +130,7 @@ const getStatusStyle = (status) => {
             style={myBlogStyles.createButton}
           >
             <LinearGradient
-              colors={["#3B82F6", "#2563EB"]}
+              colors={["#3B82F6", "#1D4ED8"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={myBlogStyles.createButtonGradient}
@@ -178,23 +182,26 @@ const getStatusStyle = (status) => {
                   <Text style={myBlogStyles.blogDesc} numberOfLines={2}>
                     {item.summary || "No summary available"}
                   </Text>
-                 {item.status ? (
-  <View
-    style={[
-      myBlogStyles.statusBadge,
-      { backgroundColor: getStatusStyle(item.status).backgroundColor }
-    ]}
-  >
-    <Text
-      style={[
-        myBlogStyles.statusBadgeText,
-        { color: getStatusStyle(item.status).color }
-      ]}
-    >
-      {String(item.status).toUpperCase()}
-    </Text>
-  </View>
-) : null}
+                  {item.status ? (
+                    <View
+                      style={[
+                        myBlogStyles.statusBadge,
+                        {
+                          backgroundColor: getStatusStyle(item.status)
+                            .backgroundColor,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          myBlogStyles.statusBadgeText,
+                          { color: getStatusStyle(item.status).color },
+                        ]}
+                      >
+                        {String(item.status).toUpperCase()}
+                      </Text>
+                    </View>
+                  ) : null}
 
                   <View style={myBlogStyles.blogMeta}>
                     <Text style={myBlogStyles.blogDate}>

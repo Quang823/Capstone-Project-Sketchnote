@@ -14,7 +14,8 @@ import { Shadow } from "react-native-shadow-2";
 import { coursesStyles } from "./CoursesScreen.styles";
 import { courseService } from "../../../service/courseService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
-
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 // Course Categories
 const courseCategories = [
   { id: "all", name: "All" },
@@ -180,9 +181,19 @@ export default function CoursesScreen() {
 
   if (loading) {
     return (
-      <View style={coursesStyles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={coursesStyles.loadingText}>Loading courses...</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
       </View>
     );
   }

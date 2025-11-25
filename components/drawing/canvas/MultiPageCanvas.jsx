@@ -158,6 +158,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     noteConfig = null, // Add noteConfig to props
     projectId,
     userId,
+    enableCollab,
     tool,
     color,
     setColor,
@@ -1767,6 +1768,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                       {...{
                         projectId,
                         userId,
+                        enableCollab,
                         tool,
                         color,
                         setColor,

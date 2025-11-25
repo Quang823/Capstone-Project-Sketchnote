@@ -13,6 +13,8 @@ import Toast from "react-native-toast-message";
 import { useCart } from "../../../context/CartContext";
 import { resourceService } from "../../../service/resourceService";
 import { styles } from "./ResourceDetailScreen.styles";
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 
 export default function ResourceDetailScreen() {
   const navigation = useNavigation();
@@ -31,7 +33,7 @@ export default function ResourceDetailScreen() {
     const fetchResource = async () => {
       try {
         const data = await resourceService.getResourceById(resourceId);
-        console.log(data)
+        console.log(data);
         setResource(data);
       } catch (error) {
         Toast.show({
@@ -211,9 +213,19 @@ export default function ResourceDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={styles.loadingText}>Loading resource details...</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
       </View>
     );
   }
@@ -328,13 +340,13 @@ export default function ResourceDetailScreen() {
           <View style={styles.rightColumn}>
             <View style={styles.rightColumnContainer}>
               <View style={styles.resourceHeaderRow}>
-              <Text style={styles.resourceName}>{resource.name}</Text>
-              {resource.type && (
-                <View style={styles.typeBadge}>
-                  <Text style={styles.typeBadgeText}>{resource.type}</Text>
-                </View>
-              )}
-            </View>
+                <Text style={styles.resourceName}>{resource.name}</Text>
+                {resource.type && (
+                  <View style={styles.typeBadge}>
+                    <Text style={styles.typeBadgeText}>{resource.type}</Text>
+                  </View>
+                )}
+              </View>
               <Text style={styles.price}>
                 {resource.price.toLocaleString()} đ
               </Text>
@@ -427,7 +439,7 @@ export default function ResourceDetailScreen() {
                   <Text
                     style={[styles.actionButtonText, styles.buyNowButtonText]}
                   >
-                   Buy now
+                    Buy now
                   </Text>
                 </Pressable>
               </View>

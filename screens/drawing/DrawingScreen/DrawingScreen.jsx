@@ -17,6 +17,8 @@ import {
   ActivityIndicator,
   Text,
   findNodeHandle,
+  Modal,
+  TouchableOpacity,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import HeaderToolbar from "../../../components/drawing/toolbar/HeaderToolbar";
@@ -65,7 +67,7 @@ const getImageSize = (uri) => {
       (error) => {
         clearTimeout(timeout);
         reject(error);
-      },
+      }
     );
   });
 };
@@ -87,17 +89,18 @@ export default function DrawingScreen({ route }) {
         pages: [],
         projectDetails: null,
       },
-    [noteConfig],
+    [noteConfig]
   );
   const { user } = useContext(AuthContext);
   const [isExportModalVisible, setExportModalVisible] = useState(false);
+  const [exitModalVisible, setExitModalVisible] = useState(false);
   const { toast } = useToast();
   const multiPageCanvasContainerRef = useRef(null);
   // ✅ Validate noteConfig to prevent crash
   useEffect(() => {
     if (!noteConfig) {
       console.warn(
-        "[DrawingScreen] No noteConfig provided, using fallback config",
+        "[DrawingScreen] No noteConfig provided, using fallback config"
       );
     }
   }, [noteConfig]);
@@ -364,12 +367,12 @@ export default function DrawingScreen({ route }) {
             ? updater(
                 prev[activePageId] || [
                   { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
-                ],
+                ]
               )
             : updater,
       }));
     },
-    [activePageId],
+    [activePageId]
   );
 
   // Handler for adding new layer
@@ -396,7 +399,7 @@ export default function DrawingScreen({ route }) {
         };
       });
     },
-    [layerCounter],
+    [layerCounter]
   );
 
   // Layer panel callbacks - memoized to prevent re-renders
@@ -421,7 +424,7 @@ export default function DrawingScreen({ route }) {
 
       if (!layerExists) {
         console.warn(
-          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`,
+          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`
         );
         // Fallback về layer đầu tiên nếu layer không tồn tại
         if (currentLayers.length > 0) {
@@ -437,25 +440,25 @@ export default function DrawingScreen({ route }) {
         layerSelectTimeoutRef.current = null;
       }, 50); // 50ms debounce
     },
-    [pageLayers, activePageId],
+    [pageLayers, activePageId]
   );
 
   const handleToggleVisibility = useCallback(
     (id) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)),
+        prev.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l))
       );
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleToggleLock = useCallback(
     (id) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l)),
+        prev.map((l) => (l.id === id ? { ...l, locked: !l.locked } : l))
       );
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleLayerAdd = useCallback(() => {
@@ -466,16 +469,16 @@ export default function DrawingScreen({ route }) {
     (id) => {
       updateCurrentPageLayers((prev) => prev.filter((l) => l.id !== id));
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleLayerRename = useCallback(
     (id, newName) => {
       updateCurrentPageLayers((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, name: newName } : l)),
+        prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
       );
     },
-    [updateCurrentPageLayers],
+    [updateCurrentPageLayers]
   );
 
   const handleCloseLayerPanel = useCallback(() => setShowLayerPanel(false), []);
@@ -572,7 +575,7 @@ export default function DrawingScreen({ route }) {
         thickness: 1.0,
         stabilization: 0.2,
       },
-    [tool, toolConfigs],
+    [tool, toolConfigs]
   );
 
   const handleSettingChange = useCallback((toolName, key, value) => {
@@ -598,11 +601,11 @@ export default function DrawingScreen({ route }) {
       "airbrush",
       "crayon",
     ],
-    [],
+    []
   );
   const shapeTools = useMemo(
     () => ["line", "arrow", "rect", "circle", "triangle", "star", "polygon"],
-    [],
+    []
   );
   const [penColors, setPenColors] = useState({
     pen: "#111827",
@@ -640,11 +643,11 @@ export default function DrawingScreen({ route }) {
     if (typeof color !== "string") return;
     if (penTools.includes(tool)) {
       setPenColors((prev) =>
-        prev[tool] === color ? prev : { ...prev, [tool]: color },
+        prev[tool] === color ? prev : { ...prev, [tool]: color }
       );
     } else if (shapeTools.includes(tool)) {
       setShapeColors((prev) =>
-        prev[tool] === color ? prev : { ...prev, [tool]: color },
+        prev[tool] === color ? prev : { ...prev, [tool]: color }
       );
     }
   }, [tool, color]);
@@ -703,7 +706,7 @@ export default function DrawingScreen({ route }) {
       setStrokeWidth(size);
       setPenBaseWidths((prev) => ({ ...prev, [tool]: size }));
     },
-    [tool],
+    [tool]
   );
 
   const multiPageCanvasRef = useRef();
@@ -760,7 +763,7 @@ export default function DrawingScreen({ route }) {
           if (sanitizedChunk.length > 0) {
             multiPageCanvasRef.current?.appendStrokesToPage(
               pageId,
-              sanitizedChunk,
+              sanitizedChunk
             );
           }
 
@@ -815,7 +818,7 @@ export default function DrawingScreen({ route }) {
               projectId,
               p.pageNumber,
               p.strokeUrl,
-              { signal: controller.signal, preferRemote: true, skipLocal: true },
+              { signal: controller.signal, preferRemote: true, skipLocal: true }
             );
 
             if (controller.signal.aborted || !data) continue;
@@ -835,7 +838,7 @@ export default function DrawingScreen({ route }) {
                 const existingLayers = prev[pageId] || [];
                 const mergedLayers = data.layers.map((savedLayer) => {
                   const existingLayer = existingLayers.find(
-                    (l) => l?.id === savedLayer.id,
+                    (l) => l?.id === savedLayer.id
                   );
                   return {
                     id: savedLayer.id,
@@ -866,7 +869,7 @@ export default function DrawingScreen({ route }) {
             if (e.name !== "AbortError") {
               console.error(
                 `❌ Load page ${p.pageNumber} failed:`,
-                e?.message || e,
+                e?.message || e
               );
             }
           }
@@ -877,7 +880,7 @@ export default function DrawingScreen({ route }) {
           if (!controller.signal.aborted) {
             Alert.alert(
               "Lỗi",
-              "Không thể tải dữ liệu project. Vui lòng thử lại.",
+              "Không thể tải dữ liệu project. Vui lòng thử lại."
             );
           }
         }
@@ -990,8 +993,8 @@ export default function DrawingScreen({ route }) {
         projectService.uploadPageToS3(
           noteConfig.projectId,
           page.pageNumber,
-          page.dataObject,
-        ),
+          page.dataObject
+        )
       );
 
       const uploadedPagesResults = await Promise.all(uploadPromises);
@@ -1020,7 +1023,7 @@ export default function DrawingScreen({ route }) {
         projectId: noteConfig.projectId,
         pages: uploadedPagesResults.map((result) => {
           const snap = uploadedSnapshots.find(
-            (s) => s.pageNumber === result.pageNumber,
+            (s) => s.pageNumber === result.pageNumber
           );
           return {
             pageNumber: result.pageNumber,
@@ -1034,7 +1037,7 @@ export default function DrawingScreen({ route }) {
 
       try {
         const refreshed = await projectService.getProjectById(
-          noteConfig.projectId,
+          noteConfig.projectId
         );
         const serverPages = Array.isArray(refreshed?.pages)
           ? refreshed.pages
@@ -1118,7 +1121,9 @@ export default function DrawingScreen({ route }) {
           if (msg.payload?.stroke && typeof msg.payload.stroke === "object") {
             const s = msg.payload.stroke;
             const sanitized = {
-              id: s.id || `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+              id:
+                s.id ||
+                `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
               tool: s.tool || "pen",
               color: s.color || "#2563EB",
               width: s.width || 2,
@@ -1138,7 +1143,7 @@ export default function DrawingScreen({ route }) {
                             thickness: p.thickness,
                             stabilization: p.stabilization,
                           }
-                        : null,
+                        : null
                     )
                     .filter(Boolean)
                 : [],
@@ -1169,7 +1174,9 @@ export default function DrawingScreen({ route }) {
               if (incomingStrokes.length > 0) {
                 const pageId = data?.id || msg.payload?.pageId || activePageId;
                 const sanitized = incomingStrokes.map((s) => ({
-                  id: s?.id || `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                  id:
+                    s?.id ||
+                    `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
                   tool: s?.tool || "pen",
                   color: s?.color || "#2563EB",
                   width: s?.width || 2,
@@ -1206,7 +1213,9 @@ export default function DrawingScreen({ route }) {
               if (incomingStrokes.length > 0) {
                 const pageId = data?.id || msg.payload?.pageId || activePageId;
                 const sanitized = incomingStrokes.map((s) => ({
-                  id: s?.id || `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                  id:
+                    s?.id ||
+                    `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
                   tool: s?.tool || "pen",
                   color: s?.color || "#2563EB",
                   width: s?.width || 2,
@@ -1244,7 +1253,7 @@ export default function DrawingScreen({ route }) {
                       thickness: p.thickness,
                       stabilization: p.stabilization,
                     }
-                  : null,
+                  : null
               )
               .filter(Boolean);
           } else if (Array.isArray(msg.payload?.points)) {
@@ -1252,7 +1261,8 @@ export default function DrawingScreen({ route }) {
               .map((p) => (Array.isArray(p) ? { x: p[0], y: p[1] } : null))
               .filter(Boolean);
           } else if (
-            typeof msg.payload?.x === "number" && typeof msg.payload?.y === "number"
+            typeof msg.payload?.x === "number" &&
+            typeof msg.payload?.y === "number"
           ) {
             // BE test payload: {x, y} only
             pts = [
@@ -1280,13 +1290,24 @@ export default function DrawingScreen({ route }) {
       } catch {}
     };
 
-    projectService.realtime.connect(pid, uid, handler);
+    const enableCollab = !!noteConfig?.projectDetails?.hasCollaboration;
+    if (enableCollab) {
+      projectService.realtime.connect(pid, uid, handler);
+    } else {
+      try {
+        projectService.realtime.disconnect();
+      } catch {}
+    }
     return () => {
       try {
         projectService.realtime.disconnect();
       } catch {}
     };
-  }, [noteConfig?.projectId, user?.id]);
+  }, [
+    noteConfig?.projectId,
+    noteConfig?.projectDetails?.hasCollaboration,
+    user?.id,
+  ]);
 
   // 📤 EXPORT (local PDF/PNG)
   const handleExportFile = async (options) => {
@@ -1296,9 +1317,9 @@ export default function DrawingScreen({ route }) {
     if (options.selected === "picture") {
       if (!multiPageCanvasContainerRef.current) {
         toast.show({
-          title: "Lỗi",
-          description: "Không thể xuất file. Không tìm thấy canvas.",
-          variant: "error",
+          title: "Error",
+          description: "Cannot export file. Canvas not found.",
+          variant: "destructive",
         });
         return;
       }
@@ -1320,21 +1341,21 @@ export default function DrawingScreen({ route }) {
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(sharePath, {
             mimeType: "image/png",
-            dialogTitle: "Chia sẻ bản vẽ",
+            dialogTitle: "Share Image",
           });
         } else {
           toast.show({
-            title: "Không thể chia sẻ",
-            description: "Chức năng chia sẻ không có sẵn trên thiết bị này.",
-            variant: "error",
+            title: "Cannot Share",
+            description: "Sharing feature is not available on this device.",
+            variant: "destructive",
           });
         }
       } catch (error) {
-        console.error("Lỗi xuất file ảnh:", error);
+        console.error("Error exporting image:", error);
         toast.show({
-          title: "Xuất Ảnh Thất Bại",
-          description: "Đã có lỗi xảy ra khi xuất file ảnh.",
-          variant: "error",
+          title: "Export Image Failed",
+          description: "An error occurred while exporting the image.",
+          variant: "destructive",
         });
       }
     }
@@ -1344,8 +1365,8 @@ export default function DrawingScreen({ route }) {
         const pagesData = await multiPageCanvasRef.current.getAllPagesData();
         if (!pagesData || pagesData.length === 0) {
           toast.show({
-            title: "Không có dữ liệu",
-            description: "Không có nội dung để xuất file.",
+            title: "No Data",
+            description: "No content to export.",
             variant: "info",
           });
           return;
@@ -1369,21 +1390,21 @@ export default function DrawingScreen({ route }) {
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(uri, {
             mimeType: "application/json",
-            dialogTitle: "Chia sẻ file StarNote",
+            dialogTitle: "Share file SketchNote",
           });
         } else {
           toast.show({
-            title: "Không thể chia sẻ",
-            description: "Chức năng chia sẻ không có sẵn trên thiết bị này.",
-            variant: "error",
+            title: "Cannot Share",
+            description: "Sharing feature is not available on this device.",
+            variant: "destructive",
           });
         }
       } catch (error) {
-        console.error("Lỗi xuất file StarNote:", error);
+        console.error("Error exporting SketchNote:", error);
         toast.show({
-          title: "Xuất StarNote Thất Bại",
-          description: "Đã có lỗi xảy ra khi xuất file.",
-          variant: "error",
+          title: "Export SketchNote Failed",
+          description: "An error occurred while exporting the file.",
+          variant: "destructive",
         });
       }
     }
@@ -1394,9 +1415,9 @@ export default function DrawingScreen({ route }) {
     ) {
       if (options.selected === "editable") {
         toast.show({
-          title: "Thông báo",
+          title: "Notification",
           description:
-            "Xuất file PDF có thể chỉnh sửa hiện chưa được hỗ trợ. Một file PDF đa trang dạng ảnh sẽ được tạo.",
+            "Exporting editable PDF is not supported yet. A multi-page image PDF will be created instead.",
           variant: "info",
         });
       }
@@ -1406,8 +1427,8 @@ export default function DrawingScreen({ route }) {
         const pagesData = multiPageCanvasRef.current?.getAllPagesData?.();
         if (!pagesData || pagesData.length === 0) {
           toast.show({
-            title: "Không có dữ liệu",
-            description: "Không có trang nào để xuất file.",
+            title: "No Data",
+            description: "No content to export.",
             variant: "info",
           });
           setIsSaving(false);
@@ -1443,18 +1464,19 @@ export default function DrawingScreen({ route }) {
           pageRefs.current,
           options.fileName,
           selectedNums,
+          options.quality
         );
 
         await Sharing.shareAsync(pdfPath, {
           mimeType: "application/pdf",
-          dialogTitle: "Chia sẻ file PDF",
+          dialogTitle: "Share file PDF",
         });
       } catch (error) {
-        console.error("Lỗi xuất file PDF đa trang:", error);
+        console.error("Error exporting multi-page PDF:", error);
         toast.show({
-          title: "Xuất PDF Thất Bại",
-          description: "Đã có lỗi xảy ra khi xuất file PDF.",
-          variant: "error",
+          title: "Export PDF Failed",
+          description: "An error occurred while exporting the PDF.",
+          variant: "destructive",
         });
       } finally {
         setIsSaving(false);
@@ -1463,8 +1485,8 @@ export default function DrawingScreen({ route }) {
     // --- OTHER/DEFAULT ---
     else {
       toast.show({
-        title: "Chức năng chưa được hỗ trợ",
-        description: `Chức năng xuất file sang định dạng ${options.selected} hiện chưa được hỗ trợ.`,
+        title: "Feature Not Supported",
+        description: `Exporting to ${options.selected} format is not supported yet.`,
         variant: "info",
       });
     }
@@ -1496,7 +1518,7 @@ export default function DrawingScreen({ route }) {
         const manipResult = await manipulateAsync(
           localUri,
           [{ rotate: 0 }], // No-op to just get orientation fixed
-          { compress: 0.9, format: SaveFormat.JPEG },
+          { compress: 0.9, format: SaveFormat.JPEG }
         );
         localUri = manipResult.uri;
         size = { width: manipResult.width, height: manipResult.height };
@@ -1509,7 +1531,7 @@ export default function DrawingScreen({ route }) {
         const resizeResult = await manipulateAsync(
           localUri,
           [{ resize: { width: newW, height: newH } }],
-          { compress: 0.85, format: SaveFormat.JPEG },
+          { compress: 0.85, format: SaveFormat.JPEG }
         );
         localUri = resizeResult.uri;
         size = { width: resizeResult.width, height: resizeResult.height };
@@ -1523,7 +1545,7 @@ export default function DrawingScreen({ route }) {
 
       if (!cloudUrl) {
         throw new Error(
-          "Upload to Cloudinary succeeded but no secure_url was returned.",
+          "Upload to Cloudinary succeeded but no secure_url was returned."
         );
       }
 
@@ -1544,7 +1566,11 @@ export default function DrawingScreen({ route }) {
         height: finalHeight,
       });
     } catch (err) {
-      Alert.alert("Lỗi", "Không thể chèn ảnh: " + err.message);
+      toast.show({
+        title: "Insert Image Failed",
+        description: "An error occurred while inserting the image.",
+        variant: "destructive",
+      });
     } finally {
       setIsUploadingAsset(false);
     }
@@ -1555,7 +1581,11 @@ export default function DrawingScreen({ route }) {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission required", "Camera access is needed.");
+        toast.show({
+          title: "Permission Required",
+          description: "Camera access is needed.",
+          variant: "destructive",
+        });
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -1575,7 +1605,7 @@ export default function DrawingScreen({ route }) {
           const resizeResult = await manipulateAsync(
             localUri,
             [{ resize: { width: newW, height: newH } }],
-            { compress: 0.85, format: SaveFormat.JPEG },
+            { compress: 0.85, format: SaveFormat.JPEG }
           );
           uriToUpload = resizeResult.uri;
           imgWidth = resizeResult.width;
@@ -1583,7 +1613,7 @@ export default function DrawingScreen({ route }) {
         }
         const cloudUrl = await projectService.uploadAsset(
           uriToUpload,
-          "image/jpeg",
+          "image/jpeg"
         );
         if (!cloudUrl) {
           throw new Error("Failed to upload image from camera.");
@@ -1600,7 +1630,11 @@ export default function DrawingScreen({ route }) {
         });
       }
     } catch (e) {
-      Alert.alert("Lỗi Camera", e.message || String(e));
+      toast.show({
+        title: "Camera Error",
+        description: e.message || String(e),
+        variant: "destructive",
+      });
     } finally {
       setIsUploadingAsset(false);
     }
@@ -1610,7 +1644,11 @@ export default function DrawingScreen({ route }) {
   const handleStickerSelect = useCallback(async (data) => {
     setStickerModalVisible(false);
     if (!data) {
-      Alert.alert("Error", "Invalid sticker data");
+      toast.show({
+        title: "Error",
+        description: "Invalid sticker data",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -1621,8 +1659,9 @@ export default function DrawingScreen({ route }) {
       if (tool === "sticker" && uri && !uri.startsWith("http")) {
         setIsUploadingAsset(true);
         let stickerUri = uri;
-        const { width: imgWidth0, height: imgHeight0 } =
-          await getImageSize(uri);
+        const { width: imgWidth0, height: imgHeight0 } = await getImageSize(
+          uri
+        );
         const MAX_DIM = 512;
         let imgWidth = imgWidth0;
         let imgHeight = imgHeight0;
@@ -1633,7 +1672,7 @@ export default function DrawingScreen({ route }) {
           const resized = await manipulateAsync(
             uri,
             [{ resize: { width: newW, height: newH } }],
-            { compress: 0.85, format: SaveFormat.PNG },
+            { compress: 0.85, format: SaveFormat.PNG }
           );
           stickerUri = resized.uri;
           imgWidth = resized.width;
@@ -1641,7 +1680,7 @@ export default function DrawingScreen({ route }) {
         }
         const cloudUrl = await projectService.uploadAsset(
           stickerUri,
-          "image/png",
+          "image/png"
         );
         if (!cloudUrl) {
           throw new Error("Failed to upload sticker.");
@@ -1687,7 +1726,11 @@ export default function DrawingScreen({ route }) {
         return;
       }
     } catch (err) {
-      Alert.alert("Lỗi", "Không thể thêm sticker: " + err.message);
+      toast.show({
+        title: "Error",
+        description: "Failed to add sticker: " + err.message,
+        variant: "destructive",
+      });
     } finally {
       setIsUploadingAsset(false);
     }
@@ -1743,15 +1786,15 @@ export default function DrawingScreen({ route }) {
               {isSaving
                 ? "Saving..."
                 : isUploadingAsset
-                  ? "Uploading asset..."
-                  : "Loading project..."}
+                ? "Uploading asset..."
+                : "Loading project..."}
             </Text>
           </View>
         </View>
       )}
       {/* 🧰 Header Toolbar */}
       <HeaderToolbar
-        onBack={() => navigation.navigate("Home")}
+        onBack={() => setExitModalVisible(true)}
         onToggleToolbar={() => setToolbarVisible((v) => !v)}
         onPreview={() => {}} // Sidebar đã tích hợp trong MultiPageCanvas
         onCamera={handleOpenCamera}
@@ -1760,10 +1803,116 @@ export default function DrawingScreen({ route }) {
         onExportPress={() => setExportModalVisible(true)}
         projectId={safeNoteConfig?.projectId}
       />
+      <Modal
+        visible={exitModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setExitModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.4)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              width: 360,
+              maxWidth: "95%",
+              backgroundColor: "#FFFFFF",
+              borderRadius: 16,
+              padding: 16,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "700",
+                color: "#111827",
+                marginBottom: 12,
+              }}
+            >
+              Save project before exit?
+            </Text>
+            <Text style={{ fontSize: 14, color: "#374151", marginBottom: 16 }}>
+              Your latest changes can be saved now.
+            </Text>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  backgroundColor: "#3B82F6",
+                }}
+                onPress={async () => {
+                  try {
+                    await handleSaveFile();
+                  } catch {}
+                  try {
+                    projectService.realtime.disconnect();
+                  } catch {}
+                  setExitModalVisible(false);
+                  navigation.navigate("Home");
+                }}
+              >
+                <Text
+                  style={{ color: "white", fontSize: 14, fontWeight: "600" }}
+                >
+                  Save & Exit
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  backgroundColor: "#E5E7EB",
+                }}
+                onPress={() => {
+                  try {
+                    projectService.realtime.disconnect();
+                  } catch {}
+                  setExitModalVisible(false);
+                  navigation.navigate("Home");
+                }}
+              >
+                <Text
+                  style={{ color: "#111827", fontSize: 14, fontWeight: "600" }}
+                >
+                  Exit without Save
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={{
+                marginTop: 12,
+                paddingVertical: 10,
+                borderRadius: 10,
+                alignItems: "center",
+                backgroundColor: "#F3F4F6",
+              }}
+              onPress={() => setExitModalVisible(false)}
+            >
+              <Text
+                style={{ color: "#111827", fontSize: 14, fontWeight: "600" }}
+              >
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <ExportModal
         visible={isExportModalVisible}
         onClose={() => setExportModalVisible(false)}
         onExport={handleExportFile}
+        hasPro={!!user?.hasActiveSubscription}
       />
       {showLayerPanel && (
         <LayerPanel
@@ -1883,6 +2032,7 @@ export default function DrawingScreen({ route }) {
           noteConfig={safeNoteConfig}
           projectId={safeNoteConfig?.projectId}
           userId={user?.id}
+          enableCollab={!!safeNoteConfig?.projectDetails?.hasCollaboration}
           activePageId={activePageId}
           setActivePageId={setActivePageId}
           pageLayers={pageLayers}

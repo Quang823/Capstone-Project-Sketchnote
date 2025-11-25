@@ -247,7 +247,7 @@ export default function CartScreen() {
         <View style={cartStyles.header}>
           <Pressable
             onPress={() => navigation.goBack()}
-            style={cartStyles.backButton}
+            style={cartStyles.backBtn}
           >
             <Icon name="arrow-back" size={24} color="#084F8C" />
           </Pressable>
@@ -283,13 +283,22 @@ export default function CartScreen() {
   return (
     <SafeAreaView style={cartStyles.container}>
       <View style={cartStyles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={cartStyles.backBtn}
-        >
-          <Icon name="arrow-back" size={24} color="#1F2937" />
-        </Pressable>
-        <Text style={cartStyles.headerTitle}>Cart ({cart.length})</Text>
+        {/* Left side: Back icon + Cart */}
+        <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={cartStyles.backBtn}
+          >
+            <Icon name="arrow-back" size={24} color="#1F2937" />
+          </Pressable>
+          <Text
+            style={[cartStyles.headerTitle, { textAlign: "center", flex: 1 }]}
+          >
+            Cart ({cart.length})
+          </Text> 
+        </View>
+
+        {/* Right side: Continue Shopping */}
         <Pressable onPress={() => navigation.navigate("ResourceStore")}>
           <Text style={cartStyles.continueText}>Continue Shopping</Text>
         </Pressable>

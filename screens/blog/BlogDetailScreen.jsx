@@ -13,6 +13,8 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { blogService } from "../../service/blogService";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../assets/loading.json";
 
 const { width } = Dimensions.get("window");
 
@@ -27,7 +29,7 @@ export default function BlogDetailScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const isTablet = windowWidth >= 768;
   const contentMaxWidth = isTablet ? 1000 : windowWidth;
-const handleBackPress = () => {
+  const handleBackPress = () => {
     navigation.goBack();
   };
   // 🧩 Gọi API thật
@@ -67,19 +69,36 @@ const handleBackPress = () => {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" }}>
-        <ActivityIndicator size="large" color="#60A5FA" />
-        <Text style={{ marginTop: 16, color: "#64748B", fontSize: 16, fontWeight: "600" }}>
-         Loading blog...
-        </Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
       </View>
     );
   }
 
   if (!blog) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" }}>
-        <Text style={{ fontSize: 16, color: "#64748B" }}>Không tìm thấy bài viết</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#F8FAFC",
+        }}
+      >
+        <Text style={{ fontSize: 16, color: "#64748B" }}>
+          Không tìm thấy bài viết
+        </Text>
       </View>
     );
   }
@@ -87,17 +106,14 @@ const handleBackPress = () => {
   return (
     <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
       <ScrollView showsVerticalScrollIndicator={false}>
-     
-        
         {/* Hero Section */}
         <View style={{ backgroundColor: "#FFFFFF", paddingBottom: 32 }}>
           {/* Header Image */}
-             {/* Back Button */}
-        <Pressable style={{ padding: 10 }} onPress={handleBackPress}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
-        </Pressable>
+          {/* Back Button */}
+          <Pressable style={{ padding: 10 }} onPress={handleBackPress}>
+            <Icon name="arrow-back" size={24} color="#1F2937" />
+          </Pressable>
           {blog.imageUrl && (
-            
             <Image
               source={{ uri: blog.imageUrl }}
               style={{
@@ -169,7 +185,9 @@ const handleBackPress = () => {
                 >
                   {blog.author}
                 </Text>
-                <Text style={{ fontSize: 13, color: "#64748B", fontWeight: "500" }}>
+                <Text
+                  style={{ fontSize: 13, color: "#64748B", fontWeight: "500" }}
+                >
                   {new Date(blog.createdAt).toLocaleDateString("vi-VN")}
                 </Text>
               </View>
@@ -187,7 +205,13 @@ const handleBackPress = () => {
                   borderLeftColor: "#60A5FA",
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
+                >
                   <Text style={{ fontSize: 18, marginRight: 8 }}>💡</Text>
                   <Text
                     style={{
@@ -246,7 +270,13 @@ const handleBackPress = () => {
                   elevation: 2,
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 20,
+                  }}
+                >
                   <View
                     style={{
                       width: 5,
@@ -270,7 +300,12 @@ const handleBackPress = () => {
                 </View>
 
                 {isTablet ? (
-                  <View style={{ flexDirection: showImageLeft ? "row" : "row-reverse", gap: 32 }}>
+                  <View
+                    style={{
+                      flexDirection: showImageLeft ? "row" : "row-reverse",
+                      gap: 32,
+                    }}
+                  >
                     {section.contentUrl && (
                       <View style={{ width: "45%" }}>
                         <Image
@@ -341,9 +376,23 @@ const handleBackPress = () => {
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View style={{ width: 40, height: 1, backgroundColor: "#CBD5E1", marginRight: 12 }} />
+              <View
+                style={{
+                  width: 40,
+                  height: 1,
+                  backgroundColor: "#CBD5E1",
+                  marginRight: 12,
+                }}
+              />
               <Text style={{ fontSize: 24 }}>✓</Text>
-              <View style={{ width: 40, height: 1, backgroundColor: "#CBD5E1", marginLeft: 12 }} />
+              <View
+                style={{
+                  width: 40,
+                  height: 1,
+                  backgroundColor: "#CBD5E1",
+                  marginLeft: 12,
+                }}
+              />
             </View>
             <Text
               style={{

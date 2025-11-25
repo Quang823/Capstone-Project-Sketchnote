@@ -408,6 +408,7 @@ export const projectService = {
     let heartbeatTimer = null;
     let pendingQueue = [];
     let stompClient = null;
+    let autoReconnect = false;
     // Try SockJS endpoint instead of native WebSocket
     const WS_GATEWAY_URL = "https://sketchnote.litecsys.com/ws"; // SockJS base URL (no wss://)
     const WS_DIRECT_URL = "https://sketchnote.litecsys.com/ws";
@@ -465,6 +466,7 @@ export const projectService = {
 
         console.log("🔵 [Realtime] Creating StompClient with SockJS...");
 
+        autoReconnect = true;
         stompClient = new StompClient({
           // brokerURL is NOT used with webSocketFactory
 
@@ -552,7 +554,12 @@ export const projectService = {
             console.log("🔴🔴🔴 [Realtime] WebSocket CLOSED 🔴🔴🔴", e);
             isConnected = false;
             activeProjectId = null;
-
+            if (!autoReconnect && stompClient) {
+              try {
+                stompClient.reconnectDelay = 0;
+                stompClient.deactivate();
+              } catch {}
+            }
             // Simple reconnect logic if needed, but StompJS handles reconnects automatically
             // if reconnectDelay is set.
             // We only need manual fallback if we want to switch URLs.
@@ -573,9 +580,14 @@ export const projectService = {
     const disconnect = () => {
       try {
         console.log("[Realtime] DISCONNECT");
+        autoReconnect = false;
         if (stompClient) {
           try {
-            stompClient.deactivate();
+            stompClient.reconnectDelay = 0;
+            const p = stompClient.deactivate?.();
+            if (p && typeof p.then === "function") {
+              p.then(() => {}).catch(() => {});
+            }
           } catch {}
         }
       } finally {
