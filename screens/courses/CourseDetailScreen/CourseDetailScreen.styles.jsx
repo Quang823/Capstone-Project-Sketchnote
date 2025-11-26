@@ -37,22 +37,23 @@ export const courseDetailStyles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  
+
   // LAYOUT 2 CỘT
   twoColumnContainer: {
     flexDirection: "row",
     padding: 24,
     gap: 24,
-    maxWidth: 1400,
+    maxWidth: 1300,
     alignSelf: "center",
     width: "100%",
+    justifyContent: "space-between",
   },
-  
+
   // CỘT TRÁI
   leftColumn: {
-    flex: 1.2,
+    flex: 1.4,
   },
-  
+
   mainCard: {
     backgroundColor: "white",
     borderRadius: 12,
@@ -63,17 +64,17 @@ export const courseDetailStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  
+
   courseImage: {
     width: "100%",
     height: 320,
     resizeMode: "cover",
   },
-  
+
   courseInfo: {
     padding: 32,
   },
-  
+
   courseTitle: {
     fontSize: 28,
     fontWeight: "700",
@@ -81,14 +82,14 @@ export const courseDetailStyles = StyleSheet.create({
     marginBottom: 8,
     lineHeight: 36,
   },
-  
+
   subtitle: {
     fontSize: 15,
     color: "#6B7280",
     marginBottom: 20,
     lineHeight: 22,
   },
-  
+
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -96,19 +97,19 @@ export const courseDetailStyles = StyleSheet.create({
     gap: 16,
     marginBottom: 24,
   },
-  
+
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
-  
+
   metaText: {
     fontSize: 14,
     color: "#4B5563",
     fontWeight: "500",
   },
-  
+
   levelBadge: {
     fontSize: 13,
     color: "#3B82F6",
@@ -118,54 +119,54 @@ export const courseDetailStyles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 4,
   },
-  
+
   divider: {
     height: 1,
     backgroundColor: "#E5E7EB",
     marginVertical: 20,
   },
-  
+
   descriptionText: {
     marginVertical: 20,
   },
-  
+
   descriptionContent: {
     fontSize: 15,
     lineHeight: 24,
     color: "#374151",
   },
-  
+
   includesSection: {
     backgroundColor: "#F9FAFB",
     padding: 20,
     borderRadius: 8,
   },
-  
+
   includesTitle: {
     fontSize: 15,
     fontWeight: "600",
     color: "#111827",
     marginBottom: 12,
   },
-  
+
   includeItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     marginBottom: 10,
   },
-  
+
   includeText: {
     fontSize: 14,
     color: "#4B5563",
     flex: 1,
   },
-  
+
   // CỘT PHẢI
   rightColumn: {
     flex: 1,
   },
-  
+
   stickyCard: {
     backgroundColor: "white",
     borderRadius: 12,
@@ -175,25 +176,25 @@ export const courseDetailStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  
+
   priceSection: {
     padding: 24,
     paddingBottom: 20,
   },
-  
+
   priceText: {
     fontSize: 36,
     fontWeight: "700",
     color: "#111827",
     marginBottom: 20,
   },
-  
+
   primaryButton: {
     height: 52,
     borderRadius: 8,
     overflow: "hidden",
   },
-  
+
   buttonGradient: {
     flex: 1,
     flexDirection: "row",
@@ -201,13 +202,13 @@ export const courseDetailStyles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  
+
   buttonText: {
     fontSize: 16,
     fontWeight: "600",
     color: "white",
   },
-  
+
   curriculumSection: {
     padding: 24,
     paddingTop: 20,
@@ -216,26 +217,26 @@ export const courseDetailStyles = StyleSheet.create({
     borderTopColor: "#3B82F6",
     borderTopWidth: 3,
   },
-  
+
   curriculumHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     marginBottom: 8,
   },
-  
+
   curriculumTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: "#111827",
   },
-  
+
   curriculumMeta: {
     fontSize: 14,
     color: "#6B7280",
     marginBottom: 20,
   },
-  
+
   lessonItem: {
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
@@ -243,32 +244,32 @@ export const courseDetailStyles = StyleSheet.create({
     marginHorizontal: -24,
     paddingHorizontal: 24,
   },
-  
+
   lessonHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 16,
   },
-  
+
   lessonHeaderLeft: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-  
+
   lessonIndex: {
     fontSize: 14,
     fontWeight: "600",
     color: "#9CA3AF",
     width: 24,
   },
-  
+
   lessonInfo: {
     flex: 1,
   },
-  
+
   lessonTitle: {
     fontSize: 15,
     fontWeight: "500",
@@ -276,24 +277,24 @@ export const courseDetailStyles = StyleSheet.create({
     marginBottom: 4,
     lineHeight: 20,
   },
-  
+
   lessonDuration: {
     fontSize: 13,
     color: "#9CA3AF",
   },
-  
+
   lessonContent: {
     paddingLeft: 36,
     paddingRight: 16,
     paddingBottom: 16,
   },
-  
+
   lessonContentText: {
     fontSize: 14,
     color: "#6B7280",
     lineHeight: 20,
   },
-  
+
   // LOADING & ERROR
   loadingContainer: {
     flex: 1,
@@ -301,14 +302,14 @@ export const courseDetailStyles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F9FAFB",
   },
-  
+
   loadingText: {
     marginTop: 12,
     fontSize: 15,
     color: "#6B7280",
     fontWeight: "500",
   },
-  
+
   errorContainer: {
     flex: 1,
     justifyContent: "center",
@@ -316,14 +317,14 @@ export const courseDetailStyles = StyleSheet.create({
     backgroundColor: "#F9FAFB",
     paddingHorizontal: 32,
   },
-  
+
   errorText: {
     fontSize: 15,
     color: "#DC2626",
     marginTop: 16,
     textAlign: "center",
   },
-  
+
   retryButton: {
     marginTop: 20,
     backgroundColor: "#3B82F6",
@@ -331,7 +332,7 @@ export const courseDetailStyles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
   },
-  
+
   retryButtonText: {
     color: "white",
     fontSize: 15,
@@ -403,5 +404,245 @@ export const courseDetailStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  // DEDICATED FEEDBACK SECTION
+  feedbackContainer: {
+    maxWidth: 1300,
+    alignSelf: "center",
+    width: "100%",
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    marginTop: 20,
+  },
+
+  feedbackHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 24,
+    gap: 12,
+  },
+
+  feedbackTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1F2937",
+  },
+
+  feedbackSubTitle: {
+    marginTop: 4,
+    fontSize: 14,
+    color: "#6B7280",
+  },
+
+  feedbackContent: {
+    flexDirection: "row",
+    gap: 32,
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  // Left Side: Rating Summary
+  ratingSummaryColumn: {
+    flex: 1,
+    borderRightWidth: 1,
+    borderRightColor: "#E5E7EB",
+    paddingRight: 32,
+  },
+
+  ratingOverview: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+
+  averageRating: {
+    fontSize: 64,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 8,
+    lineHeight: 64,
+  },
+
+  starsContainer: {
+    flexDirection: "row",
+    gap: 4,
+    marginBottom: 8,
+  },
+
+  totalReviews: {
+    fontSize: 15,
+    color: "#6B7280",
+    marginTop: 4,
+  },
+
+  ratingDistribution: {
+    gap: 12,
+    width: "100%",
+  },
+
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  ratingStars: {
+    flexDirection: "row",
+    gap: 2,
+    minWidth: 90,
+  },
+
+  ratingBarContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  ratingBarBg: {
+    flex: 1,
+    height: 8,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+
+  ratingBarFill: {
+    height: "100%",
+    backgroundColor: "#F59E0B",
+    borderRadius: 4,
+  },
+
+  ratingBarText: {
+    fontSize: 13,
+    color: "#6B7280",
+    fontWeight: "500",
+    minWidth: 30,
+    textAlign: "right",
+  },
+
+  // Right Side: Reviews List
+  reviewsListColumn: {
+    flex: 2,
+  },
+
+  reviewsListTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#111827",
+    marginBottom: 20,
+  },
+
+  reviewsList: {
+    gap: 20,
+  },
+
+  reviewItem: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    padding: 20,
+    gap: 12,
+  },
+
+  reviewHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+
+  reviewerInfo: {
+    flexDirection: "row",
+    gap: 12,
+    flex: 1,
+  },
+
+  reviewerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#E5E7EB",
+  },
+
+  reviewerAvatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#3B82F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  reviewerInitial: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+
+  reviewerDetails: {
+    flex: 1,
+    gap: 4,
+  },
+
+  reviewerName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1F2937",
+  },
+
+  reviewMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  reviewDate: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+
+  editedBadge: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontStyle: "italic",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 4,
+  },
+
+  reviewComment: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: "#374151",
+  },
+
+  completedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+
+  completedText: {
+    fontSize: 13,
+    color: "#10B981",
+    fontWeight: "500",
+  },
+
+  noReviews: {
+    textAlign: "center",
+    fontSize: 15,
+    color: "#9CA3AF",
+    paddingVertical: 40,
+    fontStyle: "italic",
   },
 });

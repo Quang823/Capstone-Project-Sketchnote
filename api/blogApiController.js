@@ -38,4 +38,23 @@ export const blogApiController = {
   deleteContent: async (id) => {
     return await privateApi.delete(`/api/contents/${id}`);
   },
+  getCommentsBlog: async (blogId,page,size) => {
+    return await privateApi.get(`/api/blogs/${blogId}/comments`, {
+      params: { page, size }
+    });
+  },
+  createCommentsBlog: async (blogId, comment) => {
+    return await privateApi.post(`/api/blogs/${blogId}/comments`, comment);
+  },
+  updateCommentsBlog: async ( commentId, comment) => {
+    return await privateApi.put(`/api/blogs/comments/${commentId}`, comment);
+  },
+  deleteCommentsBlog: async (commentId) => {
+    return await privateApi.delete(`/api/blogs/comments/${commentId}`);
+  },
+  getReplyCommentsBlog: async (commentId,page,size) => {
+    return await privateApi.get(`/api/blogs/comments/${commentId}/replies`, {
+      params: { page, size }
+    });
+  },
 };
