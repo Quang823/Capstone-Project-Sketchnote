@@ -13,6 +13,7 @@ import Toast from "react-native-toast-message";
 import { useCart } from "../../../context/CartContext";
 import { resourceService } from "../../../service/resourceService";
 import { styles } from "./ResourceDetailScreen.styles";
+import { feedbackService } from "../../../service/feedbackService";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 
@@ -28,13 +29,17 @@ export default function ResourceDetailScreen() {
   const [quantity, setQuantity] = useState(1);
   const [selectedOption, setSelectedOption] = useState("Blindbox");
   const [userResources, setUserResources] = useState([]);
+  const [feedback, setFeedback] = useState([]);
 
   useEffect(() => {
     const fetchResource = async () => {
       try {
         const data = await resourceService.getResourceById(resourceId);
-        console.log(data);
+        console.log("getResourceById:", data);
         setResource(data);
+        const feedbackData = await feedbackService.getAllFeedbackResource(resourceId);
+       
+        setFeedback(feedbackData || []);
       } catch (error) {
         Toast.show({
           type: "error",
@@ -53,9 +58,8 @@ export default function ResourceDetailScreen() {
   useEffect(() => {
     const fetchUserResources = async () => {
       try {
-        const resUser = await resourceService.getResourceProjectByUserId();
-        //  console.log(resUser);
-        const userData = Array.isArray(resUser) ? resUser : [];
+        const resUser = await resourceService.getResourceProjectByUserId(0,20);
+        const userData = Array.isArray(resUser.content) ? resUser.content : [];
         // console.log("✅ Resource By User Id:", userData);
         setUserResources(userData);
       } catch (error) {
@@ -157,8 +161,7 @@ export default function ResourceDetailScreen() {
     }
 
     const designerName = resource.designerInfo
-      ? `${resource.designerInfo.firstName || ""} ${
-          resource.designerInfo.lastName || ""
+      ? `${resource.designerInfo.firstName || ""} ${resource.designerInfo.lastName || ""
         }`.trim()
       : "Unknown Designer";
 
@@ -452,34 +455,28 @@ export default function ResourceDetailScreen() {
           <View style={styles.section}>
             <View style={styles.reviewsHeader}>
               <Text style={styles.sectionTitle}>Reviews</Text>
-              {/* <Pressable style={styles.writeReviewButton}>
-                <Icon name="rate-review" size={16} color="#FFFFFF" />
-                <Text style={styles.writeReviewText}>Write a Review</Text>
-              </Pressable> */}
             </View>
 
             {/* ⭐ Rating Overview */}
             <View style={styles.ratingStats}>
               <View style={styles.ratingOverview}>
-                <Text style={styles.ratingNumber}>4.5</Text>
+                <Text style={styles.ratingNumber}>
+                  {feedback?.averageRating || 0}
+                </Text>
                 <View style={styles.starsContainerSmall}>
-                  {renderStars(4.5)}
+                  {renderStars(feedback?.averageRating || 0)}
                 </View>
-                <Text style={styles.totalReviews}>(128 reviews)</Text>
+                <Text style={styles.totalReviews}>
+                  ({feedback?.totalFeedbacks || 0} reviews)
+                </Text>
               </View>
 
               <View style={styles.ratingBars}>
                 {[5, 4, 3, 2, 1].map((star) => {
-                  const percentage =
-                    star === 5
-                      ? 70
-                      : star === 4
-                      ? 20
-                      : star === 3
-                      ? 5
-                      : star === 2
-                      ? 3
-                      : 2;
+                  const count = feedback?.ratingDistribution?.[star] || 0;
+                  const total = feedback?.totalFeedbacks || 1; // Avoid division by zero
+                  const percentage = Math.round((count / total) * 100);
+
                   return (
                     <View key={star} style={styles.ratingBarRow}>
                       <Text style={styles.starLabel}>{star}</Text>
@@ -498,44 +495,47 @@ export default function ResourceDetailScreen() {
 
             {/* 🧠 Reviews List */}
             <View style={styles.reviewsList}>
-              {/* {reviews.map((review, index) => (
-      <View key={index} style={styles.reviewItem}>
-        <View style={styles.reviewHeader}>
-          <Image
-            source={{
-              uri:
-                review.avatar ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name)}&background=4F46E5&color=fff`,
-            }}
-            style={styles.reviewerAvatar}
-          />
-          <View style={styles.reviewerInfoContainer}>
-            <Text style={styles.reviewerName}>{review.name}</Text>
-            <View style={styles.reviewRating}>{renderStars(review.rating)}</View>
-          </View>
-          <Text style={styles.reviewDate}>{review.date}</Text>
-        </View>
+              {feedback?.feedbacks?.length > 0 ? (
+                feedback.feedbacks.map((item) => (
+                  <View key={item.id} style={styles.reviewItem}>
+                    <View style={styles.reviewHeader}>
+                      <Image
+                        source={{
+                          uri:
+                            item.userAvatarUrl ||
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                              item.userFullName || "User"
+                            )}&background=4F46E5&color=fff`,
+                        }}
+                        style={styles.reviewerAvatar}
+                      />
+                      <View style={styles.reviewerInfoContainer}>
+                        <Text style={styles.reviewerName}>
+                          {item.userFullName || "Anonymous"}
+                        </Text>
+                        <View style={styles.reviewRating}>
+                          {renderStars(item.rating)}
+                        </View>
+                      </View>
+                      <Text style={styles.reviewDate}>
+                        {new Date(item.createdAt).toLocaleDateString("vi-VN")}
+                      </Text>
+                    </View>
 
-        <Text style={styles.reviewComment}>{review.comment}</Text>
+                    <Text style={styles.reviewComment}>{item.comment}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={{ textAlign: "center", color: "#6B7280", marginTop: 10 }}>
+                  No reviews yet.
+                </Text>
+              )}
 
-        <View style={styles.reviewActions}>
-          <Pressable style={styles.reviewActionButton}>
-            <Icon name="thumb-up-off-alt" size={16} color="#6B7280" />
-            <Text style={styles.reviewActionText}>Hữu ích ({review.likes})</Text>
-          </Pressable>
-          <Pressable style={styles.reviewActionButton}>
-            <Icon name="reply" size={16} color="#6B7280" />
-            <Text style={styles.reviewActionText}>Trả lời</Text>
-          </Pressable>
-        </View>
-      </View>
-    ))} */}
-
-              {/* Load More */}
-              <Pressable style={styles.loadMoreButton}>
+              {/* Load More - Optional: Hide if no more reviews or implement pagination later */}
+              {/* <Pressable style={styles.loadMoreButton}>
                 <Text style={styles.loadMoreText}>Load more reviews</Text>
                 <Icon name="keyboard-arrow-down" size={20} color="#3B82F6" />
-              </Pressable>
+              </Pressable> */}
             </View>
           </View>
         </View>

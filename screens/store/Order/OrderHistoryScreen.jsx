@@ -7,6 +7,10 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -17,6 +21,7 @@ import SidebarToggleButton from "../../../components/navigation/SidebarToggleBut
 import loadingAnimation from "../../../assets/loading.json";
 import LottieView from "lottie-react-native";
 import Toast from "react-native-toast-message";
+import { feedbackService } from "../../../service/feedbackService";
 
 const ITEMS_PER_PAGE = 5;
 
@@ -27,6 +32,14 @@ export default function OrderHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [retryingOrderId, setRetryingOrderId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [order, setOrder] = useState(null);
+
+  // Feedback Modal States
+  const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -36,17 +49,17 @@ export default function OrderHistoryScreen() {
     try {
       setLoading(true);
       const response = await orderService.getOrderByUserId();
-     
-      
+      setOrder(response);
+
       // Sắp xếp orders theo ngày mới nhất lên trên
       const sortedOrders = (response || []).sort((a, b) => {
         const dateA = new Date(a.issueDate);
         const dateB = new Date(b.issueDate);
-        return dateB - dateA; // Mới nhất lên trên
+        return dateB - dateA;
       });
-      
+
       setAllOrders(sortedOrders);
-      setCurrentPage(1); // Reset về trang 1
+      setCurrentPage(1);
     } catch (error) {
       console.error("Error fetching orders:", error);
     } finally {
@@ -60,33 +73,93 @@ export default function OrderHistoryScreen() {
     fetchOrders();
   };
 
- const handleRetryPayment = async (orderId, invoiceNumber, totalAmount) => {
-  try {
-    setRetryingOrderId(orderId);
+  const openFeedbackModal = (item) => {
+    setSelectedItem(item);
+    setRating(0);
+    setComment("");
+    setFeedbackModalVisible(true);
+  };
 
-    await orderService.createOrderRetry(orderId);
-    await fetchOrders(); // ✅ Chờ xong rồi mới tiếp tục
+  const closeFeedbackModal = () => {
+    setFeedbackModalVisible(false);
+    setSelectedItem(null);
+    setRating(0);
+    setComment("");
+  };
 
-    // 🔥 Hiện Alert thay vì Toast
-    Alert.alert(
-      "Retry Successful",
-      "Payment has been retried successfully.",
-      [{ text: "OK" }],
-      { cancelable: true }
-    );
+  const createFeedback = async () => {
+    if (rating === 0) {
+      Alert.alert("Rating Required", "Please select a rating before submitting.");
+      return;
+    }
 
-  } catch (error) {
-    Alert.alert(
-      "Retry Failed",
-      error.message || "Insufficient balance in wallet",
-      [{ text: "OK" }],
-      { cancelable: true }
-    );
-  } finally {
-    setRetryingOrderId(null);
-  }
-};
+    if (!comment.trim()) {
+      Alert.alert("Comment Required", "Please write a comment about your experience.");
+      return;
+    }
 
+    try {
+      setSubmittingFeedback(true);
+      
+   
+      const payload = {
+        resourceId: selectedItem.resourceTemplateId, // hoặc selectedItem.resourceId nếu có
+        rating: rating,
+        comment: comment.trim(),
+        validTarget: true,
+      };
+
+      console.log('Feedback payload:', payload); // Debug log
+
+      await feedbackService.postFeedbackResource(payload);
+
+      Alert.alert(
+        "Success!",
+        "Thank you for your feedback!",
+        [{ text: "OK", onPress: closeFeedbackModal }]
+      );
+
+      Toast.show({
+        type: "success",
+        text1: "Feedback Submitted",
+        text2: "Thank you for sharing your experience!",
+      });
+
+    } catch (error) {
+      console.error("Error creating feedback:", error.message);
+      Alert.alert(
+        "Error",
+        error.message || "Failed to submit feedback. Please try again.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
+  const handleRetryPayment = async (orderId, invoiceNumber, totalAmount) => {
+    try {
+      setRetryingOrderId(orderId);
+      await orderService.createOrderRetry(orderId);
+      await fetchOrders();
+
+      Alert.alert(
+        "Retry Successful",
+        "Payment has been retried successfully.",
+        [{ text: "OK" }],
+        { cancelable: true }
+      );
+    } catch (error) {
+      Alert.alert(
+        "Retry Failed",
+        error.message || "Insufficient balance in wallet",
+        [{ text: "OK" }],
+        { cancelable: true }
+      );
+    } finally {
+      setRetryingOrderId(null);
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -124,7 +197,25 @@ export default function OrderHistoryScreen() {
     }
   };
 
- 
+  const renderStars = () => {
+    return (
+      <View style={feedbackStyles.starsContainer}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Pressable
+            key={star}
+            onPress={() => setRating(star)}
+            style={feedbackStyles.starButton}
+          >
+            <Icon
+              name={star <= rating ? "star" : "star-border"}
+              size={40}
+              color={star <= rating ? "#FFB300" : "#BDC3C7"}
+            />
+          </Pressable>
+        ))}
+      </View>
+    );
+  };
 
   // Tính toán phân trang
   const totalPages = Math.ceil(allOrders.length / ITEMS_PER_PAGE);
@@ -231,31 +322,54 @@ export default function OrderHistoryScreen() {
 
             {/* Items */}
             <View style={styles.itemsContainer}>
-              {order?.items?.map((item) => (
-                <View key={item.orderDetailId} style={styles.itemRow}>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>{item.templateName}</Text>
-                    <Text style={styles.itemDesc}>
-                      {item.templateDescription}
-                    </Text>
-                    <View style={styles.typeBadge}>
-                      <Text style={styles.typeBadgeText}>
-                        {item.templateType}
+              {order?.items?.map((item) => {
+              
+                
+                // Check điều kiện hiển thị feedback button
+                const canShowFeedback = 
+                  (order.orderStatus === "COMPLETED" || order.orderStatus === "SUCCESS") && 
+                  order.paymentStatus === "PAID" &&
+                  item.resourceTemplateId;
+
+                return (
+                  <View key={item.orderDetailId} style={styles.itemRow}>
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemName}>{item.templateName}</Text>
+                      <Text style={styles.itemDesc}>
+                        {item.templateDescription}
                       </Text>
+                      <View style={styles.typeBadge}>
+                        <Text style={styles.typeBadgeText}>
+                          {item.templateType}
+                        </Text>
+                      </View>
+                      
+                      {/* Feedback Button */}
+                      {canShowFeedback && (
+                        <Pressable
+                          style={feedbackStyles.feedbackButton}
+                          onPress={() => openFeedbackModal(item)}
+                        >
+                          <Icon name="rate-review" size={16} color="#1E40AF" />
+                          <Text style={feedbackStyles.feedbackButtonText}>
+                            Write Review
+                          </Text>
+                        </Pressable>
+                      )}
+                    </View>
+                    <View style={styles.itemRight}>
+                      <Text style={styles.itemPrice}>
+                        {item.unitPrice.toLocaleString()} đ
+                      </Text>
+                      {item.discount > 0 && (
+                        <Text style={styles.discountText}>
+                          -{item.discount.toLocaleString()} đ
+                        </Text>
+                      )}
                     </View>
                   </View>
-                  <View style={styles.itemRight}>
-                    <Text style={styles.itemPrice}>
-                      {item.unitPrice.toLocaleString()} đ
-                    </Text>
-                    {item.discount > 0 && (
-                      <Text style={styles.discountText}>
-                        -{item.discount.toLocaleString()} đ
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
 
             {/* Footer */}
@@ -283,8 +397,8 @@ export default function OrderHistoryScreen() {
                       order.paymentStatus === "PENDING"
                         ? "payment"
                         : order.paymentStatus === "FAILED"
-                        ? "error"
-                        : "check-circle"
+                          ? "error"
+                          : "check-circle"
                     }
                     size={14}
                     color="#1F2937"
@@ -405,6 +519,249 @@ export default function OrderHistoryScreen() {
 
         <View style={{ height: 20 }} />
       </ScrollView>
+
+      {/* Feedback Modal */}
+      <Modal
+        visible={feedbackModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeFeedbackModal}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={feedbackStyles.modalOverlay}
+        >
+          <Pressable
+            style={feedbackStyles.modalBackdrop}
+            onPress={closeFeedbackModal}
+          />
+          <View style={feedbackStyles.modalContent}>
+            {/* Header */}
+            <View style={feedbackStyles.modalHeader}>
+              <View>
+                <Text style={feedbackStyles.modalTitle}>Write a Review</Text>
+                <Text style={feedbackStyles.modalSubtitle}>
+                  {selectedItem?.templateName}
+                </Text>
+              </View>
+              <Pressable onPress={closeFeedbackModal}>
+                <Icon name="close" size={24} color="#64748B" />
+              </Pressable>
+            </View>
+
+            {/* Rating */}
+            <View style={feedbackStyles.section}>
+              <Text style={feedbackStyles.sectionTitle}>Your Rating</Text>
+              {renderStars()}
+              {rating > 0 && (
+                <Text style={feedbackStyles.ratingText}>
+                  {rating === 1 && "Poor"}
+                  {rating === 2 && "Fair"}
+                  {rating === 3 && "Good"}
+                  {rating === 4 && "Very Good"}
+                  {rating === 5 && "Excellent"}
+                </Text>
+              )}
+            </View>
+
+            {/* Comment */}
+            <View style={feedbackStyles.section}>
+              <Text style={feedbackStyles.sectionTitle}>Your Comment</Text>
+              <TextInput
+                style={feedbackStyles.commentInput}
+                placeholder="Share your experience with this resource..."
+                placeholderTextColor="#94A3B8"
+                multiline
+                numberOfLines={5}
+                value={comment}
+                onChangeText={setComment}
+                textAlignVertical="top"
+              />
+              <Text style={feedbackStyles.charCount}>
+                {comment.length} characters
+              </Text>
+            </View>
+
+            {/* Action Buttons */}
+            <View style={feedbackStyles.buttonRow}>
+              <Pressable
+                style={feedbackStyles.cancelButton}
+                onPress={closeFeedbackModal}
+              >
+                <Text style={feedbackStyles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  feedbackStyles.submitButton,
+                  (submittingFeedback || rating === 0 || !comment.trim()) &&
+                    feedbackStyles.submitButtonDisabled,
+                ]}
+                onPress={createFeedback}
+                disabled={submittingFeedback || rating === 0 || !comment.trim()}
+              >
+                {submittingFeedback ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Icon name="send" size={18} color="#FFFFFF" />
+                    <Text style={feedbackStyles.submitButtonText}>
+                      Submit Review
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+// Feedback Modal Styles
+const feedbackStyles = {
+  feedbackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    alignSelf: "flex-start",
+  },
+  feedbackButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1E40AF",
+    marginLeft: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: "85%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1F2937",
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 4,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 12,
+  },
+  starsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+  },
+  starButton: {
+    padding: 4,
+  },
+  ratingText: {
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFB300",
+    marginTop: 8,
+  },
+  commentInput: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: "#1F2937",
+    minHeight: 120,
+  },
+  charCount: {
+    fontSize: 12,
+    color: "#94A3B8",
+    textAlign: "right",
+    marginTop: 8,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  submitButton: {
+    flex: 1,
+    flexDirection: "row",
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: "#1E40AF",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#1E40AF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitButtonDisabled: {
+    backgroundColor: "#CBD5E1",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+};

@@ -66,6 +66,7 @@ export default function LessonScreen() {
   const intervalRef = useRef(null);
   const saveIntervalRef = useRef(null);
   const updateTimeRef = useRef(null);
+  const hasAutoSavedRef = useRef(false);
 
   useEffect(() => {
     fetchCourseData();
@@ -91,6 +92,7 @@ export default function LessonScreen() {
     lastUpdateRef.current = Date.now();
     setCurrentTime(0);
     setCanProceed(false);
+    hasAutoSavedRef.current = false;
 
     // Clear intervals
     if (intervalRef.current) {
@@ -115,12 +117,10 @@ export default function LessonScreen() {
       setLoading(true);
       setError(null);
       const response = await courseService.getCourseByIdEnrolled(courseId);
-      console.log(response.result.course.lessons);
       if (response && response.result.course) {
         setCourse(response.result.course);
       }
     } catch (err) {
-      console.error("Error fetching course:", err);
       setError("Không thể tải khóa học");
     } finally {
       setLoading(false);
@@ -128,7 +128,7 @@ export default function LessonScreen() {
   };
 
   // Lưu progress lên server
-  const saveLessonProgress = async () => {
+  const saveLessonProgress = async (forceComplete = false) => {
     if (!currentLessonId || !courseId) return;
 
     try {
@@ -140,7 +140,7 @@ export default function LessonScreen() {
           lastPosition = Math.floor(time);
         }
       } catch (err) {
-        console.log("Could not get current time from player");
+        // Không log error
       }
 
       const timeSpent = Math.floor(timeSpentRef.current);
@@ -149,26 +149,15 @@ export default function LessonScreen() {
       const lessonDuration = currentLesson?.duration || 0;
       const watchPercentage =
         lessonDuration > 0 ? (lastPosition / lessonDuration) * 100 : 0;
-      const completed = watchPercentage >= 80;
+      const completed = forceComplete || watchPercentage >= 80;
 
       // Chỉ lưu nếu có thời gian xem
       if (timeSpent > 0 || lastPosition > 0) {
-        console.log("Saving progress:", {
-          courseId,
-          lessonId: currentLessonId,
-          lastPosition,
-          timeSpent,
-          completed,
-          watchPercentage: watchPercentage.toFixed(1),
-        });
-
         await courseService.saveLessonProgress(courseId, currentLessonId, {
           lastPosition,
           timeSpent,
           completed,
         });
-
-        console.log("Progress saved successfully");
 
         // Tự động update local lesson status thành COMPLETED khi xem đủ 80%
         if (completed && course?.lessons) {
@@ -178,18 +167,16 @@ export default function LessonScreen() {
               : lesson
           );
           setCourse({ ...course, lessons: updatedLessons });
-          console.log("Lesson status updated to COMPLETED");
         }
       }
     } catch (error) {
-      console.error("Error saving lesson progress:", error);
+      // Không log error
     }
   };
 
   // Callback khi trạng thái player thay đổi
   const onChangeState = useCallback(
-    (state) => {
-      console.log("Player state:", state);
+    async (state) => {
       setPlayerState(state);
 
       if (state === "playing") {
@@ -210,7 +197,7 @@ export default function LessonScreen() {
         if (!saveIntervalRef.current) {
           saveIntervalRef.current = setInterval(() => {
             saveLessonProgress();
-          }, 30000); // 30 seconds
+          }, 30000);
         }
 
         if (!updateTimeRef.current) {
@@ -222,16 +209,17 @@ export default function LessonScreen() {
                 const lessonDuration = currentLesson?.duration || 0;
                 if (lessonDuration > 0) {
                   const watchPercentage = (time / lessonDuration) * 100;
-                  setCanProceed(watchPercentage >= 90);
-                  console.log(
-                    `Video progress: ${time.toFixed(
-                      1
-                    )}s / ${lessonDuration}s (${watchPercentage.toFixed(1)}%)`
-                  );
+                  setCanProceed(watchPercentage >= 80);
+                  
+                  // Auto-save khi đạt 80% lần đầu
+                  if (watchPercentage >= 80 && !hasAutoSavedRef.current) {
+                    hasAutoSavedRef.current = true;
+                    await saveLessonProgress(true);
+                  }
                 }
               }
             } catch (err) {
-              console.log("Error getting current time:", err);
+              // Không log error
             }
           }, 1000);
         }
@@ -248,12 +236,23 @@ export default function LessonScreen() {
           clearInterval(updateTimeRef.current);
           updateTimeRef.current = null;
         }
-        if (state === "paused" || state === "ended") {
-          saveLessonProgress();
+        
+        if (state === "paused") {
+          await saveLessonProgress();
+        } else if (state === "ended") {
+          // Video kết thúc: lưu progress và tự động chuyển bài
+          await saveLessonProgress(true);
+          
+          // Tự động chuyển sang bài tiếp theo nếu không phải bài cuối
+          if (currentLessonIndex < course.lessons.length - 1 && course?.lessons) {
+            setTimeout(() => {
+              setCurrentLessonId(course.lessons[currentLessonIndex + 1].lessonId);
+            }, 1000);
+          }
         }
       }
     },
-    [currentLessonId, courseId]
+    [currentLessonId, courseId, currentLesson, course, currentLessonIndex]
   );
 
   const currentLesson = useMemo(() => {
@@ -267,7 +266,7 @@ export default function LessonScreen() {
   }, [currentLesson]);
 
   const handleBack = () => {
-    saveLessonProgress(); // Save trước khi back
+    saveLessonProgress();
     navigation.goBack();
   };
 
@@ -299,10 +298,10 @@ export default function LessonScreen() {
 
     // Check if lesson can be accessed based on progress rules
     if (!canAccessLesson(targetIndex, targetLesson)) {
-      return; // Don't allow access if lesson is locked
+      return;
     }
 
-    saveLessonProgress(); // Save lesson hiện tại
+    saveLessonProgress();
     setCurrentLessonId(id);
   };
 
@@ -347,16 +346,19 @@ export default function LessonScreen() {
 
   const handlePrevious = () => {
     if (currentLessonIndex > 0 && course?.lessons) {
-      saveLessonProgress(); // Save trước khi chuyển
+      saveLessonProgress();
       setCurrentLessonId(course.lessons[currentLessonIndex - 1].lessonId);
     }
   };
 
-  const handleComplete = () => {
-    saveLessonProgress(); // Save trước khi chuyển
+  const handleComplete = async () => {
+    await saveLessonProgress(true);
+    
     if (currentLessonIndex < course.lessons.length - 1 && course?.lessons) {
+      // Chuyển sang bài tiếp theo
       setCurrentLessonId(course.lessons[currentLessonIndex + 1].lessonId);
     } else {
+      // Đã hoàn thành khóa học, quay về
       navigation.goBack();
     }
   };
@@ -540,15 +542,6 @@ export default function LessonScreen() {
         {/* Header */}
         <View style={lessonStyles.header}>
           <Text style={lessonStyles.headerTitle}>{course.title}</Text>
-          <View style={lessonStyles.headerActions}>
-            {/* Debug info - có thể xóa sau */}
-            <Text style={{ fontSize: 12, color: "#666", marginRight: 10 }}>
-              Time: {Math.floor(timeSpentRef.current)}s | Pos:{" "}
-              {Math.floor(currentTime)}s | Status:{" "}
-              {currentLesson?.lessonProgressStatus} | CanNext:{" "}
-              {canProceedToNext ? "Yes" : "No"}
-            </Text>
-          </View>
         </View>
 
         <ScrollView style={lessonStyles.contentScroll}>

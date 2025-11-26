@@ -38,6 +38,10 @@ export default function MyBlogScreen({ navigation }) {
     navigation.navigate("UpdateBlog", { blog });
   };
 
+  const handleViewBlog = (blogId) => {
+    navigation.navigate("BlogDetail", { blogId });
+  };
+
   const handleDeleteBlog = async (id) => {
     Alert.alert("Delete Blog", "Are you sure you want to delete this post?", [
       { text: "Cancel", style: "cancel" },
@@ -168,7 +172,11 @@ export default function MyBlogScreen({ navigation }) {
           </View>
           <ScrollView contentContainerStyle={myBlogStyles.listContainer}>
             {visibleBlogs?.map((item) => (
-              <View key={item.id} style={myBlogStyles.blogItem}>
+              <Pressable
+                key={item.id}
+                style={myBlogStyles.blogItem}
+                onPress={() => handleViewBlog(item.id)}
+              >
                 <Image
                   source={{
                     uri: item.imageUrl || "https://i.imgur.com/9Y2w2fQ.jpeg",
@@ -223,7 +231,7 @@ export default function MyBlogScreen({ navigation }) {
                     <Icon name="delete-outline" size={22} color="#F5576C" />
                   </Pressable>
                 </View>
-              </View>
+              </Pressable>
             ))}
           </ScrollView>
         </>

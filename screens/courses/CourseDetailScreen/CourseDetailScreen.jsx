@@ -21,6 +21,7 @@ import Reanimated, {
 import { courseDetailStyles } from "./CourseDetailScreen.styles";
 import { courseService } from "../../../service/courseService";
 import Toast from "react-native-toast-message";
+import { feedbackService } from "../../../service/feedbackService";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 
@@ -37,6 +38,14 @@ const formatDuration = (seconds) => {
   return `${minutes} phút`;
 };
 
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 export default function CourseDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -48,6 +57,7 @@ export default function CourseDetailScreen() {
   const [expandedModules, setExpandedModules] = useState({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+  const [feedbackData, setFeedbackData] = useState(null);
 
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
@@ -57,6 +67,10 @@ export default function CourseDetailScreen() {
     translateY.value = withTiming(0, { duration: 800, easing: Easing.ease });
 
     fetchCourseDetail(courseId);
+    fetchFeedback(courseId);
+    console.log("Feedback state:", feedbackData);
+    console.log("Feedback list:", feedbackData?.feedbacks);
+
   }, [courseId]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -92,13 +106,11 @@ export default function CourseDetailScreen() {
       const res = await courseService.buyCourse(course.price);
       console.log("Buy course response:", res);
 
-      // ✅ Kiểm tra lỗi thiếu tiền
       if (res.code === 402) {
         setShowConfirmModal(true);
         return;
       }
 
-      // ✅ Kiểm tra các lỗi khác
       if (res.code && res.code !== 200) {
         Toast.show({
           type: "error",
@@ -108,7 +120,6 @@ export default function CourseDetailScreen() {
         return;
       }
 
-      // ✅ Kiểm tra thành công
       if (res.result?.status === "SUCCESS") {
         console.log("Enrolling course:", course.id);
         const enrollRes = await courseService.enrollCourse(course.id);
@@ -120,7 +131,6 @@ export default function CourseDetailScreen() {
           text2: "Course purchased successfully!",
         });
 
-        // Refresh course data to update isEnrolled status
         await fetchCourseDetail(courseId);
         handleStartLearning();
       } else {
@@ -164,6 +174,18 @@ export default function CourseDetailScreen() {
     }));
   };
 
+  const fetchFeedback = async (courseId) => {
+    try {
+      const data = await feedbackService.getAllFeedbackCourse(courseId);
+      console.log(data);
+
+      setFeedbackData(data);
+
+    } catch (error) {
+      console.error("Error fetching feedback:", error.message);
+    }
+  };
+
   const fetchCourseDetail = async (courseId) => {
     try {
       setLoading(true);
@@ -175,7 +197,6 @@ export default function CourseDetailScreen() {
       if (response && response.result) {
         const data = response.result;
 
-        // ✅ Check xem khóa học hiện tại đã mua chưa
         const enrolledCourses = enrolledRes.result || [];
         const isEnrolled = enrolledCourses.some(
           (item) => item.courseId === data.courseId
@@ -212,6 +233,38 @@ export default function CourseDetailScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderStars = (rating) => {
+    return (
+      <View style={courseDetailStyles.starsContainer}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Icon
+            key={star}
+            name={star <= rating ? "star" : "star-border"}
+            size={16}
+            color="#F59E0B"
+          />
+        ))}
+      </View>
+    );
+  };
+
+  const renderRatingBar = (count, total) => {
+    const percentage = total > 0 ? (count / total) * 100 : 0;
+    return (
+      <View style={courseDetailStyles.ratingBarContainer}>
+        <View style={courseDetailStyles.ratingBarBg}>
+          <View
+            style={[
+              courseDetailStyles.ratingBarFill,
+              { width: `${percentage}%` },
+            ]}
+          />
+        </View>
+        <Text style={courseDetailStyles.ratingBarText}>{count}</Text>
+      </View>
+    );
   };
 
   if (loading) {
@@ -433,10 +486,114 @@ export default function CourseDetailScreen() {
             </View>
           </View>
         </ReanimatedView>
+
+        {/* DEDICATED FEEDBACK SECTION */}
+        {feedbackData && (
+          <View style={courseDetailStyles.feedbackContainer}>
+            {/* <View style={courseDetailStyles.feedbackHeader}>
+              <Icon name="rate-review" size={28} color="#3B82F6" />
+              <View>
+                <Text style={courseDetailStyles.feedbackTitle}>Student Feedback</Text>
+                <Text style={courseDetailStyles.feedbackSubTitle}>
+                  Đánh giá và nhận xét từ học viên đã tham gia khóa học
+                </Text>
+              </View>
+            </View> */}
+
+            <View style={courseDetailStyles.feedbackContent}>
+              {/* LEFT: Rating Summary */}
+              <View style={courseDetailStyles.ratingSummaryColumn}>
+                <View style={courseDetailStyles.ratingOverview}>
+                  <Text style={courseDetailStyles.averageRating}>
+                    {feedbackData.averageRating?.toFixed(1) || "0.0"}
+                  </Text>
+                  {renderStars(Math.round(feedbackData.averageRating || 0))}
+                  <Text style={courseDetailStyles.totalReviews}>
+                    {feedbackData.totalFeedbacks} feedbacks
+                  </Text>
+                </View>
+
+                <View style={courseDetailStyles.ratingDistribution}>
+                  {[5, 4, 3, 2, 1].map((star) => (
+                    <View key={star} style={courseDetailStyles.ratingRow}>
+                      <View style={courseDetailStyles.ratingStars}>
+                        {renderStars(star)}
+                      </View>
+                      {renderRatingBar(
+                        feedbackData.ratingDistribution?.[star] || 0,
+                        feedbackData.totalFeedbacks
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+
+              {/* RIGHT: Reviews List */}
+              <View style={courseDetailStyles.reviewsListColumn}>
+                <Text style={courseDetailStyles.reviewsListTitle}>Feedback List</Text>
+                <View style={courseDetailStyles.reviewsList}>
+                  {feedbackData.feedbacks && feedbackData.feedbacks.length > 0 ? (
+                    feedbackData.feedbacks.map((feedback) => (
+                      <View key={feedback.id} style={courseDetailStyles.reviewItem}>
+                        <View style={courseDetailStyles.reviewHeader}>
+                          <View style={courseDetailStyles.reviewerInfo}>
+                            {feedback.userAvatarUrl ? (
+                              <Image
+                                source={{ uri: feedback.userAvatarUrl }}
+                                style={courseDetailStyles.reviewerAvatar}
+                              />
+                            ) : (
+                              <View style={courseDetailStyles.reviewerAvatarPlaceholder}>
+                                <Text style={courseDetailStyles.reviewerInitial}>
+                                  {feedback.userFullName?.charAt(0) || "U"}
+                                </Text>
+                              </View>
+                            )}
+                            <View style={courseDetailStyles.reviewerDetails}>
+                              <Text style={courseDetailStyles.reviewerName}>
+                                {feedback.userFullName || "Anonymous"}
+                              </Text>
+                              <View style={courseDetailStyles.reviewMeta}>
+                                {renderStars(feedback.rating)}
+                                <Text style={courseDetailStyles.reviewDate}>
+                                  {formatDate(feedback.createdAt)}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                          {feedback.isEdited && (
+                            <Text style={courseDetailStyles.editedBadge}>Edited</Text>
+                          )}
+                        </View>
+                        {feedback.comment && (
+                          <Text style={courseDetailStyles.reviewComment}>
+                            {feedback.comment}
+                          </Text>
+                        )}
+                        {feedback.progressWhenSubmitted === 100 && (
+                          <View style={courseDetailStyles.completedBadge}>
+                            <Icon name="check-circle" size={14} color="#10B981" />
+                            <Text style={courseDetailStyles.completedText}>
+                              Completed
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={courseDetailStyles.noReviews}>
+                      No feedbacks yet.
+                    </Text>
+                  )}
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Modal Confirm - Purchase */}
-      <Modal
+      < Modal
         visible={showPurchaseModal}
         transparent={true}
         animationType="fade"

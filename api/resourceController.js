@@ -40,7 +40,9 @@ export const resourceController = {
     );
   },
 
-  getResourceProjectByUserId: async () => {
-    return await privateApi.get(`/api/orders/user_resources/user/me`);
+  getResourceProjectByUserId: async (page, size) => {
+    return await privateApi.get(
+      `/api/orders/user_resources/user/me?page=${page}&size=${size}`
+    );
   },
 };

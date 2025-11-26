@@ -81,13 +81,13 @@ export const resourceService = {
           throw new Error(message);
         }
     },
-    getResourceProjectByUserId : async ()=>{
+    getResourceProjectByUserId : async (page,size)=>{
         try {
-            const response = await resourceController.getResourceProjectByUserId();
+            const response = await resourceController.getResourceProjectByUserId(page,size);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Get resource project by user id failed.";
+            error.response?.message || error.message || "Get resource project by user id failed.";
           throw new Error(message);
         }
     }
