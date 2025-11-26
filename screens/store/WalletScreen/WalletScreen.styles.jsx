@@ -8,12 +8,12 @@ export const walletStyles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   header: {
-    paddingTop: 60,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
     backgroundColor: "rgba(255,255,255,0.96)",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
@@ -22,14 +22,22 @@ export const walletStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+
   backButton: {
-    fontSize: 16,
-    color: "#60A5FA",
-    fontWeight: "600",
+    position: "absolute",
+    left: 20,
+    padding: 12, // vùng chạm lớn hơn
+    borderRadius: 30,
+    backgroundColor: "#F8FAFC",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
   },
+
   headerTitle: {
-    fontSize: 22,
-    fontWeight: "800",
+    fontSize: 26,
+    fontFamily: "Pacifico-Regular",
     color: "#084F8C",
     letterSpacing: -0.5,
   },
@@ -44,23 +52,22 @@ export const walletStyles = StyleSheet.create({
   // Balance Card (designer-like)
   walletOverview: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 24,
-    height: 220,
+    gap: 12,
+    marginBottom: 20,
+    height: 250,
   },
 
   // Left Card - Balance
   balanceInfoCard: {
     flex: 1,
-    backgroundColor: "#084F8C",
+    backgroundColor: "#FFFFFF", // đổi sang trắng
     borderRadius: 24,
     padding: 20,
-    justifyContent: "space-between",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 12,
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
   },
   balanceHeaderRow: {
     flexDirection: "row",
@@ -69,23 +76,26 @@ export const walletStyles = StyleSheet.create({
   },
   balanceLabel: {
     fontSize: 14,
-    color: "#E0E7FF",
-    fontWeight: "600",
-    opacity: 0.9,
+    color: "#084F8C", // đổi màu chữ
+    fontWeight: "700",
   },
   balanceAmount: {
     fontSize: 32,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#084F8C", // đổi màu chữ
     marginTop: 8,
     letterSpacing: -0.5,
   },
   walletIconLarge: {
-    backgroundColor: "rgba(255,255,255,0.15)",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backdropFilter: "blur(10px)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  walletLabel: {
+    fontSize: 16,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+    marginTop: -4,
   },
 
   miniStats: {
@@ -100,40 +110,44 @@ export const walletStyles = StyleSheet.create({
   },
   miniStatLabel: {
     fontSize: 11,
-    color: "#C8D7FF",
+    color: "#64748B",
     marginBottom: 4,
   },
   miniStatValue: {
     fontSize: 15,
-    color: "#A5F3FC",
+    color: "#084F8C",
     fontWeight: "700",
   },
   miniStatValueNegative: {
     fontSize: 15,
-    color: "#FCA5A5",
+    color: "#EF4444",
     fontWeight: "700",
   },
   miniStatDivider: {
     width: 1,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(0, 0, 0, 0.31)", // màu xám nhạt
     marginHorizontal: 12,
+    height: "80%", // cho đẹp, không full 100%
+    alignSelf: "center",
   },
 
   depositButtonNew: {
-    backgroundColor: "#60A5FA",
+    backgroundColor: "#084F8C", // đổi sang xanh đậm
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 14,
     borderRadius: 16,
-    marginTop: 16,
     gap: 8,
-    shadowColor: "#60A5FA",
-    shadowOpacity: 0.4,
+    shadowColor: "#084F8C",
+    shadowOpacity: 0.3,
     elevation: 8,
+    marginTop: 12,
+    width: "50%",
+    alignSelf: "center",
   },
   depositButtonTextNew: {
-    color: "#FFFFFF",
+    color: "#FFFFFF", // chữ trắng
     fontSize: 15,
     fontWeight: "700",
   },
@@ -156,19 +170,19 @@ export const walletStyles = StyleSheet.create({
   },
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(8, 79, 140, 0.65)",
+    backgroundColor: "rgba(33, 78, 118, 0.65)",
     justifyContent: "flex-end",
     padding: 20,
   },
   imageText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800",
     color: "#FFFFFF",
     letterSpacing: -0.3,
   },
   imageSubtext: {
-    fontSize: 12,
-    color: "#C8D7FF",
+    fontSize: 15,
+    color: "#e5ecffff",
     marginTop: 4,
     fontWeight: "500",
   },
@@ -186,12 +200,12 @@ export const walletStyles = StyleSheet.create({
   viewAllButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 6,
+    paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 16,
     backgroundColor: "#F1F5F9",
     borderWidth: 1,
-    borderColor: "#E2E8F0",
+    borderColor: "#dcdcdcff",
   },
   viewAllText: {
     color: "#3B82F6",
@@ -270,25 +284,6 @@ export const walletStyles = StyleSheet.create({
     color: "#EF4444",
   },
 
-  // Empty State
-  emptyState: {
-    alignItems: "center",
-    padding: 48,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  emptyStateIcon: {
-    fontSize: 56,
-    marginBottom: 16,
-  },
-  emptyStateText: {
-    fontSize: 15,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-
   // Modal
   modalOverlay: {
     flex: 1,
@@ -301,6 +296,12 @@ export const walletStyles = StyleSheet.create({
     borderTopRightRadius: 24,
     padding: 24,
     maxHeight: "85%",
+    borderWidth: 2,
+    borderColor: "#E0E7FF",
+    shadowColor: "#084F8C",
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
   },
   modalHeader: {
     flexDirection: "row",
@@ -313,6 +314,9 @@ export const walletStyles = StyleSheet.create({
     fontWeight: "700",
     color: "#1E293B",
     letterSpacing: -0.5,
+  },
+  modalBody: {
+    maxHeight: "100%",
   },
   modalCloseButton: {
     fontSize: 24,
@@ -329,17 +333,33 @@ export const walletStyles = StyleSheet.create({
     color: "#1E293B",
     marginBottom: 10,
   },
+  amountInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#F8FAFC",
+    marginBottom: 16,
+  },
+  currencySymbol: {
+    fontSize: 18,
+    color: "#1E293B",
+    fontWeight: "700",
+    marginRight: 8,
+  },
   amountInput: {
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 0,
+    paddingVertical: 12,
     fontSize: 16,
-    marginBottom: 16,
     color: "#1E293B",
     fontWeight: "600",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "transparent",
+    flex: 1,
   },
   quickAmounts: {
     flexDirection: "row",
@@ -415,43 +435,37 @@ export const walletStyles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Modal Actions
-  modalActions: {
+  modalFooterNew: {
     flexDirection: "row",
-    gap: 12,
+    justifyContent: "center", // canh giữa
+    paddingHorizontal: 20,
+    gap: 60, // khoảng cách giữa 2 nút
   },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: "#F1F5F9",
-    paddingVertical: 15,
-    borderRadius: 12,
+
+  buttonNew: {
+    width: "28%", // mỗi nút khoảng 50%
+    paddingVertical: 16,
+    borderRadius: 14,
     alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cancelButtonNew: {
+    backgroundColor: "#F1F5F9",
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  cancelButtonText: {
-    fontSize: 16,
-    color: "#64748B",
-    fontWeight: "700",
-  },
-  confirmButton: {
-    flex: 1,
-    backgroundColor: "#60A5FA",
-    paddingVertical: 15,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#60A5FA",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
+
+  confirmButtonNew: {
+    backgroundColor: "#084F8C",
+    shadowColor: "#084F8C",
     shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  confirmButtonText: {
+
+  buttonTextNew: {
     fontSize: 16,
-    color: "#FFFFFF",
     fontWeight: "700",
   },
   transactionItem: {
@@ -514,23 +528,7 @@ export const walletStyles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
   },
-  viewAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: 12,
-    paddingVertical: 14,
-    backgroundColor: "#EFF6FF",
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#DBEAFE",
-  },
-  viewAllText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#3B82F6",
-  },
+
   emptyState: {
     alignItems: "center",
     paddingVertical: 40,

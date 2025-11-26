@@ -27,4 +27,7 @@ export const authApiController = {
   updateUser: async (id, data) => {
     return await privateApi.put(`/api/users/${id}`, data);
   },
+  getMyProfile: async (config) => {
+    return await privateApi.get(`/api/users/me/profile`, config);
+  },
 };

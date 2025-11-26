@@ -1,7 +1,6 @@
 // AuthContext.js
 import React, { createContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getUserFromToken } from "../utils/AuthUtils";
 import { authService } from "../service/authService";
 
 export const AuthContext = createContext();
@@ -12,7 +11,12 @@ export const AuthProvider = ({ children }) => {
   // Lấy user từ token khi app load
   const fetchUser = async () => {
     try {
-      const u = await getUserFromToken();
+      const token = await AsyncStorage.getItem("accessToken");
+      if (!token) {
+        setUser(null);
+        return;
+      }
+      const u = await authService.getMyProfile(token);
       setUser(u);
     } catch (err) {
       setUser(null);

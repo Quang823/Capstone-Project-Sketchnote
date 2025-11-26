@@ -16,6 +16,8 @@ import { walletStyles } from "./WalletScreen.styles";
 import { paymentService } from "../../../service/paymentService";
 import Toast from "react-native-toast-message";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import LottieView from "lottie-react-native";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
@@ -31,7 +33,7 @@ export default function WalletScreen() {
 
   // 📦 Format helpers
   const formatCurrency = (amount) =>
-    (amount ?? 0).toLocaleString("vi-VN") + " VND";
+    (amount ?? 0).toLocaleString("vi-VN") + " đ";
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -153,12 +155,14 @@ export default function WalletScreen() {
     <View style={walletStyles.container}>
       {/* Header */}
       <View style={walletStyles.header}>
-        {/* <SidebarToggleButton iconSize={24} iconColor="#1F2937" /> */}
-        <Pressable onPress={() => navigation.navigate("Home")}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={walletStyles.backButton}
+        >
+          <Icon name="arrow-back" size={24} color="#084F8C" />
         </Pressable>
-        <Text style={walletStyles.headerTitle}>E-Wallet</Text>
-        <View style={{ width: 24 }} />
+        <Text style={walletStyles.headerTitle}>Customer Wallet</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView
@@ -177,7 +181,12 @@ export default function WalletScreen() {
                 </Text>
               </View>
               <View style={walletStyles.walletIconLarge}>
-                <Text style={{ fontSize: 36 }}>Wallet</Text>
+                <MaterialCommunityIcons
+                  name="wallet"
+                  size={42}
+                  color="#084F8C"
+                />
+                <Text style={walletStyles.walletLabel}>Wallet</Text>
               </View>
             </View>
 
@@ -188,7 +197,9 @@ export default function WalletScreen() {
                   {formatCurrency(totalDeposit)}
                 </Text>
               </View>
+
               <View style={walletStyles.miniStatDivider} />
+
               <View style={walletStyles.miniStat}>
                 <Text style={walletStyles.miniStatLabel}>Spent</Text>
                 <Text style={walletStyles.miniStatValueNegative}>
@@ -212,7 +223,7 @@ export default function WalletScreen() {
           <View style={walletStyles.imageCard}>
             <Image
               source={{
-                uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763710026/w3ykeckpumfg9vjbmxhs.jpg",
+                uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763869859/lmxle0retihhni0cujue.jpg",
               }}
               style={walletStyles.decorativeImage}
               resizeMode="cover"
@@ -235,7 +246,7 @@ export default function WalletScreen() {
                 {recentTransactions.length} of {walletData.transactions.length}
               </Text>
             </View>
-            {walletData.transactions.length > 5 && (
+            {walletData.transactions.length > 0 && (
               <Pressable
                 style={walletStyles.viewAllButton}
                 onPress={() =>
@@ -336,7 +347,12 @@ export default function WalletScreen() {
             </>
           ) : (
             <View style={walletStyles.emptyState}>
-              <Text style={walletStyles.emptyStateIcon}>📭</Text>
+              <LottieView
+                source={require("../../../assets/transaction.json")}
+                autoPlay
+                loop
+                style={{ width: 180, height: 180 }}
+              />
               <Text style={walletStyles.emptyStateText}>
                 No transactions yet
               </Text>
@@ -354,7 +370,10 @@ export default function WalletScreen() {
       >
         <View style={walletStyles.modalOverlay}>
           <View style={[walletStyles.modalContent, { maxHeight: "85%" }]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={walletStyles.modalBody}
+            >
               <View style={walletStyles.modalHeader}>
                 <Text style={walletStyles.modalTitle}>Deposit Funds</Text>
                 <Pressable onPress={() => setShowDepositModal(false)}>
@@ -365,13 +384,16 @@ export default function WalletScreen() {
               {/* Amount Input */}
               <View style={walletStyles.amountSection}>
                 <Text style={walletStyles.amountLabel}>Deposit Amount</Text>
-                <TextInput
-                  style={walletStyles.amountInput}
-                  value={depositAmount}
-                  onChangeText={setDepositAmount}
-                  placeholder="Enter amount"
-                  keyboardType="numeric"
-                />
+                <View style={walletStyles.amountInputContainer}>
+                  <Text style={walletStyles.currencySymbol}>₫</Text>
+                  <TextInput
+                    style={walletStyles.amountInput}
+                    value={depositAmount}
+                    onChangeText={setDepositAmount}
+                    placeholder="Enter amount"
+                    keyboardType="numeric"
+                  />
+                </View>
 
                 <View style={walletStyles.quickAmounts}>
                   {quickAmounts.map((amt) => (
@@ -419,19 +441,28 @@ export default function WalletScreen() {
               </View>
 
               {/* Buttons */}
-              <View style={walletStyles.modalActions}>
+              <View style={walletStyles.modalFooterNew}>
                 <Pressable
-                  style={walletStyles.cancelButton}
+                  style={[walletStyles.buttonNew, walletStyles.cancelButtonNew]}
                   onPress={() => setShowDepositModal(false)}
                 >
-                  <Text style={walletStyles.cancelButtonText}>Cancel</Text>
+                  <Text
+                    style={[walletStyles.buttonTextNew, { color: "#64748B" }]}
+                  >
+                    Cancel
+                  </Text>
                 </Pressable>
                 <Pressable
-                  style={walletStyles.confirmButton}
+                  style={[
+                    walletStyles.buttonNew,
+                    walletStyles.confirmButtonNew,
+                  ]}
                   onPress={handleDeposit}
                 >
-                  <Text style={walletStyles.confirmButtonText}>
-                    Confirm Deposit
+                  <Text
+                    style={[walletStyles.buttonTextNew, { color: "#FFFFFF" }]}
+                  >
+                    Confirm
                   </Text>
                 </Pressable>
               </View>

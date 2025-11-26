@@ -14,6 +14,8 @@ import { useCart } from "../../../context/CartContext";
 import { resourceService } from "../../../service/resourceService";
 import { styles } from "./ResourceDetailScreen.styles";
 import { feedbackService } from "../../../service/feedbackService";
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 
 export default function ResourceDetailScreen() {
   const navigation = useNavigation();
@@ -214,9 +216,19 @@ export default function ResourceDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={styles.loadingText}>Loading resource details...</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
       </View>
     );
   }

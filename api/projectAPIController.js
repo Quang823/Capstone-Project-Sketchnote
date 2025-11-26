@@ -61,7 +61,29 @@ export const projectAPIController = {
       throw err;
     }
   },
+  updateProject: async (projectId, projectData) => {
+    try {
+      const res = await privateApi2.put(`/api/projects/${projectId}`, {
+        name: projectData.name,
+        description: projectData.description || "",
+        imageUrl: projectData.imageUrl || "",
+      });
+      return res;
+    } catch (err) {
+      console.error("Error updating project:", err.response?.data || err);
+      throw err;
+    }
+  },
 
+  deleteProject: async (projectId) => {
+    try {
+      const res = await privateApi2.delete(`/api/projects/${projectId}`);
+      return res;
+    } catch (err) {
+      console.error("Error deleting project:", err.response?.data || err);
+      throw err;
+    }
+  },
   // 🔹 Lấy chi tiết project theo ID
   getProjectById: async (projectId) => {
     try {
@@ -105,7 +127,7 @@ export const projectAPIController = {
         userId,
         edited,
       });
-      console.log("✅ Invite collaborator response:", res.data);
+      //console.log("✅ Invite collaborator response:", res.data);
       return res;
     } catch (err) {
       throw err;

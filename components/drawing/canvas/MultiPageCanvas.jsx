@@ -16,6 +16,7 @@ import {
   Dimensions,
   Alert,
   Modal,
+  StyleSheet,
 } from "react-native";
 import Animated, {
   useSharedValue,
@@ -157,6 +158,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     noteConfig = null, // Add noteConfig to props
     projectId,
     userId,
+    enableCollab,
     tool,
     color,
     setColor,
@@ -1240,101 +1242,121 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     const resp = await fetch(safeUrl, {
       headers: { Accept: "application/json, text/plain, */*" },
     });
-    const ct = (resp.headers && resp.headers.get && resp.headers.get("content-type")) || "";
+    const ct =
+      (resp.headers && resp.headers.get && resp.headers.get("content-type")) ||
+      "";
     if (ct.includes("application/json")) {
       return await resp.json();
     }
     const text = await resp.text();
-    const raw = String(text).trim().replace(/^\uFEFF/, "");
+    const raw = String(text)
+      .trim()
+      .replace(/^\uFEFF/, "");
     let candidate = raw;
     const idxBrace = raw.indexOf("{");
     const idxBracket = raw.indexOf("[");
-    const startIdx = idxBrace >= 0 && idxBracket >= 0 ? Math.min(idxBrace, idxBracket) : Math.max(idxBrace, idxBracket);
+    const startIdx =
+      idxBrace >= 0 && idxBracket >= 0
+        ? Math.min(idxBrace, idxBracket)
+        : Math.max(idxBrace, idxBracket);
     const endBrace = raw.lastIndexOf("}");
     const endBracket = raw.lastIndexOf("]");
-    const endIdx = endBrace >= 0 && endBracket >= 0 ? Math.max(endBrace, endBracket) : Math.max(endBrace, endBracket);
+    const endIdx =
+      endBrace >= 0 && endBracket >= 0
+        ? Math.max(endBrace, endBracket)
+        : Math.max(endBrace, endBracket);
     if (startIdx >= 0 && endIdx > startIdx) {
       candidate = raw.slice(startIdx, endIdx + 1);
     }
     return JSON.parse(candidate);
   }, []);
 
-  const applyTemplateToPage = useCallback(async (pageId, url, mode = "append") => {
-    try {
-      if (!pageId || !url) return;
-      const safeUrl = String(url).trim().replace(/^`|`$/g, "");
-      let json;
+  const applyTemplateToPage = useCallback(
+    async (pageId, url, mode = "append") => {
       try {
-        json = await fetchTemplateJson(safeUrl);
-      } catch (e) {
-        Alert.alert("Template lỗi", "Không thể đọc dữ liệu template từ URL đã chọn.");
-        return;
-      }
-
-      const { strokesArray, layersMetadata, pageUpdates } =
-        extractTemplateData(json);
-      const prevPage = pages.find((pg) => pg.id === pageId) || {};
-      const pageRef = pageRefs.current[pageId];
-      if (placeTemplateOnNewLayer) {
-        setPageLayers?.((prev) => {
-          const curr = prev[pageId] || [
-            { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
-          ];
-          const hasTemplateLayer = curr.some((l) => l.id === "template");
-          return {
-            ...prev,
-            [pageId]: hasTemplateLayer
-              ? curr
-              : [
-                  ...curr,
-                  {
-                    id: "template",
-                    name: "Template",
-                    visible: true,
-                    locked: false,
-                    strokes: [],
-                  },
-                ],
-          };
-        });
-      }
-      if (pageRef) {
-        if (mode === "replace" && typeof pageRef.loadStrokes === "function") {
-          const toLoad = Array.isArray(strokesArray) ? strokesArray : [];
-          pageRef.loadStrokes(toLoad, layersMetadata || []);
-        } else if (typeof pageRef.appendStrokes === "function") {
-          const toAppend = Array.isArray(strokesArray)
-            ? strokesArray.map((s) => ({
-                ...s,
-                __templateSource: safeUrl,
-                layerId: placeTemplateOnNewLayer ? "template" : s.layerId || "layer1",
-              }))
-            : [];
-          pageRef.appendStrokes(toAppend);
+        if (!pageId || !url) return;
+        const safeUrl = String(url).trim().replace(/^`|`$/g, "");
+        let json;
+        try {
+          json = await fetchTemplateJson(safeUrl);
+        } catch (e) {
+          Alert.alert(
+            "Template lỗi",
+            "Không thể đọc dữ liệu template từ URL đã chọn."
+          );
+          return;
         }
+
+        const { strokesArray, layersMetadata, pageUpdates } =
+          extractTemplateData(json);
+        const prevPage = pages.find((pg) => pg.id === pageId) || {};
+        const pageRef = pageRefs.current[pageId];
+        if (placeTemplateOnNewLayer) {
+          setPageLayers?.((prev) => {
+            const curr = prev[pageId] || [
+              { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+            ];
+            const hasTemplateLayer = curr.some((l) => l.id === "template");
+            return {
+              ...prev,
+              [pageId]: hasTemplateLayer
+                ? curr
+                : [
+                    ...curr,
+                    {
+                      id: "template",
+                      name: "Template",
+                      visible: true,
+                      locked: false,
+                      strokes: [],
+                    },
+                  ],
+            };
+          });
+        }
+        if (pageRef) {
+          if (mode === "replace" && typeof pageRef.loadStrokes === "function") {
+            const toLoad = Array.isArray(strokesArray) ? strokesArray : [];
+            pageRef.loadStrokes(toLoad, layersMetadata || []);
+          } else if (typeof pageRef.appendStrokes === "function") {
+            const toAppend = Array.isArray(strokesArray)
+              ? strokesArray.map((s) => ({
+                  ...s,
+                  __templateSource: safeUrl,
+                  layerId: placeTemplateOnNewLayer
+                    ? "template"
+                    : s.layerId || "layer1",
+                }))
+              : [];
+            pageRef.appendStrokes(toAppend);
+          }
+        }
+        if (pageUpdates) {
+          setPages((prev) =>
+            prev.map((pg) =>
+              pg.id === pageId ? { ...pg, ...pageUpdates } : pg
+            )
+          );
+        }
+        const stack = templateHistoryRef.current.get(pageId) || [];
+        const prevStrokes = pageRef?.getStrokes?.() || [];
+        const prevLayersMetadata = pageRef?.getLayersMetadata?.() || [];
+        stack.push({
+          source: safeUrl,
+          mode,
+          prevBackgroundColor: prevPage.backgroundColor,
+          prevTemplate: prevPage.template,
+          prevImageUrl: prevPage.imageUrl,
+          prevStrokes,
+          prevLayersMetadata,
+        });
+        templateHistoryRef.current.set(pageId, stack);
+      } catch (e) {
+        console.warn("[MultiPageCanvas] applyTemplateToPage error:", e);
       }
-      if (pageUpdates) {
-        setPages((prev) =>
-          prev.map((pg) => (pg.id === pageId ? { ...pg, ...pageUpdates } : pg))
-        );
-      }
-      const stack = templateHistoryRef.current.get(pageId) || [];
-      const prevStrokes = pageRef?.getStrokes?.() || [];
-      const prevLayersMetadata = pageRef?.getLayersMetadata?.() || [];
-      stack.push({
-        source: safeUrl,
-        mode,
-        prevBackgroundColor: prevPage.backgroundColor,
-        prevTemplate: prevPage.template,
-        prevImageUrl: prevPage.imageUrl,
-        prevStrokes,
-        prevLayersMetadata,
-      });
-      templateHistoryRef.current.set(pageId, stack);
-    } catch (e) {
-      console.warn("[MultiPageCanvas] applyTemplateToPage error:", e);
-    }
-  }, []);
+    },
+    []
+  );
 
   const unapplyLastTemplate = useCallback((pageId) => {
     const stack = templateHistoryRef.current.get(pageId) || [];
@@ -1344,10 +1366,16 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     const pageRef = pageRefs.current[pageId];
     if (last.mode === "replace") {
       if (pageRef && typeof pageRef.loadStrokes === "function") {
-        pageRef.loadStrokes(last.prevStrokes || [], last.prevLayersMetadata || []);
+        pageRef.loadStrokes(
+          last.prevStrokes || [],
+          last.prevLayersMetadata || []
+        );
       }
     } else {
-      if (pageRef && typeof pageRef.removeStrokesByTemplateSource === "function") {
+      if (
+        pageRef &&
+        typeof pageRef.removeStrokesByTemplateSource === "function"
+      ) {
         pageRef.removeStrokesByTemplateSource(last.source);
       }
     }
@@ -1442,251 +1470,227 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         animationType="fade"
         onRequestClose={() => setTemplateConfirm(null)}
       >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.45)",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 24,
-          }}
-        >
-          <View
-            style={{
-              width: 420, // ⬅ tăng size modal lên
-              maxWidth: "95%", // ⬅ fallback để không bị tràn màn
-              backgroundColor: "#FFFFFF",
-              borderRadius: 22,
-              padding: 26,
-              shadowColor: "#000",
-              shadowOpacity: 0.25,
-              shadowRadius: 14,
-              shadowOffset: { width: 0, height: 6 },
-              elevation: 12,
-            }}
-          >
-            {/* Header */}
-            <View style={{ alignItems: "center", marginBottom: 20 }}>
-              <Text
-                style={{ fontSize: 22, fontWeight: "700", color: "#111827" }}
-              >
-                Apply Template
-              </Text>
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            {/* ===== HEADER ===== */}
+            <View style={styles.header}>
+              <View style={styles.headerLeft}>
+                <View style={styles.iconCircle}>
+                  <Icon name="auto-fix-high" size={28} color="#2563EB" />
+                </View>
+                <View>
+                  <Text style={styles.title}>Apply Template</Text>
+                  {templateConfirm?.name && (
+                    <Text style={styles.templateName} numberOfLines={1}>
+                      {templateConfirm.name}
+                    </Text>
+                  )}
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setTemplateConfirm(null)}>
+                <Icon name="close" size={26} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
 
-              <Text
-                style={{
-                  marginTop: 8,
-                  fontSize: 15,
-                  textAlign: "center",
-                  color: "#4B5563",
-                  lineHeight: 22,
-                }}
-              >
-                Choose how you want to apply this template.
-              </Text>
-
-              {!!templateConfirm?.name && (
-                <Text
-                  style={{
-                    marginTop: 10,
-                    fontSize: 14,
-                    color: "#6B7280",
-                    fontStyle: "italic",
-                  }}
+            {/* ===== SECTION: Apply Mode ===== */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Apply Mode</Text>
+              <View style={styles.optionRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.option,
+                    applyMode === "append" && styles.optionActive,
+                  ]}
+                  onPress={() => setApplyMode("append")}
                 >
-                  {templateConfirm.name}
-                </Text>
-              )}
+                  <Icon
+                    name="playlist-add"
+                    size={22}
+                    color={applyMode === "append" ? "#2563EB" : "#64748B"}
+                  />
+                  <View style={styles.optionText}>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        applyMode === "append" && styles.activeText,
+                      ]}
+                    >
+                      Append
+                    </Text>
+                    <Text style={styles.optionDesc}>
+                      Keep current content, add template to the end
+                    </Text>
+                  </View>
+                  {applyMode === "append" && (
+                    <Icon name="check" size={24} color="#2563EB" />
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.option,
+                    applyMode === "replace" && styles.optionActive,
+                  ]}
+                  onPress={() => setApplyMode("replace")}
+                >
+                  <Icon
+                    name="refresh"
+                    size={22}
+                    color={applyMode === "replace" ? "#2563EB" : "#64748B"}
+                  />
+                  <View style={styles.optionText}>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        applyMode === "replace" && styles.activeText,
+                      ]}
+                    >
+                      Replace
+                    </Text>
+                    <Text style={styles.optionDesc}>
+                      Clear current content, replace with template
+                    </Text>
+                  </View>
+                  {applyMode === "replace" && (
+                    <Icon name="check" size={24} color="#2563EB" />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* Mode Toggle */}
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 10,
-                marginBottom: 18,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <TouchableOpacity
-                onPress={() => setApplyMode("append")}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 14,
-                  borderRadius: 12,
-                  backgroundColor: applyMode === "append" ? "#2563EB" : "#E5E7EB",
-                }}
-              >
-                <Text style={{ color: applyMode === "append" ? "white" : "#111827" }}>
-                  Append (Preserve)
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setApplyMode("replace")}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 14,
-                  borderRadius: 12,
-                  backgroundColor: applyMode === "replace" ? "#2563EB" : "#E5E7EB",
-                }}
-              >
-                <Text style={{ color: applyMode === "replace" ? "white" : "#111827" }}>
-                  Replace (Overwrite)
-                </Text>
-              </TouchableOpacity>
+            {/* ===== SECTION: Layer Placement ===== */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Layer Placement</Text>
+              <View style={styles.optionRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.option,
+                    placeTemplateOnNewLayer && styles.optionActive,
+                  ]}
+                  onPress={() => setPlaceTemplateOnNewLayer(true)}
+                >
+                  <Icon
+                    name="layers"
+                    size={22}
+                    color={placeTemplateOnNewLayer ? "#2563EB" : "#64748B"}
+                  />
+                  <View style={styles.optionText}>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        placeTemplateOnNewLayer && styles.activeText,
+                      ]}
+                    >
+                      New Layer
+                    </Text>
+                    <Text style={styles.optionDesc}>
+                      Create a new layer, easier to edit later
+                    </Text>
+                  </View>
+                  {placeTemplateOnNewLayer && (
+                    <Icon name="check" size={24} color="#2563EB" />
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.option,
+                    !placeTemplateOnNewLayer && styles.optionActive,
+                  ]}
+                  onPress={() => setPlaceTemplateOnNewLayer(false)}
+                >
+                  <Icon
+                    name="merge-type"
+                    size={22}
+                    color={!placeTemplateOnNewLayer ? "#2563EB" : "#64748B"}
+                  />
+                  <View style={styles.optionText}>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        !placeTemplateOnNewLayer && styles.activeText,
+                      ]}
+                    >
+                      Merge Layer
+                    </Text>
+                    <Text style={styles.optionDesc}>
+                      Merge directly into the current layer
+                    </Text>
+                  </View>
+                  {!placeTemplateOnNewLayer && (
+                    <Icon name="check" size={24} color="#2563EB" />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* Placement Toggle */}
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 10,
-                marginBottom: 18,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+            {/* ===== ACTION BUTTONS ===== */}
+            <View style={styles.actions}>
               <TouchableOpacity
-                onPress={() => setPlaceTemplateOnNewLayer(true)}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 14,
-                  borderRadius: 12,
-                  backgroundColor: placeTemplateOnNewLayer ? "#2563EB" : "#E5E7EB",
-                }}
-              >
-                <Text style={{ color: placeTemplateOnNewLayer ? "white" : "#111827" }}>
-                  Place on new layer
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setPlaceTemplateOnNewLayer(false)}
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 14,
-                  borderRadius: 12,
-                  backgroundColor: !placeTemplateOnNewLayer ? "#2563EB" : "#E5E7EB",
-                }}
-              >
-                <Text style={{ color: !placeTemplateOnNewLayer ? "white" : "#111827" }}>
-                  Merge into layer
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Action Buttons Row */}
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 14, // ⬅ tăng gap để thoáng hơn
-                marginBottom: 18,
-              }}
-            >
-              <TouchableOpacity
+                style={[styles.actionBtn, styles.currentBtn]}
                 onPress={async () => {
                   const page = pages[activeIndex];
-                  if (!page || page.id == null) return;
-                  await applyTemplateToPage(page.id, templateConfirm.itemUrl, applyMode);
-                  setTemplateConfirm(null);
-                  setOverviewVisible(false);
-                }}
-                style={{
-                  flex: 1,
-                  paddingVertical: 16,
-                  borderRadius: 14,
-                  backgroundColor: "#3b82f6",
-                  alignItems: "center",
+                  if (page?.id) {
+                    await applyTemplateToPage(
+                      page.id,
+                      templateConfirm.itemUrl,
+                      applyMode
+                    );
+                    setTemplateConfirm(null);
+                    setOverviewVisible(false);
+                  }
                 }}
               >
-                <Text
-                  style={{
-                    color: "white",
-                    fontSize: 15,
-                    fontWeight: "600",
-                  }}
-                >
-                  Current Page
-                </Text>
+                <Icon name="description" size={20} color="#FFF" />
+                <Text style={styles.actionText}>Current Page Only</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
+                style={[styles.actionBtn, styles.allBtn]}
                 onPress={async () => {
                   for (const p of pages) {
-                    if (p && p.id != null) {
-                      await applyTemplateToPage(p.id, templateConfirm.itemUrl, applyMode);
-                    }
+                    if (p?.id)
+                      await applyTemplateToPage(
+                        p.id,
+                        templateConfirm.itemUrl,
+                        applyMode
+                      );
                   }
                   setTemplateConfirm(null);
                   setOverviewVisible(false);
                 }}
-                style={{
-                  flex: 1,
-                  paddingVertical: 16,
-                  borderRadius: 14,
-                  backgroundColor: "#059669",
-                  alignItems: "center",
-                }}
               >
-                <Text
-                  style={{
-                    color: "white",
-                    fontSize: 15,
-                    fontWeight: "600",
-                  }}
-                >
-                  All Pages
-                </Text>
+                <Icon name="library-books" size={20} color="#FFF" />
+                <Text style={styles.actionText}>All Pages</Text>
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              onPress={() => {
-                const page = pages[activeIndex];
-                if (!page || page.id == null) return;
-                unapplyLastTemplate(page.id);
-                setTemplateConfirm(null);
-                setOverviewVisible(false);
-              }}
-              style={{
-                paddingVertical: 16,
-                borderRadius: 14,
-                backgroundColor: "#F59E0B",
-                alignItems: "center",
-                marginBottom: 18,
-              }}
-            >
-              <Text
-                style={{
-                  color: "white",
-                  fontSize: 15,
-                  fontWeight: "600",
+            {/* ===== UNDO + CANCEL ===== */}
+            <View style={styles.footer}>
+              <TouchableOpacity
+                style={styles.undoBtn}
+                onPress={() => {
+                  const page = pages[activeIndex];
+                  if (page?.id) unapplyLastTemplate(page.id);
+                  setTemplateConfirm(null);
+                  setOverviewVisible(false);
                 }}
               >
-                Undo Last Apply
-              </Text>
-            </TouchableOpacity>
+                <Icon
+                  name="settings-backup-restore"
+                  size={19}
+                  color="#D97706"
+                />
+                <Text style={styles.undoText}>Undo Last Template</Text>
+              </TouchableOpacity>
 
-            {/* Cancel */}
-            <TouchableOpacity
-              onPress={() => setTemplateConfirm(null)}
-              style={{
-                paddingVertical: 16,
-                borderRadius: 14,
-                backgroundColor: "#F3F4F6",
-                alignItems: "center",
-              }}
-            >
-              <Text
-                style={{
-                  color: "#374151",
-                  fontSize: 15,
-                  fontWeight: "500",
-                }}
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => setTemplateConfirm(null)}
               >
-                Cancel
-              </Text>
-            </TouchableOpacity>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1764,6 +1768,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                       {...{
                         projectId,
                         userId,
+                        enableCollab,
                         tool,
                         color,
                         setColor,
@@ -1775,53 +1780,53 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                         brushWidth,
                         brushOpacity,
                         calligraphyWidth,
-                      calligraphyOpacity,
-                      paperStyle,
-                      shapeType,
-                      onRequestTextInput,
-                      toolConfigs,
-                      pressure,
-                      thickness,
-                      stabilization,
-                      layers: pageLayers?.[p.id] || [
-                        {
-                          id: "layer1",
-                          name: "Layer 1",
-                          visible: true,
-                          strokes: [],
-                        },
-                      ], // 👈 Pass page-specific layers
-                      activeLayerId,
-                      setLayers: (updater) => {
-                        if (p?.id == null) return;
-                        setPageLayers?.((prev) => ({
-                          ...prev,
-                          [p.id]:
-                            typeof updater === "function"
-                              ? updater(
-                                  prev[p.id] || [
-                                    {
-                                      id: "layer1",
-                                      name: "Layer 1",
-                                      visible: true,
-                                      strokes: [],
-                                    },
-                                  ]
-                                )
-                              : updater,
-                        }));
-                      }, // 👈 Update page-specific layers
-                      rulerPosition,
-                      onColorPicked,
-                      scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
-                      scrollYShared, // ✅ Animated scroll value
-                      pageOffsetY: offsets[i] ?? 0, // ✅ Page offset trong project
-                      backgroundColor: p.backgroundColor,
-                      pageTemplate: p.template,
-                      backgroundImageUrl: p.imageUrl,
-                      isCover: p.type === "cover",
-                      pageWidth: pageDimensions.width,
-                      pageHeight: pageDimensions.height,
+                        calligraphyOpacity,
+                        paperStyle,
+                        shapeType,
+                        onRequestTextInput,
+                        toolConfigs,
+                        pressure,
+                        thickness,
+                        stabilization,
+                        layers: pageLayers?.[p.id] || [
+                          {
+                            id: "layer1",
+                            name: "Layer 1",
+                            visible: true,
+                            strokes: [],
+                          },
+                        ], // 👈 Pass page-specific layers
+                        activeLayerId,
+                        setLayers: (updater) => {
+                          if (p?.id == null) return;
+                          setPageLayers?.((prev) => ({
+                            ...prev,
+                            [p.id]:
+                              typeof updater === "function"
+                                ? updater(
+                                    prev[p.id] || [
+                                      {
+                                        id: "layer1",
+                                        name: "Layer 1",
+                                        visible: true,
+                                        strokes: [],
+                                      },
+                                    ]
+                                  )
+                                : updater,
+                          }));
+                        }, // 👈 Update page-specific layers
+                        rulerPosition,
+                        onColorPicked,
+                        scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
+                        scrollYShared, // ✅ Animated scroll value
+                        pageOffsetY: offsets[i] ?? 0, // ✅ Page offset trong project
+                        backgroundColor: p.backgroundColor,
+                        pageTemplate: p.template,
+                        backgroundImageUrl: p.imageUrl,
+                        isCover: p.type === "cover",
+                        pageWidth: pageDimensions.width,
+                        pageHeight: pageDimensions.height,
                         onZoomChange: (isZoomActive) => {
                           // Update zoom state: true when pinch gesture starts, false when ends
                           // Disable ScrollView scroll when pinch gesture is active to prevent crash
@@ -2030,3 +2035,117 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 });
 
 export default memo(MultiPageCanvas);
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+
+  modal: {
+    width: "92%",
+    maxWidth: 460, // rộng hơn & đẹp trên tablet
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    elevation: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.22,
+    shadowRadius: 20,
+  },
+
+  // Header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  headerLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+
+  title: { fontSize: 20, fontWeight: "800", color: "#111827" },
+  templateName: { fontSize: 13.5, color: "#64748B", marginTop: 2 },
+
+  // Section
+  section: { marginBottom: 20 },
+  sectionTitle: {
+    fontSize: 15.5,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 10,
+  },
+
+  // Option
+  optionRow: { gap: 10 },
+  option: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1.3,
+    borderColor: "#E2E8F0",
+  },
+  optionActive: { backgroundColor: "#EFF6FF", borderColor: "#3B82F6" },
+
+  optionText: { flex: 1, marginLeft: 10 },
+  optionLabel: { fontSize: 15, fontWeight: "600", color: "#1F2937" },
+  optionDesc: { fontSize: 13, color: "#64748B", marginTop: 2 },
+  activeText: { color: "#2563EB" },
+
+  // Buttons
+  actions: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 6,
+  },
+  currentBtn: { backgroundColor: "#3B82F6" },
+  allBtn: { backgroundColor: "#059669" },
+
+  actionText: { color: "#FFF", fontSize: 15, fontWeight: "700" },
+
+  // Footer
+  footer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  undoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: "#FFFBEB",
+    borderRadius: 12,
+    borderWidth: 1.2,
+    borderColor: "#F59E0B",
+  },
+  undoText: { color: "#D97706", fontSize: 14, fontWeight: "600" },
+
+  cancelBtn: {
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 12,
+  },
+  cancelText: { color: "#475569", fontSize: 14.5, fontWeight: "600" },
+});

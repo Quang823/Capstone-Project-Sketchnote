@@ -11,10 +11,11 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 
-const ExportModal = ({ visible, onClose, onExport }) => {
+const ExportModal = ({ visible, onClose, onExport, hasPro = false }) => {
   const [selected, setSelected] = useState("editable");
   const [fileName, setFileName] = useState("Unnamed note");
   const [includeBg, setIncludeBg] = useState(true);
+  const [qualityPreset, setQualityPreset] = useState(hasPro ? "high" : "medium");
 
   const [pageMode, setPageMode] = useState("all");
   const [pageRange, setPageRange] = useState("");
@@ -179,6 +180,45 @@ const ExportModal = ({ visible, onClose, onExport }) => {
             </View>
           </View>
 
+          {/* Quality selection */}
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.label}>Quality:</Text>
+            <View style={styles.pageRow}>
+              <View style={styles.pageLeft}>
+                <Pressable
+                  onPress={() => setQualityPreset("low")}
+                  style={[
+                    styles.pageOption,
+                    qualityPreset === "low" && styles.pageOptionSelected,
+                  ]}
+                >
+                  <Text style={styles.pageOptionLabel}>Low</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setQualityPreset("medium")}
+                  style={[
+                    styles.pageOption,
+                    qualityPreset === "medium" && styles.pageOptionSelected,
+                  ]}
+                >
+                  <Text style={styles.pageOptionLabel}>Medium</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => hasPro && setQualityPreset("high")}
+                  style={[
+                    styles.pageOption,
+                    qualityPreset === "high" && styles.pageOptionSelected,
+                    !hasPro && { opacity: 0.5 },
+                  ]}
+                >
+                  <Text style={styles.pageOptionLabel}>High{!hasPro ? " (PRO)" : ""}</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
           {/* Export button */}
           <TouchableOpacity
             style={styles.exportBtn}
@@ -190,6 +230,12 @@ const ExportModal = ({ visible, onClose, onExport }) => {
                 pageMode,
                 pageRange,
                 pageList,
+                quality:
+                  qualityPreset === "low"
+                    ? 60
+                    : qualityPreset === "medium"
+                    ? 80
+                    : 100,
               })
             }
           >

@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { MotiView } from "moti";
 import LazyImage from "../../../common/LazyImage.js";
 import { orderService } from "../../../service/orderService.js";
 
@@ -30,13 +31,23 @@ const DocumentBrowserContent = ({
   const [activeTab, setActiveTab] = useState("pages");
   const [purchasedTemplates, setPurchasedTemplates] = useState([]);
   const [isLoadingResources, setIsLoadingResources] = useState(false);
+  const isImageUrl = (url) => {
+    if (!url || typeof url !== "string") return false;
+    const u = url.trim().replace(/^`|`$/g, "");
+    return /\.(png|jpg|jpeg|webp|gif|svg)$/i.test(u);
+  };
 
   // Debounce logic from DocumentOverviewModal
   const pageSelectTimeoutRef = useRef(null);
   const isProcessingRef = useRef(false);
 
   useEffect(() => {
-    if (activeTab === "resources" && visible) {
+    if (
+      (activeTab === "resources" ||
+        activeTab === "icons" ||
+        activeTab === "templates") &&
+      visible
+    ) {
       const fetchTemplates = async () => {
         setIsLoadingResources(true);
         try {
@@ -100,7 +111,8 @@ const DocumentBrowserContent = ({
   const tabs = [
     { id: "pages", label: "Pages", icon: "insert-drive-file" },
     { id: "resources", label: "Resources", icon: "collections" },
-    { id: "layers", label: "Layers", icon: "layers" },
+    { id: "icons", label: "Icons", icon: "photo" },
+    { id: "templates", label: "Templates", icon: "view-quilt" },
     { id: "history", label: "History", icon: "history" },
   ];
 
@@ -190,7 +202,7 @@ const DocumentBrowserContent = ({
     );
   };
 
-  const renderResources = () => {
+  const renderResources = (filterType) => {
     if (isLoadingResources) {
       return (
         <View style={styles.emptyState}>
@@ -212,49 +224,88 @@ const DocumentBrowserContent = ({
             <Text style={styles.emptyStateText}>No purchased resources</Text>
           </View>
         ) : (
-          purchasedTemplates.map((template) => (
-            <View
-              key={template.resourceTemplateId}
-              style={styles.templateSection}
-            >
-              <Text style={styles.templateName}>{template.name}</Text>
-              <View
-                style={
-                  pageLayout === "list"
-                    ? styles.resourcesGridList
-                    : styles.resourcesGridModal
-                }
-              >
-                {template.items.map((item) => (
-                  <Pressable
-                    key={item.resourceItemId}
-                    style={
-                      pageLayout === "list"
-                        ? styles.resourceCardList
-                        : styles.resourceCardModal
-                    }
-                    android_ripple={{ color: "#E5E7EB" }}
-                    onPress={() => {
-                      const payload = {
-                        type: template.type,
-                        templateId: template.resourceTemplateId,
-                        name: template.name,
-                        itemUrl: item.itemUrl,
-                        imageUrl: item.imageUrl,
-                        itemId: item.resourceItemId,
-                      };
-                      onResourceSelect?.(payload);
-                    }}
+          purchasedTemplates
+            .filter((t) =>
+              !filterType ? true : String(t.type).toUpperCase() === filterType
+            )
+            .map((template) => {
+              const isIcons = String(template.type).toUpperCase() === "ICONS";
+              const cardStyleList = isIcons
+                ? styles.iconCardListLarge
+                : styles.templateCardListMedium;
+              const cardStyleModal = isIcons
+                ? styles.iconCardModalSmall
+                : styles.templateCardModalSmall;
+
+              return (
+                <View
+                  key={template.resourceTemplateId}
+                  style={styles.templateSection}
+                >
+                  <Text style={styles.templateName}>{template.name}</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.horizontalScroll}
                   >
-                    <LazyImage
-                      source={{ uri: item.imageUrl || item.itemUrl }}
-                      style={styles.resourceImage}
-                    />
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          ))
+                    <View style={styles.itemsRow}>
+                      {template.items.map((item, index) => (
+                        <MotiView
+                          key={item.resourceItemId}
+                          from={{ opacity: 0, translateY: 12 }}
+                          animate={{ opacity: 1, translateY: 0 }}
+                          transition={{ delay: index * 60 }}
+                        >
+                          <Pressable
+                            style={
+                              pageLayout === "list"
+                                ? cardStyleList
+                                : cardStyleModal
+                            }
+                            android_ripple={{ color: "#E5E7EB" }}
+                            onPress={() => {
+                              const payload = {
+                                type: template.type,
+                                templateId: template.resourceTemplateId,
+                                name: template.name,
+                                itemUrl: item.itemUrl,
+                                imageUrl: item.imageUrl,
+                                itemId: item.resourceItemId,
+                              };
+                              onResourceSelect?.(payload);
+                            }}
+                          >
+                            {isImageUrl(item.imageUrl || item.itemUrl) ? (
+                              <LazyImage
+                                source={{
+                                  uri: (item.imageUrl || item.itemUrl)
+                                    .trim()
+                                    .replace(/^`|`$/g, ""),
+                                }}
+                                style={styles.resourceImage}
+                              />
+                            ) : (
+                              <View style={styles.emptyThumbnail}>
+                                <Icon
+                                  name={isIcons ? "image" : "insert-drive-file"}
+                                  size={32}
+                                  color="#9CA3AF"
+                                />
+                              </View>
+                            )}
+                            <View style={styles.itemIndexBadge}>
+                              <Text style={styles.itemIndexText}>
+                                {item.itemIndex ?? index + 1}
+                              </Text>
+                            </View>
+                          </Pressable>
+                        </MotiView>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+              );
+            })
         )}
       </ScrollView>
     );
@@ -266,15 +317,10 @@ const DocumentBrowserContent = ({
         return renderPages();
       case "resources":
         return renderResources();
-      case "layers":
-        return (
-          <View style={styles.tabContent}>
-            <View style={styles.emptyState}>
-              <Icon name="layers" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyStateText}>Coming soon</Text>
-            </View>
-          </View>
-        );
+      case "icons":
+        return renderResources("ICONS");
+      case "templates":
+        return renderResources("TEMPLATES");
       case "history":
         return (
           <View style={styles.tabContent}>
@@ -413,14 +459,25 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   templateSection: {
-    marginBottom: 16,
+    marginBottom: 20,
+    padding: 12,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
+
   templateName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0f4085ff",
+    marginBottom: 10,
+    letterSpacing: 0.3,
   },
+
   resourceImage: {
     width: "100%",
     height: "100%",
@@ -573,7 +630,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   resourceCardModal: {
-    width: (SCREEN_WIDTH * 0.9 - 64) / 3,
+    width: (SCREEN_WIDTH * 0.9 - 72) / 4,
     aspectRatio: 1,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
@@ -585,6 +642,93 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+    position: "relative",
+  },
+  horizontalScroll: {
+    marginTop: 6,
+  },
+  itemsRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingRight: 8,
+  },
+  iconCardListLarge: {
+    width: 120,
+    aspectRatio: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    position: "relative",
+    marginBottom: 2,
+  },
+  iconCardModalSmall: {
+    width: (SCREEN_WIDTH * 0.9 - 72) / 5,
+    aspectRatio: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    position: "relative",
+    marginBottom: 2,
+  },
+  templateCardListMedium: {
+    width: 140,
+    aspectRatio: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    position: "relative",
+    marginBottom: 2,
+  },
+  templateCardModalSmall: {
+    width: (SCREEN_WIDTH * 0.9 - 72) / 4,
+    aspectRatio: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    position: "relative",
+    marginBottom: 2,
+  },
+  itemIndexBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: "#1F2937",
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  itemIndexText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });
 

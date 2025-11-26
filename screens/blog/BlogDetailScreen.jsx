@@ -18,6 +18,8 @@ import { authService } from "../../service/authService";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import Toast from "react-native-toast-message";
 import { getUserFromToken } from "../../utils/AuthUtils";
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../assets/loading.json";
 
 const { width } = Dimensions.get("window");
 
@@ -52,7 +54,7 @@ export default function BlogDetailScreen() {
     });
   };
 
-  const handleBackPress = () => {
+    const handleBackPress = () => {
     navigation.goBack();
   };
   const fetchAuthorProfile = async (userId) => {
@@ -322,19 +324,36 @@ export default function BlogDetailScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" }}>
-        <ActivityIndicator size="large" color="#60A5FA" />
-        <Text style={{ marginTop: 16, color: "#64748B", fontSize: 16, fontWeight: "600" }}>
-          Loading blog...
-        </Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
       </View>
     );
   }
 
   if (!blog) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" }}>
-        <Text style={{ fontSize: 16, color: "#64748B" }}>Can not find this blog</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#F8FAFC",
+        }}
+      >
+        <Text style={{ fontSize: 16, color: "#64748B" }}>
+          Không tìm thấy bài viết
+        </Text>
       </View>
     );
   }
@@ -346,6 +365,9 @@ export default function BlogDetailScreen() {
         {/* Hero Section */}
         <View style={{ backgroundColor: "#FFFFFF", paddingBottom: 32 }}>
           {/* Header Image */}
+          {/* Back Button */}
+         
+         
           <View style={{ position: "relative" }}>
             {blog.imageUrl && (
               <Image
@@ -427,8 +449,10 @@ export default function BlogDetailScreen() {
                 >
                   {blog.author}
                 </Text>
-                <Text style={{ fontSize: 13, color: "#64748B", fontWeight: "500" }}>
-                  {formatDate(blog.createdAt)}
+                <Text
+                  style={{ fontSize: 13, color: "#64748B", fontWeight: "500" }}
+                >
+                  {new Date(blog.createdAt).toLocaleDateString("vi-VN")}
                 </Text>
               </View>
             </View>
@@ -445,7 +469,13 @@ export default function BlogDetailScreen() {
                   borderLeftColor: "#60A5FA",
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
+                >
                   <Text style={{ fontSize: 18, marginRight: 8 }}>💡</Text>
                   <Text
                     style={{
@@ -504,7 +534,13 @@ export default function BlogDetailScreen() {
                   elevation: 2,
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginBottom: 20,
+                  }}
+                >
                   <View
                     style={{
                       width: 5,
@@ -528,7 +564,12 @@ export default function BlogDetailScreen() {
                 </View>
 
                 {isTablet ? (
-                  <View style={{ flexDirection: showImageLeft ? "row" : "row-reverse", gap: 32 }}>
+                  <View
+                    style={{
+                      flexDirection: showImageLeft ? "row" : "row-reverse",
+                      gap: 32,
+                    }}
+                  >
                     {section.contentUrl && (
                       <View style={{ width: "45%" }}>
                         <Image
@@ -599,9 +640,23 @@ export default function BlogDetailScreen() {
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View style={{ width: 40, height: 1, backgroundColor: "#CBD5E1", marginRight: 12 }} />
+              <View
+                style={{
+                  width: 40,
+                  height: 1,
+                  backgroundColor: "#CBD5E1",
+                  marginRight: 12,
+                }}
+              />
               <Text style={{ fontSize: 24 }}>✓</Text>
-              <View style={{ width: 40, height: 1, backgroundColor: "#CBD5E1", marginLeft: 12 }} />
+              <View
+                style={{
+                  width: 40,
+                  height: 1,
+                  backgroundColor: "#CBD5E1",
+                  marginLeft: 12,
+                }}
+              />
             </View>
             <Text
               style={{

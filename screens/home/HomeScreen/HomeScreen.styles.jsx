@@ -66,6 +66,7 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#a1c3efff",
   },
+
   premiumWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -74,6 +75,7 @@ export const styles = StyleSheet.create({
 
   premiumContent: {
     flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#fef9c3",
     paddingVertical: 4,
@@ -81,11 +83,29 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#FBBF24",
+    marginRight: 8,
+  },
+
+  // Animated gradient border around subscription box when active
+  subscriptionBorder: {
+    position: "absolute",
+    top: -3,
+    bottom: -3,
+    left: -3,
+    right: 15,
+    borderRadius: 12,
+
+    overflow: "hidden",
+    zIndex: -1,
+  },
+  subscriptionBorderGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 12,
   },
 
   premiumLottie: {
-    width: 50,
-    height: 50,
+    width: 38,
+    height: 38,
     marginRight: 4,
   },
 
@@ -106,8 +126,8 @@ export const styles = StyleSheet.create({
   },
 
   arrowLottie: {
-    width: 50,
-    height: 50,
+    width: 38,
+    height: 38,
   },
   createButton: {
     borderRadius: 12,
@@ -179,7 +199,6 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   popoverTip: {
-    marginTop: 8,
     paddingHorizontal: 18,
     paddingTop: 14,
     paddingBottom: 12,
@@ -197,8 +216,11 @@ export const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   gridRow: {
-    justifyContent: "space-between",
-    marginBottom: CARD_GAP,
+    flex: 1,
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    gap: CARD_GAP,
+    justifyContent: "flex-start",
   },
   cardWrapper: {
     width: CARD_WIDTH,
@@ -240,6 +262,59 @@ export const styles = StyleSheet.create({
     right: 0,
     height: 40,
   },
+  threeDotButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    padding: 10,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 20,
+    zIndex: 110,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  menuOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 120,
+    backgroundColor: "transparent",
+  },
+  menu: {
+    position: "absolute",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    paddingVertical: 8,
+    minWidth: 180,
+    elevation: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  menuItemDelete: {
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+  },
+  menuText: {
+    fontSize: 14,
+    color: "#1E293B",
+    fontWeight: "500",
+  },
   cardInfo: {
     padding: 10,
   },
@@ -254,13 +329,12 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     color: "#64748B",
     lineHeight: 14,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 4,
   },
   dateContainer: {
     flexDirection: "row",
@@ -415,5 +489,124 @@ export const styles = StyleSheet.create({
   },
   paginationNumberTextActive: {
     color: "#FFFFFF",
+  },
+  // === MODAL ĐẸP NHƯ FIGMA 2025 ===
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    padding: 32,
+    borderRadius: 24,
+    width: "90%",
+    maxWidth: 420,
+    alignItems: "center",
+    elevation: 30,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 12 },
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  modalIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 23,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.3,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: "#475569",
+    textAlign: "center",
+    lineHeight: 24,
+    marginVertical: 16,
+    paddingHorizontal: 8,
+  },
+
+  // Input đẹp
+  inputWrapper: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 16,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  inputIcon1: {
+    marginRight: 12,
+    bottom: 24,
+  },
+  modalInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#1E293B",
+    paddingVertical: 16,
+    fontWeight: "500",
+  },
+
+  // Nút
+  modalButtons: {
+    flexDirection: "row",
+    gap: 16,
+    marginTop: 12,
+    width: "100%",
+    justifyContent: "center",
+  },
+  modalButtonCancel: {
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 28,
+    paddingVertical: 15,
+    borderRadius: 16,
+    minWidth: 120,
+    borderWidth: 1.5,
+    borderColor: "#CBD5E1",
+  },
+  modalButton: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 28,
+    paddingVertical: 15,
+    borderRadius: 16,
+    minWidth: 120,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    shadowColor: "#3B82F6",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  modalButtonDelete: {
+    backgroundColor: "#EF4444",
+    shadowColor: "#EF4444",
+  },
+  modalButtonTextCancel: {
+    color: "#475569",
+    fontWeight: "600",
+    fontSize: 15.5,
+  },
+  modalButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 15.5,
   },
 });

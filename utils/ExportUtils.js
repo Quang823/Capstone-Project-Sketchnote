@@ -1,5 +1,4 @@
 import * as FileSystem from "expo-file-system";
-import { File } from "expo-file-system";
 import { Skia, ImageFormat } from "@shopify/react-native-skia";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -61,7 +60,7 @@ async function getCanvasSnapshot(canvasRef, format = "png", quality = 100) {
   return tempUri;
 }
 
-async function exportToPdf(canvasRef, fileName) {
+async function exportToPdf(canvasRef, fileName, quality = 90) {
   try {
     // Chụp canvas ra ảnh PNG
     const imageUri = await getCanvasSnapshot(canvasRef, "png");
@@ -93,9 +92,18 @@ async function exportToPdf(canvasRef, fileName) {
       height: 842, // A4 height (points)
     });
 
-    // Trả về trực tiếp URI tạm của file PDF
-    const pdfUri = uri;
-    return pdfUri;
+    // Đổi tên file theo tên người dùng nhập
+    let safeName = String(fileName || "Untitled").trim();
+    safeName = safeName.replace(/[^a-zA-Z0-9._-]+/g, "_");
+    if (!safeName.toLowerCase().endsWith(".pdf")) safeName += ".pdf";
+    const dest =
+      (FileSystem.documentDirectory || FileSystem.cacheDirectory) + safeName;
+    try {
+      await FileSystem.copyAsync({ from: uri, to: dest });
+      return dest;
+    } catch (e) {
+      return uri;
+    }
   } catch (error) {
     console.error("Failed to export to PDF:", error);
     throw error;
@@ -115,7 +123,7 @@ export async function handleExport(options, canvasRef) {
     if (selected === "picture") {
       fileUri = await getCanvasSnapshot(canvasRef, "png");
     } else if (selected === "editable" || selected === "noneditable") {
-      fileUri = await exportToPdf(canvasRef, fileName);
+      fileUri = await exportToPdf(canvasRef, fileName, options.quality || 90);
     } else {
       alert(`Export format "${selected}" is not supported yet.`);
       return;
@@ -137,7 +145,8 @@ export async function exportPagesToPdf(
   pagesData = [],
   pageRefs = {},
   fileName = "Untitled",
-  selectedPageNumbers = []
+  selectedPageNumbers = [],
+  quality = 90
 ) {
   try {
     if (!Array.isArray(pagesData) || pagesData.length === 0) {
@@ -163,7 +172,10 @@ export async function exportPagesToPdf(
       const img = await ref.getSnapshot();
       if (!img) continue;
 
-      const b64 = img.encodeToBase64(ImageFormat.PNG, 100);
+      const b64 = img.encodeToBase64(
+        ImageFormat.JPEG,
+        Math.max(1, Math.min(100, quality))
+      );
       imagesBase64.push(b64);
     }
 
@@ -179,7 +191,7 @@ export async function exportPagesToPdf(
         }`;
         const imgStyle =
           "max-width:100%;max-height:100%;display:block;object-fit:contain;";
-        return `<div style="${pageStyle}"><img src="data:image/png;base64,${b64}" style="${imgStyle}" /></div>`;
+        return `<div style="${pageStyle}"><img src="data:image/jpeg;base64,${b64}" style="${imgStyle}" /></div>`;
       })
       .join("");
 
@@ -198,7 +210,7 @@ export async function exportPagesToPdf(
     const dest =
       (FileSystem.documentDirectory || FileSystem.cacheDirectory) + safeName;
     try {
-      await new File(uri).copyAsync(dest);
+      await FileSystem.copyAsync({ from: uri, to: dest });
       return dest;
     } catch (e) {
       return uri;

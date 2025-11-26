@@ -3025,7 +3025,7 @@ export default function GestureHandler(
 
             <ImageSelectionBox
               x={(selectedBox.x || 0) - (page?.x || 0)}
-              y={(selectedBox.y || 0) - (page?.y || 0) + 2}
+              y={(selectedBox.y || 0) - (page?.y || 0)}
               width={selectedBox.width}
               height={selectedBox.height}
               onCopy={() => {

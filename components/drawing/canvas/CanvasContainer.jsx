@@ -28,7 +28,7 @@ import Animated, {
 import { File } from "expo-file-system";
 import { projectService } from "../../../service/projectService";
 import { ImageFormat } from "@shopify/react-native-skia";
-import { Dimensions } from "react-native";
+import { Dimensions, Image } from "react-native";
 
 const PAGE_MARGIN_H = 24;
 const PAGE_MARGIN_TOP = 20;
@@ -70,6 +70,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     getNearestFont, // 👈 Pass down font helper
     projectId,
     userId,
+    enableCollab,
     isCover = false,
   },
   ref
@@ -80,7 +81,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   useEffect(() => {
     if (!Array.isArray(layers)) return;
     setInternalLayers((prev) => {
-      const prevMap = new Map((Array.isArray(prev) ? prev : []).map((l) => [l.id, { ...l }]));
+      const prevMap = new Map(
+        (Array.isArray(prev) ? prev : []).map((l) => [l.id, { ...l }])
+      );
       const next = layers.map((inLayer) => {
         const ex = prevMap.get(inLayer.id);
         if (ex) {
@@ -511,7 +514,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       }
 
       try {
-        if (projectId && userId) {
+        if (projectId && userId && enableCollab) {
           const layerSummaries = Array.isArray(internalLayers)
             ? internalLayers.map((l) => ({
                 id: l?.id,
@@ -537,7 +540,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             userId,
             pageId,
             stroke,
-            pageChunk,
+            pageChunk
           );
         }
       } catch {}
@@ -691,9 +694,37 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       } else if (!uri.startsWith("file://") && !uri.startsWith("data:image")) {
         safeUri = `file://${uri}`;
       }
+      let naturalW = null;
+      let naturalH = null;
+      try {
+        const size = await new Promise((resolve) => {
+          Image.getSize(
+            safeUri,
+            (w, h) => resolve({ w, h }),
+            () => resolve(null)
+          );
+        });
+        if (size) {
+          naturalW = size.w;
+          naturalH = size.h;
+        }
+      } catch {}
 
-      const width = opts.width ?? 400;
-      const height = opts.height ?? 400;
+      let width = typeof opts.width === "number" ? opts.width : naturalW ?? 400;
+      let height =
+        typeof opts.height === "number" ? opts.height : naturalH ?? 400;
+
+      if (
+        naturalW &&
+        naturalH &&
+        (typeof opts.width !== "number" || typeof opts.height !== "number")
+      ) {
+        const ratio = naturalW / naturalH;
+        const maxW = Math.max(40, page.w * 0.8);
+        const maxH = Math.max(40, page.h * 0.8);
+        width = Math.min(width, maxW);
+        height = Math.min(width / ratio, maxH);
+      }
 
       const { x: cx, y: cy } = getCenterPosition(width, height);
 
@@ -706,7 +737,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         width,
         height,
         rotation: opts.rotation ?? 0,
-        layerId: opts.layerId ?? activeLayerId ?? "default", // fix chính
+        layerId: opts.layerId ?? activeLayerId ?? "layer1",
+        naturalWidth: naturalW ?? undefined,
+        naturalHeight: naturalH ?? undefined,
       };
 
       addStrokeInternal(newStroke);
@@ -1225,7 +1258,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             if (layerMap.has(layerId)) {
               const existingLayer = layerMap.get(layerId);
               if (hasTemplate) {
-                existingLayer.strokes = [...uniqueStrokes, ...(existingLayer.strokes || [])];
+                existingLayer.strokes = [
+                  ...uniqueStrokes,
+                  ...(existingLayer.strokes || []),
+                ];
               } else {
                 existingLayer.strokes.push(...uniqueStrokes);
               }

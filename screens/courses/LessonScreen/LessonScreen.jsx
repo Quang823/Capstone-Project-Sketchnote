@@ -18,6 +18,8 @@ import YoutubePlayer from "react-native-youtube-iframe";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { lessonStyles } from "./LessonScreen.styles";
 import { courseService } from "../../../service/courseService";
+import LottieView from "lottie-react-native";
+import loadingAnimation from "../../../assets/loading.json";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SIDEBAR_WIDTH = 280;
@@ -363,9 +365,19 @@ export default function LessonScreen() {
 
   if (loading) {
     return (
-      <View style={lessonStyles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={lessonStyles.loadingText}>Đang tải khóa học...</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <LottieView
+          source={loadingAnimation}
+          autoPlay
+          loop
+          style={{ width: 300, height: 300 }}
+        />
       </View>
     );
   }
