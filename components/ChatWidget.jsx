@@ -50,7 +50,9 @@ export default function ChatWidget({ visible, onClose }) {
         try {
             setLoading(true);
             const response = await chatService.getMessagesByUserId(RECEIVER_ID, 0, 50);
-            setMessages(response.content || []);
+
+            // 🔥 Reverse để tin nhắn mới nhất nằm DƯỚI
+            setMessages((response.content || []).reverse());
         } catch (error) {
             console.log(error);
             toast({
@@ -62,6 +64,12 @@ export default function ChatWidget({ visible, onClose }) {
             setLoading(false);
         }
     };
+const formatVNTime = (utcString) => {
+  return new Date(utcString).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
     const handleSendMessage = async () => {
         if (!inputText.trim()) return;
@@ -77,6 +85,8 @@ export default function ChatWidget({ visible, onClose }) {
             };
 
             const newMessage = await chatService.sendMessage(data);
+
+            // 🔥 Add message cuối list
             setMessages((prev) => [...prev, newMessage]);
 
             setTimeout(() => {
@@ -125,16 +135,15 @@ export default function ChatWidget({ visible, onClose }) {
                     >
                         {item.content}
                     </Text>
+
+                    {/* 🔥 FORMAT TIME ENGLISH */}
                     <Text
                         style={[
                             styles.messageTime,
                             isMyMessage ? styles.myMessageTime : styles.theirMessageTime,
                         ]}
                     >
-                        {new Date(item.createdAt).toLocaleTimeString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                        })}
+                        {formatVNTime(item.createdAt)}
                     </Text>
                 </View>
             </View>

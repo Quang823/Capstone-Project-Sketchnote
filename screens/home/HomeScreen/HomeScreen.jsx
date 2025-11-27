@@ -35,6 +35,7 @@ import TypeFloatText from "./TypeFloatText";
 import { useToast } from "../../../hooks/use-toast";
 import { AuthContext } from "../../../context/AuthContext";
 import ChatWidget from "../../../components/ChatWidget";
+import { notiService } from "../../../service/notiService";
 const { width } = Dimensions.get("window");
 
 const formatDate = (dateString) => {
@@ -159,6 +160,10 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
+  const [notiCount, setNotiCount] = useState(0);
+  const [notiOpen, setNotiOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNoti, setLoadingNoti] = useState(false);
 
   // Menu & Modal states
   const [menuVisible, setMenuVisible] = useState(false);
@@ -209,6 +214,76 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     fetchProjects();
   }, [fetchProjects]);
+
+  useEffect(() => {
+    const loadNotiCount = async () => {
+      try {
+        const data = await notiService.getCountNotiUnRead();
+        const count = Number(data?.unread ?? 0);
+        setNotiCount(count);
+      } catch (error) {
+        console.log("loadNotiCount error", error.message);
+      }
+    };
+
+    loadNotiCount();
+  }, []);
+
+  const toggleNotiDropdown = async () => {
+    const next = !notiOpen;
+    setNotiOpen(next);
+    if (!next) return;
+
+    try {
+      setLoadingNoti(true);
+      const data = await notiService.getAllNoti(0, 20);
+      const list = Array.isArray(data) ? data : data?.content || [];
+      setNotifications(Array.isArray(list) ? list : []);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load notifications",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingNoti(false);
+    }
+  };
+
+  const handleReadAllNoti = async () => {
+    try {
+      await notiService.readAllNoti();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setNotiCount(0);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to mark all as read",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReadSingleNoti = async (item) => {
+    if (item.read) return;
+    try {
+      await notiService.readNotiByNotiId(item.id);
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === item.id
+            ? { ...n, read: true }
+            : n
+        )
+      );
+      setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to mark notification as read",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Double tap Quick Note
   const handleDoubleTap = useMemo(() => {
@@ -430,6 +505,41 @@ export default function HomeScreen({ navigation }) {
               />
             </View>
             <View style={styles.headerRight}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={toggleNotiDropdown}
+              >
+                <View style={{ position: "relative" }}>
+                  <Icon name="notifications" size={22} color="#1E40AF" />
+                  {notiCount > 0 && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        top: -6,
+                        right: -8,
+                        minWidth: 16,
+                        height: 16,
+                        borderRadius: 8,
+                        backgroundColor: "#EF4444",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        paddingHorizontal: 3,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#FFF",
+                          fontSize: 10,
+                          fontWeight: "700",
+                        }}
+                        numberOfLines={1}
+                      >
+                        {notiCount > 99 ? "99+" : notiCount}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
               <View style={{ position: "relative" }}>
                 {user?.hasActiveSubscription && (
                   <Animated.View
@@ -673,6 +783,163 @@ export default function HomeScreen({ navigation }) {
           )}
         </Animated.View>
       </View>
+      {notiOpen && (
+        <View
+          style={{
+            position: "absolute",
+            top: 145,
+            right: 30,
+            width: 320,
+            maxHeight: 360,
+            backgroundColor: "#FFFFFF",
+            borderRadius: 16,
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            shadowColor: "#000",
+            shadowOpacity: 0.15,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 8,
+            zIndex: 50,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 8,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: "#111827",
+              }}
+            >
+              Notifications
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: "#6B7280",
+                }}
+              >
+                {notiCount} unread
+              </Text>
+              {notifications.length > 0 && (
+                <TouchableOpacity onPress={handleReadAllNoti}>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: "#2563EB",
+                      fontWeight: "600",
+                    }}
+                  >
+                    Mark all as read
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {loadingNoti ? (
+            <View
+              style={{
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 20,
+              }}
+            >
+              <LottieView
+                source={loadingAnimation}
+                autoPlay
+                loop
+                style={{ width: 80, height: 80 }}
+              />
+            </View>
+          ) : notifications.length === 0 ? (
+            <View
+              style={{
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 16,
+              }}
+            >
+              <Icon name="notifications-off" size={32} color="#9CA3AF" />
+              <Text
+                style={{
+                  marginTop: 6,
+                  color: "#6B7280",
+                  fontSize: 13,
+                }}
+              >
+                No notifications
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={notifications}
+              keyExtractor={(item) => item.id?.toString()}
+              style={{ maxHeight: 300 }}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => handleReadSingleNoti(item)}
+                  activeOpacity={0.8}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 8,
+                    borderRadius: 10,
+                    backgroundColor: item.read ? "#F9FAFB" : "#DBEAFE",
+                    marginBottom: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "700",
+                      color: "#111827",
+                      marginBottom: 2,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {item.title || "Notification"}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: "#4B5563",
+                      marginBottom: 2,
+                    }}
+                    numberOfLines={2}
+                  >
+                    {item.message}
+                  </Text>
+                  {item.createdAt && (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: "#6B7280",
+                        marginTop: 2,
+                      }}
+                    >
+                      {new Date(item.createdAt).toLocaleString("vi-VN")}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </View>
+      )}
       <TouchableOpacity
         onPress={() => setChatVisible(true)}
         activeOpacity={0.8}

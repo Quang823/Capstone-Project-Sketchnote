@@ -19,6 +19,7 @@ import DesignerNavigationDrawer from "../nav/DesignerNavigationDrawer";
 import { designerHomeStyles } from "./DesignerHomeScreen.styles";
 import { dashboardService } from "../../../service/dashboardService";
 import { formatCurrencyVN } from "../../../common/formatCurrencyVN";
+import { notiService } from "../../../service/notiService";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const HEADER_HEIGHT = 180;
@@ -27,6 +28,10 @@ export default function DesignerHomeScreen() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeNavItem, setActiveNavItem] = useState("home");
   const [dashboardSummary, setDashboardSummary] = useState({});
+  const [notiCount, setNotiCount] = useState(0);
+  const [notiOpen, setNotiOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNoti, setLoadingNoti] = useState(false);
   const drawerAnimation = useRef(new Animated.Value(-320)).current;
   const overlayAnimation = useRef(new Animated.Value(0)).current;
   const [topTemplates, setTopTemplates] = useState([]);
@@ -146,9 +151,61 @@ export default function DesignerHomeScreen() {
       console.log(error);
     }
   };
+
+  const loadNotiCount = async () => {
+    try {
+      const data = await notiService.getCountNotiUnRead();
+      const count = Number(data?.unread ?? 0);
+      setNotiCount(count);
+    } catch (error) {
+      console.log("designer loadNotiCount error", error.message);
+    }
+  };
+
+  const toggleNotiDropdown = async () => {
+    const next = !notiOpen;
+    setNotiOpen(next);
+    if (!next) return;
+
+    try {
+      setLoadingNoti(true);
+      const data = await notiService.getAllNoti(0, 20);
+      const list = Array.isArray(data) ? data : data?.content || [];
+      setNotifications(Array.isArray(list) ? list : []);
+    } catch (error) {
+      console.log("designer getAllNoti error", error.message);
+    } finally {
+      setLoadingNoti(false);
+    }
+  };
+
+  const handleReadAllNoti = async () => {
+    try {
+      await notiService.readAllNoti();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setNotiCount(0);
+    } catch (error) {
+      console.log("designer readAllNoti error", error.message);
+    }
+  };
+
+  const handleReadSingleNoti = async (item) => {
+    if (item.read) return;
+    try {
+      await notiService.readNotiByNotiId(item.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
+      );
+      setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
+    } catch (error) {
+      console.log("designer readNotiByNotiId error", error.message);
+    }
+  };
+
   useEffect(() => {
     fetchSashboardSummary();
     fetchTopTemplates();
+    loadNotiCount();
   }, []);
 
   return (
@@ -164,7 +221,6 @@ export default function DesignerHomeScreen() {
         onNavPress={handleNavPress}
       />
 
-      {/* Header - Updated */}
       <View style={styles.header}>
         <Pressable onPress={toggleDrawer} style={styles.menuButton}>
           <Icon name="menu" size={24} color="#084F8C" />
@@ -172,9 +228,24 @@ export default function DesignerHomeScreen() {
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Designer Homepage</Text>
         </View>
-        <Pressable style={styles.notificationButton}>
-          <Icon name="notifications-none" size={24} color="#084F8C" />
-          <View style={styles.notificationBadge} />
+        <Pressable
+          style={styles.notificationButton}
+          onPress={toggleNotiDropdown}
+        >
+          <Icon name="notifications" size={24} color="#084F8C" />
+          {notiCount > 0 && (
+            <View style={styles.notificationBadge}>
+              <Text
+                style={{
+                  color: "#FFF",
+                  fontSize: 10,
+                  fontWeight: "700",
+                }}
+              >
+                {notiCount > 99 ? "99+" : notiCount}
+              </Text>
+            </View>
+          )}
         </Pressable>
       </View>
 
@@ -386,9 +457,160 @@ export default function DesignerHomeScreen() {
         </View>
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {notiOpen && (
+        <View
+          style={{
+            position: "absolute",
+            top: 80,
+            right: 20,
+            width: 320,
+            maxHeight: 360,
+            backgroundColor: "#FFFFFF",
+            borderRadius: 16,
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            shadowColor: "#000",
+            shadowOpacity: 0.15,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 8,
+            zIndex: 50,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 8,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: "700",
+                color: "#111827",
+              }}
+            >
+              Notifications
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: "#6B7280",
+                }}
+              >
+                {notiCount} unread
+              </Text>
+              {notifications.length > 0 && (
+                <Pressable onPress={handleReadAllNoti}>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: "#2563EB",
+                      fontWeight: "600",
+                    }}
+                  >
+                    Mark all as read
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          {loadingNoti ? (
+            <View
+              style={{
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 20,
+              }}
+            >
+              <Text style={{ color: "#6B7280" }}>Loading...</Text>
+            </View>
+          ) : notifications.length === 0 ? (
+            <View
+              style={{
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 16,
+              }}
+            >
+              <Icon name="notifications-off" size={32} color="#9CA3AF" />
+              <Text
+                style={{
+                  marginTop: 6,
+                  color: "#6B7280",
+                  fontSize: 13,
+                }}
+              >
+                No notifications
+              </Text>
+            </View>
+          ) : (
+            <ScrollView style={{ maxHeight: 300 }}>
+              {notifications.map((item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() => handleReadSingleNoti(item)}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 8,
+                    borderRadius: 10,
+                    backgroundColor: item.read ? "#F9FAFB" : "#DBEAFE",
+                    marginBottom: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "700",
+                      color: "#111827",
+                      marginBottom: 2,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {item.title || "Notification"}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: "#4B5563",
+                      marginBottom: 2,
+                    }}
+                    numberOfLines={2}
+                  >
+                    {item.message}
+                  </Text>
+                  {item.createdAt && (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: "#6B7280",
+                        marginTop: 2,
+                      }}
+                    >
+                      {new Date(item.createdAt).toLocaleString("vi-VN")}
+                    </Text>
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      )}
     </View>
   );
 }
+
 const styles = {
   container: {
     flex: 1,
