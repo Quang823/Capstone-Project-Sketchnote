@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Modal,
   View,
@@ -10,12 +10,84 @@ import {
   Switch,
 } from "react-native";
 import { Image } from "expo-image";
+import { projectService } from "../../../service/projectService";
 
-const ExportModal = ({ visible, onClose, onExport, hasPro = false }) => {
+const ExportModal = ({
+  visible,
+  onClose,
+  onExport,
+  hasPro,
+  hasActiveSubscription,
+  projectId,
+  pages: initialPages,
+}) => {
   const [selected, setSelected] = useState("editable");
   const [fileName, setFileName] = useState("Unnamed note");
   const [includeBg, setIncludeBg] = useState(true);
-  const [qualityPreset, setQualityPreset] = useState(hasPro ? "high" : "medium");
+
+  const [pagePreviews, setPagePreviews] = useState([]);
+  const [selectedPageIndex, setSelectedPageIndex] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadPages = async () => {
+      try {
+        if (!visible) return;
+        if (projectId) {
+          const data = await projectService.getProjectById(projectId);
+          const pages = Array.isArray(data?.pages) ? data.pages : [];
+          const sorted = pages
+            .slice()
+            .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
+          if (mounted) {
+            setPagePreviews(sorted);
+            setSelectedPageIndex(0);
+          }
+        } else if (Array.isArray(initialPages) && initialPages.length > 0) {
+          const sorted = initialPages
+            .slice()
+            .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
+          if (mounted) {
+            setPagePreviews(sorted);
+            setSelectedPageIndex(0);
+          }
+        } else {
+          if (mounted) {
+            setPagePreviews([]);
+            setSelectedPageIndex(0);
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          setPagePreviews([]);
+          setSelectedPageIndex(0);
+        }
+      }
+    };
+    loadPages();
+    return () => {
+      mounted = false;
+    };
+  }, [visible, projectId, initialPages]);
+
+  const isPro = !!(hasPro || hasActiveSubscription);
+
+  const [resolutionKey, setResolutionKey] = useState("medium");
+  const resolutionOptions = useMemo(() => {
+    const base = [
+      { key: "low", label: "Low", quality: 50 },
+      { key: "medium", label: "Medium", quality: 75 },
+      { key: "high", label: "High", quality: 90 },
+    ];
+    if (isPro) {
+      base.push(
+        { key: "hd", label: "HD", quality: 95 },
+        { key: "2k", label: "2K", quality: 98 },
+        { key: "4k", label: "4K", quality: 100 }
+      );
+    }
+    return base;
+  }, [isPro]);
 
   const [pageMode, setPageMode] = useState("all");
   const [pageRange, setPageRange] = useState("");
@@ -53,7 +125,6 @@ const ExportModal = ({ visible, onClose, onExport, hasPro = false }) => {
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          {/* Header */}
           <View style={styles.header}>
             <Text style={styles.cancel} onPress={onClose}>
               Cancel
@@ -62,190 +133,189 @@ const ExportModal = ({ visible, onClose, onExport, hasPro = false }) => {
             <Text style={styles.exportOnly}>Export only</Text>
           </View>
 
-          {/* Options */}
-          <View style={styles.optionRow}>
-            {options.map((opt) => (
-              <Pressable
-                key={opt.key}
-                style={[
-                  styles.option,
-                  selected === opt.key && styles.optionSelected,
-                ]}
-                onPress={() => setSelected(opt.key)}
-              >
-                <Image
-                  source={{ uri: opt.icon }}
-                  style={[
-                    styles.optionIcon,
-                    selected === opt.key && styles.optionIconSelected,
-                  ]}
+          <View style={styles.bodyRow}>
+            <View style={styles.leftPane}>
+              <View style={styles.pageThumbnail}>
+                {pagePreviews[selectedPageIndex]?.snapshotUrl ? (
+                  <Image
+                    source={{
+                      uri: pagePreviews[selectedPageIndex].snapshotUrl,
+                    }}
+                    style={styles.thumbnailImage}
+                  />
+                ) : (
+                  <View style={styles.emptyThumbnail} />
+                )}
+              </View>
+              <View style={styles.thumbRow}>
+                {pagePreviews.slice(0, 5).map((p, idx) => (
+                  <Pressable
+                    key={`${p.pageNumber}-${idx}`}
+                    onPress={() => setSelectedPageIndex(idx)}
+                  >
+                    {p.snapshotUrl ? (
+                      <Image
+                        source={{ uri: p.snapshotUrl }}
+                        style={styles.thumb}
+                      />
+                    ) : (
+                      <View style={styles.thumb} />
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.rightPane}>
+              <View style={styles.optionRow}>
+                {options.map((opt) => (
+                  <Pressable
+                    key={opt.key}
+                    style={[
+                      styles.option,
+                      selected === opt.key && styles.optionSelected,
+                    ]}
+                    onPress={() => setSelected(opt.key)}
+                  >
+                    <Image
+                      source={{ uri: opt.icon }}
+                      style={[
+                        styles.optionIcon,
+                        selected === opt.key && styles.optionIconSelected,
+                      ]}
+                    />
+                    <Text style={styles.optionLabel}>{opt.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Text style={styles.warningText}>
+                ⚠️ If the source file is a scanned document/image/non-editable
+                PDF, the exported file will remain as a non-editable PDF
+              </Text>
+
+              <View style={{ marginTop: 16 }}>
+                <Text style={styles.label}>File name:</Text>
+                <TextInput
+                  style={styles.input}
+                  value={fileName}
+                  onChangeText={setFileName}
+                  placeholder="Unnamed note"
                 />
-
-                <Text style={styles.optionLabel}>{opt.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {/* Warning */}
-          <Text style={styles.warningText}>
-            ⚠️ If the source file is a scanned document/image/non-editable PDF,
-            the exported file will remain as a non-editable PDF
-          </Text>
-
-          {/* File name */}
-          <View style={{ marginTop: 16 }}>
-            <Text style={styles.label}>File name:</Text>
-            <TextInput
-              style={styles.input}
-              value={fileName}
-              onChangeText={setFileName}
-              placeholder="Unnamed note"
-            />
-          </View>
-
-          {/* Checkbox */}
-          <View style={styles.checkboxRow}>
-            <Switch value={includeBg} onValueChange={setIncludeBg} />
-            <Text style={styles.checkboxText}>
-              Including page background (horizontal line/grid/image/text etc.)
-            </Text>
-          </View>
-
-          {/* Pages selection */}
-          <View style={{ marginTop: 12 }}>
-            <Text style={styles.label}>Pages to export:</Text>
-
-            <View style={styles.pageRow}>
-              {/* Left buttons */}
-              <View style={styles.pageLeft}>
-                <Pressable
-                  onPress={() => setPageMode("all")}
-                  style={[
-                    styles.pageOption,
-                    pageMode === "all" && styles.pageOptionSelected,
-                  ]}
-                >
-                  <Text style={styles.pageOptionLabel}>All</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setPageMode("range")}
-                  style={[
-                    styles.pageOption,
-                    pageMode === "range" && styles.pageOptionSelected,
-                  ]}
-                >
-                  <Text style={styles.pageOptionLabel}>Range</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setPageMode("list")}
-                  style={[
-                    styles.pageOption,
-                    pageMode === "list" && styles.pageOptionSelected,
-                  ]}
-                >
-                  <Text style={styles.pageOptionLabel}>List</Text>
-                </Pressable>
               </View>
 
-              {/* Right: label + input */}
-              <View style={styles.pageRight}>
-                {pageMode === "all" && (
-                  <Text style={styles.pageInfo}>Export all pages</Text>
-                )}
-
-                {pageMode === "range" && (
-                  <>
-                    <TextInput
-                      style={styles.input}
-                      value={pageRange}
-                      onChangeText={setPageRange}
-                      placeholder="e.g., 1–3"
-                    />
-                  </>
-                )}
-
-                {pageMode === "list" && (
-                  <>
-                    <TextInput
-                      style={styles.input}
-                      value={pageList}
-                      onChangeText={setPageList}
-                      placeholder="e.g., 1,3,5"
-                    />
-                  </>
+              <View style={{ marginTop: 12 }}>
+                <Text style={styles.label}>Resolution:</Text>
+                <View style={styles.resRow}>
+                  {resolutionOptions.map((r) => (
+                    <Pressable
+                      key={r.key}
+                      onPress={() => setResolutionKey(r.key)}
+                      style={[
+                        styles.resOption,
+                        resolutionKey === r.key && styles.resOptionSelected,
+                      ]}
+                    >
+                      <Text style={styles.resLabel}>{r.label}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                {!isPro && (
+                  <Text style={styles.proHint}>
+                    HD, 2K và 4K chỉ dành cho người dùng Pro
+                  </Text>
                 )}
               </View>
+
+              <View style={styles.checkboxRow}>
+                <Switch value={includeBg} onValueChange={setIncludeBg} />
+                <Text style={styles.checkboxText}>
+                  Including page background (horizontal line/grid/image/text
+                  etc.)
+                </Text>
+              </View>
+
+              <View style={{ marginTop: 12 }}>
+                <Text style={styles.label}>Pages to export:</Text>
+                <View style={styles.pageRow}>
+                  <View style={styles.pageLeft}>
+                    <Pressable
+                      onPress={() => setPageMode("all")}
+                      style={[
+                        styles.pageOption,
+                        pageMode === "all" && styles.pageOptionSelected,
+                      ]}
+                    >
+                      <Text style={styles.pageOptionLabel}>All</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setPageMode("range")}
+                      style={[
+                        styles.pageOption,
+                        pageMode === "range" && styles.pageOptionSelected,
+                      ]}
+                    >
+                      <Text style={styles.pageOptionLabel}>Range</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setPageMode("list")}
+                      style={[
+                        styles.pageOption,
+                        pageMode === "list" && styles.pageOptionSelected,
+                      ]}
+                    >
+                      <Text style={styles.pageOptionLabel}>List</Text>
+                    </Pressable>
+                  </View>
+                  <View style={styles.pageRight}>
+                    {pageMode === "all" && (
+                      <Text style={styles.pageInfo}>Export all pages</Text>
+                    )}
+                    {pageMode === "range" && (
+                      <TextInput
+                        style={styles.input}
+                        value={pageRange}
+                        onChangeText={setPageRange}
+                        placeholder="e.g., 1–3"
+                      />
+                    )}
+                    {pageMode === "list" && (
+                      <TextInput
+                        style={styles.input}
+                        value={pageList}
+                        onChangeText={setPageList}
+                        placeholder="e.g., 1,3,5"
+                      />
+                    )}
+                  </View>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.exportBtn}
+                onPress={() => {
+                  const quality =
+                    resolutionOptions.find((r) => r.key === resolutionKey)
+                      ?.quality || 90;
+                  onExport({
+                    selected,
+                    fileName,
+                    includeBg,
+                    pageMode,
+                    pageRange,
+                    pageList,
+                    quality,
+                  });
+                }}
+              >
+                <Text style={styles.exportText}>Export and share</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.savePath}>
+                Save path: storage/documents/starnote/export
+              </Text>
             </View>
           </View>
-
-          {/* Quality selection */}
-          <View style={{ marginTop: 12 }}>
-            <Text style={styles.label}>Quality:</Text>
-            <View style={styles.pageRow}>
-              <View style={styles.pageLeft}>
-                <Pressable
-                  onPress={() => setQualityPreset("low")}
-                  style={[
-                    styles.pageOption,
-                    qualityPreset === "low" && styles.pageOptionSelected,
-                  ]}
-                >
-                  <Text style={styles.pageOptionLabel}>Low</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setQualityPreset("medium")}
-                  style={[
-                    styles.pageOption,
-                    qualityPreset === "medium" && styles.pageOptionSelected,
-                  ]}
-                >
-                  <Text style={styles.pageOptionLabel}>Medium</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => hasPro && setQualityPreset("high")}
-                  style={[
-                    styles.pageOption,
-                    qualityPreset === "high" && styles.pageOptionSelected,
-                    !hasPro && { opacity: 0.5 },
-                  ]}
-                >
-                  <Text style={styles.pageOptionLabel}>High{!hasPro ? " (PRO)" : ""}</Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
-
-          {/* Export button */}
-          <TouchableOpacity
-            style={styles.exportBtn}
-            onPress={() =>
-              onExport({
-                selected,
-                fileName,
-                includeBg,
-                pageMode,
-                pageRange,
-                pageList,
-                quality:
-                  qualityPreset === "low"
-                    ? 60
-                    : qualityPreset === "medium"
-                    ? 80
-                    : 100,
-              })
-            }
-          >
-            <Text style={styles.exportText}>Export and share</Text>
-          </TouchableOpacity>
-
-          {/* Save path */}
-          <Text style={styles.savePath}>
-            Save path: storage/documents/starnote/export
-          </Text>
         </View>
       </View>
     </Modal>
@@ -263,7 +333,7 @@ const styles = StyleSheet.create({
   },
   modal: {
     backgroundColor: "#ffffff",
-    width: "50%",
+    width: "70%",
     borderRadius: 16,
     padding: 20,
   },
@@ -398,5 +468,96 @@ const styles = StyleSheet.create({
   pageInfo: {
     color: "#777",
     fontSize: 13,
+  },
+  bodyRow: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  leftPane: {
+    flex: 0.4,
+    backgroundColor: "#F4F6F8",
+    borderRadius: 12,
+    padding: 16,
+    justifyContent: "space-between",
+  },
+  rightPane: {
+    flex: 0.6,
+  },
+  pageThumbnail: {
+    width: "100%",
+    aspectRatio: 3 / 4,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 12,
+  },
+  thumbnailImage: {
+    width: "100%",
+    height: "100%",
+  },
+  emptyThumbnail: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+  },
+  previewBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+  },
+  previewIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: "#fff",
+  },
+  previewLabel: {
+    fontSize: 14,
+    color: "#111",
+    fontWeight: "600",
+  },
+  thumbRow: {
+    flexDirection: "row",
+  },
+
+  thumbWrapSelected: {
+    borderColor: "#007AFF",
+  },
+
+  thumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: "#EAF4FF",
+    contentFit: "contain",
+  },
+  resRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  resOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: "#F2F2F2",
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  resOptionSelected: {
+    backgroundColor: "#EAF4FF",
+    borderColor: "#007AFF",
+  },
+  resLabel: {
+    fontSize: 13,
+    color: "#111",
+  },
+  proHint: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#777",
   },
 });

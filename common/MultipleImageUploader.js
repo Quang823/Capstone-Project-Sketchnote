@@ -13,7 +13,10 @@ import { uploadToCloudinary } from "../service/cloudinary";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import Toast from "react-native-toast-message";
 
-export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 }) {
+export default function MultipleImageUploader({
+  onImageUploaded,
+  maxImages = 10,
+}) {
   const [images, setImages] = useState([]);
   const [uploading, setUploading] = useState(false);
 
@@ -30,12 +33,12 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
       }
 
       // Xin quyền truy cập
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
         Toast.show({
           type: "error",
           text1: "Need Permission",
-          
         });
         return;
       }
@@ -52,35 +55,27 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
 
       const selectedUri = result.assets[0].uri;
       await handleUpload(selectedUri);
-    } catch (error) {
-     
-    }
+    } catch (error) {}
   };
 
   const handleUpload = async (uri) => {
     try {
       setUploading(true);
-     
-      
+
       const uploaded = await uploadToCloudinary(uri);
-      
+
       if (uploaded?.secure_url) {
-     
-        
         // Thêm vào state local
         setImages((prev) => [...prev, uploaded.secure_url]);
-        
+
         // Gọi callback để parent component biết
-        if (onImageUploaded && typeof onImageUploaded === 'function') {
-         
+        if (onImageUploaded && typeof onImageUploaded === "function") {
           onImageUploaded(uploaded.secure_url);
         }
-        
-      
+
         Toast.show({
           type: "success",
           text1: "Upload success",
-         
         });
       } else {
         throw new Error("Invalid upload response");
@@ -94,20 +89,16 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
   };
 
   const removeImage = (index) => {
-    Alert.alert(
-      "Confirm",
-      "Are you sure you want to delete this image?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            setImages((prev) => prev.filter((_, i) => i !== index));
-          },
+    Alert.alert("Confirm", "Are you sure you want to delete this image?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          setImages((prev) => prev.filter((_, i) => i !== index));
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -117,19 +108,31 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
         onPress={pickImage}
         disabled={uploading || images.length >= maxImages}
         style={{
-          backgroundColor: images.length >= maxImages ? "#9CA3AF" : "#31c3e7ff",
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          borderRadius: 6,
+          backgroundColor: images.length >= maxImages ? "#9CA3AF" : "#084F8C",
+          paddingHorizontal: 14,
+          paddingVertical: 10,
+          borderRadius: 10,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "center",
           alignSelf: "flex-start",
-          opacity: (uploading || images.length >= maxImages) ? 0.6 : 1,
+          opacity: uploading || images.length >= maxImages ? 0.6 : 1,
+          shadowColor: "#084F8C",
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.22,
+          shadowRadius: 6,
+          elevation: 3,
         }}
       >
         <Icon name="add-photo-alternate" size={16} color="#fff" />
-        <Text style={{ color: "#fff", marginLeft: 6, fontSize: 14, fontWeight: "500" }}>
+        <Text
+          style={{
+            color: "#fff",
+            marginLeft: 6,
+            fontSize: 14,
+            fontWeight: "500",
+          }}
+        >
           Add Image ({images.length}/{maxImages})
         </Text>
       </Pressable>
@@ -137,8 +140,10 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
       {/* Loading Indicator */}
       {uploading && (
         <View style={{ marginTop: 12, alignItems: "center" }}>
-          <ActivityIndicator size="small" color="#2eabefff" />
-          <Text style={{ marginTop: 6, color: "#666", fontSize: 12 }}>Uploading...</Text>
+          <ActivityIndicator size="small" color="#084F8C" />
+          <Text style={{ marginTop: 6, color: "#666", fontSize: 12 }}>
+            Uploading...
+          </Text>
         </View>
       )}
 
@@ -156,6 +161,11 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
                 style={{
                   marginRight: 10,
                   position: "relative",
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 6,
+                  elevation: 3,
                 }}
               >
                 <Image
@@ -165,10 +175,10 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
                     height: 100,
                     borderRadius: 8,
                     borderWidth: index === 0 ? 3 : 1,
-                    borderColor: index === 0 ? "#10B981" : "#ccc",
+                    borderColor: index === 0 ? "#084F8C" : "#E2E8F0",
                   }}
                 />
-                
+
                 {/* Thumbnail Badge */}
                 {index === 0 && (
                   <View
@@ -176,13 +186,19 @@ export default function MultipleImageUploader({ onImageUploaded, maxImages = 10 
                       position: "absolute",
                       bottom: 5,
                       left: 5,
-                      backgroundColor: "#10B981",
+                      backgroundColor: "#084F8C",
                       paddingHorizontal: 6,
                       paddingVertical: 2,
                       borderRadius: 4,
                     }}
                   >
-                    <Text style={{ color: "#fff", fontSize: 10, fontWeight: "bold" }}>
+                    <Text
+                      style={{
+                        color: "#fff",
+                        fontSize: 10,
+                        fontWeight: "bold",
+                      }}
+                    >
                       Thumbnail
                     </Text>
                   </View>

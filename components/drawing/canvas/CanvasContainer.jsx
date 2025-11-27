@@ -70,7 +70,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     getNearestFont, // 👈 Pass down font helper
     projectId,
     userId,
-    enableCollab,
     isCover = false,
   },
   ref
@@ -81,9 +80,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   useEffect(() => {
     if (!Array.isArray(layers)) return;
     setInternalLayers((prev) => {
-      const prevMap = new Map(
-        (Array.isArray(prev) ? prev : []).map((l) => [l.id, { ...l }])
-      );
+      const prevMap = new Map((Array.isArray(prev) ? prev : []).map((l) => [l.id, { ...l }]));
       const next = layers.map((inLayer) => {
         const ex = prevMap.get(inLayer.id);
         if (ex) {
@@ -514,7 +511,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       }
 
       try {
-        if (projectId && userId && enableCollab) {
+        if (projectId && userId) {
           const layerSummaries = Array.isArray(internalLayers)
             ? internalLayers.map((l) => ({
                 id: l?.id,
@@ -540,7 +537,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             userId,
             pageId,
             stroke,
-            pageChunk
+            pageChunk,
           );
         }
       } catch {}
@@ -711,14 +708,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       } catch {}
 
       let width = typeof opts.width === "number" ? opts.width : naturalW ?? 400;
-      let height =
-        typeof opts.height === "number" ? opts.height : naturalH ?? 400;
+      let height = typeof opts.height === "number" ? opts.height : naturalH ?? 400;
 
-      if (
-        naturalW &&
-        naturalH &&
-        (typeof opts.width !== "number" || typeof opts.height !== "number")
-      ) {
+      if (naturalW && naturalH && (typeof opts.width !== "number" || typeof opts.height !== "number")) {
         const ratio = naturalW / naturalH;
         const maxW = Math.max(40, page.w * 0.8);
         const maxH = Math.max(40, page.h * 0.8);
@@ -1258,10 +1250,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             if (layerMap.has(layerId)) {
               const existingLayer = layerMap.get(layerId);
               if (hasTemplate) {
-                existingLayer.strokes = [
-                  ...uniqueStrokes,
-                  ...(existingLayer.strokes || []),
-                ];
+                existingLayer.strokes = [...uniqueStrokes, ...(existingLayer.strokes || [])];
               } else {
                 existingLayer.strokes.push(...uniqueStrokes);
               }

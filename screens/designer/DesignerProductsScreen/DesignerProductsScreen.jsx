@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,17 +9,27 @@ import {
   Dimensions,
   Modal,
   Image,
+  Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { designerProductsStyles } from "./DesignerProductsScreen.styles";
 import { resourceService } from "../../../service/resourceService";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
+import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerProductsScreen() {
   const navigation = useNavigation();
+  const { setActiveNavItem } = useNavContext();
+  const [activeNavItemLocal, setActiveNavItemLocal] = useState("products");
+
+  useEffect(() => {
+    setActiveNavItem("products");
+    setActiveNavItemLocal("products");
+  }, [setActiveNavItem]);
   const [products, setProducts] = useState([]);
   const [filter, setFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -66,52 +76,49 @@ export default function DesignerProductsScreen() {
     fetchProducts(0, newSize);
   };
 
- const filteredProducts = products.filter((product) => {
-  const matchesFilter =
-    filter === "ALL" || product.status === filter;
+  const filteredProducts = products.filter((product) => {
+    const matchesFilter = filter === "ALL" || product.status === filter;
 
-  const matchesSearch =
-    product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-  return matchesFilter && matchesSearch;
-});
-
+    return matchesFilter && matchesSearch;
+  });
 
   const getStatusColor = (status) => {
-  switch (status) {
-     case "PENDING_REVIEW":
-      return "#3B82F6";
-    case "PUBLISHED":
-      return "#10B981"; 
-    case "REJECTED":
-      return "#EF4444"; 
-    case "ARCHIVED":
-      return "#F59E0B"; 
-    case "DELETED":
-      return "#6B7280"; 
-    default:
-      return "#9CA3AF";
-  }
-};
+    switch (status) {
+      case "PENDING_REVIEW":
+        return "#3B82F6";
+      case "PUBLISHED":
+        return "#10B981";
+      case "REJECTED":
+        return "#EF4444";
+      case "ARCHIVED":
+        return "#F59E0B";
+      case "DELETED":
+        return "#6B7280";
+      default:
+        return "#9CA3AF";
+    }
+  };
 
-const getStatusText = (status) => {
-  switch (status) {
-     case "PENDING_REVIEW":
-      return "Pending Review";
-    case "PUBLISHED":
-      return "Published";
-    case "REJECTED":
-      return "Rejected";
-    case "ARCHIVED":
-      return "Archived";
-    case "DELETED":
-      return "Deleted";
-    default:
-      return "All";
-  }
-};
-
+  const getStatusText = (status) => {
+    switch (status) {
+      case "PENDING_REVIEW":
+        return "Pending Review";
+      case "PUBLISHED":
+        return "Published";
+      case "REJECTED":
+        return "Rejected";
+      case "ARCHIVED":
+        return "Archived";
+      case "DELETED":
+        return "Deleted";
+      default:
+        return "All";
+    }
+  };
 
   const formatCurrency = (amount) => {
     return (amount ?? 0).toLocaleString("vi-VN") + " VND";
@@ -130,26 +137,29 @@ const getStatusText = (status) => {
 
   const handleEditProduct = (product) => {
     setShowDetailModal(false);
-    // Navigate to edit screen or show edit modal
     Alert.alert("Edit", `Edit: ${product.name}`);
   };
 
   const handleDeleteProduct = (product) => {
-    Alert.alert("Delete product", `Are you sure you want to delete "${product.name}"?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
-          setProducts(
-            products.filter(
-              (p) => p.resourceTemplateId !== product.resourceTemplateId
-            )
-          );
-          setShowDetailModal(false);
+    Alert.alert(
+      "Delete product",
+      `Are you sure you want to delete "${product.name}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            setProducts(
+              products.filter(
+                (p) => p.resourceTemplateId !== product.resourceTemplateId
+              )
+            );
+            setShowDetailModal(false);
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleToggleActive = (product) => {
@@ -179,13 +189,16 @@ const getStatusText = (status) => {
     <View style={designerProductsStyles.container}>
       {/* Header */}
       <View style={designerProductsStyles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
-        </Pressable>
-        <Text style={designerProductsStyles.headerTitle}>Product Management</Text>
-        <Pressable onPress={() => setShowFilterModal(true)}>
-          <Icon name="filter-list" size={24} color="#1F2937" />
-        </Pressable>
+        <SidebarToggleButton iconColor="#084F8C" iconSize={24} />
+        <Text style={designerProductsStyles.headerTitle}>Products</Text>
+        <View style={designerProductsStyles.headerActions}>
+          <Pressable
+            onPress={() => setShowFilterModal(true)}
+            style={designerProductsStyles.headerActionIcon}
+          >
+            <Icon name="filter-list" size={22} color="#084F8C" />
+          </Pressable>
+        </View>
       </View>
 
       {/* Stats Cards */}
@@ -221,27 +234,33 @@ const getStatusText = (status) => {
 
       {/* Filter Tabs */}
       <View style={designerProductsStyles.filterTabs}>
-  {["ALL", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED", "DELETED"].map((status) => (
-    <Pressable
-      key={status}
-      style={[
-        designerProductsStyles.filterTab,
-        filter === status && designerProductsStyles.filterTabActive,
-      ]}
-      onPress={() => setFilter(status)}
-    >
-      <Text
-        style={[
-          designerProductsStyles.filterTabText,
-          filter === status && designerProductsStyles.filterTabTextActive,
-        ]}
-      >
-        {getStatusText(status)}
-      </Text>
-    </Pressable>
-  ))}
-</View>
-
+        {[
+          "ALL",
+          "PENDING_REVIEW",
+          "PUBLISHED",
+          "REJECTED",
+          "ARCHIVED",
+          "DELETED",
+        ].map((status) => (
+          <Pressable
+            key={status}
+            style={[
+              designerProductsStyles.filterTab,
+              filter === status && designerProductsStyles.filterTabActive,
+            ]}
+            onPress={() => setFilter(status)}
+          >
+            <Text
+              style={[
+                designerProductsStyles.filterTabText,
+                filter === status && designerProductsStyles.filterTabTextActive,
+              ]}
+            >
+              {getStatusText(status)}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       {/* Products List */}
       <ScrollView
@@ -254,103 +273,126 @@ const getStatusText = (status) => {
               Loading...
             </Text>
           </View>
-        ) : filteredProducts.map((product) => (
-          <Pressable
-            key={product.resourceTemplateId}
-            style={designerProductsStyles.productCard}
-            onPress={() => handleProductPress(product)}
-          >
-            {product.images && product.images.length > 0 ? (
-              <Image 
-                source={{ uri: product.images[0].url || product.images[0].imageUrl }} 
-                style={designerProductsStyles.productThumbnail} 
-              />
-            ) : (
-              <View style={[designerProductsStyles.productThumbnail, { backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' }]}>
-                <Icon name="image" size={32} color="#9CA3AF" />
-              </View>
-            )}
-            
-            <View style={designerProductsStyles.productInfo}>
-              <View style={designerProductsStyles.productHeader}>
-                <Text style={designerProductsStyles.productTitle} numberOfLines={1}>
-                  {product.name}
-                </Text>
-                <View style={[
-                  designerProductsStyles.statusBadge,
-                  { backgroundColor: getStatusColor(product.status) }
-                ]}>
-                  <Text style={designerProductsStyles.statusText}>
-                    {getStatusText(product.status)}
-                  </Text>
-                </View>
-              </View>
-              
-              <Text style={designerProductsStyles.productDescription} numberOfLines={2}>
-                {product.description}
-              </Text>
-              
-              <View style={designerProductsStyles.productStats}>
-                <View style={designerProductsStyles.statItem}>
-                  <Icon name="attach-money" size={16} color="#6B7280" />
-                  <Text style={designerProductsStyles.statText}>
-                    {formatCurrency(product.price)}
-                  </Text>
-                </View>
-                <View style={designerProductsStyles.statItem}>
-                  <Icon name="category" size={16} color="#6B7280" />
-                  <Text style={designerProductsStyles.statText}>{product.type}</Text>
-                </View>
-              </View>
-              
-              <View style={designerProductsStyles.productStats}>
-                <View style={designerProductsStyles.statItem}>
-                  <Icon name="calendar-today" size={14} color="#6B7280" />
-                  <Text style={designerProductsStyles.statText}>
-                    Released: {formatDate(product.releaseDate)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-            
-            <View style={designerProductsStyles.productActions}>
-              <Pressable
-                style={designerProductsStyles.actionButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleEditProduct(product);
-                }}
-              >
-                <Icon name="edit" size={20} color="#3B82F6" />
-              </Pressable>
-              
-              <Pressable
-                style={designerProductsStyles.actionButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleToggleActive(product);
-                }}
-              >
-                <Icon 
-                  name={product.isActive ? "toggle-on" : "toggle-off"} 
-                  size={20} 
-                  color={product.isActive ? "#10B981" : "#6B7280"} 
+        ) : (
+          filteredProducts.map((product) => (
+            <Pressable
+              key={product.resourceTemplateId}
+              style={designerProductsStyles.productCard}
+              onPress={() => handleProductPress(product)}
+            >
+              {product.images && product.images.length > 0 ? (
+                <Image
+                  source={{
+                    uri: product.images[0].url || product.images[0].imageUrl,
+                  }}
+                  style={designerProductsStyles.productThumbnail}
                 />
-              </Pressable>
-              
-              <Pressable
-                style={designerProductsStyles.actionButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleDeleteProduct(product);
-                }}
-              >
-                <Icon name="delete" size={20} color="#EF4444" />
-              </Pressable>
-            </View>
-          </Pressable>
-        ))}
-        
+              ) : (
+                <View
+                  style={[
+                    designerProductsStyles.productThumbnail,
+                    {
+                      backgroundColor: "#E5E7EB",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    },
+                  ]}
+                >
+                  <Icon name="image" size={32} color="#9CA3AF" />
+                </View>
+              )}
+
+              <View style={designerProductsStyles.productInfo}>
+                <View style={designerProductsStyles.productHeader}>
+                  <Text
+                    style={designerProductsStyles.productTitle}
+                    numberOfLines={1}
+                  >
+                    {product.name}
+                  </Text>
+                  <View
+                    style={[
+                      designerProductsStyles.statusBadge,
+                      { backgroundColor: getStatusColor(product.status) },
+                    ]}
+                  >
+                    <Text style={designerProductsStyles.statusText}>
+                      {getStatusText(product.status)}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text
+                  style={designerProductsStyles.productDescription}
+                  numberOfLines={2}
+                >
+                  {product.description}
+                </Text>
+
+                <View style={designerProductsStyles.productStats}>
+                  <View style={designerProductsStyles.statItem}>
+                    <Icon name="attach-money" size={16} color="#6B7280" />
+                    <Text style={designerProductsStyles.statText}>
+                      {formatCurrency(product.price)}
+                    </Text>
+                  </View>
+                  <View style={designerProductsStyles.statItem}>
+                    <Icon name="category" size={16} color="#6B7280" />
+                    <Text style={designerProductsStyles.statText}>
+                      {product.type}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={designerProductsStyles.productStats}>
+                  <View style={designerProductsStyles.statItem}>
+                    <Icon name="calendar-today" size={14} color="#6B7280" />
+                    <Text style={designerProductsStyles.statText}>
+                      Released: {formatDate(product.releaseDate)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={designerProductsStyles.productActions}>
+                <Pressable
+                  style={designerProductsStyles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleEditProduct(product);
+                  }}
+                >
+                  <Icon name="edit" size={20} color="#3B82F6" />
+                </Pressable>
+
+                <Pressable
+                  style={designerProductsStyles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleToggleActive(product);
+                  }}
+                >
+                  <Icon
+                    name={product.isActive ? "toggle-on" : "toggle-off"}
+                    size={20}
+                    color={product.isActive ? "#10B981" : "#6B7280"}
+                  />
+                </Pressable>
+
+                <Pressable
+                  style={designerProductsStyles.actionButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleDeleteProduct(product);
+                  }}
+                >
+                  <Icon name="delete" size={20} color="#EF4444" />
+                </Pressable>
+              </View>
+            </Pressable>
+          ))
+        )}
+
         {!loading && filteredProducts.length === 0 && (
           <View style={designerProductsStyles.emptyState}>
             <Icon name="inventory" size={64} color="#D1D5DB" />
@@ -412,57 +454,117 @@ const getStatusText = (status) => {
       {/* Filter Modal */}
       <Modal
         visible={showFilterModal}
-        animationType="slide"
+        animationType="fade"
         transparent
         onRequestClose={() => setShowFilterModal(false)}
       >
-        <View style={designerProductsStyles.modalOverlay}>
-          <View style={designerProductsStyles.modalContent}>
+        <Pressable
+          style={designerProductsStyles.modalOverlay}
+          onPress={() => setShowFilterModal(false)}
+          activeOpacity={1}
+        >
+          <Pressable
+            style={designerProductsStyles.modalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
             <View style={designerProductsStyles.modalHeader}>
-              <Text style={designerProductsStyles.modalTitle}>Filters</Text>
-              <Pressable onPress={() => setShowFilterModal(false)}>
-                <Icon name="close" size={24} color="#6B7280" />
+              <View style={designerProductsStyles.modalHeaderLeft}>
+                <View style={designerProductsStyles.modalIconWrapper}>
+                  <Icon name="filter-list" size={22} color="#1E3A8A" />
+                </View>
+                <Text style={designerProductsStyles.modalTitle}>
+                  Filter Status
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setShowFilterModal(false)}
+                style={designerProductsStyles.modalCloseBtn}
+              >
+                <Icon name="close" size={22} color="#64748B" />
               </Pressable>
             </View>
-            
-           <View style={designerProductsStyles.modalBody}>
-  <Text style={designerProductsStyles.modalSectionTitle}>Status</Text>
-  {["ALL", "PENDING_REVIEW", "PUBLISHED", "REJECTED", "ARCHIVED", "DELETED"].map((status) => (
-    <Pressable
-      key={status}
-      style={designerProductsStyles.modalOption}
-      onPress={() => {
-        setFilter(status);
-        setShowFilterModal(false);
-      }}
-    >
-      <Text style={designerProductsStyles.modalOptionText}>
-        {getStatusText(status)}
-      </Text>
-      {filter === status && <Icon name="check" size={20} color="#3B82F6" />}
-    </Pressable>
-  ))}
-</View>
 
-          </View>
-        </View>
+            <View style={designerProductsStyles.modalBody}>
+              {[
+                { value: "ALL", icon: "apps", color: "#64748B" },
+                { value: "PENDING_REVIEW", icon: "schedule", color: "#3B82F6" },
+                { value: "PUBLISHED", icon: "check-circle", color: "#10B981" },
+                { value: "REJECTED", icon: "cancel", color: "#EF4444" },
+                { value: "ARCHIVED", icon: "archive", color: "#F59E0B" },
+                { value: "DELETED", icon: "delete", color: "#6B7280" },
+              ].map((status) => (
+                <Pressable
+                  key={status.value}
+                  style={[
+                    designerProductsStyles.modalOption,
+                    filter === status.value &&
+                      designerProductsStyles.modalOptionActive,
+                  ]}
+                  onPress={() => {
+                    setFilter(status.value);
+                    setShowFilterModal(false);
+                  }}
+                >
+                  <View style={designerProductsStyles.modalOptionLeft}>
+                    <View
+                      style={[
+                        designerProductsStyles.modalOptionIcon,
+                        { backgroundColor: status.color + "20" },
+                      ]}
+                    >
+                      <Icon name={status.icon} size={20} color={status.color} />
+                    </View>
+                    <Text style={designerProductsStyles.modalOptionText}>
+                      {getStatusText(status.value)}
+                    </Text>
+                  </View>
+                  {filter === status.value && (
+                    <View style={designerProductsStyles.checkIconWrapper}>
+                      <Icon name="check" size={20} color="#1E3A8A" />
+                    </View>
+                  )}
+                </Pressable>
+              ))}
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Detail Modal */}
       <Modal
         visible={showDetailModal}
-        animationType="slide"
+        animationType="fade"
         transparent
         onRequestClose={() => setShowDetailModal(false)}
       >
-        <View style={designerProductsStyles.modalOverlay}>
-          <View style={designerProductsStyles.detailModalContent}>
-            <View style={designerProductsStyles.modalHeader}>
-              <Text style={designerProductsStyles.modalTitle}>
-                Product details
-              </Text>
-              <Pressable onPress={() => setShowDetailModal(false)}>
-                <Icon name="close" size={24} color="#6B7280" />
+        <Pressable
+          style={designerProductsStyles.detailModalOverlay}
+          onPress={() => setShowDetailModal(false)}
+          activeOpacity={1}
+        >
+          <Pressable
+            style={designerProductsStyles.detailModalContent}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {/* Handle (drag indicator) */}
+            <View style={designerProductsStyles.dragHandle} />
+
+            {/* HEADER */}
+            <View style={designerProductsStyles.detailModalHeader}>
+              <View style={designerProductsStyles.modalHeaderLeft}>
+                <View style={designerProductsStyles.modalIconWrapper}>
+                  <Icon name="inventory-2" size={22} color="#1E3A8A" />
+                </View>
+                <Text style={designerProductsStyles.modalTitle}>
+                  Product Details
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={() => setShowDetailModal(false)}
+                style={designerProductsStyles.modalCloseBtn}
+              >
+                <Icon name="close" size={22} color="#64748B" />
               </Pressable>
             </View>
 
@@ -471,186 +573,227 @@ const getStatusText = (status) => {
               showsVerticalScrollIndicator={false}
             >
               {selectedProduct && (
-                <>
-                  {/* Product Images */}
-                  {selectedProduct.images &&
-                    selectedProduct.images.length > 0 && (
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={designerProductsStyles.detailImagesContainer}
-                      >
-                        {selectedProduct.images.map((img, index) => (
-                          <Image
-                            key={index}
-                            source={{ uri: img.url || img.imageUrl }}
-                            style={designerProductsStyles.detailImage}
-                          />
-                        ))}
-                      </ScrollView>
-                    )}
+                <View style={designerProductsStyles.detailBodyRow}>
+                  <View style={designerProductsStyles.leftPane}>
+                    <View style={designerProductsStyles.leftPaneCard}>
+                      {selectedProduct.images?.length > 0 ? (
+                        <Image
+                          source={{
+                            uri:
+                              selectedProduct.images[0].url ||
+                              selectedProduct.images[0].imageUrl,
+                          }}
+                          style={designerProductsStyles.detailImage}
+                        />
+                      ) : (
+                        <View style={designerProductsStyles.heroPlaceholder}>
+                          <Icon name="image" size={48} color="#9CA3AF" />
+                        </View>
+                      )}
 
-                  {/* Product Info */}
-                  <View style={designerProductsStyles.detailSection}>
-                    <Text style={designerProductsStyles.detailLabel}>
-                      Product name
-                    </Text>
-                    <Text style={designerProductsStyles.detailValue}>
-                      {selectedProduct.name}
-                    </Text>
-                  </View>
-
-                  <View style={designerProductsStyles.detailSection}>
-                    <Text style={designerProductsStyles.detailLabel}>
-                      Description
-                    </Text>
-                    <Text style={designerProductsStyles.detailValue}>
-                      {selectedProduct.description}
-                    </Text>
-                  </View>
-
-                  <View style={designerProductsStyles.detailRow}>
-                    <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>
-                        Price
-                      </Text>
-                      <Text style={designerProductsStyles.detailValue}>
-                        {formatCurrency(selectedProduct.price)}
-                      </Text>
-                    </View>
-
-                    <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>
-                        Type
-                      </Text>
-                      <Text style={designerProductsStyles.detailValue}>
-                        {selectedProduct.type}
-                      </Text>
+                      {selectedProduct.images?.length > 1 && (
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          style={designerProductsStyles.thumbsContainer}
+                        >
+                          {selectedProduct.images.slice(1).map((img, idx) => (
+                            <View
+                              key={idx}
+                              style={designerProductsStyles.thumbWrapper}
+                            >
+                              <Image
+                                source={{ uri: img.url || img.imageUrl }}
+                                style={designerProductsStyles.thumbImage}
+                              />
+                            </View>
+                          ))}
+                        </ScrollView>
+                      )}
                     </View>
                   </View>
 
-                  <View style={designerProductsStyles.detailRow}>
-                    <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>
-                        Release date
-                      </Text>
-                      <Text style={designerProductsStyles.detailValue}>
-                        {formatDate(selectedProduct.releaseDate)}
-                      </Text>
-                    </View>
-
-                    <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>
-                        Expiration date
-                      </Text>
-                      <Text style={designerProductsStyles.detailValue}>
-                        {formatDate(selectedProduct.expiredTime)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={designerProductsStyles.detailSection}>
-                    <Text style={designerProductsStyles.detailLabel}>
-                      Status
-                    </Text>
-                    <View
-                      style={[
-                        designerProductsStyles.statusBadge,
-                        {
-                          backgroundColor: getStatusColor(
-                            selectedProduct.isActive
-                          ),
-                          alignSelf: "flex-start",
-                        },
-                      ]}
-                    >
-                      <Text style={designerProductsStyles.statusText}>
-                        {getStatusText(selectedProduct.isActive)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Designer Info */}
-                  {selectedProduct.designerInfo && (
-                    <View style={designerProductsStyles.detailSection}>
-                      <Text style={designerProductsStyles.detailLabel}>
-                        Designer info
-                      </Text>
-                      <Text style={designerProductsStyles.detailValue}>
-                        {selectedProduct.designerInfo.firstName}{" "}
-                        {selectedProduct.designerInfo.lastName}
-                      </Text>
-                      <Text style={designerProductsStyles.detailSubValue}>
-                        {selectedProduct.designerInfo.email}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Items */}
-                  {selectedProduct.items &&
-                    selectedProduct.items.length > 0 && (
+                  <View style={designerProductsStyles.rightPane}>
+                    <View style={designerProductsStyles.infoCard}>
                       <View style={designerProductsStyles.detailSection}>
                         <Text style={designerProductsStyles.detailLabel}>
-                          Items count: {selectedProduct.items.length}
+                          Product name
+                        </Text>
+                        <Text style={designerProductsStyles.detailValue}>
+                          {selectedProduct.name}
                         </Text>
                       </View>
-                    )}
 
-                  {/* Action Buttons */}
-                  <View style={designerProductsStyles.detailActions}>
-                    <Pressable
-                      style={[
-                        designerProductsStyles.detailButton,
-                        { backgroundColor: "#3B82F6" },
-                      ]}
-                      onPress={() => handleEditProduct(selectedProduct)}
-                    >
-                      <Icon name="edit" size={20} color="#FFFFFF" />
-                      <Text style={designerProductsStyles.detailButtonText}>
-                        Edit
-                      </Text>
-                    </Pressable>
+                      <View style={designerProductsStyles.detailSection}>
+                        <Text style={designerProductsStyles.detailLabel}>
+                          Description
+                        </Text>
+                        <Text style={designerProductsStyles.detailValue}>
+                          {selectedProduct.description}
+                        </Text>
+                      </View>
 
-                    <Pressable
-                      style={[
-                        designerProductsStyles.detailButton,
-                        { backgroundColor: "#10B981" },
-                      ]}
-                      onPress={() => {
-                        handleToggleActive(selectedProduct);
-                        setShowDetailModal(false);
-                      }}
-                    >
-                      <Icon
-                        name={
-                          selectedProduct.isActive ? "toggle-off" : "toggle-on"
-                        }
-                        size={20}
-                        color="#FFFFFF"
-                      />
-                      <Text style={designerProductsStyles.detailButtonText}>
-                        {selectedProduct.isActive ? "Deactivate" : "Activate"}
-                      </Text>
-                    </Pressable>
+                      <View style={designerProductsStyles.detailRow}>
+                        <View style={designerProductsStyles.detailCol}>
+                          <Text style={designerProductsStyles.detailLabel}>
+                            Price
+                          </Text>
+                          <Text style={designerProductsStyles.detailValue}>
+                            {formatCurrency(selectedProduct.price)}
+                          </Text>
+                        </View>
 
-                    <Pressable
-                      style={[
-                        designerProductsStyles.detailButton,
-                        { backgroundColor: "#EF4444" },
-                      ]}
-                      onPress={() => handleDeleteProduct(selectedProduct)}
-                    >
-                      <Icon name="delete" size={20} color="#FFFFFF" />
-                      <Text style={designerProductsStyles.detailButtonText}>
-                        Delete
-                      </Text>
-                    </Pressable>
+                        <View style={designerProductsStyles.detailCol}>
+                          <Text style={designerProductsStyles.detailLabel}>
+                            Type
+                          </Text>
+                          <Text style={designerProductsStyles.detailValue}>
+                            {selectedProduct.type}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={designerProductsStyles.detailRow}>
+                        <View style={designerProductsStyles.detailCol}>
+                          <Text style={designerProductsStyles.detailLabel}>
+                            Release date
+                          </Text>
+                          <Text style={designerProductsStyles.detailValue}>
+                            {formatDate(selectedProduct.releaseDate)}
+                          </Text>
+                        </View>
+                        <View style={designerProductsStyles.detailCol}>
+                          <Text style={designerProductsStyles.detailLabel}>
+                            Expiration date
+                          </Text>
+                          <Text style={designerProductsStyles.detailValue}>
+                            {formatDate(selectedProduct.expiredTime)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={designerProductsStyles.detailSection}>
+                        <Text style={designerProductsStyles.detailLabel}>
+                          Status
+                        </Text>
+                        <View
+                          style={[
+                            designerProductsStyles.statusBadgeLarge,
+                            {
+                              backgroundColor: getStatusColor(
+                                selectedProduct.status ??
+                                  selectedProduct.isActive
+                              ),
+                            },
+                          ]}
+                        >
+                          <Icon name="circle" size={8} color="#FFFFFF" />
+                          <Text style={designerProductsStyles.statusTextLarge}>
+                            {getStatusText(
+                              selectedProduct.status ?? selectedProduct.isActive
+                            )}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {selectedProduct.designerInfo && (
+                        <View style={designerProductsStyles.detailSection}>
+                          <Text style={designerProductsStyles.detailLabel}>
+                            Designer info
+                          </Text>
+                          <View style={designerProductsStyles.designerInfo}>
+                            <View style={designerProductsStyles.designerAvatar}>
+                              <Icon name="person" size={20} color="#1E3A8A" />
+                            </View>
+                            <View
+                              style={designerProductsStyles.designerDetails}
+                            >
+                              <Text style={designerProductsStyles.designerName}>
+                                {selectedProduct.designerInfo.firstName}{" "}
+                                {selectedProduct.designerInfo.lastName}
+                              </Text>
+                              <Text
+                                style={designerProductsStyles.designerEmail}
+                              >
+                                {selectedProduct.designerInfo.email}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      )}
+
+                      {selectedProduct.items?.length > 0 && (
+                        <View style={designerProductsStyles.detailSection}>
+                          <Text style={designerProductsStyles.detailLabel}>
+                            Items
+                          </Text>
+                          <View style={designerProductsStyles.itemsCounter}>
+                            <Icon name="inventory" size={18} color="#1E3A8A" />
+                            <Text style={designerProductsStyles.itemsCountText}>
+                              {selectedProduct.items.length} items
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={designerProductsStyles.detailActions}>
+                      <Pressable
+                        style={[
+                          designerProductsStyles.detailButton,
+                          designerProductsStyles.detailButtonEdit,
+                        ]}
+                        onPress={() => handleEditProduct(selectedProduct)}
+                      >
+                        <Icon name="edit" size={20} color="#FFFFFF" />
+                        <Text style={designerProductsStyles.detailButtonText}>
+                          Edit
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        style={[
+                          designerProductsStyles.detailButton,
+                          designerProductsStyles.detailButtonToggle,
+                        ]}
+                        onPress={() => {
+                          handleToggleActive(selectedProduct);
+                          setShowDetailModal(false);
+                        }}
+                      >
+                        <Icon
+                          name={
+                            selectedProduct.isActive
+                              ? "toggle-off"
+                              : "toggle-on"
+                          }
+                          size={20}
+                          color="#FFFFFF"
+                        />
+                        <Text style={designerProductsStyles.detailButtonText}>
+                          {selectedProduct.isActive ? "Deactivate" : "Activate"}
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        style={[
+                          designerProductsStyles.detailButton,
+                          designerProductsStyles.detailButtonDelete,
+                        ]}
+                        onPress={() => handleDeleteProduct(selectedProduct)}
+                      >
+                        <Icon name="delete" size={20} color="#FFFFFF" />
+                        <Text style={designerProductsStyles.detailButtonText}>
+                          Delete
+                        </Text>
+                      </Pressable>
+                    </View>
                   </View>
-                </>
+                </View>
               )}
             </ScrollView>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
