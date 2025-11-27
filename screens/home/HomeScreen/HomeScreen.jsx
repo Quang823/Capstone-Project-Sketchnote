@@ -34,6 +34,7 @@ import * as offlineStorage from "../../../utils/offlineStorage";
 import TypeFloatText from "./TypeFloatText";
 import { useToast } from "../../../hooks/use-toast";
 import { AuthContext } from "../../../context/AuthContext";
+import ChatWidget from "../../../components/ChatWidget";
 const { width } = Dimensions.get("window");
 
 const formatDate = (dateString) => {
@@ -167,6 +168,7 @@ export default function HomeScreen({ navigation }) {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [chatVisible, setChatVisible] = useState(false);
   const { toast } = useToast();
   const { user } = useContext(AuthContext);
   const fade = useSharedValue(0);
@@ -459,8 +461,8 @@ export default function HomeScreen({ navigation }) {
                             text={
                               user?.subscriptionEndDate
                                 ? `Active until ${formatDate(
-                                    user.subscriptionEndDate
-                                  )}`
+                                  user.subscriptionEndDate
+                                )}`
                                 : "Active"
                             }
                             style={styles.premiumSubtitle}
@@ -671,7 +673,25 @@ export default function HomeScreen({ navigation }) {
           )}
         </Animated.View>
       </View>
-
+      <TouchableOpacity
+        onPress={() => setChatVisible(true)}
+        activeOpacity={0.8}
+        style={{
+          position: "absolute",
+          right: 30,
+          bottom: 50,
+        }}
+      >
+        <LottieView
+          source={require("../../../assets/Chat Bubble.json")}
+          autoPlay
+          loop
+          style={{
+            width: 100,
+            height: 100,
+          }}
+        />
+      </TouchableOpacity>
       {/* MENU & MODALS – RA NGOÀI ĐỂ KHÔNG BỊ ĐÈ */}
       <ProjectMenu
         visible={menuVisible}
@@ -793,6 +813,9 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Chat Widget */}
+      <ChatWidget visible={chatVisible} onClose={() => setChatVisible(false)} />
     </View>
   );
 }

@@ -90,5 +90,56 @@ export const blogService = {
           error.response?.data?.message || error.message || "Delete content failed.";
         throw new Error(message);
       }
-    }
+    },
+    getCommentsBlog : async (blogId,page,size) =>{
+      try {
+        const res = await blogApiController.getCommentsBlog(blogId,page,size);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Get comments blog failed.";
+        throw new Error(message);
+      }
+    },
+    createCommentsBlog : async (blogId,comment) =>{
+      try {
+        const res = await blogApiController.createCommentsBlog(blogId,comment);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Create comments blog failed.";
+        throw new Error(message);
+      }
+    },
+    updateCommentsBlog : async (commentId,comment) =>{
+      try {
+        const res = await blogApiController.updateCommentsBlog(commentId,comment);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Update comments blog failed.";
+        throw new Error(message);
+      }
+    },
+    deleteCommentsBlog : async (commentId) =>{
+      try {
+        const res = await blogApiController.deleteCommentsBlog(commentId);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Delete comments blog failed.";
+        throw new Error(message);
+      }
+    },
+    getReplyCommentsBlog : async (commentId,page,size) =>{
+      try {
+        const res = await blogApiController.getReplyCommentsBlog(commentId,page,size);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Get reply comments blog failed.";
+        throw new Error(message);
+      }
+    },
+    
 }

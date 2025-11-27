@@ -163,6 +163,13 @@ export const blogStyles = StyleSheet.create({
     fontWeight: "500",
   },
 
+  blogDate: {
+    marginTop: 10,
+    fontSize: 12,
+    color: "#94A3B8",
+    fontWeight: "600",
+  },
+
   blogMeta: {
     flexDirection: "row",
     alignItems: "center",

@@ -205,6 +205,15 @@ export default function BlogScreen() {
                       >
                         {item.summary || "Không có mô tả"}
                       </Text>
+                      {item.createdAt ? (
+                        <Text style={blogStyles.blogDate}>
+                          {new Date(item.createdAt).toLocaleDateString("en-US", {
+                            month: "long",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
                 </Shadow>
