@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,12 +11,15 @@ import {
   StyleSheet,
   Modal,
   useWindowDimensions,
+  Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { paymentService } from "../../../service/paymentService";
 import { useToast } from "../../../hooks/use-toast";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
+import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
@@ -24,6 +27,8 @@ export default function DesignerWalletScreen() {
   const navigation = useNavigation();
   const { toast } = useToast();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { setActiveNavItem } = useNavContext();
+  const [activeNavItemLocal, setActiveNavItemLocal] = useState("wallet");
   const [walletData, setWalletData] = useState({
     balance: 0,
     transactions: [],
@@ -146,6 +151,11 @@ export default function DesignerWalletScreen() {
     return unsubscribe;
   }, [navigation]);
 
+  useEffect(() => {
+    setActiveNavItem("wallet");
+    setActiveNavItemLocal("wallet");
+  }, [setActiveNavItem]);
+
   // Recent transactions (last 5)
   const recentTransactions = walletData.transactions.slice(0, 5);
   const isLandscape = windowWidth > windowHeight;
@@ -156,12 +166,11 @@ export default function DesignerWalletScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
+        <SidebarToggleButton
           style={styles.backButton}
-        >
-          <Icon name="arrow-back" size={24} color="#084F8C" />
-        </Pressable>
+          iconColor="#084F8C"
+          iconSize={24}
+        />
         <Text style={styles.headerTitle}>Designer Wallet</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -307,7 +316,9 @@ export default function DesignerWalletScreen() {
                 key={
                   transaction?.transactionId ??
                   transaction?.id ??
-                  `${transaction?.type || 'TX'}-${transaction?.createdAt || ''}-${idx}`
+                  `${transaction?.type || "TX"}-${
+                    transaction?.createdAt || ""
+                  }-${idx}`
                 }
                 style={styles.transactionItemNew}
               >

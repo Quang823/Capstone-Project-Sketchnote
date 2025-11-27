@@ -1,5 +1,12 @@
 import React, { useContext } from "react";
-import { View, Text, Pressable, Animated, ScrollView, Image } from "react-native";
+import {
+  View,
+  Text,
+  Pressable,
+  Animated,
+  ScrollView,
+  Image,
+} from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { designerDrawerStyles } from "./DesignerNavigationDrawer.styles";
 import { CommonActions, useNavigation } from "@react-navigation/native";
@@ -17,7 +24,9 @@ export default function DesignerNavigationDrawer({
   const { user, logout } = useContext(AuthContext);
 
   const displayName = user
-    ? user.name || `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || "Designer"
+    ? user.name ||
+      `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+      "Designer"
     : "Guest";
 
   const handleLogout = async () => {
@@ -36,7 +45,7 @@ export default function DesignerNavigationDrawer({
 
   const workspaceNavItems = [
     { icon: "upload", label: "Quick Template Upload", id: "quickUpload" },
-    { icon: "create", label: "Create New", id: "create" },
+    { icon: "work", label: "Project Management", id: "projectManagement" },
     { icon: "photo-library", label: "Library", id: "gallery" },
   ];
 
@@ -95,20 +104,17 @@ export default function DesignerNavigationDrawer({
     <>
       {/* Overlay khi drawer mở */}
       {drawerOpen && (
-        <Animated.View 
-          style={[
-            designerDrawerStyles.overlay, 
-            { opacity: overlayAnimation }
-          ]}
+        <Animated.View
+          style={[designerDrawerStyles.overlay, { opacity: overlayAnimation }]}
           onTouchStart={onToggleDrawer}
         />
       )}
-      
+
       {/* Navigation Drawer */}
-      <Animated.View 
+      <Animated.View
         style={[
-          designerDrawerStyles.drawer, 
-          { transform: [{ translateX: drawerAnimation }] }
+          designerDrawerStyles.drawer,
+          { transform: [{ translateX: drawerAnimation }] },
         ]}
       >
         {/* Header */}
@@ -122,7 +128,10 @@ export default function DesignerNavigationDrawer({
             />
             <Text style={designerDrawerStyles.drawerTitle}>SketchNote</Text>
           </View>
-          <Pressable onPress={onToggleDrawer} style={designerDrawerStyles.closeButton}>
+          <Pressable
+            onPress={onToggleDrawer}
+            style={designerDrawerStyles.closeButton}
+          >
             <Icon name="close" size={24} color="#6B7280" />
           </Pressable>
         </View>
@@ -131,13 +140,18 @@ export default function DesignerNavigationDrawer({
         <View style={designerDrawerStyles.userInfo}>
           <View style={designerDrawerStyles.avatar}>
             {user?.avatarUrl ? (
-              <Image source={{ uri: user.avatarUrl }} style={designerDrawerStyles.avatarImage} />
+              <Image
+                source={{ uri: user.avatarUrl }}
+                style={designerDrawerStyles.avatarImage}
+              />
             ) : (
               <Icon name="account-circle" size={56} color="#4F46E5" />
             )}
           </View>
           <Text style={designerDrawerStyles.userName}>{displayName}</Text>
-          <Text style={designerDrawerStyles.userEmail}>{user?.email || "designer@example.com"}</Text>
+          <Text style={designerDrawerStyles.userEmail}>
+            {user?.email || "designer@example.com"}
+          </Text>
           {(user?.role || user) && (
             <View style={designerDrawerStyles.roleBadge}>
               <Text style={designerDrawerStyles.roleText}>
@@ -146,21 +160,27 @@ export default function DesignerNavigationDrawer({
             </View>
           )}
         </View>
-        
+
         {/* Navigation Items */}
-        <ScrollView style={designerDrawerStyles.drawerItems} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={designerDrawerStyles.drawerItems}
+          showsVerticalScrollIndicator={false}
+        >
           {renderNavSection("MAIN", mainNavItems)}
           {renderNavSection("WORKSPACE", workspaceNavItems)}
           {renderNavSection("ACCOUNT", accountNavItems, true)}
         </ScrollView>
-        
+
         {/* Footer */}
         <View style={designerDrawerStyles.drawerFooter}>
-          <Pressable style={designerDrawerStyles.logoutButton} onPress={handleLogout}>
+          <Pressable
+            style={designerDrawerStyles.logoutButton}
+            onPress={handleLogout}
+          >
             <Icon name="logout" size={20} color="#EF4444" />
             <Text style={designerDrawerStyles.logoutText}>Sign Out</Text>
           </Pressable>
-          
+
           <Text style={designerDrawerStyles.versionText}>Designer v1.0.0</Text>
         </View>
       </Animated.View>

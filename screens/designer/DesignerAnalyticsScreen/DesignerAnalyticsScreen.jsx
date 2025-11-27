@@ -1,5 +1,5 @@
 // DesignerAnalyticsScreen.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
+  Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -15,11 +16,20 @@ import { LineChart, BarChart } from "react-native-chart-kit";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { styles } from "./DesignerAnalyticsScreen.styles";
 import { dashboardService } from "../../../service/dashboardService";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
+import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerAnalyticsScreen() {
   const navigation = useNavigation();
+  const { setActiveNavItem } = useNavContext();
+  const [activeNavItemLocal, setActiveNavItemLocal] = useState("analytics");
+
+  useEffect(() => {
+    setActiveNavItem("analytics");
+    setActiveNavItemLocal("analytics");
+  }, [setActiveNavItem]);
   const [groupBy, setGroupBy] = useState("month");
   const [salesData, setSalesData] = useState(null);
   const [topTemplates, setTopTemplates] = useState([]);
@@ -47,7 +57,11 @@ export default function DesignerAnalyticsScreen() {
       console.log("🔄 Fetching Sales Report...");
       console.log("📅 Parameters:", { startStr, endStr, groupBy });
 
-      const result = await dashboardService.getSalesReport(startStr, endStr, groupBy);
+      const result = await dashboardService.getSalesReport(
+        startStr,
+        endStr,
+        groupBy
+      );
 
       console.log("✅ API Response:", result.data);
 
@@ -94,14 +108,19 @@ export default function DesignerAnalyticsScreen() {
 
   const formatCurrencyCompact = (value) => {
     const amount = Number(value) || 0;
-    if (amount >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(1)}B`;
+    if (amount >= 1_000_000_000)
+      return `${(amount / 1_000_000_000).toFixed(1)}B`;
     if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}M`;
     if (amount >= 1_000) return `${(amount / 1_000).toFixed(1)}K`;
     return `${Math.round(amount)}`;
   };
 
   const formatDate = (date) => {
-    return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
   const handleStartDateChange = (event, selectedDate) => {
@@ -179,13 +198,15 @@ export default function DesignerAnalyticsScreen() {
 
     const timelinePoints = mapped;
 
-    const rankingPoints = [...mapped].sort((a, b) => b.value - a.value).slice(0, 5);
+    const rankingPoints = [...mapped]
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
 
     const timeline = {
-      labels: timelinePoints.map(point => point.shortLabel),
+      labels: timelinePoints.map((point) => point.shortLabel),
       datasets: [
         {
-          data: timelinePoints.map(point => point.value),
+          data: timelinePoints.map((point) => point.value),
           color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
           strokeWidth: 2,
         },
@@ -195,10 +216,10 @@ export default function DesignerAnalyticsScreen() {
 
     const ranking = rankingPoints.length
       ? {
-          labels: rankingPoints.map(point => point.shortLabel),
+          labels: rankingPoints.map((point) => point.shortLabel),
           datasets: [
             {
-              data: rankingPoints.map(point => point.value),
+              data: rankingPoints.map((point) => point.value),
             },
           ],
         }
@@ -209,9 +230,13 @@ export default function DesignerAnalyticsScreen() {
           bestPeriod: rankingPoints[0]?.longLabel || null,
           bestValue: rankingPoints[0]?.value || 0,
           lowestPeriod:
-            rankingPoints.length > 1 ? rankingPoints[rankingPoints.length - 1]?.longLabel || null : null,
+            rankingPoints.length > 1
+              ? rankingPoints[rankingPoints.length - 1]?.longLabel || null
+              : null,
           lowestValue:
-            rankingPoints.length > 1 ? rankingPoints[rankingPoints.length - 1]?.value || 0 : null,
+            rankingPoints.length > 1
+              ? rankingPoints[rankingPoints.length - 1]?.value || 0
+              : null,
         }
       : null;
 
@@ -224,10 +249,12 @@ export default function DesignerAnalyticsScreen() {
   const comparisonDetails = processedCharts.rankingDetails || [];
 
   const hasTimelineData = Boolean(
-    timelineChartData?.datasets?.[0]?.data && timelineChartData.datasets[0].data.some(value => value > 0)
+    timelineChartData?.datasets?.[0]?.data &&
+      timelineChartData.datasets[0].data.some((value) => value > 0)
   );
   const hasComparisonData = Boolean(
-    comparisonChartData?.datasets?.[0]?.data && comparisonChartData.datasets[0].data.some(value => value > 0)
+    comparisonChartData?.datasets?.[0]?.data &&
+      comparisonChartData.datasets[0].data.some((value) => value > 0)
   );
 
   // Calculate statistics
@@ -241,7 +268,7 @@ export default function DesignerAnalyticsScreen() {
       };
     }
 
-    const revenues = salesData.data.map(d => Number(d.revenue) || 0);
+    const revenues = salesData.data.map((d) => Number(d.revenue) || 0);
     const totalRevenue = revenues.reduce((sum, r) => sum + r, 0);
     const avgRevenue = totalRevenue / revenues.length;
     const maxRevenue = Math.max(...revenues);
@@ -263,9 +290,7 @@ export default function DesignerAnalyticsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back" size={22} color="#111827" />
-          </Pressable>
+          <SidebarToggleButton iconColor="#111827" iconSize={22} />
           <Text style={styles.headerTitle}>Sales Analytics</Text>
           <View style={{ width: 22 }} />
         </View>
@@ -279,15 +304,10 @@ export default function DesignerAnalyticsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={22} color="#111827" />
-        </Pressable>
+        <SidebarToggleButton iconColor="#111827" iconSize={22} />
         <Text style={styles.headerTitle}>Sales Analytics</Text>
-        <Pressable>
-          <Icon name="more-horiz" size={22} color="#111827" />
-        </Pressable>
+        <View style={{ width: 22 }} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -341,26 +361,50 @@ export default function DesignerAnalyticsScreen() {
           <Text style={styles.filterLabel}>Group By</Text>
           <View style={styles.filterButtons}>
             <Pressable
-              style={[styles.filterButton, groupBy === "day" && styles.filterButtonActive]}
+              style={[
+                styles.filterButton,
+                groupBy === "day" && styles.filterButtonActive,
+              ]}
               onPress={() => setGroupBy("day")}
             >
-              <Text style={[styles.filterButtonText, groupBy === "day" && styles.filterButtonTextActive]}>
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  groupBy === "day" && styles.filterButtonTextActive,
+                ]}
+              >
                 Daily
               </Text>
             </Pressable>
             <Pressable
-              style={[styles.filterButton, groupBy === "month" && styles.filterButtonActive]}
+              style={[
+                styles.filterButton,
+                groupBy === "month" && styles.filterButtonActive,
+              ]}
               onPress={() => setGroupBy("month")}
             >
-              <Text style={[styles.filterButtonText, groupBy === "month" && styles.filterButtonTextActive]}>
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  groupBy === "month" && styles.filterButtonTextActive,
+                ]}
+              >
                 Monthly
               </Text>
             </Pressable>
             <Pressable
-              style={[styles.filterButton, groupBy === "year" && styles.filterButtonActive]}
+              style={[
+                styles.filterButton,
+                groupBy === "year" && styles.filterButtonActive,
+              ]}
               onPress={() => setGroupBy("year")}
             >
-              <Text style={[styles.filterButtonText, groupBy === "year" && styles.filterButtonTextActive]}>
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  groupBy === "year" && styles.filterButtonTextActive,
+                ]}
+              >
                 Yearly
               </Text>
             </Pressable>
@@ -369,35 +413,45 @@ export default function DesignerAnalyticsScreen() {
 
         {/* Overview Cards - 2x2 Grid */}
         <View style={styles.overviewGrid}>
-          <View style={[styles.overviewCard, { backgroundColor: '#F59E0B' }]}>
+          <View style={[styles.overviewCard, { backgroundColor: "#F59E0B" }]}>
             <View style={styles.overviewHeader}>
               <Icon name="trending-up" size={18} color="#FFF" />
-              <Text style={[styles.overviewLabel, { color: '#FFF' }]}>Total Revenue</Text>
+              <Text style={[styles.overviewLabel, { color: "#FFF" }]}>
+                Total Revenue
+              </Text>
             </View>
-            <Text style={[styles.overviewNumber, { color: '#FFF' }]}>
+            <Text style={[styles.overviewNumber, { color: "#FFF" }]}>
               {formatCurrency(stats.totalRevenue)}
             </Text>
             <View style={styles.overviewFooter}>
-              <Icon name={stats.trend >= 0 ? "arrow-upward" : "arrow-downward"} size={12} color="#FFF" />
-              <Text style={[styles.overviewGrowth, { color: '#FFF' }]}>
-                {stats.trend >= 0 ? '+' : ''}{stats.trend.toFixed(1)}%
+              <Icon
+                name={stats.trend >= 0 ? "arrow-upward" : "arrow-downward"}
+                size={12}
+                color="#FFF"
+              />
+              <Text style={[styles.overviewGrowth, { color: "#FFF" }]}>
+                {stats.trend >= 0 ? "+" : ""}
+                {stats.trend.toFixed(1)}%
               </Text>
             </View>
           </View>
 
-          <View style={[styles.overviewCard, { backgroundColor: '#10B981' }]}>
+          <View style={[styles.overviewCard, { backgroundColor: "#10B981" }]}>
             <View style={styles.overviewHeader}>
               <Icon name="show-chart" size={18} color="#FFF" />
-              <Text style={[styles.overviewLabel, { color: '#FFF' }]}>Average</Text>
+              <Text style={[styles.overviewLabel, { color: "#FFF" }]}>
+                Average
+              </Text>
             </View>
-            <Text style={[styles.overviewNumber, { color: '#FFF' }]}>
+            <Text style={[styles.overviewNumber, { color: "#FFF" }]}>
               {formatCurrency(stats.avgRevenue)}
             </Text>
             <View style={styles.overviewFooter}>
-              <Text style={[styles.overviewSubtext, { color: '#FFF' }]}>Per Period</Text>
+              <Text style={[styles.overviewSubtext, { color: "#FFF" }]}>
+                Per Period
+              </Text>
             </View>
           </View>
-
         </View>
 
         {/* Revenue Chart */}
@@ -421,7 +475,8 @@ export default function DesignerAnalyticsScreen() {
                     backgroundGradientToOpacity: 0,
                     decimalPlaces: 0,
                     color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
-                    labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+                    labelColor: (opacity = 1) =>
+                      `rgba(107, 114, 128, ${opacity})`,
                     propsForDots: {
                       r: "4",
                       strokeWidth: "2",
@@ -445,15 +500,37 @@ export default function DesignerAnalyticsScreen() {
                 {chartInsights?.bestPeriod && (
                   <View style={styles.chartInsightRow}>
                     <View style={styles.chartInsightCard}>
-                      <Text style={styles.chartInsightLabel}>Highest Revenue</Text>
-                      <Text style={styles.chartInsightValue}>{formatCurrency(chartInsights.bestValue)}</Text>
-                      <Text style={styles.chartInsightSub}>{chartInsights.bestPeriod}</Text>
+                      <Text style={styles.chartInsightLabel}>
+                        Highest Revenue
+                      </Text>
+                      <Text style={styles.chartInsightValue}>
+                        {formatCurrency(chartInsights.bestValue)}
+                      </Text>
+                      <Text style={styles.chartInsightSub}>
+                        {chartInsights.bestPeriod}
+                      </Text>
                     </View>
                     {chartInsights.lowestPeriod && (
-                      <View style={[styles.chartInsightCard, styles.chartInsightCardSecondary]}>
-                        <Text style={[styles.chartInsightLabel, styles.chartInsightLabelSecondary]}>Lowest Revenue</Text>
-                        <Text style={styles.chartInsightValue}>{formatCurrency(chartInsights.lowestValue)}</Text>
-                        <Text style={styles.chartInsightSub}>{chartInsights.lowestPeriod}</Text>
+                      <View
+                        style={[
+                          styles.chartInsightCard,
+                          styles.chartInsightCardSecondary,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.chartInsightLabel,
+                            styles.chartInsightLabelSecondary,
+                          ]}
+                        >
+                          Lowest Revenue
+                        </Text>
+                        <Text style={styles.chartInsightValue}>
+                          {formatCurrency(chartInsights.lowestValue)}
+                        </Text>
+                        <Text style={styles.chartInsightSub}>
+                          {chartInsights.lowestPeriod}
+                        </Text>
                       </View>
                     )}
                   </View>
@@ -485,9 +562,10 @@ export default function DesignerAnalyticsScreen() {
                   backgroundGradientToOpacity: 0,
                   decimalPlaces: 0,
                   color: (opacity = 1) => `rgba(129, 140, 248, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
-                  formatYLabel: value => formatCurrencyCompact(value),
-                  formatXLabel: value => value,
+                  labelColor: (opacity = 1) =>
+                    `rgba(107, 114, 128, ${opacity})`,
+                  formatYLabel: (value) => formatCurrencyCompact(value),
+                  formatXLabel: (value) => value,
                   style: {
                     borderRadius: 16,
                   },
@@ -503,13 +581,20 @@ export default function DesignerAnalyticsScreen() {
 
               {comparisonDetails.length > 0 && (
                 <View style={styles.chartLegendList}>
-                  {comparisonDetails.map(detail => (
-                    <View key={detail.shortLabel} style={styles.chartLegendItem}>
+                  {comparisonDetails.map((detail) => (
+                    <View
+                      key={detail.shortLabel}
+                      style={styles.chartLegendItem}
+                    >
                       <View style={styles.chartLegendLabelRow}>
                         <Icon name="calendar-today" size={14} color="#6366F1" />
-                        <Text style={styles.chartLegendLabel}>{detail.longLabel || detail.shortLabel}</Text>
+                        <Text style={styles.chartLegendLabel}>
+                          {detail.longLabel || detail.shortLabel}
+                        </Text>
                       </View>
-                      <Text style={styles.chartLegendValue}>{formatCurrency(detail.value)}</Text>
+                      <Text style={styles.chartLegendValue}>
+                        {formatCurrency(detail.value)}
+                      </Text>
                     </View>
                   ))}
                 </View>

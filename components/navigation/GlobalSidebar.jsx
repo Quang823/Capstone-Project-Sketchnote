@@ -31,6 +31,7 @@ export default function GlobalSidebar() {
   const { user, logout } = useContext(AuthContext);
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const navigation = useReactNavigation();
+  const isDesigner = String(user?.role || "").toUpperCase() === "DESIGNER";
 
   const handleLogout = async () => {
     await logout(); // reset user + remove token
@@ -43,39 +44,91 @@ export default function GlobalSidebar() {
   const handleNavPress = (itemId) => {
     setActiveNavItem(itemId);
 
-    switch (itemId) {
-      case "home":
-        navigation.navigate("Home");
-        break;
-      case "courses":
-        navigation.navigate("CoursesScreen");
-        break;
-      case "myCourses":
-        navigation.navigate("MyCourses");
-        break;
-      case "gallery":
-        navigation.navigate("Gallery");
-        break;
-      case "store":
-        navigation.navigate("ResourceStore");
-        break;
-      case "orderHistory":
-        navigation.navigate("OrderHistory");
-        break;
-      case "blogAll":
-        navigation.navigate("BlogList");
-        break;
-      case "blogMine":
-        navigation.navigate("MyBlog");
-        break;
-      case "profile":
-        navigation.navigate("Profile");
-        break;
-      case "settings":
-        navigation.navigate("Settings");
-        break;
-      default:
-        break;
+    if (isDesigner) {
+      switch (itemId) {
+        case "designerDashboard":
+          navigation.navigate("DesignerDashboard");
+          break;
+        case "home":
+          navigation.navigate("Home");
+          break;
+        case "products":
+          navigation.navigate("DesignerProducts");
+          break;
+        case "analytics":
+          navigation.navigate("DesignerAnalytics");
+          break;
+        case "quickUpload":
+          navigation.navigate("DesignerQuickUpload");
+          break;
+        case "wallet":
+          navigation.navigate("DesignerWallet");
+          break;
+        case "courses":
+          navigation.navigate("CoursesScreen");
+          break;
+        case "myCourses":
+          navigation.navigate("MyCourses");
+          break;
+        case "gallery":
+          navigation.navigate("Gallery");
+          break;
+        case "profile":
+          navigation.navigate("Profile");
+          break;
+        case "settings":
+          navigation.navigate("Settings");
+          break;
+        case "store":
+          navigation.navigate("ResourceStore");
+          break;
+        case "orderHistory":
+          navigation.navigate("OrderHistory");
+          break;
+        case "blogAll":
+          navigation.navigate("BlogList");
+          break;
+        case "blogMine":
+          navigation.navigate("MyBlog");
+          break;
+        default:
+          break;
+      }
+    } else {
+      switch (itemId) {
+        case "home":
+          navigation.navigate("Home");
+          break;
+        case "courses":
+          navigation.navigate("CoursesScreen");
+          break;
+        case "myCourses":
+          navigation.navigate("MyCourses");
+          break;
+        case "gallery":
+          navigation.navigate("Gallery");
+          break;
+        case "store":
+          navigation.navigate("ResourceStore");
+          break;
+        case "orderHistory":
+          navigation.navigate("OrderHistory");
+          break;
+        case "blogAll":
+          navigation.navigate("BlogList");
+          break;
+        case "blogMine":
+          navigation.navigate("MyBlog");
+          break;
+        case "profile":
+          navigation.navigate("Profile");
+          break;
+        case "settings":
+          navigation.navigate("Settings");
+          break;
+        default:
+          break;
+      }
     }
 
     toggleSidebar(); // đóng sidebar sau navigation
@@ -111,6 +164,22 @@ export default function GlobalSidebar() {
   const accountNavItems = [
     { icon: "person", label: "Profile", id: "profile" },
     { icon: "settings", label: "Settings", id: "settings" },
+  ];
+
+  const designerMainItems = [
+    { icon: "dashboard", label: "Dashboard", id: "designerDashboard" },
+    { icon: "inventory", label: "Product Management", id: "products" },
+    { icon: "analytics", label: "Analytics & Reports", id: "analytics" },
+  ];
+
+  const designerWorkspaceItems = [
+    { icon: "upload", label: "Resource Upload", id: "quickUpload" },
+    { icon: "photo-library", label: "Gallery", id: "gallery" },
+  ];
+
+  const designerAccountItems = [
+    { icon: "account-balance-wallet", label: "Designer Wallet", id: "wallet" },
+    { icon: "person", label: "Profile", id: "profile" },
   ];
 
   return (
@@ -217,174 +286,468 @@ export default function GlobalSidebar() {
           )}
         </View>
 
-        {/* Navigation Items */}
         <ScrollView
           style={drawerStyles.drawerItems}
           showsVerticalScrollIndicator={false}
         >
-          {/* MAIN */}
-          <Text style={drawerStyles.sectionTitle}>MAIN</Text>
-          {[
-            { icon: "home", label: "Home", id: "home" },
-            { icon: "school", label: "Courses", id: "courses" },
-            { icon: "menu-book", label: "My Courses", id: "myCourses" },
-            { icon: "photo-library", label: "Gallery", id: "gallery" },
-          ].map((item) => (
-            <Pressable
-              key={item.id}
-              style={({ pressed }) => [
-                drawerStyles.drawerItem,
-                activeNavItem === item.id && drawerStyles.drawerItemActive,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={() => handleNavPress(item.id)}
-            >
-              <View
-                style={[
-                  drawerStyles.iconContainer,
-                  activeNavItem === item.id && drawerStyles.iconContainerActive,
-                ]}
-              >
-                <Icon
-                  name={item.icon}
-                  size={22}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
-                />
-              </View>
-              <Text
-                style={[
-                  drawerStyles.drawerText,
-                  activeNavItem === item.id && drawerStyles.drawerTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
+          {isDesigner ? (
+            <>
+              <Text style={drawerStyles.sectionTitle}>DESIGNER</Text>
+              {designerMainItems.map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [
+                    drawerStyles.drawerItem,
+                    activeNavItem === item.id && drawerStyles.drawerItemActive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => handleNavPress(item.id)}
+                >
+                  <View
+                    style={[
+                      drawerStyles.iconContainer,
+                      activeNavItem === item.id &&
+                        drawerStyles.iconContainerActive,
+                    ]}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={22}
+                      color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      drawerStyles.drawerText,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
 
-          <View style={drawerStyles.divider} />
+              <View style={drawerStyles.divider} />
 
-          {/* STORE */}
-          <Text style={drawerStyles.sectionTitle}>STORE</Text>
-          {[
-            { icon: "store", label: "Resource Store", id: "store" },
-            {
-              icon: "receipt-long",
-              label: "Order History",
-              id: "orderHistory",
-            },
-          ].map((item) => (
-            <Pressable
-              key={item.id}
-              style={({ pressed }) => [
-                drawerStyles.drawerItem,
-                activeNavItem === item.id && drawerStyles.drawerItemActive,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={() => handleNavPress(item.id)}
-            >
-              <View
-                style={[
-                  drawerStyles.iconContainer,
-                  activeNavItem === item.id && drawerStyles.iconContainerActive,
-                ]}
-              >
-                <Icon
-                  name={item.icon}
-                  size={22}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
-                />
-              </View>
-              <Text
-                style={[
-                  drawerStyles.drawerText,
-                  activeNavItem === item.id && drawerStyles.drawerTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
+              <Text style={drawerStyles.sectionTitle}>WORKSPACE</Text>
+              {designerWorkspaceItems.map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [
+                    drawerStyles.drawerItem,
+                    activeNavItem === item.id && drawerStyles.drawerItemActive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => handleNavPress(item.id)}
+                >
+                  <View
+                    style={[
+                      drawerStyles.iconContainer,
+                      activeNavItem === item.id &&
+                        drawerStyles.iconContainerActive,
+                    ]}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={22}
+                      color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      drawerStyles.drawerText,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
 
-          <View style={drawerStyles.divider} />
+              <View style={drawerStyles.divider} />
 
-          {/* BLOG */}
-          <Text style={drawerStyles.sectionTitle}>BLOG</Text>
-          {[
-            { icon: "dynamic-feed", label: "All Blogs", id: "blogAll" },
-            { icon: "person-outline", label: "My Blogs", id: "blogMine" },
-          ].map((item) => (
-            <Pressable
-              key={item.id}
-              style={({ pressed }) => [
-                drawerStyles.drawerItem,
-                activeNavItem === item.id && drawerStyles.drawerItemActive,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={() => handleNavPress(item.id)}
-            >
-              <View
-                style={[
-                  drawerStyles.iconContainer,
-                  activeNavItem === item.id && drawerStyles.iconContainerActive,
-                ]}
-              >
-                <Icon
-                  name={item.icon}
-                  size={22}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
-                />
-              </View>
-              <Text
-                style={[
-                  drawerStyles.drawerText,
-                  activeNavItem === item.id && drawerStyles.drawerTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
+              <Text style={drawerStyles.sectionTitle}>ACCOUNT</Text>
+              {designerAccountItems.map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [
+                    drawerStyles.drawerItem,
+                    activeNavItem === item.id && drawerStyles.drawerItemActive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => handleNavPress(item.id)}
+                >
+                  <View
+                    style={[
+                      drawerStyles.iconContainer,
+                      activeNavItem === item.id &&
+                        drawerStyles.iconContainerActive,
+                    ]}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={22}
+                      color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      drawerStyles.drawerText,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
 
-          <View style={drawerStyles.divider} />
+              <View style={drawerStyles.divider} />
 
-          {/* ACCOUNT */}
-          <Text style={drawerStyles.sectionTitle}>ACCOUNT</Text>
-          {[
-            { icon: "person", label: "Profile", id: "profile" },
-            { icon: "settings", label: "Settings", id: "settings" },
-          ].map((item) => (
-            <Pressable
-              key={item.id}
-              style={({ pressed }) => [
-                drawerStyles.drawerItem,
-                activeNavItem === item.id && drawerStyles.drawerItemActive,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={() => handleNavPress(item.id)}
-            >
-              <View
-                style={[
-                  drawerStyles.iconContainer,
-                  activeNavItem === item.id && drawerStyles.iconContainerActive,
-                ]}
-              >
-                <Icon
-                  name={item.icon}
-                  size={22}
-                  color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
-                />
-              </View>
-              <Text
-                style={[
-                  drawerStyles.drawerText,
-                  activeNavItem === item.id && drawerStyles.drawerTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
+              <Text style={drawerStyles.sectionTitle}>MAIN</Text>
+              {[
+                { icon: "home", label: "Home", id: "home" },
+                { icon: "school", label: "Courses", id: "courses" },
+                { icon: "menu-book", label: "My Courses", id: "myCourses" },
+              ].map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [
+                    drawerStyles.drawerItem,
+                    activeNavItem === item.id && drawerStyles.drawerItemActive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => handleNavPress(item.id)}
+                >
+                  <View
+                    style={[
+                      drawerStyles.iconContainer,
+                      activeNavItem === item.id &&
+                        drawerStyles.iconContainerActive,
+                    ]}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={22}
+                      color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      drawerStyles.drawerText,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
+
+              <View style={drawerStyles.divider} />
+
+              <Text style={drawerStyles.sectionTitle}>STORE</Text>
+              {[
+                { icon: "store", label: "Resource Store", id: "store" },
+                {
+                  icon: "receipt-long",
+                  label: "Order History",
+                  id: "orderHistory",
+                },
+              ].map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [
+                    drawerStyles.drawerItem,
+                    activeNavItem === item.id && drawerStyles.drawerItemActive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => handleNavPress(item.id)}
+                >
+                  <View
+                    style={[
+                      drawerStyles.iconContainer,
+                      activeNavItem === item.id &&
+                        drawerStyles.iconContainerActive,
+                    ]}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={22}
+                      color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      drawerStyles.drawerText,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
+
+              <View style={drawerStyles.divider} />
+
+              <Text style={drawerStyles.sectionTitle}>BLOG</Text>
+              {[
+                { icon: "dynamic-feed", label: "All Blogs", id: "blogAll" },
+                { icon: "person-outline", label: "My Blogs", id: "blogMine" },
+              ].map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [
+                    drawerStyles.drawerItem,
+                    activeNavItem === item.id && drawerStyles.drawerItemActive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => handleNavPress(item.id)}
+                >
+                  <View
+                    style={[
+                      drawerStyles.iconContainer,
+                      activeNavItem === item.id &&
+                        drawerStyles.iconContainerActive,
+                    ]}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={22}
+                      color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      drawerStyles.drawerText,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
+
+              <View style={drawerStyles.divider} />
+
+              <Text style={drawerStyles.sectionTitle}>SETTINGS</Text>
+              {accountNavItems
+                .filter((i) => i.id !== "profile")
+                .map((item) => (
+                  <Pressable
+                    key={item.id}
+                    style={({ pressed }) => [
+                      drawerStyles.drawerItem,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerItemActive,
+                      pressed && { opacity: 0.7 },
+                    ]}
+                    onPress={() => handleNavPress(item.id)}
+                  >
+                    <View
+                      style={[
+                        drawerStyles.iconContainer,
+                        activeNavItem === item.id &&
+                          drawerStyles.iconContainerActive,
+                      ]}
+                    >
+                      <Icon
+                        name={item.icon}
+                        size={22}
+                        color={
+                          activeNavItem === item.id ? "#FFFFFF" : "#64748B"
+                        }
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        drawerStyles.drawerText,
+                        activeNavItem === item.id &&
+                          drawerStyles.drawerTextActive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+            </>
+          ) : (
+            <>
+              <Text style={drawerStyles.sectionTitle}>MAIN</Text>
+              {[
+                { icon: "home", label: "Home", id: "home" },
+                { icon: "school", label: "Courses", id: "courses" },
+                { icon: "menu-book", label: "My Courses", id: "myCourses" },
+                { icon: "photo-library", label: "Gallery", id: "gallery" },
+              ].map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [
+                    drawerStyles.drawerItem,
+                    activeNavItem === item.id && drawerStyles.drawerItemActive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => handleNavPress(item.id)}
+                >
+                  <View
+                    style={[
+                      drawerStyles.iconContainer,
+                      activeNavItem === item.id &&
+                        drawerStyles.iconContainerActive,
+                    ]}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={22}
+                      color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      drawerStyles.drawerText,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
+
+              <View style={drawerStyles.divider} />
+
+              <Text style={drawerStyles.sectionTitle}>STORE</Text>
+              {[
+                { icon: "store", label: "Resource Store", id: "store" },
+                {
+                  icon: "receipt-long",
+                  label: "Order History",
+                  id: "orderHistory",
+                },
+              ].map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [
+                    drawerStyles.drawerItem,
+                    activeNavItem === item.id && drawerStyles.drawerItemActive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => handleNavPress(item.id)}
+                >
+                  <View
+                    style={[
+                      drawerStyles.iconContainer,
+                      activeNavItem === item.id &&
+                        drawerStyles.iconContainerActive,
+                    ]}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={22}
+                      color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      drawerStyles.drawerText,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
+
+              <View style={drawerStyles.divider} />
+
+              <Text style={drawerStyles.sectionTitle}>BLOG</Text>
+              {[
+                { icon: "dynamic-feed", label: "All Blogs", id: "blogAll" },
+                { icon: "person-outline", label: "My Blogs", id: "blogMine" },
+              ].map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [
+                    drawerStyles.drawerItem,
+                    activeNavItem === item.id && drawerStyles.drawerItemActive,
+                    pressed && { opacity: 0.7 },
+                  ]}
+                  onPress={() => handleNavPress(item.id)}
+                >
+                  <View
+                    style={[
+                      drawerStyles.iconContainer,
+                      activeNavItem === item.id &&
+                        drawerStyles.iconContainerActive,
+                    ]}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={22}
+                      color={activeNavItem === item.id ? "#FFFFFF" : "#64748B"}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      drawerStyles.drawerText,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
+
+              <View style={drawerStyles.divider} />
+
+              <Text style={drawerStyles.sectionTitle}>SETTINGS</Text>
+              {accountNavItems
+                .filter((i) => i.id !== "profile")
+                .map((item) => (
+                  <Pressable
+                    key={item.id}
+                    style={({ pressed }) => [
+                      drawerStyles.drawerItem,
+                      activeNavItem === item.id &&
+                        drawerStyles.drawerItemActive,
+                      pressed && { opacity: 0.7 },
+                    ]}
+                    onPress={() => handleNavPress(item.id)}
+                  >
+                    <View
+                      style={[
+                        drawerStyles.iconContainer,
+                        activeNavItem === item.id &&
+                          drawerStyles.iconContainerActive,
+                      ]}
+                    >
+                      <Icon
+                        name={item.icon}
+                        size={22}
+                        color={
+                          activeNavItem === item.id ? "#FFFFFF" : "#64748B"
+                        }
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        drawerStyles.drawerText,
+                        activeNavItem === item.id &&
+                          drawerStyles.drawerTextActive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+            </>
+          )}
         </ScrollView>
 
         {/* Footer */}

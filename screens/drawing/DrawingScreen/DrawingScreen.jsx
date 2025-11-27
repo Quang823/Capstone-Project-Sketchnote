@@ -1913,6 +1913,8 @@ export default function DrawingScreen({ route }) {
         onClose={() => setExportModalVisible(false)}
         onExport={handleExportFile}
         hasPro={!!user?.hasActiveSubscription}
+        projectId={safeNoteConfig?.projectId}
+        pages={safeNoteConfig?.pages}
       />
       {showLayerPanel && (
         <LayerPanel
