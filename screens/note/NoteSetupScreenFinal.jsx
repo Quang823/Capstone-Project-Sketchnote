@@ -583,7 +583,7 @@ export default function NoteSetupScreen({ navigation, route }) {
       Alert.alert(
         "Error",
         "Failed to create project. Please try again.\n" +
-          (error.message || "Unknown error"),
+          (error.message || "Unknown error")
       );
     }
   };
@@ -609,7 +609,7 @@ export default function NoteSetupScreen({ navigation, route }) {
         <TouchableOpacity onPress={handleCreate} disabled={isCreating}>
           <LinearGradient
             colors={
-              isCreating ? ["#94a3b8", "#64748b"] : ["#3b82f6", "#2563eb"]
+              isCreating ? ["#94a3b8", "#64748b"] : ["#1863dbff", "#084F8C"]
             }
             style={styles.createButton}
           >
@@ -670,7 +670,14 @@ export default function NoteSetupScreen({ navigation, route }) {
             {/* Preview Cards */}
             <View style={styles.previewContainer}>
               <View style={styles.previewCard}>
-                <View style={styles.previewBox}>
+                <View
+                  style={[
+                    styles.previewBox,
+                    orientation === "portrait"
+                      ? styles.previewPortrait
+                      : styles.previewLandscape,
+                  ]}
+                >
                   {coverImageUrl ? (
                     <Image
                       source={{ uri: coverImageUrl }}
@@ -690,7 +697,13 @@ export default function NoteSetupScreen({ navigation, route }) {
               </View>
               <View style={styles.previewCard}>
                 <View
-                  style={[styles.previewBox, { backgroundColor: "#FFFFFF" }]}
+                  style={[
+                    styles.previewBox,
+                    orientation === "portrait"
+                      ? styles.previewPortrait
+                      : styles.previewLandscape,
+                    { backgroundColor: "#FFFFFF" },
+                  ]}
                 >
                   <View style={styles.previewLines}>
                     <View style={styles.previewLine} />
@@ -741,50 +754,35 @@ export default function NoteSetupScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
 
-            {/* Format Dropdown */}
             <View style={styles.settingColumn}>
               <Text style={styles.settingLabel}>Format</Text>
-              <TouchableOpacity
-                style={styles.dropdown}
-                onPress={() => setShowFormatDropdown(!showFormatDropdown)}
-              >
-                <Text style={styles.dropdownText}>
-                  {ORIENTATIONS.find((o) => o.id === orientation)?.label}
-                </Text>
-                <MaterialCommunityIcons
-                  name="chevron-down"
-                  size={20}
-                  color="#64748b"
-                />
-              </TouchableOpacity>
-              {showFormatDropdown && (
-                <View style={styles.dropdownMenu}>
-                  {ORIENTATIONS.map((item) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setOrientation(item.id);
-                        setShowFormatDropdown(false);
-                      }}
+              <View style={styles.orientationTabs}>
+                {ORIENTATIONS.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.orientationTab,
+                      orientation === item.id && styles.orientationTabActive,
+                    ]}
+                    onPress={() => setOrientation(item.id)}
+                  >
+                    <MaterialCommunityIcons
+                      name={item.icon}
+                      size={18}
+                      color={orientation === item.id ? "#3b82f6" : "#64748b"}
+                    />
+                    <Text
+                      style={[
+                        styles.orientationTabText,
+                        orientation === item.id &&
+                          styles.orientationTabTextActive,
+                      ]}
                     >
-                      <MaterialCommunityIcons
-                        name={item.icon}
-                        size={18}
-                        color="#64748b"
-                      />
-                      <Text style={styles.dropdownItemText}>{item.label}</Text>
-                      {orientation === item.id && (
-                        <MaterialCommunityIcons
-                          name="check"
-                          size={18}
-                          color="#3b82f6"
-                        />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
 
             {/* Size Buttons */}
@@ -865,6 +863,9 @@ export default function NoteSetupScreen({ navigation, route }) {
                       key={template.id}
                       style={[
                         styles.coverTemplateCard,
+                        orientation === "portrait"
+                          ? styles.coverCardPortrait
+                          : styles.coverCardLandscape,
                         selectedCover === template.id &&
                           styles.coverTemplateCardActive,
                       ]}
@@ -906,7 +907,12 @@ export default function NoteSetupScreen({ navigation, route }) {
                           return (
                             <LazyImage
                               source={{ uri: imageUrlToShow }}
-                              style={styles.coverTemplatePreview}
+                              style={[
+                                styles.coverTemplatePreview,
+                                orientation === "portrait"
+                                  ? styles.coverPreviewPortrait
+                                  : styles.coverPreviewLandscape,
+                              ]}
                             />
                           );
                         }
@@ -961,7 +967,14 @@ export default function NoteSetupScreen({ navigation, route }) {
                       ]}
                       onPress={() => setSelectedPaper(template.id)}
                     >
-                      <View style={styles.paperTemplatePreview}>
+                      <View
+                        style={[
+                          styles.paperTemplatePreview,
+                          orientation === "portrait"
+                            ? styles.paperPreviewPortrait
+                            : styles.paperPreviewLandscape,
+                        ]}
+                      >
                         <MaterialCommunityIcons
                           name={template.icon}
                           size={32}
@@ -1003,9 +1016,10 @@ const styles = StyleSheet.create({
     color: "#64748b",
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#0f172a",
+    fontSize: 28,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+    letterSpacing: 0.5,
   },
   createButton: {
     paddingHorizontal: 20,
@@ -1092,6 +1106,12 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     overflow: "hidden",
   },
+  previewPortrait: {
+    height: 330,
+  },
+  previewLandscape: {
+    height: 150,
+  },
   previewBoxInner: {
     position: "absolute",
     top: 0,
@@ -1102,7 +1122,7 @@ const styles = StyleSheet.create({
   previewImage: {
     position: "absolute",
     top: 0,
-    left: 0,
+    left: 15,
     right: 0,
     bottom: 0,
     width: "100%",
@@ -1123,6 +1143,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#64748b",
     fontWeight: "500",
+    marginBottom: -8,
   },
   titleInput: {
     backgroundColor: "#F8FAFC",
@@ -1167,7 +1188,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   toggleActive: {
-    backgroundColor: "#3b82f6",
+    backgroundColor: "#085497ff",
   },
   toggleThumb: {
     width: 24,
@@ -1192,6 +1213,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0f172a",
     fontWeight: "500",
+  },
+  orientationTabs: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  orientationTab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    gap: 8,
+  },
+  orientationTabActive: {
+    backgroundColor: "#EFF6FF",
+    borderColor: "#3b82f6",
+  },
+  orientationTabText: {
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  orientationTabTextActive: {
+    color: "#3b82f6",
+    fontWeight: "600",
   },
   dropdownMenu: {
     backgroundColor: "#FFFFFF",
@@ -1232,8 +1282,8 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   sizeButtonActive: {
-    backgroundColor: "#3b82f6",
-    borderColor: "#3b82f6",
+    backgroundColor: "#1366aeff",
+    borderColor: "#084F8C",
   },
   sizeButtonText: {
     fontSize: 14,
@@ -1294,7 +1344,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   templateCard: {
-    width: "31%",
+    width: "48%",
     alignItems: "center",
     padding: 12,
     borderRadius: 12,
@@ -1316,7 +1366,7 @@ const styles = StyleSheet.create({
   },
   paperTemplatePreview: {
     width: "100%",
-    height: 100,
+    height: 160,
     borderRadius: 8,
     backgroundColor: "#F8FAFC",
     justifyContent: "center",
@@ -1325,8 +1375,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  paperPreviewPortrait: {
+    height: 160,
+  },
+  paperPreviewLandscape: {
+    height: 120,
+  },
   templateName: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#64748b",
     textAlign: "center",
   },
@@ -1337,7 +1393,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   coverTemplateCard: {
-    width: 120,
     alignItems: "center",
     padding: 10,
     borderRadius: 12,
@@ -1345,19 +1400,31 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#E2E8F0",
   },
+  coverCardPortrait: {
+    width: 140,
+  },
+  coverCardLandscape: {
+    width: 200,
+  },
   coverTemplateCardActive: {
     borderColor: "#3b82f6",
     backgroundColor: "#EFF6FF",
   },
   coverTemplatePreview: {
-    width: 100,
-    height: 140,
     borderRadius: 8,
     marginBottom: 8,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
+  },
+  coverPreviewPortrait: {
+    width: 120,
+    height: 180,
+  },
+  coverPreviewLandscape: {
+    width: 180,
+    height: 120,
   },
   coverEmoji: {
     fontSize: 48,

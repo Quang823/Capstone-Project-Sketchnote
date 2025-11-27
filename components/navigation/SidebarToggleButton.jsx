@@ -4,13 +4,18 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "../../context/NavigationContext";
 
 // Toggle Button Component - có thể đặt ở bất kỳ đâu trong app
-export default function SidebarToggleButton({ style, iconColor = "#4F46E5", iconSize = 28 }) {
+export default function SidebarToggleButton({
+  style,
+  iconColor = "#4F46E5",
+  iconSize = 28,
+  onPress,
+}) {
   const { toggleSidebar } = useNavigation();
 
   return (
     <TouchableOpacity
       style={[styles.toggleButton, style]}
-      onPress={toggleSidebar}
+      onPress={onPress || toggleSidebar}
       activeOpacity={0.7}
     >
       <Icon name="menu" size={iconSize} color={iconColor} />

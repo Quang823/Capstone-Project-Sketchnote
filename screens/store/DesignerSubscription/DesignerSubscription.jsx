@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   Dimensions,
   ActivityIndicator,
   StyleSheet,
+  Modal,
+  Animated,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -25,7 +27,9 @@ export default function SubscriptionPlansScreen() {
   const [buyingPlanId, setBuyingPlanId] = useState(null);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [activePlanId, setActivePlanId] = useState(null);
-
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const scaleAnim = useRef(new Animated.Value(0.85)).current;
   useEffect(() => {
     const loadPlans = async () => {
       try {
@@ -40,13 +44,24 @@ export default function SubscriptionPlansScreen() {
     };
     loadPlans();
   }, []);
-
+  useEffect(() => {
+    if (showConfirmModal) {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        friction: 6,
+        tension: 50,
+      }).start();
+    }
+  }, [showConfirmModal]);
   const loadUserSubscriptions = async () => {
     try {
       const res = await subscriptionService.getUserSubscriptions();
       const list = Array.isArray(res?.result) ? res.result : [];
       const activeItem = list.find(
-        (s) => s?.isCurrentlyActive || String(s?.status || "").toUpperCase() === "ACTIVE"
+        (s) =>
+          s?.isCurrentlyActive ||
+          String(s?.status || "").toUpperCase() === "ACTIVE"
       );
       const pid = activeItem?.plan?.planId ?? null;
       setActivePlanId(pid);
@@ -74,7 +89,11 @@ export default function SubscriptionPlansScreen() {
         planId: plan.planId,
         autoRenew: true,
       });
-      Toast.show({ type: "success", text1: "Subscription activated", text2: `${plan.planName}` });
+      Toast.show({
+        type: "success",
+        text1: "Subscription activated",
+        text2: `${plan.planName}`,
+      });
       await loadUserSubscriptions();
     } catch (e) {
       Toast.show({ type: "error", text1: "Purchase failed", text2: e.message });
@@ -84,13 +103,8 @@ export default function SubscriptionPlansScreen() {
   };
 
   const handleChoosePlan = (plan) => {
-    Toast.show({
-      type: "success",
-      text1: "Confirm to buy",
-      text2: "Tap this to BUY",
-      position: "top",
-      onPress: () => confirmBuy(plan),
-    });
+    setSelectedPlan(plan);
+    setShowConfirmModal(true);
   };
 
   return (
@@ -169,7 +183,8 @@ export default function SubscriptionPlansScreen() {
               <View style={styles.plansGridCompact}>
                 {plans.map((plan) => {
                   const isPopular = plan.planId === popularPlanId;
-                  const isActivePlan = hasActiveSubscription && plan.planId === activePlanId;
+                  const isActivePlan =
+                    hasActiveSubscription && plan.planId === activePlanId;
                   return (
                     <TouchableOpacity
                       key={plan.planId}
@@ -180,12 +195,16 @@ export default function SubscriptionPlansScreen() {
                         colors={
                           isActivePlan
                             ? ["#136bb8ff", "#0251c7ff"]
-                            : ["#FFFFFF", "#FFFFFF"]
+                            : isPopular
+                            ? ["#5eadf2ff", "#1d7accff"]
+                            : ["#E0F2FE", "#BAE6FD"]
                         }
                         style={[
                           styles.planCardCompact,
                           isActivePlan
                             ? styles.planCardActiveCompact
+                            : isPopular
+                            ? styles.planCardPopularCompact
                             : styles.planCardInactiveCompact,
                         ]}
                       >
@@ -200,14 +219,16 @@ export default function SubscriptionPlansScreen() {
 
                         {isActivePlan && (
                           <View style={styles.activeBadgeCompact}>
-                            <Text style={styles.activeTextCompact}>ACTIVE PLAN</Text>
+                            <Text style={styles.activeTextCompact}>
+                              ACTIVE PLAN
+                            </Text>
                           </View>
                         )}
 
                         <Text
                           style={[
                             styles.planNameCompact,
-                            isActivePlan && { color: "#FFF" },
+                            (isActivePlan || isPopular) && { color: "#FFF" },
                           ]}
                         >
                           {plan.planName}
@@ -216,7 +237,7 @@ export default function SubscriptionPlansScreen() {
                         <Text
                           style={[
                             styles.planDescCompact,
-                            isActivePlan && { color: "#E0F2FE" },
+                            (isActivePlan || isPopular) && { color: "#E0F2FE" },
                           ]}
                         >
                           {plan.description}
@@ -226,7 +247,7 @@ export default function SubscriptionPlansScreen() {
                           <Text
                             style={[
                               styles.priceCompact,
-                              isActivePlan && { color: "#FFF" },
+                              (isActivePlan || isPopular) && { color: "#FFF" },
                             ]}
                           >
                             {plan.price === 0
@@ -237,7 +258,9 @@ export default function SubscriptionPlansScreen() {
                             <Text
                               style={[
                                 styles.periodCompact,
-                                isActivePlan && { color: "#BAE6FD" },
+                                (isActivePlan || isPopular) && {
+                                  color: "#BAE6FD",
+                                },
                               ]}
                             >
                               /month
@@ -309,6 +332,52 @@ export default function SubscriptionPlansScreen() {
           </Text>
         </LinearGradient>
       </ScrollView>
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showConfirmModal}
+        onRequestClose={() => setShowConfirmModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View
+            style={[styles.modalContent, { transform: [{ scale: scaleAnim }] }]}
+          >
+            <View style={styles.topAccent} />
+
+            <Text style={styles.modalTitle}>Confirm Purchase</Text>
+
+            <Text style={styles.modalText}>
+              {selectedPlan?.price === 0
+                ? `Activate ${selectedPlan?.planName} plan?`
+                : `Buy ${selectedPlan?.planName} for ${(
+                    selectedPlan?.price ?? 0
+                  ).toLocaleString("vi-VN")}đ / month?`}
+            </Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setShowConfirmModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalConfirm, buyingPlanId && { opacity: 0.7 }]}
+                disabled={!!buyingPlanId}
+                onPress={async () => {
+                  await confirmBuy(selectedPlan);
+                  setShowConfirmModal(false);
+                }}
+              >
+                <Text style={styles.modalConfirmText}>
+                  {buyingPlanId ? "Processing..." : "Buy"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -449,7 +518,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.05 }],
   },
   planCardInactiveCompact: {
-    opacity: 0.6,
+    opacity: 1,
   },
   popularBadgeCompact: {
     position: "absolute",
@@ -572,5 +641,83 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     lineHeight: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+
+  modalContent: {
+    width: "85%",
+    maxWidth: 360,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 22,
+
+    // shadow mịn kiểu iOS
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+
+  topAccent: {
+    height: 4,
+    width: "25%",
+    alignSelf: "center",
+    borderRadius: 50,
+    marginBottom: 12,
+    backgroundColor: "#3B82F6",
+  },
+
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
+    color: "#0F172A",
+    marginBottom: 12,
+  },
+
+  modalText: {
+    fontSize: 15,
+    textAlign: "center",
+    color: "#475569",
+    lineHeight: 22,
+    marginBottom: 25,
+  },
+
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 14,
+  },
+
+  modalCancel: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
+  },
+
+  modalCancelText: {
+    color: "#1E293B",
+    fontWeight: "600",
+    fontSize: 15,
+  },
+
+  modalConfirm: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#245edbff",
+  },
+
+  modalConfirmText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
   },
 });

@@ -1,5 +1,5 @@
 // DesignerQuickUploadScreen.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,26 +8,38 @@ import {
   TextInput,
   Dimensions,
   Image,
+  Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
 import { styles } from "./DesignerQuickUploadScreen.styles";
 import { resourceService } from "../../../service/resourceService";
 import MultipleImageUploader from "../../../common/MultipleImageUploader";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
+import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerQuickUploadScreen() {
   const navigation = useNavigation();
+  const { setActiveNavItem } = useNavContext();
+  const [activeNavItemLocal, setActiveNavItemLocal] = useState("quickUpload");
+
+  useEffect(() => {
+    setActiveNavItem("quickUpload");
+    setActiveNavItemLocal("quickUpload");
+  }, [setActiveNavItem]);
 
   // State
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState("OTHER");
+  const [type, setType] = useState("TEMPLATES");
   const [price, setPrice] = useState("");
   const [expiredTime, setExpiredTime] = useState("");
+  const [showExpiredPicker, setShowExpiredPicker] = useState(false);
   const [images, setImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [itemSource, setItemSource] = useState("upload");
@@ -35,22 +47,23 @@ export default function DesignerQuickUploadScreen() {
   const [projects, setProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
 
- const getTodayDateOnly = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
+  const getTodayDateOnly = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
-
- const [releaseDate, setReleaseDate] = useState(getTodayDateOnly()); 
-const [releaseDateISO, setReleaseDateISO] = useState(new Date().toISOString());
-
+  const [releaseDate, setReleaseDate] = useState(getTodayDateOnly());
+  const [releaseDateISO, setReleaseDateISO] = useState(
+    new Date().toISOString()
+  );
 
   useEffect(() => {
     (async () => {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Toast.show({
           type: "error",
@@ -75,8 +88,20 @@ const [releaseDateISO, setReleaseDateISO] = useState(new Date().toISOString());
     }
   };
 
+  const formatPriceDisplay = (raw) => {
+    const digits = String(raw || "").replace(/\D/g, "");
+    const value = digits ? Number(digits) * 1000 : 0;
+    return new Intl.NumberFormat("vi-VN").format(value) + "đ";
+  };
+
   const handleUpload = async () => {
-    if (!name.trim() || !description.trim() || !type.trim() || !price || !expiredTime) {
+    if (
+      !name.trim() ||
+      !description.trim() ||
+      !type.trim() ||
+      !price ||
+      !expiredTime
+    ) {
       Toast.show({
         type: "error",
         text1: "Missing information",
@@ -125,7 +150,7 @@ const [releaseDateISO, setReleaseDateISO] = useState(new Date().toISOString());
           name,
           description,
           type: formattedType,
-          price: Number(price),
+          price: Number(String(price).replace(/\D/g, "")) * 1000,
           releaseDate,
           expiredTime,
           images: formattedImages,
@@ -136,12 +161,14 @@ const [releaseDateISO, setReleaseDateISO] = useState(new Date().toISOString());
         };
         await resourceService.uploadResource(template);
       } else if (itemSource === "project") {
-        const selectedProject = projects.find((p) => p.projectId === selectedProjectId);
+        const selectedProject = projects.find(
+          (p) => p.projectId === selectedProjectId
+        );
         const templateData = {
           name,
           description,
           type: formattedType,
-          price: Number(price),
+          price: Number(String(price).replace(/\D/g, "")) * 1000,
           expiredTime: new Date(expiredTime).toISOString(),
           images: [
             {
@@ -176,241 +203,331 @@ const [releaseDateISO, setReleaseDateISO] = useState(new Date().toISOString());
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Icon name="arrow-back" size={22} color="#111827" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Upload Template</Text>
-        <Pressable 
-          onPress={handleUpload} 
-          disabled={isUploading}
+        <SidebarToggleButton
           style={styles.headerButton}
+          iconColor="#084F8C"
+          iconSize={24}
+        />
+        <Text style={styles.headerTitle}>Upload Template</Text>
+        <Pressable
+          onPress={handleUpload}
+          disabled={isUploading}
+          style={styles.headerSubmitBtn}
         >
-          <Text style={[styles.submitText, isUploading && styles.submitTextDisabled]}>
-            {isUploading ? "..." : "Submit"}
+          <Text
+            style={[
+              styles.headerSubmitText,
+              isUploading && styles.submitTextDisabled,
+            ]}
+          >
+            {isUploading ? "..." : "Upload Template"}
           </Text>
         </Pressable>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Basic Info Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Basic Information</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Template Name *</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter template name"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description *</Text>
-            <TextInput
-              style={[styles.input, styles.textarea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Enter description"
-              placeholderTextColor="#9CA3AF"
-              multiline
-              numberOfLines={4}
-            />
+        {/* Basic Info */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Icon name="description" size={20} color="#084F8C" />
+            <Text style={styles.sectionTitle}>Basic Information</Text>
           </View>
 
           <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Type *</Text>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Template Name</Text>
               <TextInput
-                style={styles.input}
-                value={type}
-                onChangeText={setType}
-                placeholder="OTHER"
-                placeholderTextColor="#9CA3AF"
+                style={styles.largeInput}
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter template name"
+                placeholderTextColor="#94A3B8"
               />
             </View>
-            <View style={{ width: 12 }} />
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Price (VND) *</Text>
+
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Description</Text>
               <TextInput
-                style={styles.input}
-                value={price}
-                onChangeText={setPrice}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor="#9CA3AF"
+                style={[styles.largeInput, styles.largeTextarea]}
+                value={description}
+                onChangeText={setDescription}
+                placeholder="Describe your template"
+                placeholderTextColor="#94A3B8"
+                multiline
+                numberOfLines={2}
               />
             </View>
           </View>
 
           <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Release Date *</Text>
-              <TextInput
-  style={styles.input}
-  value={releaseDate}          
-  onChangeText={(val) => {
-    setReleaseDate(val);
-
-    // Convert sang ISO có giờ giữ nguyên
-    const iso = new Date(val + "T00:00:00").toISOString();
-    setReleaseDateISO(iso);
-  }}
-  placeholder="YYYY-MM-DD"
-  placeholderTextColor="#9CA3AF"
-/>
-
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Type</Text>
+              <View style={styles.typeToggle}>
+                <Pressable
+                  onPress={() => setType("TEMPLATES")}
+                  style={[
+                    styles.typeButton,
+                    type === "TEMPLATES" && styles.typeButtonActive,
+                  ]}
+                >
+                  <Icon
+                    name="grid-view"
+                    size={16}
+                    color={type === "TEMPLATES" ? "#FFFFFF" : "#64748B"}
+                  />
+                  <Text
+                    style={[
+                      styles.typeButtonText,
+                      type === "TEMPLATES" && styles.typeButtonTextActive,
+                    ]}
+                  >
+                    Template
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setType("ICONS")}
+                  style={[
+                    styles.typeButton,
+                    type === "ICONS" && styles.typeButtonActive,
+                  ]}
+                >
+                  <Icon
+                    name="category"
+                    size={16}
+                    color={type === "ICONS" ? "#FFFFFF" : "#64748B"}
+                  />
+                  <Text
+                    style={[
+                      styles.typeButtonText,
+                      type === "ICONS" && styles.typeButtonTextActive,
+                    ]}
+                  >
+                    Icon
+                  </Text>
+                </Pressable>
+              </View>
             </View>
-            <View style={{ width: 12 }} />
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Expired Date *</Text>
+
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Price</Text>
+              <View style={styles.priceInput}>
+                <TextInput
+                  style={styles.priceField}
+                  value={price}
+                  onChangeText={(text) => {
+                    const digits = text.replace(/\D/g, "");
+                    setPrice(digits);
+                  }}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="#94A3B8"
+                />
+                <Text style={styles.priceSuffix}>.000đ</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Release Date</Text>
               <TextInput
                 style={styles.input}
-                value={expiredTime}
-                onChangeText={setExpiredTime}
+                value={releaseDate}
+                onChangeText={(val) => {
+                  setReleaseDate(val);
+                  const iso = new Date(val + "T00:00:00").toISOString();
+                  setReleaseDateISO(iso);
+                }}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor="#94A3B8"
               />
+            </View>
+
+            <View style={styles.halfInput}>
+              <Text style={styles.label}>Expired Date</Text>
+              <Pressable
+                onPress={() => setShowExpiredPicker(true)}
+                style={styles.dateButton}
+              >
+                <Text style={styles.dateText}>
+                  {expiredTime || "Select date"}
+                </Text>
+                <Icon name="calendar-today" size={18} color="#64748B" />
+              </Pressable>
+              {showExpiredPicker && (
+                <DateTimePicker
+                  value={expiredTime ? new Date(expiredTime) : new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowExpiredPicker(false);
+                    if (selectedDate) {
+                      const y = selectedDate.getFullYear();
+                      const m = String(selectedDate.getMonth() + 1).padStart(
+                        2,
+                        "0"
+                      );
+                      const d = String(selectedDate.getDate()).padStart(2, "0");
+                      setExpiredTime(`${y}-${m}-${d}`);
+                    }
+                  }}
+                />
+              )}
             </View>
           </View>
         </View>
 
-        {/* Banner Images Card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Banner Images *</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{images.length}</Text>
-            </View>
+        {/* Images */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Icon name="image" size={20} color="#084F8C" />
+            <Text style={styles.sectionTitle}>Images</Text>
           </View>
-          <MultipleImageUploader onImageUploaded={handleImageUploaded} maxImages={10} />
-        </View>
-
-        {/* Item Source Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Item Source *</Text>
-          
-          <View style={styles.sourceToggle}>
-            <Pressable
-              onPress={() => setItemSource("upload")}
-              style={[
-                styles.sourceButton,
-                itemSource === "upload" && styles.sourceButtonActive,
-              ]}
-            >
-              <Icon 
-                name="upload-file" 
-                size={18} 
-                color={itemSource === "upload" ? "#FFFFFF" : "#6B7280"} 
-              />
-              <Text
-                style={[
-                  styles.sourceButtonText,
-                  itemSource === "upload" && styles.sourceButtonTextActive,
-                ]}
-              >
-                Upload from device
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setItemSource("project")}
-              style={[
-                styles.sourceButton,
-                itemSource === "project" && styles.sourceButtonActive,
-              ]}
-            >
-              <Icon 
-                name="folder" 
-                size={18} 
-                color={itemSource === "project" ? "#FFFFFF" : "#6B7280"} 
-              />
-              <Text
-                style={[
-                  styles.sourceButtonText,
-                  itemSource === "project" && styles.sourceButtonTextActive,
-                ]}
-              >
-                Select from project
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Upload from device */}
-          {itemSource === "upload" && (
-            <View style={styles.sourceContent}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.sectionTitle}>Item Images</Text>
+          <View style={styles.row}>
+            <View style={styles.halfInput}>
+              <View style={styles.sectionHeader}>
+                <Icon name="image" size={18} color="#084F8C" />
+                <Text style={styles.sectionTitle}>Banner Images</Text>
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{localItems.length}</Text>
+                  <Text style={styles.badgeText}>{images.length}</Text>
                 </View>
               </View>
               <MultipleImageUploader
-                onImageUploaded={(url) => setLocalItems((prev) => [...prev, url])}
+                onImageUploaded={handleImageUploaded}
                 maxImages={10}
               />
             </View>
-          )}
-
-          {/* Select from project */}
-          {itemSource === "project" && (
-            <View style={styles.sourceContent}>
-              <Text style={styles.sectionTitle}>
-                Available Projects ({projects.length})
-              </Text>
-
-              {projects.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Icon name="folder-open" size={48} color="#D1D5DB" />
-                  <Text style={styles.emptyText}>No projects available</Text>
-                </View>
-              ) : (
-                projects.map((proj) => (
-                  <Pressable
-                    key={proj.projectId}
-                    onPress={() => setSelectedProjectId(proj.projectId)}
-                    style={[
-                      styles.projectCard,
-                      selectedProjectId === proj.projectId && styles.projectCardActive,
-                    ]}
-                  >
-                    <Image
-                      source={{ uri: proj.imageUrl }}
-                      style={styles.projectImage}
-                    />
-                    <View style={styles.projectInfo}>
-                      <Text style={styles.projectName} numberOfLines={1}>
-                        {proj.name}
-                      </Text>
-                      <Text style={styles.projectDesc} numberOfLines={2}>
-                        {proj.description}
-                      </Text>
+            <View style={styles.verticalDivider} />
+            <View style={styles.halfInput}>
+              {itemSource === "upload" && (
+                <>
+                  <View style={styles.sectionHeader}>
+                    <Icon name="collections" size={18} color="#084F8C" />
+                    <Text style={styles.sectionTitle}>Item Images</Text>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{localItems.length}</Text>
                     </View>
-                    {selectedProjectId === proj.projectId && (
-                      <View style={styles.checkIcon}>
-                        <Icon name="check-circle" size={24} color="#10B981" />
-                      </View>
-                    )}
-                  </Pressable>
-                ))
+                  </View>
+                  <MultipleImageUploader
+                    onImageUploaded={(url) =>
+                      setLocalItems((prev) => [...prev, url])
+                    }
+                    maxImages={10}
+                  />
+                </>
               )}
             </View>
-          )}
+          </View>
         </View>
 
-        {/* Submit Button */}
-        <Pressable
-          style={[styles.submitButton, isUploading && styles.submitButtonDisabled]}
-          onPress={handleUpload}
-          disabled={isUploading}
-        >
-          <Icon name="cloud-upload" size={20} color="#FFFFFF" />
-          <Text style={styles.submitButtonText}>
-            {isUploading ? "Uploading..." : "Upload Template"}
-          </Text>
-        </Pressable>
+        {/* Item Source */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Icon name="inventory" size={20} color="#084F8C" />
+            <Text style={styles.sectionTitle}>Item Source</Text>
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.halfInput, styles.sourceToggle]}>
+              <Pressable
+                onPress={() => setItemSource("upload")}
+                style={[
+                  styles.sourceButton,
+                  itemSource === "upload" && styles.sourceButtonActive,
+                  itemSource === "upload" && styles.sourceButtonSelected,
+                ]}
+              >
+                <Icon
+                  name="upload-file"
+                  size={18}
+                  color={itemSource === "upload" ? "#FFFFFF" : "#64748B"}
+                />
+                <Text
+                  style={[
+                    styles.sourceButtonText,
+                    itemSource === "upload" && styles.sourceButtonTextActive,
+                  ]}
+                >
+                  Upload
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setItemSource("project")}
+                style={[
+                  styles.sourceButton,
+                  itemSource === "project" && styles.sourceButtonActive,
+                  itemSource === "project" && styles.sourceButtonSelected,
+                ]}
+              >
+                <Icon
+                  name="folder"
+                  size={18}
+                  color={itemSource === "project" ? "#FFFFFF" : "#64748B"}
+                />
+                <Text
+                  style={[
+                    styles.sourceButtonText,
+                    itemSource === "project" && styles.sourceButtonTextActive,
+                  ]}
+                >
+                  Project
+                </Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.verticalDivider} />
+
+            <View style={styles.halfInput}>
+              {itemSource === "project" && (
+                <View style={styles.sourceContent}>
+                  <Text style={styles.itemTitle}>
+                    Available Projects ({projects.length})
+                  </Text>
+
+                  {projects.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <Icon name="folder-open" size={48} color="#CBD5E1" />
+                      <Text style={styles.emptyText}>
+                        No projects available
+                      </Text>
+                    </View>
+                  ) : (
+                    projects.map((proj) => (
+                      <Pressable
+                        key={proj.projectId}
+                        onPress={() => setSelectedProjectId(proj.projectId)}
+                        style={[
+                          styles.projectCard,
+                          selectedProjectId === proj.projectId &&
+                            styles.projectCardActive,
+                        ]}
+                      >
+                        <Image
+                          source={{ uri: proj.imageUrl }}
+                          style={styles.projectImage}
+                        />
+                        <View style={styles.projectInfo}>
+                          <Text style={styles.projectName} numberOfLines={1}>
+                            {proj.name}
+                          </Text>
+                          <Text style={styles.projectDesc} numberOfLines={2}>
+                            {proj.description}
+                          </Text>
+                        </View>
+                        {selectedProjectId === proj.projectId && (
+                          <Icon name="check-circle" size={24} color="#084F8C" />
+                        )}
+                      </Pressable>
+                    ))
+                  )}
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Removed bottom upload button: now on header */}
 
         <View style={{ height: 40 }} />
       </ScrollView>

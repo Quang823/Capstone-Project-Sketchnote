@@ -15,100 +15,29 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
-import DesignerNavigationDrawer from "../nav/DesignerNavigationDrawer";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { designerHomeStyles } from "./DesignerHomeScreen.styles";
 import { dashboardService } from "../../../service/dashboardService";
 import { formatCurrencyVN } from "../../../common/formatCurrencyVN";
 import { notiService } from "../../../service/notiService";
+import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const HEADER_HEIGHT = 180;
 export default function DesignerHomeScreen() {
   const navigation = useNavigation();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeNavItem, setActiveNavItem] = useState("home");
+  const { setActiveNavItem } = useNavContext();
+  const [activeNavItemLocal, setActiveNavItemLocal] = useState("home");
   const [dashboardSummary, setDashboardSummary] = useState({});
   const [notiCount, setNotiCount] = useState(0);
   const [notiOpen, setNotiOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loadingNoti, setLoadingNoti] = useState(false);
-  const drawerAnimation = useRef(new Animated.Value(-320)).current;
-  const overlayAnimation = useRef(new Animated.Value(0)).current;
   const [topTemplates, setTopTemplates] = useState([]);
-  const toggleDrawer = () => {
-    if (drawerOpen) {
-      Animated.parallel([
-        Animated.timing(drawerAnimation, {
-          toValue: -320,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayAnimation, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setDrawerOpen(false);
-      });
-    } else {
-      setDrawerOpen(true);
-      Animated.parallel([
-        Animated.timing(drawerAnimation, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayAnimation, {
-          toValue: 0.5,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  };
-
-  const handleNavPress = (navItem) => {
-    setActiveNavItem(navItem);
-    if (drawerOpen) {
-      Animated.parallel([
-        Animated.timing(drawerAnimation, {
-          toValue: -320,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(overlayAnimation, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setDrawerOpen(false);
-        switch (navItem) {
-          case "products":
-            navigation.navigate("DesignerProducts");
-            break;
-          case "analytics":
-            navigation.navigate("DesignerAnalytics");
-            break;
-          case "quickUpload":
-            navigation.navigate("DesignerQuickUpload");
-            break;
-          case "wallet":
-            navigation.navigate("DesignerWallet");
-            break;
-          case "profile":
-            navigation.navigate("ProfileScreen");
-            break;
-          case "settings":
-            navigation.navigate("SettingsScreen");
-            break;
-          default:
-            break;
-        }
-      });
-    }
-  };
+  useEffect(() => {
+    setActiveNavItem("home");
+    setActiveNavItemLocal("home");
+  }, [setActiveNavItem]);
 
   const handleQuickAction = (action) => {
     switch (action) {
@@ -212,19 +141,12 @@ export default function DesignerHomeScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
 
-      <DesignerNavigationDrawer
-        drawerOpen={drawerOpen}
-        drawerAnimation={drawerAnimation}
-        overlayAnimation={overlayAnimation}
-        activeNavItem={activeNavItem}
-        onToggleDrawer={toggleDrawer}
-        onNavPress={handleNavPress}
-      />
-
       <View style={styles.header}>
-        <Pressable onPress={toggleDrawer} style={styles.menuButton}>
-          <Icon name="menu" size={24} color="#084F8C" />
-        </Pressable>
+        <SidebarToggleButton
+          style={styles.menuButton}
+          iconColor="#084F8C"
+          iconSize={24}
+        />
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Designer Homepage</Text>
         </View>

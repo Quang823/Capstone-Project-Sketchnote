@@ -85,6 +85,8 @@ export default function LoginScreen({ onBack }) {
       const { roles } = loginResult;
       if (roles.includes("DESIGNER")) navigation.navigate("DesignerDashboard");
       else if (roles.includes("CUSTOMER")) navigation.navigate("Home");
+      else if (isCustomer) navigation.navigate("Home");
+      else navigation.navigate("Home");
     } catch (error) {
       toast({
         title: "Login failed",

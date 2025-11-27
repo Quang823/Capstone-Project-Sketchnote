@@ -6,7 +6,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#F8FAFC",
   },
 
   // Header
@@ -15,31 +15,56 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 16,
     paddingBottom: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.96)",
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 16,
   },
   headerButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },
+  headerSubmitBtn: {
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "#084F8C",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    shadowColor: "#084F8C",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-    letterSpacing: -0.3,
+    fontSize: 26,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+    letterSpacing: -0.5,
   },
   submitText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#6366F1",
+    fontSize: 16,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+  },
+  headerSubmitText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
   },
   submitTextDisabled: {
-    color: "#9CA3AF",
+    color: "#94A3B8",
   },
 
   // Content
@@ -47,106 +72,198 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Card
-  card: {
+  // Section
+  section: {
     backgroundColor: "#FFFFFF",
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 12,
-    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 16,
-    letterSpacing: -0.3,
-  },
-  cardHeader: {
+  sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginLeft: 8,
+    flex: 1,
   },
 
   // Input
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 14,
   },
   label: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#374151",
-    marginBottom: 8,
+    color: "#475569",
+    marginBottom: 6,
   },
   input: {
-    backgroundColor: "#F9FAFB",
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 15,
-    color: "#111827",
+    color: "#0F172A",
   },
   textarea: {
-    height: 100,
+    height: 44,
+    textAlignVertical: "center",
+  },
+  largeInput: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: "#0F172A",
+  },
+  largeTextarea: {
+    height: 56,
     textAlignVertical: "top",
     paddingTop: 12,
   },
   row: {
     flexDirection: "row",
+    gap: 12,
+  },
+  halfInput: {
+    flex: 1,
+    marginBottom: 14,
+  },
+
+  // Type Toggle
+  typeToggle: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  typeButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  typeButtonActive: {
+    backgroundColor: "#084F8C",
+    borderColor: "#084F8C",
+  },
+  typeButtonText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#64748B",
+  },
+  typeButtonTextActive: {
+    color: "#FFFFFF",
+  },
+
+  // Price Input
+  priceInput: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    paddingRight: 12,
+  },
+  priceField: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: "#0F172A",
+  },
+  priceSuffix: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#64748B",
+  },
+
+  // Date Button
+  dateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dateText: {
+    fontSize: 15,
+    color: "#0F172A",
   },
 
   // Badge
   badge: {
-    backgroundColor: "#EEF2FF",
+    backgroundColor: "#E0F2FE",
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   badgeText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#6366F1",
-  },
-
-  // Section
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 12,
+    color: "#084F8C",
   },
 
   // Source Toggle
   sourceToggle: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 20,
+    gap: 8,
+    marginTop: 0,
+    alignItems: "center",
+    flexWrap: "nowrap",
   },
   sourceButton: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#F9FAFB",
+    gap: 6,
+    height: 36,
+    minWidth: 160,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#E2E8F0",
+    flexShrink: 0,
   },
   sourceButtonActive: {
-    backgroundColor: "#6366F1",
-    borderColor: "#6366F1",
+    backgroundColor: "#084F8C",
+    borderColor: "#084F8C",
+  },
+  sourceButtonSelected: {
+    transform: [{ scale: 1.06 }],
   },
   sourceButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "500",
-    color: "#6B7280",
+    color: "#64748B",
   },
   sourceButtonTextActive: {
     color: "#FFFFFF",
@@ -154,7 +271,18 @@ export const styles = StyleSheet.create({
 
   // Source Content
   sourceContent: {
-    marginTop: 8,
+    marginTop: 0,
+  },
+  itemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  itemTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0F172A",
+    marginBottom: 5,
   },
 
   // Empty State
@@ -164,7 +292,7 @@ export const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: "#9CA3AF",
+    color: "#94A3B8",
     marginTop: 12,
   },
 
@@ -173,21 +301,22 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 12,
-    marginBottom: 12,
-    borderRadius: 10,
-    backgroundColor: "#F9FAFB",
+    marginBottom: 10,
+    borderRadius: 12,
+    backgroundColor: "#ebf4fcff",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "#d1d1d1ff",
   },
   projectCardActive: {
-    backgroundColor: "#EEF2FF",
-    borderColor: "#6366F1",
+    backgroundColor: "#E0F2FE",
+    borderColor: "#084F8C",
+    borderWidth: 2,
   },
   projectImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: "#E5E7EB",
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    backgroundColor: "#E2E8F0",
   },
   projectInfo: {
     flex: 1,
@@ -196,16 +325,13 @@ export const styles = StyleSheet.create({
   projectName: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#111827",
+    color: "#0F172A",
     marginBottom: 4,
   },
   projectDesc: {
     fontSize: 12,
-    color: "#6B7280",
+    color: "#64748B",
     lineHeight: 16,
-  },
-  checkIcon: {
-    marginLeft: 8,
   },
 
   // Submit Button
@@ -214,18 +340,30 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    marginHorizontal: 20,
     marginTop: 24,
-    paddingVertical: 14,
-    borderRadius: 10,
-    backgroundColor: "#6366F1",
+    alignSelf: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: "#084F8C",
+    shadowColor: "#084F8C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  verticalDivider: {
+    width: 1,
+    backgroundColor: "#E2E8F0",
+    marginHorizontal: 6,
   },
   submitButtonDisabled: {
-    backgroundColor: "#9CA3AF",
-    opacity: 0.6,
+    backgroundColor: "#94A3B8",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "600",
     color: "#FFFFFF",
   },
