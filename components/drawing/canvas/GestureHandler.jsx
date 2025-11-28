@@ -2455,7 +2455,12 @@ export default function GestureHandler(
       </GestureDetector>
       {lassoSelection.length > 0 && lassoBox && (
         <LassoSelectionBox
-          box={lassoBox}
+          box={{
+            x: (lassoBox.x || 0) - (page?.x || 0),
+            y: (lassoBox.y || 0) - (page?.y || 0) + 20,
+            width: lassoBox.width,
+            height: lassoBox.height,
+          }}
           onMove={(dx, dy) => {
             // Store the latest delta immediately in a ref.
             lassoDragDelta.current = { dx, dy };

@@ -975,7 +975,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       )}
 
       {/* Paper guides - disabled for cover pages */}
-      {safePage.w > 0 && safePage.h > 0 && !isCover && (
+      {safePage.w > 0 && safePage.h > 0 && !isCover && !backgroundImage && (
         <PaperGuides
           paperStyle={paperStyle}
           pageTemplate={pageTemplate}

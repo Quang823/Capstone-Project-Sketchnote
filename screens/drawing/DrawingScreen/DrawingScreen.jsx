@@ -825,12 +825,12 @@ export default function DrawingScreen({ route }) {
 
             multiPageCanvasRef.current?.clearPage?.(pageId);
 
-            // ✨ FIX: Restore page template and background color
-            if (data.template || data.backgroundColor) {
-              multiPageCanvasRef.current?.updatePage?.(pageId, {
-                template: data.template,
-                backgroundColor: data.backgroundColor,
-              });
+            if (data.template || data.backgroundColor || data.imageUrl) {
+              const updates = {};
+              if (data.template) updates.template = data.template;
+              if (data.backgroundColor) updates.backgroundColor = data.backgroundColor;
+              if (data.imageUrl) updates.imageUrl = data.imageUrl;
+              multiPageCanvasRef.current?.updatePage?.(pageId, updates);
             }
 
             if (Array.isArray(data?.layers) && data.layers.length > 0) {

@@ -571,8 +571,8 @@ export default function HomeScreen({ navigation }) {
                             text={
                               user?.subscriptionEndDate
                                 ? `Active until ${formatDate(
-                                  user.subscriptionEndDate
-                                )}`
+                                    user.subscriptionEndDate
+                                  )}`
                                 : "Active"
                             }
                             style={styles.premiumSubtitle}
@@ -724,6 +724,7 @@ export default function HomeScreen({ navigation }) {
                     columnWrapperStyle={{
                       gap: CARD_GAP,
                       paddingHorizontal: 16,
+                      marginBottom: 16,
                     }}
                     contentContainerStyle={{
                       paddingBottom: sharedProjects.length > 0 ? 24 : 140,
