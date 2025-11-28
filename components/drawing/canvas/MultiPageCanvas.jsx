@@ -223,6 +223,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     const pages = [];
     const paperTemplate = noteConfig.paper?.template || "blank";
     const paperBg = noteConfig.paper?.color || "#FFFFFF";
+    const paperImageUrl = noteConfig.paper?.imageUrl || null;
 
     // Check if first page from API is a cover page (pageNumber === 1)
     const firstPageFromAPI =
@@ -264,6 +265,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             type: "paper",
             backgroundColor: paperBg,
             template: paperTemplate,
+            imageUrl: paperImageUrl,
             pageNumber: p.pageNumber,
             strokeUrl: p.strokeUrl,
             snapshotUrl: p.snapshotUrl || null,
@@ -276,6 +278,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         type: "paper",
         backgroundColor: paperBg,
         template: paperTemplate,
+        imageUrl: paperImageUrl,
         snapshotUrl: null,
       });
     }
