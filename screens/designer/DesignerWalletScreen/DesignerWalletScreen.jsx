@@ -66,13 +66,8 @@ export default function DesignerWalletScreen() {
     try {
       // In a real app, you would fetch this from your API
       const data = await paymentService.getWallet();
-      // Mock data for designer-specific fields
-      setWalletData({
-        ...data.result,
-        totalEarnings: 12500000, // Example value
-        pendingWithdrawals: 2500000, // Example value
-        totalWithdrawn: 8500000, // Example value
-      });
+      console.log(data.result)
+     setWalletData(data.result);
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
 
@@ -196,28 +191,7 @@ export default function DesignerWalletScreen() {
               {formatCurrency(walletData.balance)}
             </Text>
 
-            <View style={styles.statsRowNew}>
-              <View style={styles.statBox}>
-                <Text style={styles.statValueNew}>
-                  {formatCurrency(walletData.totalEarnings)}
-                </Text>
-                <Text style={styles.statLabelNew}>Total Earnings</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statBox}>
-                <Text style={styles.statValueNew}>
-                  {formatCurrency(walletData.pendingWithdrawals)}
-                </Text>
-                <Text style={styles.statLabelNew}>Pending</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statBox}>
-                <Text style={styles.statValueNew}>
-                  {formatCurrency(walletData.totalWithdrawn)}
-                </Text>
-                <Text style={styles.statLabelNew}>Total Withdrawn</Text>
-              </View>
-            </View>
+       
 
             <TouchableOpacity
               style={styles.withdrawButtonNew}
@@ -246,7 +220,11 @@ export default function DesignerWalletScreen() {
             >
               <Pressable
                 style={[styles.oneActionItem, isPortrait && { width: "48%" }]}
-                onPress={() => navigation.navigate("TransactionHistory")}
+                onPress={() =>
+                  navigation.navigate("TransactionHistory", {
+                    transactions: walletData.transactions || [],
+                  })
+                }
               >
                 <View
                   style={[
@@ -353,17 +331,65 @@ export default function DesignerWalletScreen() {
                   <Text style={styles.transactionDateNew}>
                     {formatDate(transaction.createdAt)}
                   </Text>
+                  {transaction.orderCode && (
+                    <Text style={styles.transactionDateNew}>
+                      Order: {transaction.orderCode}
+                    </Text>
+                  )}
                 </View>
 
-                <Text
-                  style={[
-                    styles.transactionAmountNew,
-                    { color: transaction.amount > 0 ? "#16A34A" : "#1E293B" },
-                  ]}
-                >
-                  {transaction.amount > 0 ? "+" : ""}
-                  {formatCurrency(transaction.amount)}
-                </Text>
+                <View style={styles.transactionRightNew}>
+                  <Text
+                    style={[
+                      styles.transactionAmountNew,
+                      {
+                        color:
+                          transaction.amount > 0
+                            ? "#16A34A"
+                            : "#DC2626",
+                      },
+                    ]}
+                  >
+                    {transaction.amount > 0 ? "+" : "-"}
+                    {formatCurrency(Math.abs(transaction.amount))}
+                  </Text>
+                  {typeof transaction.balance === "number" && (
+                    <Text style={styles.transactionBalanceNew}>
+                      Balance: {formatCurrency(transaction.balance)}
+                    </Text>
+                  )}
+                  {transaction.status && (
+                    <View
+                      style={[
+                        styles.statusBadgeNew,
+                        {
+                          backgroundColor:
+                            transaction.status === "SUCCESS"
+                              ? "#10B98115"
+                              : transaction.status === "PENDING"
+                              ? "#F59E0B15"
+                              : "#EF444415",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusTextNew,
+                          {
+                            color:
+                              transaction.status === "SUCCESS"
+                                ? "#10B981"
+                                : transaction.status === "PENDING"
+                                ? "#F59E0B"
+                                : "#EF4444",
+                          },
+                        ]}
+                      >
+                        {transaction.status}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
             ))
           ) : (
@@ -745,6 +771,24 @@ const styles = StyleSheet.create({
   transactionTitleNew: { fontSize: 15, fontWeight: "600", color: "#1E293B" },
   transactionDateNew: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
   transactionAmountNew: { fontSize: 15, fontWeight: "700" },
+  transactionRightNew: {
+    alignItems: "flex-end",
+  },
+  transactionBalanceNew: {
+    fontSize: 11,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  statusBadgeNew: {
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  statusTextNew: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
 
   emptyState: {
     alignItems: "center",

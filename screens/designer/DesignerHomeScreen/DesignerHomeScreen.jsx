@@ -21,6 +21,7 @@ import { dashboardService } from "../../../service/dashboardService";
 import { formatCurrencyVN } from "../../../common/formatCurrencyVN";
 import { notiService } from "../../../service/notiService";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
+import { paymentService } from "../../../service/paymentService";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const HEADER_HEIGHT = 180;
@@ -34,6 +35,7 @@ export default function DesignerHomeScreen() {
   const [notifications, setNotifications] = useState([]);
   const [loadingNoti, setLoadingNoti] = useState(false);
   const [topTemplates, setTopTemplates] = useState([]);
+  const [wallet, setWallet] = useState({});
   useEffect(() => {
     setActiveNavItem("home");
     setActiveNavItemLocal("home");
@@ -70,7 +72,15 @@ export default function DesignerHomeScreen() {
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   };
-
+ const fetchWallet = async () =>{
+  try {
+    const res = await paymentService.getWallet();
+ 
+    setWallet(res.result);
+  } catch (error) {
+    console.log(error);
+  }
+ }
   const fetchSashboardSummary = async () => {
     try {
       const res = await dashboardService.getDashboardSummaryDesigner();
@@ -135,6 +145,7 @@ export default function DesignerHomeScreen() {
     fetchSashboardSummary();
     fetchTopTemplates();
     loadNotiCount();
+    fetchWallet();
   }, []);
 
   return (
@@ -212,7 +223,7 @@ export default function DesignerHomeScreen() {
                     <Text style={styles.walletLabel}>Available Balance</Text>
                     <Text style={styles.walletAmount}>
                       {formatCurrencyVN(
-                        dashboardSummary?.availableBalance || 25000000
+                        wallet?.balance || 0
                       )}
                     </Text>
                   </View>
@@ -340,41 +351,51 @@ export default function DesignerHomeScreen() {
             </Pressable>
           </View>
         </View>
-        {/* Recent Activity - Updated List */}
+        {/* Top Templates from API */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Top template</Text>
-          <View style={styles.activityList}>
-            <View style={styles.activityItem}>
-              <View style={styles.activityIconWrap}>
-                <Icon name="check-circle" size={20} color="#10B981" />
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>Template published</Text>
-                <Text style={styles.activityTime}>2 hours ago</Text>
-              </View>
-            </View>
+          <Text style={styles.sectionTitle}>Top Templates</Text>
+          <View style={styles.topTemplateList}>
+            {topTemplates && topTemplates.length > 0 ? (
+              topTemplates.map((item) => (
+                <View
+                  key={item.templateId}
+                  style={styles.topTemplateCard}
+                >
+                  <View style={styles.topTemplateRow}>
+                    <View style={styles.topTemplateThumbnail}>
+                      <Icon name="image" size={20} color="#1D4ED8" />
+                    </View>
 
-            <View style={styles.activityItem}>
-              <View style={styles.activityIconWrap}>
-                <Icon name="file-download" size={20} color="#3B82F6" />
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>150 new downloads</Text>
-                <Text style={styles.activityTime}>5 hours ago</Text>
-              </View>
-            </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={styles.topTemplateName}
+                        numberOfLines={2}
+                      >
+                        {item.templateName}
+                      </Text>
+                      <Text style={styles.topTemplateMeta}>
+                        {item.soldCount || 0} sales
+                      </Text>
+                    </View>
 
-            <View style={styles.activityItem}>
-              <View style={styles.activityIconWrap}>
-                <Icon name="payments" size={20} color="#F59E0B" />
-              </View>
-              <View style={styles.activityContent}>
-                <Text style={styles.activityTitle}>
-                  Payment received: 500,000₫
-                </Text>
-                <Text style={styles.activityTime}>1 day ago</Text>
-              </View>
-            </View>
+                    <View style={styles.topTemplateChip}>
+                      <Icon
+                        name="trending-up"
+                        size={14}
+                        color="#4F46E5"
+                      />
+                      <Text style={styles.topTemplateRevenueValue}>
+                        {formatCurrencyVN(item.revenue || 0)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <Text style={styles.activityTime}>
+                No top templates data yet
+              </Text>
+            )}
           </View>
         </View>
         <View style={{ height: 40 }} />
@@ -831,5 +852,61 @@ const styles = {
     fontSize: 13,
     color: "#94A3B8",
     fontWeight: "500",
+  },
+  topTemplateList: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  topTemplateCard: {
+    flexDirection: "column",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  topTemplateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  topTemplateThumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#DBEAFE",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  topTemplateName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  topTemplateMeta: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  topTemplateChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "#EEF2FF",
+    gap: 4,
+    alignSelf: "flex-start",
+  },
+  topTemplateRevenueValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#047857",
   },
 };
