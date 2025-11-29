@@ -37,7 +37,6 @@ export default function MyCoursesScreen() {
     try {
       setLoading(true);
       const data = await courseService.getAllCourseEnrollments2();
-      console.log(data.result);
       setEnrollments(data.result || []);
     } catch (error) {
       console.error("Error fetching courses:", error.message);

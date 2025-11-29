@@ -1291,7 +1291,7 @@ export default function NoteSetupScreen({ navigation, route }) {
 
       // console.log("📝 Creating project with data:", projectData);
       const createdProject = await projectService.createProject(projectData);
-      //console.log("✅ Project created:", createdProject);
+      //("✅ Project created:", createdProject);
 
       // Get the project ID (backend trả về projectId)
       const projectId =
@@ -1331,10 +1331,10 @@ export default function NoteSetupScreen({ navigation, route }) {
         paperSize,
         cover: hasCover
           ? {
-              template: selectedCover,
-              color: coverColor,
-              imageUrl: finalImageUrl,
-            }
+            template: selectedCover,
+            color: coverColor,
+            imageUrl: finalImageUrl,
+          }
           : null,
         paper: { template: selectedPaper, imageUrl: finalPaperImageUrl },
         pages: initialPages, // Chưa có page nào cho tới khi Save
@@ -1355,7 +1355,7 @@ export default function NoteSetupScreen({ navigation, route }) {
       Alert.alert(
         "Error",
         "Failed to create project. Please try again.\n" +
-          (error.message || "Unknown error")
+        (error.message || "Unknown error")
       );
     }
   };
@@ -1554,7 +1554,7 @@ export default function NoteSetupScreen({ navigation, route }) {
                       style={[
                         styles.orientationTabText,
                         orientation === item.id &&
-                          styles.orientationTabTextActive,
+                        styles.orientationTabTextActive,
                       ]}
                     >
                       {item.label}
@@ -1646,7 +1646,7 @@ export default function NoteSetupScreen({ navigation, route }) {
                           ? styles.coverCardPortrait
                           : styles.coverCardLandscape,
                         selectedCover === template.id &&
-                          styles.coverTemplateCardActive,
+                        styles.coverTemplateCardActive,
                       ]}
                       onPress={() => {
                         setSelectedCover(template.id);
@@ -1745,7 +1745,7 @@ export default function NoteSetupScreen({ navigation, route }) {
                           ? styles.paperCardPortrait
                           : styles.paperCardLandscape,
                         selectedPaper === template.id &&
-                          styles.templateCardActive,
+                        styles.templateCardActive,
                       ]}
                       onPress={() => {
                         setSelectedPaper(template.id);

@@ -65,16 +65,19 @@ export const resourceStoreStyles = StyleSheet.create({
     fontWeight: "500",
   },
   cartButton: {
-    position: "relative",
-    padding: 10,
-    backgroundColor: "#4ADE80",
-    borderRadius: 12,
-    shadowColor: "#2563EB",
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 4,
   },
+
   cartBadge: {
     position: "absolute",
     top: -4,
@@ -186,7 +189,7 @@ export const resourceStoreStyles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 3,
-    height: 380, // Fixed height for all cards
+    height: 420, // Fixed height for all cards
   },
   imageContainer: {
     position: "relative",

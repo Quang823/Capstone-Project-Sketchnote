@@ -68,8 +68,6 @@ export default function CourseDetailScreen() {
 
     fetchCourseDetail(courseId);
     fetchFeedback(courseId);
-    console.log("Feedback state:", feedbackData);
-    console.log("Feedback list:", feedbackData?.feedbacks);
 
   }, [courseId]);
 
@@ -102,9 +100,7 @@ export default function CourseDetailScreen() {
   const handleBuyCourse = async () => {
     setShowPurchaseModal(false);
     try {
-      console.log("Buying course:", course.price);
       const res = await courseService.buyCourse(course.price);
-      console.log("Buy course response:", res);
 
       if (res.code === 402) {
         setShowConfirmModal(true);
@@ -121,9 +117,7 @@ export default function CourseDetailScreen() {
       }
 
       if (res.result?.status === "SUCCESS") {
-        console.log("Enrolling course:", course.id);
         const enrollRes = await courseService.enrollCourse(course.id);
-        console.log("Enroll response:", enrollRes);
 
         Toast.show({
           type: "success",
@@ -141,7 +135,6 @@ export default function CourseDetailScreen() {
         });
       }
     } catch (error) {
-      console.error("Buy course error:", error);
       Toast.show({
         type: "error",
         text1: "Buy Failed",
@@ -177,7 +170,6 @@ export default function CourseDetailScreen() {
   const fetchFeedback = async (courseId) => {
     try {
       const data = await feedbackService.getAllFeedbackCourse(courseId);
-      console.log(data);
 
       setFeedbackData(data);
 

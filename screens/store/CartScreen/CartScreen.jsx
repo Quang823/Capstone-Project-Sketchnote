@@ -18,6 +18,7 @@ import { cartStyles } from "./CartScreen.styles";
 import Toast from "react-native-toast-message";
 import { orderService } from "../../../service/orderService";
 import LottieView from "lottie-react-native";
+import SidebarToggleButton from '../../../components/navigation/SidebarToggleButton';
 
 export default function CartScreen() {
   const navigation = useNavigation();
@@ -245,12 +246,7 @@ export default function CartScreen() {
     return (
       <SafeAreaView style={cartStyles.container}>
         <View style={cartStyles.header}>
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={cartStyles.backBtn}
-          >
-            <Icon name="arrow-back" size={24} color="#084F8C" />
-          </Pressable>
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
           <Text style={cartStyles.headerTitle}>Your Cart</Text>
           <View style={{ width: 40 }} />
         </View>
@@ -285,17 +281,12 @@ export default function CartScreen() {
       <View style={cartStyles.header}>
         {/* Left side: Back icon + Cart */}
         <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={cartStyles.backBtn}
-          >
-            <Icon name="arrow-back" size={24} color="#1F2937" />
-          </Pressable>
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
           <Text
             style={[cartStyles.headerTitle, { textAlign: "center", flex: 1 }]}
           >
             Cart ({cart.length})
-          </Text> 
+          </Text>
         </View>
 
         {/* Right side: Continue Shopping */}

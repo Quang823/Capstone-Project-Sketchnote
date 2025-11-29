@@ -72,7 +72,6 @@ export default function WalletScreen() {
   const fetchWallet = async () => {
     try {
       const data = await paymentService.getWallet();
-      console.log(data);
       setWalletData(data.result);
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
@@ -112,18 +111,17 @@ export default function WalletScreen() {
           transaction.status === "SUCCESS"
             ? "#10B981"
             : transaction.status === "PENDING"
-            ? "#F59E0B"
-            : "#EF4444",
+              ? "#F59E0B"
+              : "#EF4444",
         sign: "+",
         label:
           transaction.status === "SUCCESS"
             ? "Deposit Success"
             : transaction.status === "PENDING"
-            ? "Pending Deposit"
-            : "Deposit Failed",
-        description: `Deposit to wallet${
-          transaction.orderCode ? ` • #${transaction.orderCode}` : ""
-        }`,
+              ? "Pending Deposit"
+              : "Deposit Failed",
+        description: `Deposit to wallet${transaction.orderCode ? ` • #${transaction.orderCode}` : ""
+          }`,
       },
       COURSE_FEE: {
         icon: "school",
@@ -155,13 +153,10 @@ export default function WalletScreen() {
     <View style={walletStyles.container}>
       {/* Header */}
       <View style={walletStyles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={walletStyles.backButton}
-        >
-          <Icon name="arrow-back" size={24} color="#084F8C" />
-        </Pressable>
-        <Text style={walletStyles.headerTitle}>Customer Wallet</Text>
+        <View style={walletStyles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <Text style={walletStyles.headerTitle}>Customer Wallet</Text>
+        </View>
         <View style={{ width: 40 }} />
       </View>
 
@@ -318,8 +313,8 @@ export default function WalletScreen() {
                                 transaction.status === "SUCCESS"
                                   ? "#10B98115"
                                   : transaction.status === "PENDING"
-                                  ? "#F59E0B15"
-                                  : "#EF444415",
+                                    ? "#F59E0B15"
+                                    : "#EF444415",
                             },
                           ]}
                         >
@@ -331,8 +326,8 @@ export default function WalletScreen() {
                                   transaction.status === "SUCCESS"
                                     ? "#10B981"
                                     : transaction.status === "PENDING"
-                                    ? "#F59E0B"
-                                    : "#EF4444",
+                                      ? "#F59E0B"
+                                      : "#EF4444",
                               },
                             ]}
                           >
@@ -402,7 +397,7 @@ export default function WalletScreen() {
                       style={[
                         walletStyles.quickAmountButton,
                         depositAmount === amt.toString() &&
-                          walletStyles.quickAmountButtonActive,
+                        walletStyles.quickAmountButtonActive,
                       ]}
                       onPress={() => setDepositAmount(amt.toString())}
                     >
@@ -410,7 +405,7 @@ export default function WalletScreen() {
                         style={[
                           walletStyles.quickAmountText,
                           depositAmount === amt.toString() &&
-                            walletStyles.quickAmountTextActive,
+                          walletStyles.quickAmountTextActive,
                         ]}
                       >
                         {formatCurrency(amt)}

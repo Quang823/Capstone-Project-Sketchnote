@@ -17,7 +17,6 @@ export const AuthProvider = ({ children }) => {
         return;
       }
       const u = await authService.getMyProfile(token);
-      console.log("User profile:", u);
       setUser(u);
     } catch (err) {
       setUser(null);

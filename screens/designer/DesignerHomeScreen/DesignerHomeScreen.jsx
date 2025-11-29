@@ -60,11 +60,8 @@ export default function DesignerHomeScreen() {
   const fetchTopTemplates = async () => {
     try {
       const res = await dashboardService.getTopTemplates();
-      console.log(res);
       setTopTemplates(res);
-    } catch (error) {
-      console.log("Error fetching top templates:", error);
-    }
+    } catch (error) { }
   };
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -84,11 +81,8 @@ export default function DesignerHomeScreen() {
   const fetchSashboardSummary = async () => {
     try {
       const res = await dashboardService.getDashboardSummaryDesigner();
-      console.log(res);
       setDashboardSummary(res);
-    } catch (error) {
-      console.log(error);
-    }
+    } catch (error) { }
   };
 
   const loadNotiCount = async () => {
@@ -96,9 +90,7 @@ export default function DesignerHomeScreen() {
       const data = await notiService.getCountNotiUnRead();
       const count = Number(data?.unread ?? 0);
       setNotiCount(count);
-    } catch (error) {
-      console.log("designer loadNotiCount error", error.message);
-    }
+    } catch (error) { }
   };
 
   const toggleNotiDropdown = async () => {
@@ -112,7 +104,7 @@ export default function DesignerHomeScreen() {
       const list = Array.isArray(data) ? data : data?.content || [];
       setNotifications(Array.isArray(list) ? list : []);
     } catch (error) {
-      console.log("designer getAllNoti error", error.message);
+
     } finally {
       setLoadingNoti(false);
     }
@@ -124,7 +116,6 @@ export default function DesignerHomeScreen() {
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setNotiCount(0);
     } catch (error) {
-      console.log("designer readAllNoti error", error.message);
     }
   };
 
@@ -137,7 +128,6 @@ export default function DesignerHomeScreen() {
       );
       setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
     } catch (error) {
-      console.log("designer readNotiByNotiId error", error.message);
     }
   };
 

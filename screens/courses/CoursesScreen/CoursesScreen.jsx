@@ -203,7 +203,7 @@ export default function CoursesScreen() {
       {/* Header */}
       <View style={coursesStyles.header}>
         <View style={coursesStyles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
           <Text style={coursesStyles.headerTitle}>Courses</Text>
         </View>
       </View>
@@ -242,7 +242,7 @@ export default function CoursesScreen() {
               style={[
                 coursesStyles.categoryButton,
                 selectedCategory === category.id &&
-                  coursesStyles.selectedCategoryButton,
+                coursesStyles.selectedCategoryButton,
               ]}
               onPress={() => handleCategoryPress(category.id)}
             >
@@ -250,7 +250,7 @@ export default function CoursesScreen() {
                 style={[
                   coursesStyles.categoryText,
                   selectedCategory === category.id &&
-                    coursesStyles.selectedCategoryText,
+                  coursesStyles.selectedCategoryText,
                 ]}
               >
                 {category.name}

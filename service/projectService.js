@@ -5,7 +5,7 @@ import * as FileSystem from "expo-file-system";
 import { parseJsonInBackground } from "../utils/jsonUtils";
 import * as offlineStorage from "../utils/offlineStorage";
 import NetInfo from "@react-native-community/netinfo";
-import SockJS from "sockjs-client";
+// ❌ Removed SockJS - using native WebSocket instead
 
 const getPageLocalKey = (projectId, pageNumber) =>
   `${projectId}_page_${pageNumber}`;
@@ -104,7 +104,7 @@ export const projectService = {
         if (remoteData) {
           try {
             await offlineStorage.saveProjectLocally(localKey, remoteData);
-          } catch {}
+          } catch { }
         }
         return remoteData;
       }
@@ -132,7 +132,7 @@ export const projectService = {
       if (remoteData) {
         try {
           await offlineStorage.saveProjectLocally(localKey, remoteData);
-        } catch {}
+        } catch { }
       }
       return remoteData;
     } catch (error) {
@@ -408,11 +408,6 @@ export const projectService = {
     let heartbeatTimer = null;
     let pendingQueue = [];
     let stompClient = null;
-    // Try SockJS endpoint instead of native WebSocket
-    const WS_GATEWAY_URL = "https://sketchnote.litecsys.com/ws"; // SockJS base URL (no wss://)
-    const WS_DIRECT_URL = "https://sketchnote.litecsys.com/ws";
-    let currentWsUrl = WS_GATEWAY_URL;
-    let triedDirect = false;
 
     const buildFrame = (command, headers = {}, body = "") => {
       const lines = [command];
@@ -458,23 +453,18 @@ export const projectService = {
         activeProjectId = projectId;
         onMessageCb = onMessage;
 
-        console.log("🔵 [Realtime] WS URL:", currentWsUrl);
+        // ✅ Use native WebSocket with wss:// protocol
+        const wsUrl = "wss://sketchnote.litecsys.com/ws";
+        console.log("🔵 [Realtime] WS URL:", wsUrl);
 
         const token = await AsyncStorage.getItem("accessToken");
         console.log("🔵 [Realtime] Token exists:", !!token);
 
-        console.log("🔵 [Realtime] Creating StompClient with SockJS...");
+        console.log("🔵 [Realtime] Creating StompClient with native WebSocket...");
 
         stompClient = new StompClient({
-          // brokerURL is NOT used with webSocketFactory
-
-          webSocketFactory: () => {
-            console.log(
-              "🟢 [Realtime] Creating SockJS connection to:",
-              currentWsUrl
-            );
-            return new SockJS(currentWsUrl);
-          },
+          // ✅ Use brokerURL for native WebSocket (not webSocketFactory)
+          brokerURL: wsUrl,
 
           debug: (str) => {
             console.log("🔍 [STOMP Debug]", str);
@@ -485,8 +475,8 @@ export const projectService = {
           heartbeatOutgoing: 4000,
           connectHeaders: token
             ? {
-                Authorization: `Bearer ${token}`,
-              }
+              Authorization: `Bearer ${token}`,
+            }
             : undefined,
 
           beforeConnect: () => {
@@ -552,10 +542,6 @@ export const projectService = {
             console.log("🔴🔴🔴 [Realtime] WebSocket CLOSED 🔴🔴🔴", e);
             isConnected = false;
             activeProjectId = null;
-
-            // Simple reconnect logic if needed, but StompJS handles reconnects automatically
-            // if reconnectDelay is set.
-            // We only need manual fallback if we want to switch URLs.
           },
         });
 
@@ -576,7 +562,7 @@ export const projectService = {
         if (stompClient) {
           try {
             stompClient.deactivate();
-          } catch {}
+          } catch { }
         }
       } finally {
         if (heartbeatTimer) {
@@ -585,7 +571,7 @@ export const projectService = {
         }
         try {
           socket?.close?.();
-        } catch {}
+        } catch { }
         socket = null;
         isConnected = false;
         activeProjectId = null;
@@ -612,7 +598,7 @@ export const projectService = {
           console.log("[Realtime] OUTBOUND SEND", { projectId, userId });
           try {
             console.log("[Realtime] OUTBOUND BODY", String(body).slice(0, 500));
-          } catch {}
+          } catch { }
           stompClient.publish({
             destination,
             body,
@@ -622,7 +608,7 @@ export const projectService = {
           console.log("[Realtime] QUEUE SEND", { projectId, userId });
           pendingQueue.push(frame);
         }
-      } catch {}
+      } catch { }
     };
 
     const sendDraw = (projectId, userId, tool, points = []) => {
@@ -641,12 +627,12 @@ export const projectService = {
     ) => {
       const normalizedPoints = Array.isArray(stroke.points)
         ? stroke.points.map((p) => ({
-            x: Number(p?.x) || 0,
-            y: Number(p?.y) || 0,
-            pressure: p?.pressure,
-            thickness: p?.thickness,
-            stabilization: p?.stabilization,
-          }))
+          x: Number(p?.x) || 0,
+          y: Number(p?.y) || 0,
+          pressure: p?.pressure,
+          thickness: p?.thickness,
+          stabilization: p?.stabilization,
+        }))
         : [];
       const fullStroke = {
         id: stroke.id,
@@ -687,8 +673,8 @@ export const projectService = {
           typeof pagePayload === "string"
             ? pagePayload
             : pagePayload && typeof pagePayload === "object"
-            ? JSON.stringify(pagePayload)
-            : undefined,
+              ? JSON.stringify(pagePayload)
+              : undefined,
       };
       sendAction(projectId, userId, "DRAW", payload);
     };

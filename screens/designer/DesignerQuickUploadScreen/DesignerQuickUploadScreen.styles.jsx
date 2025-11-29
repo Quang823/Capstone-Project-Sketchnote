@@ -273,6 +273,14 @@ export const styles = StyleSheet.create({
   sourceContent: {
     marginTop: 0,
   },
+  projectListScroll: {
+    maxHeight: 120,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 6,
+    backgroundColor: "#FFFFFF",
+  },
   itemHeader: {
     flexDirection: "row",
     alignItems: "center",
