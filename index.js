@@ -1,3 +1,8 @@
+const TextEncodingPolyfill = require('text-encoding');
+Object.assign(global, {
+  TextEncoder: TextEncodingPolyfill.TextEncoder,
+  TextDecoder: TextEncodingPolyfill.TextDecoder,
+});
 import "react-native-gesture-handler";
 import "react-native-reanimated";
 import { registerRootComponent } from "expo";
