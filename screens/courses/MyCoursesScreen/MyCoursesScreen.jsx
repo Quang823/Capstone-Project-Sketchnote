@@ -190,12 +190,12 @@ export default function MyCoursesScreen() {
             </View>
           </View>
 
-         <TouchableOpacity
-  style={myCoursesStyles.feedbackButtonTopRight}
-  onPress={() => openFeedbackModal(course)}
->
-  <Icon name="rate-review" size={18} color="#2563EB" />
-</TouchableOpacity>
+          <TouchableOpacity
+            style={myCoursesStyles.feedbackButtonTopRight}
+            onPress={() => openFeedbackModal(course)}
+          >
+            <Icon name="rate-review" size={18} color="#2563EB" />
+          </TouchableOpacity>
 
         </View>
       </TouchableOpacity>
@@ -218,7 +218,7 @@ export default function MyCoursesScreen() {
   return (
     <View style={myCoursesStyles.container}>
       <LinearGradient
-        colors={["#E0F2FE", "#FEF3C7"]}
+        colors={["#ffffffff", "#ffffffff"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={myCoursesStyles.header}

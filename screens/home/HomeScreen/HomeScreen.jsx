@@ -62,17 +62,22 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
   if (!visible) return null;
 
   const options = [
-    { id: "sketchnote", label: "SketchNote", icon: "description" },
-    { id: "whiteboard", label: "Whiteboard", icon: "photo", badge: "NEW" },
-    { id: "folder", label: "Folder", icon: "folder" },
-    { id: "import", label: "Import", icon: "cloud-download" },
-    { id: "image", label: "Image", icon: "image" },
+    {
+      id: "sketchnote",
+      label: "SketchNote",
+      icon: "description",
+      badge: "Default",
+    },
     { id: "quick_note", label: "Quick note", icon: "flash-on" },
+    { id: "custom_note", label: "Custom note", icon: "image" },
+    { id: "import", label: "Import", icon: "cloud-download" },
   ];
 
   return (
     <Animated.View style={[styles.popoverContainer, animatedStyle]}>
       <View style={styles.popover}>
+        <View style={styles.popoverArrowBorder} />
+        <View style={styles.popoverArrow} />
         {options.map((opt, idx) => (
           <TouchableOpacity
             key={opt.id}
@@ -105,7 +110,7 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
         ))}
         <View style={styles.popoverTip}>
           <Text style={styles.popoverTipText}>
-            Double tap "+ New" để tạo Quick note
+            Double tap "+ New" to create Quick note
           </Text>
         </View>
       </View>
@@ -269,11 +274,7 @@ export default function HomeScreen({ navigation }) {
     try {
       await notiService.readNotiByNotiId(item.id);
       setNotifications((prev) =>
-        prev.map((n) =>
-          n.id === item.id
-            ? { ...n, read: true }
-            : n
-        )
+        prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
       );
       setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
     } catch (error) {
@@ -292,20 +293,7 @@ export default function HomeScreen({ navigation }) {
       const now = Date.now();
       if (now - lastTap < 300) {
         setPopoverVisible(false);
-        navigation.navigate("DrawingScreen", {
-          noteConfig: {
-            projectId: Date.now(),
-            title: "Quick Note",
-            description: "",
-            hasCover: false,
-            orientation: "portrait",
-            paperSize: "A4",
-            cover: null,
-            paper: { template: "blank", color: "#FFFFFF" },
-            pages: [],
-            projectDetails: null,
-          },
-        });
+        setQuickNoteModalVisible(true);
       }
       lastTap = now;
     };
@@ -373,6 +361,91 @@ export default function HomeScreen({ navigation }) {
     setDeleteModalVisible(true);
     closeMenu();
   };
+
+  const [quickNoteModalVisible, setQuickNoteModalVisible] = useState(false);
+
+  const createQuickNote = useCallback(
+    async (orientation) => {
+      const portraitUrl =
+        "https://res.cloudinary.com/dk3yac2ie/image/upload/v1764387248/ip922pwckxhifmww7iiv.jpg";
+      const landscapeUrl =
+        "https://res.cloudinary.com/dk3yac2ie/image/upload/v1764387248/bqffv8bevx0qlnrfgtpt.jpg";
+
+      const isPortrait = orientation === "portrait";
+      const bgUrl = isPortrait ? portraitUrl : landscapeUrl;
+      setQuickNoteModalVisible(false);
+
+      try {
+        const projectData = {
+          name: "Quick Note",
+          description: "",
+          imageUrl: bgUrl,
+          orientation: isPortrait ? "portrait" : "landscape",
+        };
+        const created = await projectService.createProject(projectData);
+        const projectId = created?.projectId || created?.id || created?._id;
+        if (!projectId) throw new Error("Cannot get projectId after creation");
+
+        const pageNumber = 2; // first paper page if 1 is cover
+        const dataObject = {
+          type: "paper",
+          backgroundColor: "#FFFFFF",
+          template: "blank",
+          imageUrl: bgUrl,
+          layers: [
+            { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+          ],
+          strokes: [],
+          pageWidth: null,
+          pageHeight: null,
+        };
+
+        const uploaded = await projectService.uploadPageToS3(
+          projectId,
+          pageNumber,
+          dataObject
+        );
+        const strokeUrl = uploaded?.url;
+        const payload = { projectId, pages: [{ pageNumber, strokeUrl }] };
+        await projectService.createPage(payload);
+
+        await offlineStorage.saveProjectLocally(`${projectId}_meta`, {
+          orientation: isPortrait ? "portrait" : "landscape",
+          paperSize: "A4",
+        });
+
+        const noteConfig = {
+          projectId,
+          title: "Quick Note",
+          description: "",
+          hasCover: false,
+          orientation: isPortrait ? "portrait" : "landscape",
+          paperSize: "A4",
+          cover: null,
+          paper: { template: "blank", imageUrl: bgUrl },
+          pages: [
+            {
+              pageId: 10001,
+              pageNumber,
+              imageUrl: bgUrl,
+              strokeUrl,
+              snapshotUrl: null,
+            },
+          ],
+          projectDetails: created,
+        };
+
+        navigation.navigate("DrawingScreen", { noteConfig });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to create Quick Note",
+          variant: "destructive",
+        });
+      }
+    },
+    [navigation]
+  );
 
   const saveEdit = async () => {
     if (!editName.trim()) {
@@ -501,10 +574,73 @@ export default function HomeScreen({ navigation }) {
                 source={require("../../../assets/cat.json")}
                 autoPlay
                 loop
-                style={{ width: 80, height: 70 }}
+                style={{ width: 80, height: 70, marginLeft: -30 }}
               />
             </View>
             <View style={styles.headerRight}>
+              <View style={{ position: "relative" }}>
+                {user?.hasActiveSubscription && (
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[styles.subscriptionBorder]}
+                  >
+                    <LinearGradient
+                      colors={["#F59E0B", "#EF4444", "#8B5CF6", "#3B82F6"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.subscriptionBorderGradient}
+                    />
+                  </Animated.View>
+                )}
+                <TouchableOpacity
+                  style={styles.premiumWrapper}
+                  onPress={() => navigation.navigate("DesignerSubscription")}
+                >
+                  <View style={styles.premiumContent}>
+                    <View style={styles.premiumTextBox}>
+                      {user?.hasActiveSubscription ? (
+                        <>
+                          <TypeFloatText
+                            text={user?.subscriptionType || "Subscribed"}
+                            style={styles.premiumTitle}
+                            speed={40}
+                          />
+                          <TypeFloatText
+                            text={
+                              user?.subscriptionEndDate
+                                ? `Active until ${formatDate(
+                                    user.subscriptionEndDate
+                                  )}`
+                                : "Active"
+                            }
+                            style={styles.premiumSubtitle}
+                            speed={35}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <TypeFloatText
+                            text="Become a Designer"
+                            style={styles.premiumTitle}
+                            speed={40}
+                          />
+                          <TypeFloatText
+                            text="Click here to upgrade"
+                            style={styles.premiumSubtitle}
+                            speed={35}
+                          />
+                        </>
+                      )}
+                    </View>
+                    <LottieView
+                      source={require("../../../assets/premium.json")}
+                      autoPlay
+                      loop
+                      style={styles.premiumLottie}
+                    />
+                  </View>
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
                 style={styles.iconButton}
                 onPress={toggleNotiDropdown}
@@ -540,69 +676,6 @@ export default function HomeScreen({ navigation }) {
                   )}
                 </View>
               </TouchableOpacity>
-              <View style={{ position: "relative" }}>
-                {user?.hasActiveSubscription && (
-                  <Animated.View
-                    pointerEvents="none"
-                    style={[styles.subscriptionBorder]}
-                  >
-                    <LinearGradient
-                      colors={["#F59E0B", "#EF4444", "#8B5CF6", "#3B82F6"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.subscriptionBorderGradient}
-                    />
-                  </Animated.View>
-                )}
-                <TouchableOpacity
-                  style={styles.premiumWrapper}
-                  onPress={() => navigation.navigate("DesignerSubscription")}
-                >
-                  <View style={styles.premiumContent}>
-                    <View style={styles.premiumTextBox}>
-                      {user?.hasActiveSubscription ? (
-                        <>
-                          <TypeFloatText
-                            text={user?.subscriptionType || "Subscribed"}
-                            style={styles.premiumTitle}
-                            speed={40}
-                          />
-                          <TypeFloatText
-                            text={
-                              user?.subscriptionEndDate
-                                ? `Active until ${formatDate(
-                                  user.subscriptionEndDate
-                                )}`
-                                : "Active"
-                            }
-                            style={styles.premiumSubtitle}
-                            speed={35}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <TypeFloatText
-                            text="Become a Designer"
-                            style={styles.premiumTitle}
-                            speed={40}
-                          />
-                          <TypeFloatText
-                            text="Click here to upgrade"
-                            style={styles.premiumSubtitle}
-                            speed={35}
-                          />
-                        </>
-                      )}
-                    </View>
-                    <LottieView
-                      source={require("../../../assets/premium.json")}
-                      autoPlay
-                      loop
-                      style={styles.premiumLottie}
-                    />
-                  </View>
-                </TouchableOpacity>
-              </View>
               <TouchableOpacity
                 style={styles.iconButton}
                 onPress={() => navigation.navigate("Wallet")}
@@ -642,7 +715,7 @@ export default function HomeScreen({ navigation }) {
                 navigation.navigate("NoteSetupScreen", {
                   mode: "whiteboard",
                 });
-              if (type === "quick_note") handleDoubleTap();
+              if (type === "quick_note") setQuickNoteModalVisible(true);
             }}
           />
 
@@ -724,6 +797,7 @@ export default function HomeScreen({ navigation }) {
                     columnWrapperStyle={{
                       gap: CARD_GAP,
                       paddingHorizontal: 16,
+                      marginBottom: 16,
                     }}
                     contentContainerStyle={{
                       paddingBottom: sharedProjects.length > 0 ? 24 : 140,
@@ -783,12 +857,94 @@ export default function HomeScreen({ navigation }) {
           )}
         </Animated.View>
       </View>
+      <Modal
+        visible={quickNoteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQuickNoteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "700",
+                color: "#111827",
+                marginBottom: 12,
+              }}
+            >
+              Create Quick Note
+            </Text>
+            <Text style={{ fontSize: 14, color: "#374151", marginBottom: 16 }}>
+              Chọn orientation cho trang đầu tiên
+            </Text>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: "#DBEAFE",
+                  backgroundColor: "#EFF6FF",
+                }}
+                onPress={() => createQuickNote("portrait")}
+              >
+                <Icon name="smartphone" size={22} color="#1E40AF" />
+                <Text
+                  style={{ marginTop: 6, color: "#1E293B", fontWeight: "600" }}
+                >
+                  Portrait
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: "#DBEAFE",
+                  backgroundColor: "#EFF6FF",
+                }}
+                onPress={() => createQuickNote("landscape")}
+              >
+                <Icon name="stay-current-landscape" size={22} color="#1E40AF" />
+                <Text
+                  style={{ marginTop: 6, color: "#1E293B", fontWeight: "600" }}
+                >
+                  Landscape
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  backgroundColor: "#E5E7EB",
+                }}
+                onPress={() => setQuickNoteModalVisible(false)}
+              >
+                <Text
+                  style={{ color: "#111827", fontSize: 14, fontWeight: "600" }}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {notiOpen && (
         <View
           style={{
             position: "absolute",
-            top: 145,
-            right: 30,
+            top: 125,
+            right: 250,
             width: 320,
             maxHeight: 360,
             backgroundColor: "#FFFFFF",
@@ -803,6 +959,8 @@ export default function HomeScreen({ navigation }) {
             zIndex: 50,
           }}
         >
+          <View style={styles.notiArrowBorder} />
+          <View style={styles.notiArrow} />
           <View
             style={{
               flexDirection: "row",
