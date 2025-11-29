@@ -1,4 +1,5 @@
 import * as FileSystem from "expo-file-system";
+import { Platform } from "react-native";
 import { Skia, ImageFormat } from "@shopify/react-native-skia";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -146,7 +147,8 @@ export async function exportPagesToPdf(
   pageRefs = {},
   fileName = "Untitled",
   selectedPageNumbers = [],
-  quality = 90
+  quality = 90,
+  pageOrientation = "portrait"
 ) {
   try {
     if (!Array.isArray(pagesData) || pagesData.length === 0) {
@@ -183,20 +185,23 @@ export async function exportPagesToPdf(
       throw new Error("Failed to capture any page images.");
     }
 
+    const isLandscape = String(pageOrientation).toLowerCase() === "landscape";
+    const widthPts = isLandscape ? 842 : 595;
+    const heightPts = isLandscape ? 595 : 842;
+
     const htmlContent = imagesBase64
       .map((b64, idx) => {
         const isLast = idx === imagesBase64.length - 1;
-        const pageStyle = `width:595pt;height:842pt;${
-          !isLast ? "page-break-after: always;" : ""
-        }`;
+        const pageStyle = `width:${widthPts}pt;height:${heightPts}pt;${!isLast ? "page-break-after: always;" : ""
+          }`;
         const imgStyle =
-          "max-width:100%;max-height:100%;display:block;object-fit:contain;";
+          "width:100%;height:100%;display:block;object-fit:contain;";
         return `<div style="${pageStyle}"><img src="data:image/jpeg;base64,${b64}" style="${imgStyle}" /></div>`;
       })
       .join("");
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8" /><style>
-      @page { margin: 0; size: A4; }
+      @page { margin: 0; size: A4 ${isLandscape ? "landscape" : "portrait"}; }
       body { margin: 0; padding: 0; }
     </style></head><body>${htmlContent}</body></html>`;
 
@@ -209,12 +214,16 @@ export async function exportPagesToPdf(
     if (!safeName.toLowerCase().endsWith(".pdf")) safeName += ".pdf";
     const dest =
       (FileSystem.documentDirectory || FileSystem.cacheDirectory) + safeName;
+    let finalDest = dest;
     try {
       await FileSystem.copyAsync({ from: uri, to: dest });
-      return dest;
+      finalDest = dest;
     } catch (e) {
-      return uri;
+      finalDest = uri;
     }
+
+    // SAF logic removed - handled in DrawingScreen
+    return finalDest;
   } catch (error) {
     console.error("exportPagesToPdf failed:", error);
     throw error;
