@@ -100,16 +100,14 @@ export default function OrderHistoryScreen() {
 
     try {
       setSubmittingFeedback(true);
-      
-   
+
+
       const payload = {
         resourceId: selectedItem.resourceTemplateId, // hoặc selectedItem.resourceId nếu có
         rating: rating,
         comment: comment.trim(),
         validTarget: true,
       };
-
-      console.log('Feedback payload:', payload); // Debug log
 
       await feedbackService.postFeedbackResource(payload);
 
@@ -323,11 +321,11 @@ export default function OrderHistoryScreen() {
             {/* Items */}
             <View style={styles.itemsContainer}>
               {order?.items?.map((item) => {
-              
-                
+
+
                 // Check điều kiện hiển thị feedback button
-                const canShowFeedback = 
-                  (order.orderStatus === "COMPLETED" || order.orderStatus === "SUCCESS") && 
+                const canShowFeedback =
+                  (order.orderStatus === "COMPLETED" || order.orderStatus === "SUCCESS") &&
                   order.paymentStatus === "PAID" &&
                   item.resourceTemplateId;
 
@@ -343,7 +341,7 @@ export default function OrderHistoryScreen() {
                           {item.templateType}
                         </Text>
                       </View>
-                      
+
                       {/* Feedback Button */}
                       {canShowFeedback && (
                         <Pressable
@@ -595,7 +593,7 @@ export default function OrderHistoryScreen() {
                 style={[
                   feedbackStyles.submitButton,
                   (submittingFeedback || rating === 0 || !comment.trim()) &&
-                    feedbackStyles.submitButtonDisabled,
+                  feedbackStyles.submitButtonDisabled,
                 ]}
                 onPress={createFeedback}
                 disabled={submittingFeedback || rating === 0 || !comment.trim()}

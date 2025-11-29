@@ -1086,10 +1086,14 @@ export default function DrawingScreen({ route }) {
             const snap = uploadedSnapshots.find(
               (s) => s.pageNumber === result.pageNumber
             );
+            // Find original page data to get existing snapshotUrl if new one is not generated
+            const originalPage = pagesData.find(
+              (p) => p.pageNumber === result.pageNumber
+            );
             return {
               pageNumber: result.pageNumber,
               strokeUrl: result.url,
-              snapshotUrl: snap?.url || "",
+              snapshotUrl: snap?.url || originalPage?.snapshotUrl || "",
             };
           }),
         };
@@ -1342,7 +1346,8 @@ export default function DrawingScreen({ route }) {
         // ✅ Android: Use MediaLibrary to save to Pictures/SketchNote
         if (Platform.OS === "android") {
           try {
-            const { status } = await MediaLibrary.requestPermissionsAsync();
+            const { status } = await MediaLibrary.requestPermissionsAsync({ accessPrivileges: "readOnly" });
+
             if (status !== 'granted') {
               toast({
                 title: "Permission Required",
@@ -1385,6 +1390,162 @@ export default function DrawingScreen({ route }) {
         toast({
           title: "Export Image Failed",
           description: "An error occurred while exporting the image.",
+          variant: "destructive",
+        });
+      }
+    }
+
+    // --- PICTURES (ALL PAGES) EXPORT ---
+    else if (options.selected === "pictures_all") {
+      try {
+        const snapshots = multiPageCanvasRef.current?.getAllPagesSnapshots?.() || [];
+
+        if (snapshots.length === 0) {
+          toast({
+            title: "No Data",
+            description: "No pages available to export.",
+            variant: "info",
+          });
+          return;
+        }
+
+        // Build selected page numbers from options
+        let selectedPageNumbers = [];
+        if (options.pageMode === "range" && typeof options.pageRange === "string") {
+          const m = options.pageRange.match(/\s*(\d+)\s*-\s*(\d+)\s*/);
+          if (m) {
+            const start = Math.max(1, parseInt(m[1], 10));
+            const end = Math.max(start, parseInt(m[2], 10));
+            for (let i = start; i <= end; i++) selectedPageNumbers.push(i);
+          }
+        } else if (options.pageMode === "list" && typeof options.pageList === "string") {
+          selectedPageNumbers = options.pageList
+            .split(/[,\s]+/)
+            .map((x) => parseInt(x, 10))
+            .filter((n) => Number.isFinite(n) && n >= 1);
+        }
+
+        // Filter snapshots by selection
+        const selectedSnapshots =
+          selectedPageNumbers.length > 0
+            ? snapshots.filter(s => selectedPageNumbers.includes(s.pageNumber))
+            : snapshots; // All pages if no selection
+
+        if (selectedSnapshots.length === 0) {
+          toast({
+            title: "No Pages Selected",
+            description: "Please select valid pages to export.",
+            variant: "info",
+          });
+          return;
+        }
+
+        // Android: Save all images to Pictures/SketchNote
+        if (Platform.OS === "android") {
+          try {
+            const { status } = await MediaLibrary.requestPermissionsAsync({ accessPrivileges: "readOnly" });
+
+            if (status !== 'granted') {
+              toast({
+                title: "Permission Required",
+                description: "Need permission to save to Pictures folder.",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            // Save each snapshot
+            for (const snap of selectedSnapshots) {
+              const tempUri =
+                (FileSystem.cacheDirectory || FileSystem.documentDirectory) +
+                `page_${snap.pageNumber}.png`;
+
+              await FileSystem.writeAsStringAsync(tempUri, snap.base64, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+
+              const asset = await MediaLibrary.createAssetAsync(tempUri);
+              let album = await MediaLibrary.getAlbumAsync('SketchNote');
+              if (!album) {
+                album = await MediaLibrary.createAlbumAsync('SketchNote', asset, false);
+              } else {
+                await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+              }
+            }
+
+            toast({
+              title: "Exported Successfully",
+              description: `Saved ${selectedSnapshots.length} image(s) to Pictures/SketchNote`,
+              variant: "default",
+            });
+            return;
+          } catch (error) {
+            console.error("MediaLibrary error:", error);
+            // Fallback to SAF for all images
+          }
+        }
+
+        // Fallback: Use Storage Access Framework to save all images
+        if (Platform.OS === "android" && FileSystem.StorageAccessFramework) {
+          try {
+            const permissions =
+              await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+            if (permissions.granted) {
+              let savedCount = 0;
+
+              for (const snap of selectedSnapshots) {
+                try {
+                  const safUri =
+                    await FileSystem.StorageAccessFramework.createFileAsync(
+                      permissions.directoryUri,
+                      `page_${snap.pageNumber}.png`,
+                      "image/png"
+                    );
+
+                  await FileSystem.writeAsStringAsync(safUri, snap.base64, {
+                    encoding: FileSystem.EncodingType.Base64,
+                  });
+
+                  savedCount++;
+                } catch (err) {
+                  console.error(`Error saving page ${snap.pageNumber}:`, err);
+                }
+              }
+
+              toast({
+                title: "Exported Successfully",
+                description: `Saved ${savedCount} image(s) to selected folder`,
+                variant: "default",
+              });
+              return;
+            }
+          } catch (error) {
+            console.error("SAF error:", error);
+          }
+        }
+
+        // Last resort: Share first image only (iOS or if all else fails)
+        const firstSnap = selectedSnapshots[0];
+        const tempUri =
+          (FileSystem.cacheDirectory || FileSystem.documentDirectory) +
+          `page_${firstSnap.pageNumber}.png`;
+
+        await FileSystem.writeAsStringAsync(tempUri, firstSnap.base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(tempUri, {
+            mimeType: "image/png",
+            dialogTitle: `Sharing 1 of ${selectedSnapshots.length} image(s)`,
+          });
+        }
+      } catch (error) {
+        console.error("Error exporting all images:", error);
+        toast({
+          title: "Export Failed",
+          description: "An error occurred while exporting images.",
           variant: "destructive",
         });
       }
@@ -1438,7 +1599,7 @@ export default function DrawingScreen({ route }) {
               toast({
                 title: "Exported Successfully",
                 description: "Saved SketchNote to selected folder",
-                variant: "default",
+                variant: "success",
               });
               return;
             }
@@ -1448,7 +1609,7 @@ export default function DrawingScreen({ route }) {
         toast({
           title: "Exported",
           description: "SketchNote file ready",
-          variant: "default",
+          variant: "success",
         });
       } catch (error) {
         console.error("Error exporting SketchNote:", error);
@@ -1457,6 +1618,172 @@ export default function DrawingScreen({ route }) {
           description: "An error occurred while exporting the file.",
           variant: "destructive",
         });
+      }
+    }
+
+    // --- SKETCHNOTE (S3) EXPORT ---
+    else if (options.selected === "sketchnote_s3") {
+      try {
+        setIsSaving(true);
+
+        // Check if online
+        const netState = await NetInfo.fetch();
+        if (!netState.isConnected || !netState.isInternetReachable) {
+          toast({
+            title: "Offline",
+            description: "S3 export requires internet connection.",
+            variant: "destructive",
+          });
+          setIsSaving(false);
+          return;
+        }
+
+        const pagesData = multiPageCanvasRef.current?.getAllPagesData?.();
+        if (!pagesData || pagesData.length === 0) {
+          toast({
+            title: "No Data",
+            description: "No content to export.",
+            variant: "info",
+          });
+          setIsSaving(false);
+          return;
+        }
+
+        // Build selected page numbers from options
+        let selectedPageNumbers = [];
+        if (options.pageMode === "range" && typeof options.pageRange === "string") {
+          const m = options.pageRange.match(/\s*(\d+)\s*-\s*(\d+)\s*/);
+          if (m) {
+            const start = Math.max(1, parseInt(m[1], 10));
+            const end = Math.max(start, parseInt(m[2], 10));
+            for (let i = start; i <= end; i++) selectedPageNumbers.push(i);
+          }
+        } else if (options.pageMode === "list" && typeof options.pageList === "string") {
+          selectedPageNumbers = options.pageList
+            .split(/[,\s]+/)
+            .map((x) => parseInt(x, 10))
+            .filter((n) => Number.isFinite(n) && n >= 1);
+        }
+
+        // Filter pages by selection
+        const selectedPages =
+          selectedPageNumbers.length > 0
+            ? pagesData.filter(p => selectedPageNumbers.includes(p.pageNumber))
+            : pagesData; // All pages if no selection
+
+        if (selectedPages.length === 0) {
+          toast({
+            title: "No Pages Selected",
+            description: "Please select valid pages to export.",
+            variant: "info",
+          });
+          setIsSaving(false);
+          return;
+        }
+
+        // Upload strokes to S3 (same as save)
+        const uploadPromises = selectedPages.map((page) =>
+          projectService.uploadPageToS3(
+            noteConfig.projectId,
+            page.pageNumber,
+            page.dataObject
+          )
+        );
+        const uploadedPagesResults = await Promise.all(uploadPromises);
+
+        // Upload snapshots
+        const allSnapshots = multiPageCanvasRef.current?.getAllPagesSnapshots?.() || [];
+        const selectedSnapshots =
+          selectedPageNumbers.length > 0
+            ? allSnapshots.filter(s => selectedPageNumbers.includes(s.pageNumber))
+            : allSnapshots;
+
+        const snapshotUploads = selectedSnapshots.map(async (snap) => {
+          const tempUri =
+            (FileSystem.cacheDirectory || FileSystem.documentDirectory) +
+            `snapshot_${noteConfig.projectId}_${snap.pageNumber}.png`;
+          await FileSystem.writeAsStringAsync(tempUri, snap.base64, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          try {
+            const res = await uploadToCloudinary(tempUri);
+            return { pageNumber: snap.pageNumber, url: res?.secure_url };
+          } finally {
+            try {
+              await FileSystem.deleteAsync(tempUri, { idempotent: true });
+            } catch { }
+          }
+        });
+        const uploadedSnapshots = await Promise.all(snapshotUploads);
+
+        // Build project data with S3 URLs
+        const projectData = {
+          version: "1.0.0",
+          createdAt: new Date().toISOString(),
+          noteConfig: noteConfig,
+          pages: uploadedPagesResults.map((result) => {
+            const snap = uploadedSnapshots.find(
+              (s) => s.pageNumber === result.pageNumber
+            );
+            return {
+              pageNumber: result.pageNumber,
+              strokeUrl: result.url, // ✅ S3 URL instead of raw strokes
+              snapshotUrl: snap?.url || "",
+            };
+          }),
+        };
+
+        const jsonString = JSON.stringify(projectData, null, 2);
+        let safeName = `${options.fileName || "Untitled"}.sketchnote`;
+        safeName = safeName.replace(/[^a-zA-Z0-9._-]+/g, "_");
+
+        const internalUri =
+          (FileSystem.documentDirectory || FileSystem.cacheDirectory) + safeName;
+        await FileSystem.writeAsStringAsync(internalUri, jsonString, {
+          encoding: "utf8",
+        });
+
+        // Android: SAF
+        if (Platform.OS === "android" && FileSystem.StorageAccessFramework) {
+          try {
+            const permissions =
+              await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+            if (permissions.granted) {
+              const safUri =
+                await FileSystem.StorageAccessFramework.createFileAsync(
+                  permissions.directoryUri,
+                  safeName,
+                  "application/json"
+                );
+              await FileSystem.writeAsStringAsync(safUri, jsonString, {
+                encoding: FileSystem.EncodingType.UTF8,
+              });
+
+              toast({
+                title: "Exported Successfully",
+                description: `Saved SketchNote (S3) to selected folder`,
+                variant: "default",
+              });
+              setIsSaving(false);
+              return;
+            }
+          } catch { }
+        }
+
+        toast({
+          title: "Exported",
+          description: "SketchNote (S3) file ready",
+          variant: "default",
+        });
+        setIsSaving(false);
+      } catch (error) {
+        console.error("Error exporting SketchNote S3:", error);
+        toast({
+          title: "Export Failed",
+          description: "An error occurred while exporting.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
       }
     }
     // --- PDF EXPORT (using expo-print) ---
@@ -1591,6 +1918,95 @@ export default function DrawingScreen({ route }) {
   const handleShareFile = async (options) => {
     setExportModalVisible(false);
 
+    // --- PICTURES (ALL PAGES) SHARE ---
+    if (options.selected === "pictures_all") {
+      try {
+        const snapshots = multiPageCanvasRef.current?.getAllPagesSnapshots?.() || [];
+        if (snapshots.length === 0) {
+          toast({
+            title: "No Data",
+            description: "No pages to share.",
+            variant: "info",
+          });
+          return;
+        }
+
+        // Build selected page numbers
+        let selectedPageNumbers = [];
+        if (options.pageMode === "range" && typeof options.pageRange === "string") {
+          const m = options.pageRange.match(/\s*(\d+)\s*-\s*(\d+)\s*/);
+          if (m) {
+            const start = Math.max(1, parseInt(m[1], 10));
+            const end = Math.max(start, parseInt(m[2], 10));
+            for (let i = start; i <= end; i++) selectedPageNumbers.push(i);
+          }
+        } else if (options.pageMode === "list" && typeof options.pageList === "string") {
+          selectedPageNumbers = options.pageList
+            .split(/[,\s]+/)
+            .map((x) => parseInt(x, 10))
+            .filter((n) => Number.isFinite(n) && n >= 1);
+        }
+
+        const selectedSnapshots =
+          selectedPageNumbers.length > 0
+            ? snapshots.filter(s => selectedPageNumbers.includes(s.pageNumber))
+            : snapshots;
+
+        if (selectedSnapshots.length === 0) {
+          toast({
+            title: "No Pages Selected",
+            description: "Please select valid pages.",
+            variant: "info",
+          });
+          return;
+        }
+
+        // Share first image (Sharing API only supports 1 file)
+        const firstSnap = selectedSnapshots[0];
+        const tempUri =
+          (FileSystem.cacheDirectory || FileSystem.documentDirectory) +
+          `share_page_${firstSnap.pageNumber}.png`;
+
+        await FileSystem.writeAsStringAsync(tempUri, firstSnap.base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(tempUri, {
+            mimeType: "image/png",
+            dialogTitle: selectedSnapshots.length > 1
+              ? `Sharing page ${firstSnap.pageNumber} (${selectedSnapshots.length} total pages)`
+              : "Share Image",
+          });
+        } else {
+          toast({
+            title: "Share Not Available",
+            description: "Sharing is not supported on this device.",
+            variant: "info",
+          });
+        }
+      } catch (error) {
+        console.error("Error sharing images:", error);
+        toast({
+          title: "Share Failed",
+          description: "Unable to share images.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    // --- SKETCHNOTE (S3) SHARE ---
+    if (options.selected === "sketchnote_s3") {
+      toast({
+        title: "Feature Coming Soon",
+        description: "SketchNote (S3) sharing will be available soon. Please use Export instead.",
+        variant: "info",
+      });
+      return;
+    }
+
+    // --- PICTURE (SINGLE PAGE) SHARE ---
     if (options.selected === "picture") {
       if (!multiPageCanvasContainerRef.current) {
         toast({

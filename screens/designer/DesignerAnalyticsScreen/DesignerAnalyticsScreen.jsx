@@ -54,16 +54,11 @@ export default function DesignerAnalyticsScreen() {
       const startStr = startDate.toISOString().slice(0, 10);
       const endStr = endDate.toISOString().slice(0, 10);
 
-      console.log("🔄 Fetching Sales Report...");
-      console.log("📅 Parameters:", { startStr, endStr, groupBy });
-
       const result = await dashboardService.getSalesReport(
         startStr,
         endStr,
         groupBy
       );
-
-      console.log("✅ API Response:", result.data);
 
       setSalesData(result);
     } catch (error) {
@@ -79,7 +74,7 @@ export default function DesignerAnalyticsScreen() {
       const res = await dashboardService.getTopTemplates();
       setTopTemplates(res);
     } catch (error) {
-      console.log("Error fetching top templates:", error);
+
     }
   };
 
@@ -89,7 +84,7 @@ export default function DesignerAnalyticsScreen() {
       const res = await dashboardService.getDashboardSummaryDesigner();
       setSummary(res);
     } catch (error) {
-      console.log("Error fetching summary:", error);
+
     }
   };
 
@@ -216,28 +211,28 @@ export default function DesignerAnalyticsScreen() {
 
     const ranking = rankingPoints.length
       ? {
-          labels: rankingPoints.map((point) => point.shortLabel),
-          datasets: [
-            {
-              data: rankingPoints.map((point) => point.value),
-            },
-          ],
-        }
+        labels: rankingPoints.map((point) => point.shortLabel),
+        datasets: [
+          {
+            data: rankingPoints.map((point) => point.value),
+          },
+        ],
+      }
       : null;
 
     const insights = rankingPoints.length
       ? {
-          bestPeriod: rankingPoints[0]?.longLabel || null,
-          bestValue: rankingPoints[0]?.value || 0,
-          lowestPeriod:
-            rankingPoints.length > 1
-              ? rankingPoints[rankingPoints.length - 1]?.longLabel || null
-              : null,
-          lowestValue:
-            rankingPoints.length > 1
-              ? rankingPoints[rankingPoints.length - 1]?.value || 0
-              : null,
-        }
+        bestPeriod: rankingPoints[0]?.longLabel || null,
+        bestValue: rankingPoints[0]?.value || 0,
+        lowestPeriod:
+          rankingPoints.length > 1
+            ? rankingPoints[rankingPoints.length - 1]?.longLabel || null
+            : null,
+        lowestValue:
+          rankingPoints.length > 1
+            ? rankingPoints[rankingPoints.length - 1]?.value || 0
+            : null,
+      }
       : null;
 
     return { timeline, ranking, insights, rankingDetails: rankingPoints };
@@ -250,11 +245,11 @@ export default function DesignerAnalyticsScreen() {
 
   const hasTimelineData = Boolean(
     timelineChartData?.datasets?.[0]?.data &&
-      timelineChartData.datasets[0].data.some((value) => value > 0)
+    timelineChartData.datasets[0].data.some((value) => value > 0)
   );
   const hasComparisonData = Boolean(
     comparisonChartData?.datasets?.[0]?.data &&
-      comparisonChartData.datasets[0].data.some((value) => value > 0)
+    comparisonChartData.datasets[0].data.some((value) => value > 0)
   );
 
   // Calculate statistics

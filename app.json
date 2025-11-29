@@ -23,12 +23,28 @@
       },
       "edgeToEdgeEnabled": true,
       "usesCleartextTraffic": true,
-      "package": "com.anonymous.SketchNoteApp"
+      "package": "com.anonymous.SketchNoteApp",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "favicon": "./assets/logo.png"
     },
-    "plugins": ["expo-font"],
+    "plugins": [
+      "expo-font",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow SketchNote to save your drawings to Photos",
+          "savePhotosPermission": "Allow SketchNote to save your drawings",
+          "addAudioPermissions": false,
+          "readOnly": true
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "ed0dcf01-092f-4444-98d8-4c2566156375"

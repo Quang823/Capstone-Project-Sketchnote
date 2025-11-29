@@ -16,7 +16,7 @@ import { styles } from "./ResourceDetailScreen.styles";
 import { feedbackService } from "../../../service/feedbackService";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
-
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 export default function ResourceDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -28,17 +28,29 @@ export default function ResourceDetailScreen() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedOption, setSelectedOption] = useState("Blindbox");
-  const [userResources, setUserResources] = useState([]);
+  const [galleryImages, setGalleryImages] = useState([]);
   const [feedback, setFeedback] = useState([]);
 
   useEffect(() => {
     const fetchResource = async () => {
       try {
         const data = await resourceService.getResourceById(resourceId);
-        console.log("getResourceById:", data);
         setResource(data);
-        const feedbackData = await feedbackService.getAllFeedbackResource(resourceId);
-       
+
+        // 🖼 Combine images and items for gallery
+        const mainImages = data.images || [];
+        const itemImages = data.items
+          ? data.items
+            .filter((item) => item.imageUrl)
+            .map((item) => ({ imageUrl: item.imageUrl }))
+          : [];
+
+        setGalleryImages([...mainImages, ...itemImages]);
+
+        const feedbackData = await feedbackService.getAllFeedbackResource(
+          resourceId
+        );
+
         setFeedback(feedbackData || []);
       } catch (error) {
         Toast.show({
@@ -46,7 +58,6 @@ export default function ResourceDetailScreen() {
           text1: "Load resource failed",
           text2: error.message,
         });
-        // console.log(error);
       } finally {
         setLoading(false);
       }
@@ -54,32 +65,13 @@ export default function ResourceDetailScreen() {
     fetchResource();
   }, [resourceId]);
 
-  // Fetch Resource By User Id
-  useEffect(() => {
-    const fetchUserResources = async () => {
-      try {
-        const resUser = await resourceService.getResourceProjectByUserId(0,20);
-        const userData = Array.isArray(resUser.content) ? resUser.content : [];
-        // console.log("✅ Resource By User Id:", userData);
-        setUserResources(userData);
-      } catch (error) {
-        console.error("❌ Fetch Resource By User Id Failed:", error);
-        setUserResources([]);
-      }
-    };
-    fetchUserResources();
-  }, []);
+
 
   // ✅ Thêm vào giỏ hàng
   const handleAddToCart = () => {
     if (!resource) return;
-    const alreadyOwned =
-      Array.isArray(userResources) &&
-      userResources.some(
-        (r) => r.resourceTemplateId === resource.resourceTemplateId
-      );
 
-    if (alreadyOwned) {
+    if (resource.isOwner) {
       Toast.show({
         type: "info",
         text1: "You already own this resource",
@@ -129,13 +121,7 @@ export default function ResourceDetailScreen() {
   // 🟡 Mua ngay - Add to cart and navigate to cart screen
   const handleBuyNow = () => {
     // Check if user already owns the resource
-    const alreadyOwned =
-      Array.isArray(userResources) &&
-      userResources.some(
-        (r) => r.resourceTemplateId === resource.resourceTemplateId
-      );
-
-    if (alreadyOwned) {
+    if (resource.isOwner) {
       Toast.show({
         type: "info",
         text1: "You already own this resource",
@@ -154,8 +140,8 @@ export default function ResourceDetailScreen() {
       navigation.navigate("Cart");
       Toast.show({
         type: "info",
-        text1: "Resource đã có trong giỏ",
-        text2: `${resource.name} đang chờ thanh toán.`,
+        text1: "Resource already in cart",
+        text2: `${resource.name} is waiting for payment.`,
       });
       return;
     }
@@ -246,18 +232,15 @@ export default function ResourceDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Icon name="arrow-back" size={24} color="#1F2937" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Resource Detail</Text>
+        <View style={styles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <Text style={styles.headerTitle}>Resource Detail</Text>
+        </View>
         <Pressable
           style={styles.cartButton}
           onPress={() => navigation.navigate("Cart")}
         >
-          <Icon name="shopping-cart" size={24} color="#1F2937" />
+          <Icon name="shopping-cart" size={24} color="#084F8C" />
         </Pressable>
       </View>
 
@@ -276,7 +259,7 @@ export default function ResourceDetailScreen() {
                   <Image
                     source={{
                       uri:
-                        resource.images?.[currentImageIndex]?.imageUrl ||
+                        galleryImages[currentImageIndex]?.imageUrl ||
                         "https://via.placeholder.com/400x300",
                     }}
                     style={styles.mainImage}
@@ -285,14 +268,14 @@ export default function ResourceDetailScreen() {
                 </View>
 
                 {/* Thumbnail Images */}
-                {resource.images && resource.images.length > 1 && (
+                {galleryImages.length > 1 && (
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     style={styles.thumbnailContainer}
                     contentContainerStyle={styles.thumbnailContent}
                   >
-                    {resource.images.map((item, index) => (
+                    {galleryImages.map((item, index) => (
                       <Pressable
                         key={index}
                         onPress={() => setCurrentImageIndex(index)}
@@ -321,7 +304,7 @@ export default function ResourceDetailScreen() {
                 <Image
                   source={{
                     uri:
-                      resource.designer?.avatar ||
+                      resource.designerInfo?.avatarUrl ||
                       "https://ui-avatars.com/api/?name=Designer&background=4F46E5&color=fff",
                   }}
                   style={styles.authorAvatar}
@@ -329,7 +312,10 @@ export default function ResourceDetailScreen() {
                 <View style={styles.authorInfo}>
                   <Text style={styles.authorLabel}>Designer</Text>
                   <Text style={styles.authorName}>
-                    {resource.designer?.fullName || "Designer Studio"}
+                    {resource.designerInfo
+                      ? `${resource.designerInfo.firstName || ""} ${resource.designerInfo.lastName || ""
+                        }`.trim()
+                      : "Designer Studio"}
                   </Text>
                 </View>
                 <Pressable style={styles.followButton}>
@@ -343,9 +329,12 @@ export default function ResourceDetailScreen() {
           <View style={styles.rightColumn}>
             <View style={styles.rightColumnContainer}>
               <View style={styles.resourceHeaderRow}>
-                <Text style={styles.resourceName}>{resource.name}</Text>
+                <Text style={styles.resourceName}>{resource.name?.toUpperCase()}</Text>
                 {resource.type && (
-                  <View style={styles.typeBadge}>
+                  <View style={[
+                    styles.typeBadge,
+                    resource.type === 'TEMPLATES' && styles.typeBadgeBlue
+                  ]}>
                     <Text style={styles.typeBadgeText}>{resource.type}</Text>
                   </View>
                 )}
@@ -359,7 +348,7 @@ export default function ResourceDetailScreen() {
                 <View style={styles.ratingRow}>
                   <View style={styles.starsContainer}>{renderStars(4.5)}</View>
                   <Text style={styles.ratingText}>4.5</Text>
-                  <Text style={styles.reviewCount}>(128 đánh giá)</Text>
+                  <Text style={styles.reviewCount}>(128 feedbacks)</Text>
                 </View>
               </View>
 
@@ -413,7 +402,7 @@ export default function ResourceDetailScreen() {
                     </View>
                   </View>
 
-                  {/* File Size */}
+                  {/* File Size
                   <View style={styles.infoItem}>
                     <Icon name="storage" size={18} color="#10B981" />
                     <View style={styles.infoTextContainer}>
@@ -422,65 +411,124 @@ export default function ResourceDetailScreen() {
                         {resource.size ? `${resource.size} MB` : "15 MB"}
                       </Text>
                     </View>
-                  </View>
+                  </View> */}
                 </View>
               </View>
 
               <View style={styles.actionButtonsContainer}>
-                <Pressable
-                  style={[styles.actionButton, styles.addToCartButton]}
-                  onPress={handleAddToCart}
-                >
-                  <Text style={styles.actionButtonText}>Add to Cart</Text>
-                </Pressable>
+                {resource.isOwner ? (
+                  <View style={{ flex: 1, flexDirection: "row", gap: 12 }}>
+                    <View
+                      style={[
+                        styles.actionButton,
+                        {
+                          backgroundColor: "#E5E7EB",
+                          flex: 1,
+                          justifyContent: "center",
+                          alignItems: "center",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[styles.actionButtonText, { color: "#374151" }]}
+                      >
+                        ✓ Purchased
+                      </Text>
+                    </View>
+                    <Pressable
+                      style={[
+                        styles.actionButton,
+                        {
+                          backgroundColor: "#3B82F6",
+                          flex: 1,
+                          flexDirection: "row",
+                          gap: 8,
+                        },
+                      ]}
+                      onPress={() => {
+                        // Handle open resource
+                        Toast.show({
+                          type: "info",
+                          text1: "Coming Soon",
+                          text2: "Open resource feature is under development",
+                        });
+                      }}
+                    >
+                      <Icon name="folder-open" size={18} color="#FFFFFF" />
+                      <Text style={styles.actionButtonText}>Open Resource</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <>
+                    <Pressable
+                      style={[styles.actionButton, styles.addToCartButton]}
+                      onPress={handleAddToCart}
+                    >
+                      <Icon name="shopping-cart" size={18} color="#1E40AF" />
+                      <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+                    </Pressable>
 
-                <Pressable
-                  style={[styles.actionButton, styles.buyNowButton]}
-                  onPress={handleBuyNow}
-                >
-                  <Icon name="flash-on" size={16} color="#FFFFFF" />
-                  <Text
-                    style={[styles.actionButtonText, styles.buyNowButtonText]}
-                  >
-                    Buy now
-                  </Text>
-                </Pressable>
+                    <Pressable
+                      style={[styles.actionButton, styles.buyNowButton]}
+                      onPress={handleBuyNow}
+                    >
+                      <Icon name="flash-on" size={18} color="#FFFFFF" />
+                      <Text style={styles.buyNowButtonText}>
+                        Buy Now
+                      </Text>
+                    </Pressable>
+                  </>
+                )}
               </View>
             </View>
           </View>
         </View>
 
         {/* 🟣 Reviews & Ratings Section */}
-        <View style={styles.infoContainer}>
-          <View style={styles.section}>
+        <View style={styles.reviewsSection}>
+          <View style={styles.reviewsContainer}>
+            {/* Header with icon */}
             <View style={styles.reviewsHeader}>
-              <Text style={styles.sectionTitle}>Reviews</Text>
+              <View style={styles.reviewsHeaderLeft}>
+                <View style={styles.reviewsIconContainer}>
+                  <Icon name="star" size={24} color="#FFC107" />
+                </View>
+                <Text style={styles.reviewsTitle}>Reviews & Ratings</Text>
+              </View>
+              <Text style={styles.reviewsSubtitle}>
+                {feedback?.totalFeedbacks || 0} reviews
+              </Text>
             </View>
 
-            {/* ⭐ Rating Overview */}
-            <View style={styles.ratingStats}>
+            {/* ⭐ Rating Overview with gradient background */}
+            <View style={styles.ratingStatsCard}>
               <View style={styles.ratingOverview}>
-                <Text style={styles.ratingNumber}>
-                  {feedback?.averageRating || 0}
-                </Text>
+                <View style={styles.ratingNumberContainer}>
+                  <Text style={styles.ratingNumber}>
+                    {(feedback?.averageRating || 0).toFixed(1)}
+                  </Text>
+                  <View style={styles.ratingMaxText}>
+                    <Text style={styles.ratingOutOf}>out of 5</Text>
+                  </View>
+                </View>
                 <View style={styles.starsContainerSmall}>
                   {renderStars(feedback?.averageRating || 0)}
                 </View>
                 <Text style={styles.totalReviews}>
-                  ({feedback?.totalFeedbacks || 0} reviews)
+                  Based on {feedback?.totalFeedbacks || 0} reviews
                 </Text>
               </View>
 
               <View style={styles.ratingBars}>
                 {[5, 4, 3, 2, 1].map((star) => {
                   const count = feedback?.ratingDistribution?.[star] || 0;
-                  const total = feedback?.totalFeedbacks || 1; // Avoid division by zero
+                  const total = feedback?.totalFeedbacks || 1;
                   const percentage = Math.round((count / total) * 100);
 
                   return (
                     <View key={star} style={styles.ratingBarRow}>
                       <Text style={styles.starLabel}>{star}</Text>
-                      <Icon name="star" size={14} color="#FFC107" />
+                      <Icon name="star" size={16} color="#FFC107" />
                       <View style={styles.barContainer}>
                         <View
                           style={[styles.barFill, { width: `${percentage}%` }]}
@@ -495,9 +543,10 @@ export default function ResourceDetailScreen() {
 
             {/* 🧠 Reviews List */}
             <View style={styles.reviewsList}>
+              <Text style={styles.reviewsListTitle}>Customer Reviews</Text>
               {feedback?.feedbacks?.length > 0 ? (
-                feedback.feedbacks.map((item) => (
-                  <View key={item.id} style={styles.reviewItem}>
+                feedback.feedbacks.map((item, index) => (
+                  <View key={item.id} style={styles.reviewItemCard}>
                     <View style={styles.reviewHeader}>
                       <Image
                         source={{
@@ -513,29 +562,35 @@ export default function ResourceDetailScreen() {
                         <Text style={styles.reviewerName}>
                           {item.userFullName || "Anonymous"}
                         </Text>
-                        <View style={styles.reviewRating}>
-                          {renderStars(item.rating)}
+                        <View style={styles.reviewRatingRow}>
+                          <View style={styles.reviewRating}>
+                            {renderStars(item.rating)}
+                          </View>
+                          <Text style={styles.reviewDate}>
+                            {new Date(item.createdAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </Text>
                         </View>
                       </View>
-                      <Text style={styles.reviewDate}>
-                        {new Date(item.createdAt).toLocaleDateString("vi-VN")}
-                      </Text>
                     </View>
 
                     <Text style={styles.reviewComment}>{item.comment}</Text>
                   </View>
                 ))
               ) : (
-                <Text style={{ textAlign: "center", color: "#6B7280", marginTop: 10 }}>
-                  No reviews yet.
-                </Text>
+                <View style={styles.noReviewsContainer}>
+                  <Icon name="rate-review" size={48} color="#CBD5E1" />
+                  <Text style={styles.noReviewsText}>
+                    No reviews yet
+                  </Text>
+                  <Text style={styles.noReviewsSubtext}>
+                    Be the first to review this resource!
+                  </Text>
+                </View>
               )}
-
-              {/* Load More - Optional: Hide if no more reviews or implement pagination later */}
-              {/* <Pressable style={styles.loadMoreButton}>
-                <Text style={styles.loadMoreText}>Load more reviews</Text>
-                <Icon name="keyboard-arrow-down" size={20} color="#3B82F6" />
-              </Pressable> */}
             </View>
           </View>
         </View>

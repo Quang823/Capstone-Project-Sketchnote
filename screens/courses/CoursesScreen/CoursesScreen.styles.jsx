@@ -99,8 +99,8 @@ export const coursesStyles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   selectedCategoryButton: {
-    backgroundColor: "#1D4ED8",
-    borderColor: "#4F46E5",
+    backgroundColor: "#084F8C",
+    borderColor: "#0c6dc2ff",
   },
   categoryText: {
     fontSize: 14,

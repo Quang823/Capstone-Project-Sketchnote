@@ -134,10 +134,10 @@ function getNearestFont(loadedFonts, family, bold, italic, size = 18) {
     bold && italic
       ? "BoldItalic"
       : bold
-      ? "Bold"
-      : italic
-      ? "Italic"
-      : "Regular";
+        ? "Bold"
+        : italic
+          ? "Italic"
+          : "Regular";
 
   const nearest = FONT_SIZES.reduce((a, b) =>
     Math.abs(b - size) < Math.abs(a - size) ? b : a
@@ -864,7 +864,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         projectTranslateX.value = baseProjectTranslateX.value + e.translationX;
         projectTranslateY.value = baseProjectTranslateY.value + e.translationY;
         clampProjectPan();
-      } catch (err) {}
+      } catch (err) { }
     })
     .onEnd(() => {
       "worklet";
@@ -1028,13 +1028,14 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             typeof page.pageNumber === "number"
               ? page.pageNumber
               : page.type === "cover"
-              ? 1
-              : fallbackNumber;
+                ? 1
+                : fallbackNumber;
 
           allPagesData.push({
             pageId: page.id,
             pageNumber: pageNumber,
             dataObject: dataObject,
+            snapshotUrl: page.snapshotUrl,
           });
         } catch (e) {
           console.error(`Error gathering data for page ${page.id}:`, e);
@@ -1060,8 +1061,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           typeof page.pageNumber === "number"
             ? page.pageNumber
             : page.type === "cover"
-            ? 1
-            : fallbackNumber;
+              ? 1
+              : fallbackNumber;
         out.push({ pageId: page.id, pageNumber, base64: b64 });
       }
       return out;
@@ -1081,14 +1082,14 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               typeof pg.pageNumber === "number"
                 ? pg.pageNumber
                 : pg.type === "cover"
-                ? 1
-                : fallbackNumber;
+                  ? 1
+                  : fallbackNumber;
             const snap = map.get(num);
             if (snap == null || snap === pg.snapshotUrl) return pg;
             return { ...pg, snapshotUrl: snap };
           });
         });
-      } catch (e) {}
+      } catch (e) { }
     },
 
     // [NEW] Append strokes to a specific page, used for incremental loading.
@@ -1306,15 +1307,15 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               [pageId]: hasTemplateLayer
                 ? curr
                 : [
-                    ...curr,
-                    {
-                      id: "template",
-                      name: "Template",
-                      visible: true,
-                      locked: false,
-                      strokes: [],
-                    },
-                  ],
+                  ...curr,
+                  {
+                    id: "template",
+                    name: "Template",
+                    visible: true,
+                    locked: false,
+                    strokes: [],
+                  },
+                ],
             };
           });
         }
@@ -1325,12 +1326,12 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           } else if (typeof pageRef.appendStrokes === "function") {
             const toAppend = Array.isArray(strokesArray)
               ? strokesArray.map((s) => ({
-                  ...s,
-                  __templateSource: safeUrl,
-                  layerId: placeTemplateOnNewLayer
-                    ? "template"
-                    : s.layerId || "layer1",
-                }))
+                ...s,
+                __templateSource: safeUrl,
+                layerId: placeTemplateOnNewLayer
+                  ? "template"
+                  : s.layerId || "layer1",
+              }))
               : [];
             pageRef.appendStrokes(toAppend);
           }
@@ -1387,11 +1388,11 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       prev.map((pg) =>
         pg.id === pageId
           ? {
-              ...pg,
-              backgroundColor: last.prevBackgroundColor,
-              template: last.prevTemplate,
-              imageUrl: last.prevImageUrl,
-            }
+            ...pg,
+            backgroundColor: last.prevBackgroundColor,
+            template: last.prevTemplate,
+            imageUrl: last.prevImageUrl,
+          }
           : pg
       )
     );
@@ -1444,8 +1445,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           pages[activeIndex]?.id != null
             ? String(pages[activeIndex].id)
             : pages.length > 0 && pages[0]?.id != null
-            ? String(pages[0].id)
-            : "1"
+              ? String(pages[0].id)
+              : "1"
         }
         onPageSelect={(pageId) => {
           // ✅ Sử dụng scrollToPageById với debounce đã có trong scrollToPage
@@ -1730,8 +1731,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 tool === "scroll"
                   ? true
                   : tool === "zoom"
-                  ? false
-                  : !isZooming && !isZoomedIn
+                    ? false
+                    : !isZooming && !isZoomedIn
               }
               simultaneousHandlers={scrollRef}
               onLayout={(e) => {
@@ -1807,15 +1808,15 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                             [p.id]:
                               typeof updater === "function"
                                 ? updater(
-                                    prev[p.id] || [
-                                      {
-                                        id: "layer1",
-                                        name: "Layer 1",
-                                        visible: true,
-                                        strokes: [],
-                                      },
-                                    ]
-                                  )
+                                  prev[p.id] || [
+                                    {
+                                      id: "layer1",
+                                      name: "Layer 1",
+                                      visible: true,
+                                      strokes: [],
+                                    },
+                                  ]
+                                )
                                 : updater,
                           }));
                         }, // 👈 Update page-specific layers

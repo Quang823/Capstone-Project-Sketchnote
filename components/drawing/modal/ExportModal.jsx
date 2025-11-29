@@ -106,13 +106,13 @@ const ExportModal = ({
       icon: "https://cdn-icons-png.flaticon.com/512/565/565655.png",
     },
     {
-      key: "picture",
-      label: "Picture",
+      key: "pictures_all",
+      label: "Pictures (All Pages)",
       icon: "https://cdn-icons-png.flaticon.com/512/747/747968.png",
     },
     {
-      key: "sketchnote",
-      label: "SketchNote",
+      key: "sketchnote_s3",
+      label: "SketchNote (S3)",
       icon: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763174915/ctsrrmlfcxxmsmvb9yhm.png",
     },
   ];

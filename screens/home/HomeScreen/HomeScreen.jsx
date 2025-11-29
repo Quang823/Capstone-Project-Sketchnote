@@ -609,8 +609,8 @@ export default function HomeScreen({ navigation }) {
                             text={
                               user?.subscriptionEndDate
                                 ? `Active until ${formatDate(
-                                    user.subscriptionEndDate
-                                  )}`
+                                  user.subscriptionEndDate
+                                )}`
                                 : "Active"
                             }
                             style={styles.premiumSubtitle}
@@ -651,7 +651,7 @@ export default function HomeScreen({ navigation }) {
                     <View
                       style={{
                         position: "absolute",
-                        top: -6,
+                        top: -8,
                         right: -8,
                         minWidth: 16,
                         height: 16,
@@ -711,10 +711,10 @@ export default function HomeScreen({ navigation }) {
             onSelect={(type) => {
               setPopoverVisible(false);
               if (type === "sketchnote") navigation.navigate("NoteSetupScreen");
-              if (type === "whiteboard")
-                navigation.navigate("NoteSetupScreen", {
-                  mode: "whiteboard",
-                });
+              // if (type === "whiteboard")
+              //   navigation.navigate("NoteSetupScreen", {
+              //     mode: "whiteboard",
+              //   });
               if (type === "quick_note") setQuickNoteModalVisible(true);
             }}
           />
@@ -738,7 +738,7 @@ export default function HomeScreen({ navigation }) {
                 style={styles.retryButton}
                 onPress={fetchProjects}
               >
-                <Text style={styles.retryButtonText}>Thử lại</Text>
+                <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
           ) : projects.length === 0 && sharedProjects.length === 0 ? (
