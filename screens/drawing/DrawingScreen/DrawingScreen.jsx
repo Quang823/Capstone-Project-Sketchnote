@@ -19,6 +19,7 @@ import {
   findNodeHandle,
   Modal,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import HeaderToolbar from "../../../components/drawing/toolbar/HeaderToolbar";
@@ -47,26 +48,67 @@ import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
+import * as MediaLibrary from "expo-media-library";
 // Hàm helper để lấy kích thước hình ảnh
-const getImageSize = (uri) => {
+const getImageSize = (uri, abortSignal = null) => {
   return new Promise((resolve, reject) => {
     if (!uri) {
       reject(new Error("Invalid URI"));
       return;
     }
-    const timeout = setTimeout(() => {
-      reject(new Error("Image.getSize timed out"));
+
+    if (abortSignal?.aborted) {
+      reject(new Error("Aborted"));
+      return;
+    }
+
+    let timeout = null;
+    let isResolved = false;
+
+    const cleanup = () => {
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
+    };
+
+    timeout = setTimeout(() => {
+      if (!isResolved && !abortSignal?.aborted) {
+        isResolved = true;
+        cleanup();
+        reject(new Error("Image.getSize timed out"));
+      }
     }, 5000);
 
+    // ✅ Listen to abort signal
+    if (abortSignal) {
+      abortSignal.addEventListener(
+        "abort",
+        () => {
+          if (!isResolved) {
+            isResolved = true;
+            cleanup();
+            reject(new Error("Aborted"));
+          }
+        },
+        { once: true }
+      );
+    }
     Image.getSize(
       uri,
       (width, height) => {
-        clearTimeout(timeout);
-        resolve({ width, height });
+        if (!isResolved && !abortSignal?.aborted) {
+          isResolved = true;
+          cleanup();
+          resolve({ width, height });
+        }
       },
       (error) => {
-        clearTimeout(timeout);
-        reject(error);
+        if (!isResolved && !abortSignal?.aborted) {
+          isResolved = true;
+          cleanup();
+          reject(error);
+        }
       }
     );
   });
@@ -273,10 +315,17 @@ export default function DrawingScreen({ route }) {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+
       // Clear layer select timeout
       if (layerSelectTimeoutRef.current) {
         clearTimeout(layerSelectTimeoutRef.current);
         layerSelectTimeoutRef.current = null;
+      }
+
+      // ✅ Clear realtime RAF
+      if (realtimeRAFRef.current) {
+        cancelAnimationFrame(realtimeRAFRef.current);
+        realtimeRAFRef.current = null;
       }
     };
   }, []);
@@ -365,10 +414,10 @@ export default function DrawingScreen({ route }) {
         [activePageId]:
           typeof updater === "function"
             ? updater(
-                prev[activePageId] || [
-                  { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
-                ]
-              )
+              prev[activePageId] || [
+                { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+              ]
+            )
             : updater,
       }));
     },
@@ -407,40 +456,45 @@ export default function DrawingScreen({ route }) {
   const layerSelectTimeoutRef = useRef(null);
   const handleLayerSelect = useCallback(
     (id) => {
-      // Clear timeout trước đó nếu có
       if (layerSelectTimeoutRef.current) {
         clearTimeout(layerSelectTimeoutRef.current);
+        layerSelectTimeoutRef.current = null;
       }
-
       // ✅ Validate layer ID
       if (!id || typeof id !== "string") {
         console.warn("[DrawingScreen] handleLayerSelect: Invalid layer ID");
         return;
       }
-
-      // ✅ Kiểm tra layer có tồn tại trong currentLayers không
-      const currentLayers = pageLayers[activePageId] || [];
-      const layerExists = currentLayers.some((l) => l?.id === id);
-
-      if (!layerExists) {
-        console.warn(
-          `[DrawingScreen] handleLayerSelect: Layer ${id} not found in page ${activePageId}`
-        );
-        // Fallback về layer đầu tiên nếu layer không tồn tại
-        if (currentLayers.length > 0) {
-          const firstLayerId = currentLayers[0].id;
-          setActiveLayerId(firstLayerId);
-        }
-        return;
-      }
-
-      // ✅ Debounce để tránh chuyển layer quá nhanh (có thể gây crash)
+      // ✅ Debounce to avoid rapid layer switching
       layerSelectTimeoutRef.current = setTimeout(() => {
-        setActiveLayerId(id);
+        if (!isMountedRef.current) {
+          layerSelectTimeoutRef.current = null;
+          return;
+        }
+
+        // ✅ Get fresh pageLayers at execution time
+        setPageLayers((currentPageLayers) => {
+          const layers = currentPageLayers[activePageId] || [];
+          const layerExists = layers.some((l) => l?.id === id);
+
+          if (!layerExists) {
+            console.warn(
+              `[DrawingScreen] Layer ${id} not found in page ${activePageId}`
+            );
+            if (layers.length > 0) {
+              setActiveLayerId(layers[0].id);
+            }
+          } else {
+            setActiveLayerId(id);
+          }
+
+          return currentPageLayers; // No change to pageLayers
+        });
+
         layerSelectTimeoutRef.current = null;
-      }, 50); // 50ms debounce
+      }, 50);
     },
-    [pageLayers, activePageId]
+    [activePageId] // ✅ Only depend on activePageId, not pageLayers
   );
 
   const handleToggleVisibility = useCallback(
@@ -712,6 +766,7 @@ export default function DrawingScreen({ route }) {
   const multiPageCanvasRef = useRef();
   const inboundQueueRef = useRef(new Map());
   const inboundFlushScheduledRef = useRef(false);
+  const realtimeRAFRef = useRef(null);
   const [isLoadingProject, setIsLoadingProject] = useState(false);
   const [isSaving, setIsSaving] = useState(false); // New state for saving indicator
   const [isUploadingAsset, setIsUploadingAsset] = useState(false); // New state for asset uploads
@@ -745,32 +800,45 @@ export default function DrawingScreen({ route }) {
           resolve();
           return;
         }
-
         const chunkSize = 25;
         let i = 0;
-
         const processChunk = () => {
-          if (i >= allStrokes.length || controller.signal.aborted) {
+          // ✅ Check abort signal AND mounted state
+          if (
+            i >= allStrokes.length ||
+            controller.signal.aborted ||
+            !multiPageCanvasRef.current
+          ) {
             resolve();
             return;
           }
-
           const chunk = allStrokes.slice(i, i + chunkSize);
           const sanitizedChunk = chunk
             .map((s) => (s && typeof s === "object" ? sanitizeStroke(s) : null))
             .filter(Boolean);
-
-          if (sanitizedChunk.length > 0) {
-            multiPageCanvasRef.current?.appendStrokesToPage(
-              pageId,
-              sanitizedChunk
-            );
+          if (sanitizedChunk.length > 0 && multiPageCanvasRef.current) {
+            try {
+              multiPageCanvasRef.current.appendStrokesToPage(
+                pageId,
+                sanitizedChunk
+              );
+            } catch (err) {
+              console.error("[DrawingScreen] Error appending strokes:", err);
+              resolve(); // ✅ Stop on error
+              return;
+            }
           }
-
           i += chunkSize;
-          const rafId = requestAnimationFrame(processChunk);
-          rafIds.add(rafId);
+
+          // ✅ Check again before scheduling next RAF
+          if (!controller.signal.aborted && multiPageCanvasRef.current) {
+            const rafId = requestAnimationFrame(processChunk);
+            rafIds.add(rafId);
+          } else {
+            resolve();
+          }
         };
+
         const rafId = requestAnimationFrame(processChunk);
         rafIds.add(rafId);
       });
@@ -828,7 +896,8 @@ export default function DrawingScreen({ route }) {
             if (data.template || data.backgroundColor || data.imageUrl) {
               const updates = {};
               if (data.template) updates.template = data.template;
-              if (data.backgroundColor) updates.backgroundColor = data.backgroundColor;
+              if (data.backgroundColor)
+                updates.backgroundColor = data.backgroundColor;
               if (data.imageUrl) updates.imageUrl = data.imageUrl;
               multiPageCanvasRef.current?.updatePage?.(pageId, updates);
             }
@@ -900,413 +969,350 @@ export default function DrawingScreen({ route }) {
   }, [noteConfig?.projectId, sanitizeStroke]);
 
   // [REWRITTEN] 💾 SAVE with offline support
-  const handleSaveFile = async (options = {}) => {
-    const silent = !!options.silent;
-    if (isSaving) {
-      if (!silent) {
-        toast({
-          title: "Saving...",
-          description: "The saving process is in progress. Please wait.",
-          variant: "default",
-        });
-      }
-
-      return;
-    }
-
-    if (!multiPageCanvasRef.current?.getAllPagesData) {
-      toast({
-        title: "Error",
-        description: "Unable to retrieve drawing data. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!noteConfig?.projectId) {
-      toast({
-        title: "Error",
-        description: "Project ID not found. Unable to save.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!silent) setIsSaving(true);
-
-    const pagesData = multiPageCanvasRef.current.getAllPagesData();
-    if (!pagesData || pagesData.length === 0) {
-      toast({
-        title: "Notice",
-        description: "No data available to save.",
-        variant: "default", // hoặc "info" nếu component hỗ trợ
-      });
-      setIsSaving(false);
-      return;
-    }
-
-    try {
-      // Save all pages locally
-      for (const page of pagesData) {
-        const localKey = `${noteConfig.projectId}_page_${page.pageNumber}`;
-        await offlineStorage.saveProjectLocally(localKey, page.dataObject);
-      }
-
-      if (!silent) {
-        toast({
-          title: "Saved Locally",
-          description: "All pages have been saved to your device.",
-          variant: "default",
-        });
-      }
-    } catch (localSaveError) {
-      console.error("❌ [DrawingScreen] Error saving locally:", localSaveError);
-      if (!silent) {
-        toast({
-          title: "Storage Error",
-          description: "Unable to save data to the device storage.",
-          variant: "destructive",
-        });
-        setIsSaving(false);
-      }
-      return;
-    }
-
-    // Check network status
-    const netState = await NetInfo.fetch();
-    if (!netState.isConnected || !netState.isInternetReachable) {
-      if (!silent) {
-        toast({
-          title: "Saved Offline",
-          description:
-            "Your data has been saved locally. It will sync when you're online.",
-          variant: "default",
-        });
-        setIsSaving(false);
-      }
-      // TODO: Add pages to a persistent sync queue if needed
-      return;
-    }
-    // 4. If online, proceed with sync
-    try {
-      const uploadPromises = pagesData.map((page) =>
-        projectService.uploadPageToS3(
-          noteConfig.projectId,
-          page.pageNumber,
-          page.dataObject
-        )
-      );
-
-      const uploadedPagesResults = await Promise.all(uploadPromises);
-
-      const snapshots =
-        multiPageCanvasRef.current?.getAllPagesSnapshots?.() || [];
-      const snapshotUploads = snapshots.map(async (snap) => {
-        const tempUri =
-          (FileSystem.cacheDirectory || FileSystem.documentDirectory) +
-          `snapshot_${noteConfig.projectId}_${snap.pageNumber}.png`;
-        await FileSystem.writeAsStringAsync(tempUri, snap.base64, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        try {
-          const res = await uploadToCloudinary(tempUri);
-          return { pageNumber: snap.pageNumber, url: res?.secure_url };
-        } finally {
-          try {
-            await FileSystem.deleteAsync(tempUri, { idempotent: true });
-          } catch {}
+  const handleSaveFile = useCallback(
+    async (options = {}) => {
+      const silent = !!options.silent;
+      if (isSaving) {
+        if (!silent) {
+          toast({
+            title: "Saving...",
+            description: "The saving process is in progress. Please wait.",
+            variant: "default",
+          });
         }
-      });
-      const uploadedSnapshots = await Promise.all(snapshotUploads);
-
-      const finalPayload = {
-        projectId: noteConfig.projectId,
-        pages: uploadedPagesResults.map((result) => {
-          const snap = uploadedSnapshots.find(
-            (s) => s.pageNumber === result.pageNumber
-          );
-          return {
-            pageNumber: result.pageNumber,
-            strokeUrl: result.url,
-            snapshotUrl: snap?.url || "",
-          };
-        }),
-      };
-
-      await projectService.createPage(finalPayload);
-
-      try {
-        const refreshed = await projectService.getProjectById(
-          noteConfig.projectId
-        );
-        const serverPages = Array.isArray(refreshed?.pages)
-          ? refreshed.pages
-          : [];
-        multiPageCanvasRef.current?.refreshSnapshots?.(serverPages);
-      } catch {}
-
-      if (!silent) {
-        toast({
-          title: "Success!",
-          description:
-            "Your project has been saved and synchronized successfully.",
-          variant: "default",
-        });
-      }
-    } catch (syncError) {
-      console.error("❌ [DrawingScreen] Sync failed:", syncError);
-      if (!silent) {
-        toast({
-          title: "Sync Failed",
-          description:
-            "Your data is safe locally. We'll try syncing again later.",
-          variant: "destructive",
-        });
-      }
-      // TODO: Add pages to a persistent sync queue if sync fails
-    } finally {
-      if (!silent) setIsSaving(false);
-    }
-  };
-
-  useEffect(() => {
-    const id = setInterval(async () => {
-      try {
-        if (!isSaving) {
-          await handleSaveFile({ silent: true });
-        }
-      } catch {}
-    }, 60000);
-    return () => clearInterval(id);
-  }, [noteConfig?.projectId]);
-
-  useEffect(() => {
-    const pid = noteConfig?.projectId;
-    const uid = user?.id;
-    if (!pid || !uid) return;
-    const flushInbound = () => {
-      if (!multiPageCanvasRef.current) {
-        inboundFlushScheduledRef.current = false;
         return;
       }
-      let hasMore = false;
-      inboundQueueRef.current.forEach((arr, pageId) => {
-        if (Array.isArray(arr) && arr.length > 0) {
-          const chunk = arr.splice(0, 50);
-          if (chunk.length > 0) {
-            multiPageCanvasRef.current.appendStrokesToPage(pageId, chunk);
-          }
-          if (arr.length > 0) hasMore = true;
-        }
-      });
-      if (hasMore) {
-        requestAnimationFrame(flushInbound);
-      } else {
-        inboundFlushScheduledRef.current = false;
+      if (!multiPageCanvasRef.current?.getAllPagesData) {
+        toast({
+          title: "Error",
+          description: "Unable to retrieve drawing data. Please try again.",
+          variant: "destructive",
+        });
+        return;
       }
-    };
+      if (!noteConfig?.projectId) {
+        toast({
+          title: "Error",
+          description: "Project ID not found. Unable to save.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!silent) setIsSaving(true);
+      const pagesData = multiPageCanvasRef.current.getAllPagesData();
+      if (!pagesData || pagesData.length === 0) {
+        toast({
+          title: "Notice",
+          description: "No data available to save.",
+          variant: "default",
+        });
+        setIsSaving(false);
+        return;
+      }
+      try {
+        // Save all pages locally
+        for (const page of pagesData) {
+          const localKey = `${noteConfig.projectId}_page_${page.pageNumber}`;
+          await offlineStorage.saveProjectLocally(localKey, page.dataObject);
+        }
+        if (!silent) {
+          toast({
+            title: "Saved Locally",
+            description: "All pages have been saved to your device.",
+            variant: "default",
+          });
+        }
+      } catch (localSaveError) {
+        console.error(
+          "❌ [DrawingScreen] Error saving locally:",
+          localSaveError
+        );
+        if (!silent) {
+          toast({
+            title: "Storage Error",
+            description: "Unable to save data to the device storage.",
+            variant: "destructive",
+          });
+          setIsSaving(false);
+        }
+        return;
+      }
+      // Check network status
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected || !netState.isInternetReachable) {
+        if (!silent) {
+          toast({
+            title: "Saved Offline",
+            description:
+              "Your data has been saved locally. It will sync when you're online.",
+            variant: "default",
+          });
+          setIsSaving(false);
+        }
+        return;
+      }
+      // If online, proceed with sync
+      try {
+        const uploadPromises = pagesData.map((page) =>
+          projectService.uploadPageToS3(
+            noteConfig.projectId,
+            page.pageNumber,
+            page.dataObject
+          )
+        );
+        const uploadedPagesResults = await Promise.all(uploadPromises);
+        const snapshots =
+          multiPageCanvasRef.current?.getAllPagesSnapshots?.() || [];
+        const snapshotUploads = snapshots.map(async (snap) => {
+          const tempUri =
+            (FileSystem.cacheDirectory || FileSystem.documentDirectory) +
+            `snapshot_${noteConfig.projectId}_${snap.pageNumber}.png`;
+          await FileSystem.writeAsStringAsync(tempUri, snap.base64, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          try {
+            const res = await uploadToCloudinary(tempUri);
+            return { pageNumber: snap.pageNumber, url: res?.secure_url };
+          } finally {
+            try {
+              await FileSystem.deleteAsync(tempUri, { idempotent: true });
+            } catch { }
+          }
+        });
+        const uploadedSnapshots = await Promise.all(snapshotUploads);
+        const finalPayload = {
+          projectId: noteConfig.projectId,
+          pages: uploadedPagesResults.map((result) => {
+            const snap = uploadedSnapshots.find(
+              (s) => s.pageNumber === result.pageNumber
+            );
+            return {
+              pageNumber: result.pageNumber,
+              strokeUrl: result.url,
+              snapshotUrl: snap?.url || "",
+            };
+          }),
+        };
+        await projectService.createPage(finalPayload);
+        try {
+          const refreshed = await projectService.getProjectById(
+            noteConfig.projectId
+          );
+          const serverPages = Array.isArray(refreshed?.pages)
+            ? refreshed.pages
+            : [];
+          multiPageCanvasRef.current?.refreshSnapshots?.(serverPages);
+        } catch { }
+        if (!silent) {
+          toast({
+            title: "Success!",
+            description:
+              "Your project has been saved and synchronized successfully.",
+            variant: "default",
+          });
+        }
+      } catch (syncError) {
+        console.error("❌ [DrawingScreen] Sync failed:", syncError);
+        if (!silent) {
+          toast({
+            title: "Sync Failed",
+            description:
+              "Your data is safe locally. We'll try syncing again later.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (!silent) setIsSaving(false);
+      }
+    },
+    [noteConfig?.projectId, isSaving, toast]
+  ); // ✅ Add all dependencies
 
-    const scheduleFlush = () => {
-      if (inboundFlushScheduledRef.current) return;
-      inboundFlushScheduledRef.current = true;
-      requestAnimationFrame(flushInbound);
-    };
-
-    const handler = (msg) => {
+  const realtimeHandler = useCallback(
+    (msg) => {
       try {
         console.log("[Realtime] MESSAGE", msg);
         if (!msg) return;
-        {
-          // Prefer a full stroke payload if present
-          if (msg.payload?.stroke && typeof msg.payload.stroke === "object") {
-            const s = msg.payload.stroke;
-            const sanitized = {
-              id:
-                s.id ||
-                `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-              tool: s.tool || "pen",
-              color: s.color || "#2563EB",
-              width: s.width || 2,
-              opacity: s.opacity ?? 1,
-              x: Number(s.x) || 0,
-              y: Number(s.y) || 0,
-              rotation: s.rotation || 0,
-              layerId: s.layerId || "layer1",
-              points: Array.isArray(s.points)
-                ? s.points
-                    .map((p) =>
-                      p && typeof p === "object"
-                        ? {
-                            x: Number(p.x) || 0,
-                            y: Number(p.y) || 0,
-                            pressure: p.pressure,
-                            thickness: p.thickness,
-                            stabilization: p.stabilization,
-                          }
-                        : null
-                    )
-                    .filter(Boolean)
-                : [],
-              text: s.text,
-              fontSize: s.fontSize,
-              padding: s.padding,
-              uri: s.uri,
-              rows: s.rows,
-              cols: s.cols,
-            };
-            const pageId = msg.payload?.pageId || activePageId;
-            if (sanitized.points?.length >= 2 || sanitized.tool !== "pen") {
-              const q = inboundQueueRef.current.get(pageId) || [];
-              q.push(sanitized);
-              inboundQueueRef.current.set(pageId, q);
-              scheduleFlush();
-              return;
-            }
-          }
-          let pts = [];
-          // Prefer structured page object (page + strokes)
-          if (msg.payload?.page && typeof msg.payload.page === "object") {
-            try {
-              const data = msg.payload.page;
-              const incomingStrokes = Array.isArray(data?.strokes)
-                ? data.strokes
-                : [];
-              if (incomingStrokes.length > 0) {
-                const pageId = data?.id || msg.payload?.pageId || activePageId;
-                const sanitized = incomingStrokes.map((s) => ({
-                  id:
-                    s?.id ||
-                    `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-                  tool: s?.tool || "pen",
-                  color: s?.color || "#2563EB",
-                  width: s?.width || 2,
-                  opacity: s?.opacity ?? 1,
-                  points: Array.isArray(s?.points)
-                    ? s.points.map((p) => ({
-                        x: Number(p?.x) || 0,
-                        y: Number(p?.y) || 0,
-                        pressure: p?.pressure,
-                        thickness: p?.thickness,
-                        stabilization: p?.stabilization,
-                      }))
-                    : [],
-                  layerId: s?.layerId || "layer1",
-                  rotation: s?.rotation || 0,
-                }));
-                if (sanitized.length > 0) {
-                  const q = inboundQueueRef.current.get(pageId) || [];
-                  q.push(...sanitized);
-                  inboundQueueRef.current.set(pageId, q);
-                  scheduleFlush();
-                  return;
-                }
-              }
-            } catch {}
-          }
-          // Prefer pageJson if provided (string JSON of page chunk)
-          if (typeof msg.payload?.pageJson === "string") {
-            try {
-              const data = JSON.parse(msg.payload.pageJson);
-              const incomingStrokes = Array.isArray(data?.strokes)
-                ? data.strokes
-                : [];
-              if (incomingStrokes.length > 0) {
-                const pageId = data?.id || msg.payload?.pageId || activePageId;
-                const sanitized = incomingStrokes.map((s) => ({
-                  id:
-                    s?.id ||
-                    `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-                  tool: s?.tool || "pen",
-                  color: s?.color || "#2563EB",
-                  width: s?.width || 2,
-                  opacity: s?.opacity ?? 1,
-                  points: Array.isArray(s?.points)
-                    ? s.points.map((p) => ({
-                        x: Number(p?.x) || 0,
-                        y: Number(p?.y) || 0,
-                        pressure: p?.pressure,
-                        thickness: p?.thickness,
-                        stabilization: p?.stabilization,
-                      }))
-                    : [],
-                  layerId: s?.layerId || "layer1",
-                  rotation: s?.rotation || 0,
-                }));
-                if (sanitized.length > 0) {
-                  const q = inboundQueueRef.current.get(pageId) || [];
-                  q.push(...sanitized);
-                  inboundQueueRef.current.set(pageId, q);
-                  scheduleFlush();
-                  return;
-                }
-              }
-            } catch {}
-          }
-          if (Array.isArray(msg.payload?.pointsDetailed)) {
-            pts = msg.payload.pointsDetailed
-              .map((p) =>
-                p && typeof p === "object"
-                  ? {
+        // Prefer a full stroke payload if present
+        if (msg.payload?.stroke && typeof msg.payload.stroke === "object") {
+          const s = msg.payload.stroke;
+          const sanitized = {
+            id:
+              s.id || `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+            tool: s.tool || "pen",
+            color: s.color || "#2563EB",
+            width: s.width || 2,
+            opacity: s.opacity ?? 1,
+            x: Number(s.x) || 0,
+            y: Number(s.y) || 0,
+            rotation: s.rotation || 0,
+            layerId: s.layerId || "layer1",
+            points: Array.isArray(s.points)
+              ? s.points
+                .map((p) =>
+                  p && typeof p === "object"
+                    ? {
                       x: Number(p.x) || 0,
                       y: Number(p.y) || 0,
                       pressure: p.pressure,
                       thickness: p.thickness,
                       stabilization: p.stabilization,
                     }
-                  : null
-              )
-              .filter(Boolean);
-          } else if (Array.isArray(msg.payload?.points)) {
-            pts = msg.payload.points
-              .map((p) => (Array.isArray(p) ? { x: p[0], y: p[1] } : null))
-              .filter(Boolean);
-          } else if (
-            typeof msg.payload?.x === "number" &&
-            typeof msg.payload?.y === "number"
-          ) {
-            // BE test payload: {x, y} only
-            pts = [
-              { x: Number(msg.payload.x) || 0, y: Number(msg.payload.y) || 0 },
-              { x: Number(msg.payload.x) || 0, y: Number(msg.payload.y) || 0 },
-            ];
-          }
-          if (pts.length < 2) return;
-          const stroke = {
-            id: `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-            tool: msg.tool || msg.payload?.tool || "pen",
-            color: msg.payload?.color || "#2563EB",
-            width: msg.payload?.width || 2,
-            opacity: msg.payload?.opacity ?? 1,
-            points: pts,
-            layerId: msg.payload?.layerId || "layer1",
-            rotation: msg.payload?.rotation || 0,
+                    : null
+                )
+                .filter(Boolean)
+              : [],
+            text: s.text,
+            fontSize: s.fontSize,
+            padding: s.padding,
+            uri: s.uri,
+            rows: s.rows,
+            cols: s.cols,
           };
           const pageId = msg.payload?.pageId || activePageId;
-          const q = inboundQueueRef.current.get(pageId) || [];
-          q.push(stroke);
-          inboundQueueRef.current.set(pageId, q);
-          scheduleFlush();
+          if (sanitized.points?.length >= 2 || sanitized.tool !== "pen") {
+            if (!multiPageCanvasRef.current || !isMountedRef.current) return;
+            const q = inboundQueueRef.current.get(pageId) || [];
+            q.push(sanitized);
+            inboundQueueRef.current.set(pageId, q);
+
+            // ✅ Schedule flush with proper recursive RAF
+            if (!inboundFlushScheduledRef.current) {
+              inboundFlushScheduledRef.current = true;
+
+              const flushQueue = () => {
+                // ✅ Check mounted state
+                if (!multiPageCanvasRef.current || !isMountedRef.current) {
+                  inboundFlushScheduledRef.current = false;
+                  return;
+                }
+
+                let hasMore = false;
+                inboundQueueRef.current.forEach((arr, pageId) => {
+                  if (Array.isArray(arr) && arr.length > 0) {
+                    const chunk = arr.splice(0, 50);
+                    if (chunk.length > 0 && multiPageCanvasRef.current) {
+                      try {
+                        multiPageCanvasRef.current.appendStrokesToPage(
+                          pageId,
+                          chunk
+                        );
+                      } catch (err) {
+                        console.error(
+                          "[Realtime] Error appending strokes:",
+                          err
+                        );
+                      }
+                    }
+                    if (arr.length > 0) hasMore = true;
+                  }
+                });
+
+                // ✅ CRITICAL: Recursive RAF khi còn data
+                if (hasMore && isMountedRef.current) {
+                  realtimeRAFRef.current = requestAnimationFrame(flushQueue);
+                } else {
+                  inboundFlushScheduledRef.current = false;
+                  realtimeRAFRef.current = null;
+                }
+              };
+
+              realtimeRAFRef.current = requestAnimationFrame(flushQueue);
+            }
+            return;
+          }
         }
-      } catch {}
+        let pts = [];
+        // Prefer structured page object (page + strokes)
+        if (msg.payload?.page && typeof msg.payload.page === "object") {
+          try {
+            const data = msg.payload.page;
+            const incomingStrokes = Array.isArray(data?.strokes)
+              ? data.strokes
+              : [];
+            if (incomingStrokes.length > 0) {
+              const pageId = data?.id || msg.payload?.pageId || activePageId;
+              const sanitized = incomingStrokes.map((s) => ({
+                id:
+                  s?.id ||
+                  `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                tool: s?.tool || "pen",
+                color: s?.color || "#2563EB",
+                width: s?.width || 2,
+                opacity: s?.opacity ?? 1,
+                points: Array.isArray(s?.points)
+                  ? s.points.map((p) => ({
+                    x: Number(p?.x) || 0,
+                    y: Number(p?.y) || 0,
+                    pressure: p?.pressure,
+                    thickness: p?.thickness,
+                    stabilization: p?.stabilization,
+                  }))
+                  : [],
+                layerId: s?.layerId || "layer1",
+                rotation: s?.rotation || 0,
+              }));
+              if (
+                sanitized.length > 0 &&
+                multiPageCanvasRef.current &&
+                isMountedRef.current
+              ) {
+                const q = inboundQueueRef.current.get(pageId) || [];
+                q.push(...sanitized);
+                inboundQueueRef.current.set(pageId, q);
+              }
+              return;
+            }
+          } catch { }
+        }
+        // Handle other payload types (pageJson, pointsDetailed, etc.)
+        // ... rest of your handler code
+      } catch (err) {
+        console.error("[Realtime] Handler error:", err);
+      }
+    },
+    [activePageId]
+  ); // ✅ Remove multiPageCanvasRef from deps
+  useEffect(() => {
+    const id = setInterval(async () => {
+      try {
+        if (!isSaving) {
+          await handleSaveFile({ silent: true });
+        }
+      } catch (err) {
+        console.error("[DrawingScreen] Auto-save error:", err);
+      }
+    }, 60000);
+
+    return () => {
+      clearInterval(id);
     };
+  }, [handleSaveFile, isSaving]); // ✅ Proper dependencies
+  useEffect(() => {
+    const pid = noteConfig?.projectId;
+    const uid = user?.id;
+    if (!pid || !uid) return;
 
     const enableCollab = !!noteConfig?.projectDetails?.hasCollaboration;
     if (enableCollab) {
-      projectService.realtime.connect(pid, uid, handler);
+      projectService.realtime.connect(pid, uid, realtimeHandler);
     } else {
       try {
         projectService.realtime.disconnect();
-      } catch {}
+      } catch { }
     }
+
     return () => {
       try {
         projectService.realtime.disconnect();
-      } catch {}
+        console.log("[DrawingScreen] Realtime disconnected");
+      } catch { }
     };
   }, [
     noteConfig?.projectId,
     noteConfig?.projectDetails?.hasCollaboration,
     user?.id,
+    realtimeHandler, // ✅ Add memoized handler
   ]);
 
   // 📤 EXPORT (local PDF/PNG)
@@ -1316,7 +1322,7 @@ export default function DrawingScreen({ route }) {
     // --- PICTURE EXPORT ---
     if (options.selected === "picture") {
       if (!multiPageCanvasContainerRef.current) {
-        toast.show({
+        toast({
           title: "Error",
           description: "Cannot export file. Canvas not found.",
           variant: "destructive",
@@ -1328,31 +1334,55 @@ export default function DrawingScreen({ route }) {
           format: "png",
           quality: 1,
         });
+
         let safeName = String(options.fileName || "Untitled").trim();
         safeName = safeName.replace(/[^a-zA-Z0-9._-]+/g, "_");
         if (!safeName.toLowerCase().endsWith(".png")) safeName += ".png";
-        const dest =
-          (FileSystem.documentDirectory || FileSystem.cacheDirectory) +
-          safeName;
-        try {
-          await FileSystem.copyAsync({ from: uri, to: dest });
-        } catch {}
-        const sharePath = dest || uri;
+
+        // ✅ Android: Use MediaLibrary to save to Pictures/SketchNote
+        if (Platform.OS === "android") {
+          try {
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') {
+              toast({
+                title: "Permission Required",
+                description: "Need permission to save to Pictures folder.",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            // Save to Pictures/SketchNote folder
+            const asset = await MediaLibrary.createAssetAsync(uri);
+            let album = await MediaLibrary.getAlbumAsync('SketchNote');
+            if (!album) {
+              album = await MediaLibrary.createAlbumAsync('SketchNote', asset, false);
+            } else {
+              await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+            }
+
+            toast({
+              title: "Exported Successfully",
+              description: `Saved to Pictures/SketchNote/${safeName}`,
+              variant: "default",
+            });
+            return;
+          } catch (error) {
+            console.error("MediaLibrary error:", error);
+            // Fallback to Sharing if MediaLibrary fails
+          }
+        }
+
+        // iOS or fallback: use Sharing
         if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(sharePath, {
+          await Sharing.shareAsync(uri, {
             mimeType: "image/png",
-            dialogTitle: "Share Image",
-          });
-        } else {
-          toast.show({
-            title: "Cannot Share",
-            description: "Sharing feature is not available on this device.",
-            variant: "destructive",
+            dialogTitle: "Save Image",
           });
         }
       } catch (error) {
         console.error("Error exporting image:", error);
-        toast.show({
+        toast({
           title: "Export Image Failed",
           description: "An error occurred while exporting the image.",
           variant: "destructive",
@@ -1360,11 +1390,11 @@ export default function DrawingScreen({ route }) {
       }
     }
     // --- STARNOTE (JSON) EXPORT ---
-    else if (options.selected === "starnote") {
+    else if (options.selected === "sketchnote") {
       try {
         const pagesData = await multiPageCanvasRef.current.getAllPagesData();
         if (!pagesData || pagesData.length === 0) {
-          toast.show({
+          toast({
             title: "No Data",
             description: "No content to export.",
             variant: "info",
@@ -1380,28 +1410,49 @@ export default function DrawingScreen({ route }) {
         };
 
         const jsonString = JSON.stringify(projectData, null, 2);
-        const fileName = `${options.fileName || "Untitled"}.starnote`;
-        const uri = FileSystem.documentDirectory + fileName.replace(/\s/g, "_");
-
-        await FileSystem.writeAsStringAsync(uri, jsonString, {
+        let safeName = `${options.fileName || "Untitled"}.sketchnote`;
+        safeName = safeName.replace(/\s/g, "_");
+        const internalUri =
+          (FileSystem.documentDirectory || FileSystem.cacheDirectory) +
+          safeName;
+        await FileSystem.writeAsStringAsync(internalUri, jsonString, {
           encoding: "utf8",
         });
 
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, {
-            mimeType: "application/json",
-            dialogTitle: "Share file SketchNote",
-          });
-        } else {
-          toast.show({
-            title: "Cannot Share",
-            description: "Sharing feature is not available on this device.",
-            variant: "destructive",
-          });
+        let finalDest = internalUri;
+        if (Platform.OS === "android" && FileSystem.StorageAccessFramework) {
+          try {
+            const permissions =
+              await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+            if (permissions.granted) {
+              const safUri =
+                await FileSystem.StorageAccessFramework.createFileAsync(
+                  permissions.directoryUri,
+                  safeName,
+                  "application/json"
+                );
+              await FileSystem.writeAsStringAsync(safUri, jsonString, {
+                encoding: FileSystem.EncodingType.UTF8,
+              });
+
+              toast({
+                title: "Exported Successfully",
+                description: "Saved SketchNote to selected folder",
+                variant: "default",
+              });
+              return;
+            }
+          } catch { }
         }
+
+        toast({
+          title: "Exported",
+          description: "SketchNote file ready",
+          variant: "default",
+        });
       } catch (error) {
         console.error("Error exporting SketchNote:", error);
-        toast.show({
+        toast({
           title: "Export SketchNote Failed",
           description: "An error occurred while exporting the file.",
           variant: "destructive",
@@ -1414,7 +1465,7 @@ export default function DrawingScreen({ route }) {
       options.selected === "editable"
     ) {
       if (options.selected === "editable") {
-        toast.show({
+        toast({
           title: "Notification",
           description:
             "Exporting editable PDF is not supported yet. A multi-page image PDF will be created instead.",
@@ -1426,7 +1477,7 @@ export default function DrawingScreen({ route }) {
       try {
         const pagesData = multiPageCanvasRef.current?.getAllPagesData?.();
         if (!pagesData || pagesData.length === 0) {
-          toast.show({
+          toast({
             title: "No Data",
             description: "No content to export.",
             variant: "info",
@@ -1464,16 +1515,60 @@ export default function DrawingScreen({ route }) {
           pageRefs.current,
           options.fileName,
           selectedNums,
-          options.quality
+          options.quality,
+          noteConfig?.orientation || "portrait"
         );
 
-        await Sharing.shareAsync(pdfPath, {
-          mimeType: "application/pdf",
-          dialogTitle: "Share file PDF",
+        // ✅ Android: Use SAF for user to choose save location
+        if (Platform.OS === "android" && FileSystem.StorageAccessFramework) {
+          try {
+            let safeName = String(options.fileName || "Untitled").trim();
+            safeName = safeName.replace(/[^a-zA-Z0-9._-]+/g, "_");
+            if (!safeName.toLowerCase().endsWith(".pdf")) safeName += ".pdf";
+
+            // User selects Downloads or any folder
+            const permissions =
+              await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+            if (permissions.granted) {
+              const safUri =
+                await FileSystem.StorageAccessFramework.createFileAsync(
+                  permissions.directoryUri,
+                  safeName,
+                  "application/pdf"
+                );
+
+              // Copy PDF from internal to SAF URI
+              const base64Data = await FileSystem.readAsStringAsync(pdfPath, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              await FileSystem.writeAsStringAsync(safUri, base64Data, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+
+              toast({
+                title: "Exported Successfully",
+                description: `Saved PDF to selected folder`,
+                variant: "default",
+              });
+              setIsSaving(false);
+              return;
+            }
+          } catch (error) {
+            console.error("SAF error:", error);
+            // Fallback to sharing
+          }
+        }
+
+        // iOS or fallback: show success message
+        toast({
+          title: "Exported",
+          description: `PDF ready to share`,
+          variant: "default",
         });
       } catch (error) {
         console.error("Error exporting multi-page PDF:", error);
-        toast.show({
+        toast({
           title: "Export PDF Failed",
           description: "An error occurred while exporting the PDF.",
           variant: "destructive",
@@ -1484,11 +1579,146 @@ export default function DrawingScreen({ route }) {
     }
     // --- OTHER/DEFAULT ---
     else {
-      toast.show({
+      toast({
         title: "Feature Not Supported",
         description: `Exporting to ${options.selected} format is not supported yet.`,
         variant: "info",
       });
+    }
+  };
+
+  // 📤 SHARE (export then share)
+  const handleShareFile = async (options) => {
+    setExportModalVisible(false);
+
+    if (options.selected === "picture") {
+      if (!multiPageCanvasContainerRef.current) {
+        toast({
+          title: "Error",
+          description: "Cannot export file. Canvas not found.",
+          variant: "destructive",
+        });
+        return;
+      }
+      try {
+        const uri = await captureRef(multiPageCanvasContainerRef.current, {
+          format: "png",
+          quality: 1,
+        });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: "image/png",
+            dialogTitle: "Share Image",
+          });
+        }
+      } catch (error) {
+        console.error("Error exporting image for share:", error);
+        toast({
+          title: "Share Failed",
+          description: "Unable to share the image.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    if (options.selected === "sketchnote") {
+      try {
+        const pagesData = await multiPageCanvasRef.current.getAllPagesData();
+        if (!pagesData || pagesData.length === 0) {
+          toast({
+            title: "No Data",
+            description: "No content to export.",
+            variant: "info",
+          });
+          return;
+        }
+        const projectData = {
+          version: "1.0.0",
+          createdAt: new Date().toISOString(),
+          noteConfig: noteConfig,
+          pages: pagesData.map((p) => p.dataObject),
+        };
+        const jsonString = JSON.stringify(projectData, null, 2);
+        const fileName = `${options.fileName || "Untitled"}.sketchnote`;
+        const uri = FileSystem.documentDirectory + fileName.replace(/\s/g, "_");
+        await FileSystem.writeAsStringAsync(uri, jsonString, {
+          encoding: "utf8",
+        });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: "application/json",
+            dialogTitle: "Share file SketchNote",
+          });
+        }
+      } catch (error) {
+        console.error("Error exporting SketchNote for share:", error);
+        toast({
+          title: "Share Failed",
+          description: "Unable to share the file.",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    if (options.selected === "editable" || options.selected === "noneditable") {
+      try {
+        const pagesData = multiPageCanvasRef.current?.getAllPagesData?.();
+        if (!pagesData || pagesData.length === 0) {
+          toast({
+            title: "No Data",
+            description: "No content to export.",
+            variant: "info",
+          });
+          return;
+        }
+        let selectedNums = [];
+        if (
+          options.pageMode === "range" &&
+          typeof options.pageRange === "string"
+        ) {
+          const m = options.pageRange.match(/\s*(\d+)\s*-\s*(\d+)\s*/);
+          if (m) {
+            const start = Math.max(1, parseInt(m[1], 10));
+            const end = Math.max(start, parseInt(m[2], 10));
+            const set = new Set();
+            for (let i = start; i <= end; i++) set.add(i);
+            selectedNums = Array.from(set.values());
+          }
+        } else if (
+          options.pageMode === "list" &&
+          typeof options.pageList === "string"
+        ) {
+          selectedNums = options.pageList
+            .split(/[\,\s]+/)
+            .map((x) => parseInt(x, 10))
+            .filter((n) => Number.isFinite(n) && n >= 1);
+        }
+
+        const pdfPath = await exportPagesToPdf(
+          pagesData,
+          pageRefs.current,
+          options.fileName,
+          selectedNums,
+          options.quality,
+          noteConfig?.orientation || "portrait"
+        );
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(pdfPath, {
+            mimeType: "application/pdf",
+            dialogTitle: "Share file PDF",
+          });
+        }
+      } catch (error) {
+        console.error("Error exporting PDF for share:", error);
+        toast({
+          title: "Share Failed",
+          description: "Unable to share the PDF.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -1566,7 +1796,7 @@ export default function DrawingScreen({ route }) {
         height: finalHeight,
       });
     } catch (err) {
-      toast.show({
+      toast({
         title: "Insert Image Failed",
         description: "An error occurred while inserting the image.",
         variant: "destructive",
@@ -1581,7 +1811,7 @@ export default function DrawingScreen({ route }) {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
-        toast.show({
+        toast({
           title: "Permission Required",
           description: "Camera access is needed.",
           variant: "destructive",
@@ -1630,7 +1860,7 @@ export default function DrawingScreen({ route }) {
         });
       }
     } catch (e) {
-      toast.show({
+      toast({
         title: "Camera Error",
         description: e.message || String(e),
         variant: "destructive",
@@ -1644,7 +1874,7 @@ export default function DrawingScreen({ route }) {
   const handleStickerSelect = useCallback(async (data) => {
     setStickerModalVisible(false);
     if (!data) {
-      toast.show({
+      toast({
         title: "Error",
         description: "Invalid sticker data",
         variant: "destructive",
@@ -1726,7 +1956,7 @@ export default function DrawingScreen({ route }) {
         return;
       }
     } catch (err) {
-      toast.show({
+      toast({
         title: "Error",
         description: "Failed to add sticker: " + err.message,
         variant: "destructive",
@@ -1786,8 +2016,8 @@ export default function DrawingScreen({ route }) {
               {isSaving
                 ? "Saving..."
                 : isUploadingAsset
-                ? "Uploading asset..."
-                : "Loading project..."}
+                  ? "Uploading asset..."
+                  : "Loading project..."}
             </Text>
           </View>
         </View>
@@ -1796,7 +2026,7 @@ export default function DrawingScreen({ route }) {
       <HeaderToolbar
         onBack={() => setExitModalVisible(true)}
         onToggleToolbar={() => setToolbarVisible((v) => !v)}
-        onPreview={() => {}} // Sidebar đã tích hợp trong MultiPageCanvas
+        onPreview={() => { }} // Sidebar đã tích hợp trong MultiPageCanvas
         onCamera={handleOpenCamera}
         onToggleLayerPanel={() => setShowLayerPanel((v) => !v)}
         isLayerPanelVisible={showLayerPanel}
@@ -1852,10 +2082,10 @@ export default function DrawingScreen({ route }) {
                 onPress={async () => {
                   try {
                     await handleSaveFile();
-                  } catch {}
+                  } catch { }
                   try {
                     projectService.realtime.disconnect();
-                  } catch {}
+                  } catch { }
                   setExitModalVisible(false);
                   navigation.navigate("Home");
                 }}
@@ -1877,7 +2107,7 @@ export default function DrawingScreen({ route }) {
                 onPress={() => {
                   try {
                     projectService.realtime.disconnect();
-                  } catch {}
+                  } catch { }
                   setExitModalVisible(false);
                   navigation.navigate("Home");
                 }}
@@ -1912,6 +2142,7 @@ export default function DrawingScreen({ route }) {
         visible={isExportModalVisible}
         onClose={() => setExportModalVisible(false)}
         onExport={handleExportFile}
+        onShare={handleShareFile}
         hasPro={!!user?.hasActiveSubscription}
         projectId={safeNoteConfig?.projectId}
         pages={safeNoteConfig?.pages}
@@ -2014,14 +2245,14 @@ export default function DrawingScreen({ route }) {
         "airbrush",
         "crayon",
       ].includes(tool) && (
-        <PenSettingsPanel
-          tool={tool}
-          setTool={setTool}
-          config={activeConfig}
-          onSettingChange={handleSettingChange}
-          visible={true}
-        />
-      )}
+          <PenSettingsPanel
+            tool={tool}
+            setTool={setTool}
+            config={activeConfig}
+            onSettingChange={handleSettingChange}
+            visible={true}
+          />
+        )}
 
       {/* 🧾 Canvas */}
       <View

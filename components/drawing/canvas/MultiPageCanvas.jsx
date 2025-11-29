@@ -265,7 +265,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             type: "paper",
             backgroundColor: paperBg,
             template: paperTemplate,
-            imageUrl: paperImageUrl,
+            imageUrl: p.imageUrl || paperImageUrl,
             pageNumber: p.pageNumber,
             strokeUrl: p.strokeUrl,
             snapshotUrl: p.snapshotUrl || null,
@@ -502,6 +502,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         "#FFFFFF",
       template:
         firstPaperPage?.template || noteConfig?.paper?.template || "blank",
+      imageUrl: firstPaperPage?.imageUrl || noteConfig?.paper?.imageUrl || null,
+      snapshotUrl: null,
     };
 
     // Initialize layers for new page

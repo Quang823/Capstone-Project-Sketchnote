@@ -16,6 +16,7 @@ const ExportModal = ({
   visible,
   onClose,
   onExport,
+  onShare,
   hasPro,
   hasActiveSubscription,
   projectId,
@@ -291,28 +292,49 @@ const ExportModal = ({
                 </View>
               </View>
 
-              <TouchableOpacity
-                style={styles.exportBtn}
-                onPress={() => {
-                  const quality =
-                    resolutionOptions.find((r) => r.key === resolutionKey)
-                      ?.quality || 90;
-                  onExport({
-                    selected,
-                    fileName,
-                    includeBg,
-                    pageMode,
-                    pageRange,
-                    pageList,
-                    quality,
-                  });
-                }}
-              >
-                <Text style={styles.exportText}>Export and share</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <TouchableOpacity
+                  style={[styles.exportBtn, { flex: 1 }]}
+                  onPress={() => {
+                    const quality =
+                      resolutionOptions.find((r) => r.key === resolutionKey)
+                        ?.quality || 90;
+                    onExport({
+                      selected,
+                      fileName,
+                      includeBg,
+                      pageMode,
+                      pageRange,
+                      pageList,
+                      quality,
+                    });
+                  }}
+                >
+                  <Text style={styles.exportText}>Export</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.shareBtn, { flex: 1 }]}
+                  onPress={() => {
+                    const quality =
+                      resolutionOptions.find((r) => r.key === resolutionKey)
+                        ?.quality || 90;
+                    onShare?.({
+                      selected,
+                      fileName,
+                      includeBg,
+                      pageMode,
+                      pageRange,
+                      pageList,
+                      quality,
+                    });
+                  }}
+                >
+                  <Text style={styles.shareText}>Share</Text>
+                </TouchableOpacity>
+              </View>
 
               <Text style={styles.savePath}>
-                Save path: storage/documents/starnote/export
+                Save path: storage/documents/sketchnote/export
               </Text>
             </View>
           </View>
@@ -418,6 +440,14 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   exportText: { color: "#fff", fontWeight: "bold" },
+  shareBtn: {
+    backgroundColor: "#E5E7EB",
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 16,
+  },
+  shareText: { color: "#111827", fontWeight: "bold" },
 
   savePath: {
     color: "#999",
