@@ -7,19 +7,28 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isGuest, setIsGuest] = useState(true); // true until we verify authentication
+  const [isLoading, setIsLoading] = useState(true); // true during initial auth check
 
   // Lấy user từ token khi app load
   const fetchUser = async () => {
     try {
+      setIsLoading(true);
       const token = await AsyncStorage.getItem("accessToken");
       if (!token) {
         setUser(null);
+        setIsGuest(true);
         return;
       }
       const u = await authService.getMyProfile(token);
       setUser(u);
+      setIsGuest(false);
     } catch (err) {
+      console.error("Failed to fetch user:", err);
       setUser(null);
+      setIsGuest(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -36,9 +45,16 @@ export const AuthProvider = ({ children }) => {
       // Xóa token + roles khỏi AsyncStorage
       await AsyncStorage.multiRemove(["accessToken", "refreshToken", "roles"]);
       setUser(null); // reset user
+      setIsGuest(true); // return to guest mode
     } catch (err) {
       console.error("Logout failed:", err);
     }
+  };
+
+  // Switch to guest mode explicitly
+  const continueAsGuest = () => {
+    setIsGuest(true);
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -46,7 +62,18 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        setUser,
+        login,
+        logout,
+        isGuest,
+        isLoading,
+        continueAsGuest,
+        fetchUser
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

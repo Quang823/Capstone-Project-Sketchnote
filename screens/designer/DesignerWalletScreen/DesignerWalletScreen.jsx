@@ -66,8 +66,8 @@ export default function DesignerWalletScreen() {
     try {
       // In a real app, you would fetch this from your API
       const data = await paymentService.getWallet();
-      console.log(data.result)
-     setWalletData(data.result);
+
+      setWalletData(data.result);
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
 
@@ -191,7 +191,7 @@ export default function DesignerWalletScreen() {
               {formatCurrency(walletData.balance)}
             </Text>
 
-       
+
 
             <TouchableOpacity
               style={styles.withdrawButtonNew}
@@ -211,10 +211,10 @@ export default function DesignerWalletScreen() {
                 styles.actionList,
                 isPortrait
                   ? {
-                      flexDirection: "row",
-                      flexWrap: "wrap",
-                      justifyContent: "space-between",
-                    }
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    justifyContent: "space-between",
+                  }
                   : { flexDirection: "column", gap: 16 },
               ]}
             >
@@ -294,8 +294,7 @@ export default function DesignerWalletScreen() {
                 key={
                   transaction?.transactionId ??
                   transaction?.id ??
-                  `${transaction?.type || "TX"}-${
-                    transaction?.createdAt || ""
+                  `${transaction?.type || "TX"}-${transaction?.createdAt || ""
                   }-${idx}`
                 }
                 style={styles.transactionItemNew}
@@ -306,16 +305,16 @@ export default function DesignerWalletScreen() {
                       transaction.type === "DEPOSIT"
                         ? "arrow-downward"
                         : transaction.type === "WITHDRAWAL"
-                        ? "arrow-upward"
-                        : "shopping-cart"
+                          ? "arrow-upward"
+                          : "shopping-cart"
                     }
                     size={20}
                     color={
                       transaction.type === "DEPOSIT"
                         ? "#16A34A"
                         : transaction.type === "WITHDRAWAL"
-                        ? "#DC2626"
-                        : "#084F8C"
+                          ? "#DC2626"
+                          : "#084F8C"
                     }
                   />
                 </View>
@@ -325,8 +324,8 @@ export default function DesignerWalletScreen() {
                     {transaction.type === "DEPOSIT"
                       ? "Deposit"
                       : transaction.type === "WITHDRAWAL"
-                      ? "Withdrawal"
-                      : "Purchase"}
+                        ? "Withdrawal"
+                        : "Purchase"}
                   </Text>
                   <Text style={styles.transactionDateNew}>
                     {formatDate(transaction.createdAt)}
@@ -367,8 +366,8 @@ export default function DesignerWalletScreen() {
                             transaction.status === "SUCCESS"
                               ? "#10B98115"
                               : transaction.status === "PENDING"
-                              ? "#F59E0B15"
-                              : "#EF444415",
+                                ? "#F59E0B15"
+                                : "#EF444415",
                         },
                       ]}
                     >
@@ -380,8 +379,8 @@ export default function DesignerWalletScreen() {
                               transaction.status === "SUCCESS"
                                 ? "#10B981"
                                 : transaction.status === "PENDING"
-                                ? "#F59E0B"
-                                : "#EF4444",
+                                  ? "#F59E0B"
+                                  : "#EF4444",
                           },
                         ]}
                       >

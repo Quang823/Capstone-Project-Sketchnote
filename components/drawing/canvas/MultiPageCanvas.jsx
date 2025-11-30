@@ -765,7 +765,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   };
 
   const pinch = Gesture.Pinch()
-    .enabled(!zoomLocked && tool === "zoom")
+    .enabled(!zoomLocked) // ✅ Always enabled (except when locked) - allows zoom during drawing
     .onStart((e) => {
       "worklet";
       try {
@@ -878,7 +878,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   useAnimatedReaction(
     () => derivedZoom.value,
     (val, prev) => {
-      if (val !== prev) runOnJS(setZoomPercent)(val);
+      // ✅ Only update if significant change (>= 5%) - reduces JS thread load
+      if (val !== prev && Math.abs(val - prev) >= 5) runOnJS(setZoomPercent)(val);
     }
   );
 
@@ -1726,14 +1727,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               scrollEventThrottle={12}
               decelerationRate="normal"
               showsVerticalScrollIndicator={false}
-              // Chế độ scroll-only cho phép scroll ngay cả khi đã zoom
-              scrollEnabled={
-                tool === "scroll"
-                  ? true
-                  : tool === "zoom"
-                    ? false
-                    : !isZooming && !isZoomedIn
-              }
+              // ✅ Always scrollable except in zoom mode - improves responsiveness
+              scrollEnabled={tool !== "zoom"}
               simultaneousHandlers={scrollRef}
               onLayout={(e) => {
                 const h = e?.nativeEvent?.layout?.height;

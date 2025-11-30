@@ -3,6 +3,7 @@ import DrawingScreen from "../screens/drawing/DrawingScreen/DrawingScreen";
 import LoginScreen from "../screens/auth/LoginScreen/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen/RegisterScreen";
 import HomeScreen from "../screens/home/HomeScreen/HomeScreen";
+import GuestHomeScreen from "../screens/home/GuestHomeScreen/GuestHomeScreen";
 import CourseDetailScreen from "../screens/courses/CourseDetailScreen/CourseDetailScreen";
 import CoursesScreen from "../screens/courses/CoursesScreen/CoursesScreen";
 import LessonScreen from "../screens/courses/LessonScreen/LessonScreen";
@@ -41,8 +42,9 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator
       screenOptions={{ headerShown: false }}
-      initialRouteName="Login"
+      initialRouteName="GuestHome"
     >
+      <Stack.Screen name="GuestHome" component={GuestHomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="VerifyEmail" component={VerifyEmailScreen} />

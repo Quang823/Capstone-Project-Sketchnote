@@ -39,6 +39,7 @@ import { projectService } from "../../../service/projectService";
 import { AuthContext } from "../../../context/AuthContext";
 import styles from "./DrawingScreen.styles";
 import * as offlineStorage from "../../../utils/offlineStorage";
+import { saveDrawingLocally } from "../../../utils/drawingLocalSave";
 import { manipulateAsync, FlipType, SaveFormat } from "expo-image-manipulator";
 import { uploadToCloudinary } from "../../../service/cloudinary";
 import LottieView from "lottie-react-native";
@@ -137,6 +138,12 @@ export default function DrawingScreen({ route }) {
   const [isExportModalVisible, setExportModalVisible] = useState(false);
   const [exitModalVisible, setExitModalVisible] = useState(false);
   const { toast } = useToast();
+
+  // 🔥 Detect if this is a local project (guest mode)
+  const isLocalProject = useMemo(() => {
+    const projectId = safeNoteConfig?.projectId;
+    return projectService.isLocalProject(projectId) || safeNoteConfig?.isLocal === true;
+  }, [safeNoteConfig]);
   const multiPageCanvasContainerRef = useRef(null);
   // ✅ Validate noteConfig to prevent crash
   useEffect(() => {
@@ -772,22 +779,30 @@ export default function DrawingScreen({ route }) {
   const [isUploadingAsset, setIsUploadingAsset] = useState(false); // New state for asset uploads
   const lastSyncTimeRef = useRef(0);
 
-  // [NEW] Setup network listener for auto-sync
+  // [NEW] Setup network listener for auto-sync (DISABLED for local projects)
   useEffect(() => {
+    // 🔥 Skip auto-sync for local/guest projects
+    if (isLocalProject) {
+      return;
+    }
+
     const THROTTLE_MS = 10000;
     const unsubscribe = NetInfo.addEventListener((state) => {
       if (state.isConnected && state.isInternetReachable) {
         const now = Date.now();
         if (now - lastSyncTimeRef.current >= THROTTLE_MS) {
           lastSyncTimeRef.current = now;
-          projectService.syncPendingPages();
+          // Only sync if projectService.syncPendingPages exists
+          if (typeof projectService.syncPendingPages === 'function') {
+            projectService.syncPendingPages();
+          }
         }
       }
     });
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [isLocalProject]);
 
   // 🔄 Auto-load strokes from strokeUrl when opening an existing project
   useEffect(() => {
@@ -849,6 +864,31 @@ export default function DrawingScreen({ route }) {
         const projectId = noteConfig?.projectId;
         if (!projectId || controller.signal.aborted) return;
 
+        // 🔥 For local projects, load from FileSystem
+        if (isLocalProject) {
+          try {
+            const { loadDrawingLocally } = require('../../../utils/drawingLocalSave');
+            const localData = await loadDrawingLocally(projectId);
+
+            if (localData?.pages && Array.isArray(localData.pages)) {
+              for (const page of localData.pages) {
+                if (controller.signal.aborted) break;
+
+                const pageId = page.pageId || page.pageNumber || 1;
+                const strokes = page.dataObject?.strokes || [];
+
+                if (strokes.length > 0) {
+                  await loadStrokesInChunks(pageId, strokes);
+                }
+              }
+            }
+          } catch (localError) {
+            console.error('❌ Failed to load from FileSystem:', localError);
+          }
+          return;
+        }
+
+        // ✅ For cloud projects, load from strokeUrl
         const pagesToLoad = [];
         const firstPageFromAPI = noteConfig.pages?.[0];
         const isFirstPageCover = firstPageFromAPI?.pageNumber === 1;
@@ -1009,8 +1049,40 @@ export default function DrawingScreen({ route }) {
         setIsSaving(false);
         return;
       }
+
+      // 🔥 Check if this is a local project (guest mode)
+      if (isLocalProject) {
+        try {
+          const success = await saveDrawingLocally(
+            safeNoteConfig.projectId,
+            multiPageCanvasRef,
+            safeNoteConfig
+          );
+
+          if (success && !silent) {
+            toast({
+              title: "Saved Locally",
+              description: "Your drawing has been saved to device storage",
+              variant: "success",
+            });
+          }
+        } catch (error) {
+          console.error('❌ Failed to save locally:', error);
+          if (!silent) {
+            toast({
+              title: "Save Failed",
+              description: error.message || "Failed to save drawing",
+              variant: "destructive",
+            });
+          }
+        } finally {
+          if (!silent) setIsSaving(false);
+        }
+        return;
+      }
+
       try {
-        // Save all pages locally
+        // Save all pages locally first (for offline backup)
         for (const page of pagesData) {
           const localKey = `${noteConfig.projectId}_page_${page.pageNumber}`;
           await offlineStorage.saveProjectLocally(localKey, page.dataObject);
@@ -1129,13 +1201,13 @@ export default function DrawingScreen({ route }) {
         if (!silent) setIsSaving(false);
       }
     },
-    [noteConfig?.projectId, isSaving, toast]
+    [noteConfig?.projectId, isSaving, toast, isLocalProject, safeNoteConfig]
   ); // ✅ Add all dependencies
 
   const realtimeHandler = useCallback(
     (msg) => {
       try {
-        console.log("[Realtime] MESSAGE", msg);
+
         if (!msg) return;
         // Prefer a full stroke payload if present
         if (msg.payload?.stroke && typeof msg.payload.stroke === "object") {
@@ -1277,6 +1349,7 @@ export default function DrawingScreen({ route }) {
     },
     [activePageId]
   ); // ✅ Remove multiPageCanvasRef from deps
+
   useEffect(() => {
     const id = setInterval(async () => {
       try {
@@ -1309,7 +1382,6 @@ export default function DrawingScreen({ route }) {
     return () => {
       try {
         projectService.realtime.disconnect();
-        console.log("[DrawingScreen] Realtime disconnected");
       } catch { }
     };
   }, [
@@ -2503,7 +2575,8 @@ export default function DrawingScreen({ route }) {
                     projectService.realtime.disconnect();
                   } catch { }
                   setExitModalVisible(false);
-                  navigation.navigate("Home");
+                  // 🔥 Navigate to correct home based on guest mode
+                  navigation.navigate(isLocalProject ? "GuestHome" : "Home");
                 }}
               >
                 <Text
@@ -2525,7 +2598,8 @@ export default function DrawingScreen({ route }) {
                     projectService.realtime.disconnect();
                   } catch { }
                   setExitModalVisible(false);
-                  navigation.navigate("Home");
+                  // 🔥 Navigate to correct home based on guest mode
+                  navigation.navigate(isLocalProject ? "GuestHome" : "Home");
                 }}
               >
                 <Text
