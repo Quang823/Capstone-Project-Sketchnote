@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>WebSocket Endpoint Test</title>
+</head>
+
+<body>
+    <h1>Testing WebSocket Endpoints</h1>
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+
+        function log(message) {
+            const div = document.createElement('div');
+            div.textContent = message;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        // Test 1: Chat WebSocket (known working)
+        log('Testing Chat WebSocket: wss://sketchnote.litecsys.com/ws');
+        const chatWs = new WebSocket('wss://sketchnote.litecsys.com/ws');
+
+        chatWs.onopen = () => {
+            log('✅ Chat WebSocket CONNECTED!');
+            chatWs.close();
+        };
+
+        chatWs.onerror = (error) => {
+            log('❌ Chat WebSocket ERROR');
+        };
+
+        chatWs.onclose = (event) => {
+            log(`🔴 Chat WebSocket CLOSED - Code: ${event.code}, Reason: ${event.reason || 'None'}`);
+
+            // Test 2: Notification WebSocket
+            setTimeout(() => {
+                log('\nTesting Notification WebSocket: wss://sketchnote.litecsys.com/ws-notifications');
+                const notifWs = new WebSocket('wss://sketchnote.litecsys.com/ws-notifications');
+
+                notifWs.onopen = () => {
+                    log('✅ Notification WebSocket CONNECTED!');
+                    notifWs.close();
+                };
+
+                notifWs.onerror = (error) => {
+                    log('❌ Notification WebSocket ERROR');
+                };
+
+                notifWs.onclose = (event) => {
+                    log(`🔴 Notification WebSocket CLOSED - Code: ${event.code}, Reason: ${event.reason || 'None'}`);
+
+                    // Compare results
+                    setTimeout(() => {
+                        log('\n=== COMPARISON ===');
+                        log('If Chat works but Notification fails → Backend config issue');
+                        log('If both fail → Network/Nginx issue');
+                        log('If both work → STOMP protocol issue');
+                    }, 1000);
+                };
+            }, 2000);
+        };
+    </script>
+</body>
+
+</html>

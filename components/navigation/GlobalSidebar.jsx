@@ -259,7 +259,7 @@ export default function GlobalSidebar() {
           <Text style={drawerStyles.userName}>
             {user
               ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
-                "User"
+              "User"
               : "Guest"}
           </Text>
 
@@ -307,7 +307,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.iconContainer,
                       activeNavItem === item.id &&
-                        drawerStyles.iconContainerActive,
+                      drawerStyles.iconContainerActive,
                     ]}
                   >
                     <Icon
@@ -320,7 +320,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.drawerText,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerTextActive,
+                      drawerStyles.drawerTextActive,
                     ]}
                   >
                     {item.label}
@@ -345,7 +345,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.iconContainer,
                       activeNavItem === item.id &&
-                        drawerStyles.iconContainerActive,
+                      drawerStyles.iconContainerActive,
                     ]}
                   >
                     <Icon
@@ -358,7 +358,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.drawerText,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerTextActive,
+                      drawerStyles.drawerTextActive,
                     ]}
                   >
                     {item.label}
@@ -383,7 +383,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.iconContainer,
                       activeNavItem === item.id &&
-                        drawerStyles.iconContainerActive,
+                      drawerStyles.iconContainerActive,
                     ]}
                   >
                     <Icon
@@ -396,7 +396,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.drawerText,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerTextActive,
+                      drawerStyles.drawerTextActive,
                     ]}
                   >
                     {item.label}
@@ -425,7 +425,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.iconContainer,
                       activeNavItem === item.id &&
-                        drawerStyles.iconContainerActive,
+                      drawerStyles.iconContainerActive,
                     ]}
                   >
                     <Icon
@@ -438,7 +438,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.drawerText,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerTextActive,
+                      drawerStyles.drawerTextActive,
                     ]}
                   >
                     {item.label}
@@ -470,7 +470,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.iconContainer,
                       activeNavItem === item.id &&
-                        drawerStyles.iconContainerActive,
+                      drawerStyles.iconContainerActive,
                     ]}
                   >
                     <Icon
@@ -483,7 +483,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.drawerText,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerTextActive,
+                      drawerStyles.drawerTextActive,
                     ]}
                   >
                     {item.label}
@@ -511,7 +511,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.iconContainer,
                       activeNavItem === item.id &&
-                        drawerStyles.iconContainerActive,
+                      drawerStyles.iconContainerActive,
                     ]}
                   >
                     <Icon
@@ -524,7 +524,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.drawerText,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerTextActive,
+                      drawerStyles.drawerTextActive,
                     ]}
                   >
                     {item.label}
@@ -543,7 +543,7 @@ export default function GlobalSidebar() {
                     style={({ pressed }) => [
                       drawerStyles.drawerItem,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerItemActive,
+                      drawerStyles.drawerItemActive,
                       pressed && { opacity: 0.7 },
                     ]}
                     onPress={() => handleNavPress(item.id)}
@@ -552,7 +552,7 @@ export default function GlobalSidebar() {
                       style={[
                         drawerStyles.iconContainer,
                         activeNavItem === item.id &&
-                          drawerStyles.iconContainerActive,
+                        drawerStyles.iconContainerActive,
                       ]}
                     >
                       <Icon
@@ -567,7 +567,7 @@ export default function GlobalSidebar() {
                       style={[
                         drawerStyles.drawerText,
                         activeNavItem === item.id &&
-                          drawerStyles.drawerTextActive,
+                        drawerStyles.drawerTextActive,
                       ]}
                     >
                       {item.label}
@@ -597,7 +597,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.iconContainer,
                       activeNavItem === item.id &&
-                        drawerStyles.iconContainerActive,
+                      drawerStyles.iconContainerActive,
                     ]}
                   >
                     <Icon
@@ -610,7 +610,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.drawerText,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerTextActive,
+                      drawerStyles.drawerTextActive,
                     ]}
                   >
                     {item.label}
@@ -642,7 +642,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.iconContainer,
                       activeNavItem === item.id &&
-                        drawerStyles.iconContainerActive,
+                      drawerStyles.iconContainerActive,
                     ]}
                   >
                     <Icon
@@ -655,7 +655,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.drawerText,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerTextActive,
+                      drawerStyles.drawerTextActive,
                     ]}
                   >
                     {item.label}
@@ -683,7 +683,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.iconContainer,
                       activeNavItem === item.id &&
-                        drawerStyles.iconContainerActive,
+                      drawerStyles.iconContainerActive,
                     ]}
                   >
                     <Icon
@@ -696,7 +696,7 @@ export default function GlobalSidebar() {
                     style={[
                       drawerStyles.drawerText,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerTextActive,
+                      drawerStyles.drawerTextActive,
                     ]}
                   >
                     {item.label}
@@ -715,7 +715,7 @@ export default function GlobalSidebar() {
                     style={({ pressed }) => [
                       drawerStyles.drawerItem,
                       activeNavItem === item.id &&
-                        drawerStyles.drawerItemActive,
+                      drawerStyles.drawerItemActive,
                       pressed && { opacity: 0.7 },
                     ]}
                     onPress={() => handleNavPress(item.id)}
@@ -724,7 +724,7 @@ export default function GlobalSidebar() {
                       style={[
                         drawerStyles.iconContainer,
                         activeNavItem === item.id &&
-                          drawerStyles.iconContainerActive,
+                        drawerStyles.iconContainerActive,
                       ]}
                     >
                       <Icon
@@ -739,7 +739,7 @@ export default function GlobalSidebar() {
                       style={[
                         drawerStyles.drawerText,
                         activeNavItem === item.id &&
-                          drawerStyles.drawerTextActive,
+                        drawerStyles.drawerTextActive,
                       ]}
                     >
                       {item.label}
