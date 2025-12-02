@@ -54,7 +54,7 @@ export default function BlogDetailScreen() {
     });
   };
 
-    const handleBackPress = () => {
+  const handleBackPress = () => {
     navigation.goBack();
   };
   const fetchAuthorProfile = async (userId) => {
@@ -288,6 +288,14 @@ export default function BlogDetailScreen() {
     setReplyInputs((prev) => ({ ...prev, [commentId]: value }));
   };
 
+  const handleReplyToReply = (commentId, authorName) => {
+    const mention = `@${authorName} `;
+    setReplyInputs((prev) => ({
+      ...prev,
+      [commentId]: mention,
+    }));
+  };
+
   const handleSubmitReply = async (commentId) => {
     const content = replyInputs[commentId] || "";
     const success = await createCommentsBlog(content, commentId);
@@ -366,8 +374,8 @@ export default function BlogDetailScreen() {
         <View style={{ backgroundColor: "#FFFFFF", paddingBottom: 32 }}>
           {/* Header Image */}
           {/* Back Button */}
-         
-         
+
+
           <View style={{ position: "relative" }}>
             {blog.imageUrl && (
               <Image
@@ -684,7 +692,7 @@ export default function BlogDetailScreen() {
                 multiline
               />
               <Pressable style={styles.submitButton} onPress={handleSubmitComment}>
-                <Text style={styles.submitButtonText}>Post</Text>
+                <Icon name="send" size={20} color="#FFFFFF" />
               </Pressable>
             </View>
 
@@ -696,152 +704,126 @@ export default function BlogDetailScreen() {
               <Text style={styles.emptyCommentsText}>Be the first to share your thoughts.</Text>
             ) : (
               comments.map((comment) => (
-                <View key={comment.id} style={styles.commentCard}>
-                  <View style={styles.commentHeader}>
-                    <View style={styles.commentAuthorInfo}>
-                      <Image
-                        source={{
-                          uri:
-                            comment.authorAvatarUrl ||
-                            "https://ui-avatars.com/api/?background=bae6fd&color=0f172a&name=User",
-                        }}
-                        style={styles.commentAvatar}
-                      />
-                      <View>
-                        <Text style={styles.commentAuthor}>{comment.authorDisplay || "Ẩn danh"}</Text>
-                        <Text style={styles.commentDate}>{formatDate(comment.createdAt)}</Text>
-                      </View>
-                    </View>
-                  </View>
-                  {editingTarget.type === "comment" && editingTarget.id === comment.id ? (
-                    <View style={styles.editContainer}>
-                      <TextInput
-                        style={styles.editInput}
-                        value={editingText}
-                        onChangeText={setEditingText}
-                        multiline
-                      />
-                      <View style={styles.editActions}>
-                        <Pressable style={[styles.actionButton, styles.cancelButton]} onPress={handleCancelEditing}>
-                          <Text style={styles.cancelButtonText}>Cancel</Text>
-                        </Pressable>
-                        <Pressable style={[styles.actionButton, styles.saveButton]} onPress={handleSaveEditing}>
-                          <Text style={styles.saveButtonText}>Save</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-                  ) : (
-                    <Text style={styles.commentContent}>{comment.content}</Text>
-                  )}
-                  <View style={styles.commentActionsRow}>
-                    <Pressable
-                      style={styles.replyBadge}
-                      onPress={() => handleToggleReplies(comment.id, comment.replyCount || 0)}
-                    >
-                      <Text style={styles.replyBadgeText}>
-                        {expandedComments[comment.id]
-                          ? "Hide replies"
-                          : comment.replyCount > 0
-                            ? `${comment.replyCount} repl${comment.replyCount > 1 ? "ies" : "y"}`
-                            : "Reply"}
-                      </Text>
-                    </Pressable>
-                    {canManageComment(comment.authorId) && editingTarget.id !== comment.id && (
-                      <View style={styles.manageActions}>
-                        <Pressable
-                          style={[styles.manageActionButton, styles.editActionButton]}
-                          onPress={() => handleStartEditing("comment", comment.id, comment.content)}
-                        >
-                          <Text style={styles.manageActionText}>Edit</Text>
-                        </Pressable>
-                        <Pressable
-                          style={[styles.manageActionButton, styles.deleteActionButton]}
-                          onPress={() => confirmDeleteComment(comment.id)}
-                        >
-                          <Text style={[styles.manageActionText, styles.manageDeleteText]}>Delete</Text>
-                        </Pressable>
-                      </View>
-                    )}
-                  </View>
-
-                  {expandedComments[comment.id] && (
-                    <View style={styles.replySection}>
-                      {comment.replyCount > 0 && replyLoadingMap[comment.id] && (
-                        <ActivityIndicator size="small" color="#60A5FA" style={{ marginBottom: 8 }} />
+                <View key={comment.id} style={styles.commentContainer}>
+                  <Image
+                    source={{
+                      uri:
+                        comment.authorAvatarUrl ||
+                        "https://ui-avatars.com/api/?background=bae6fd&color=0f172a&name=User",
+                    }}
+                    style={styles.commentAvatar}
+                  />
+                  <View style={styles.commentContentWrapper}>
+                    <View style={styles.commentBubble}>
+                      <Text style={styles.commentAuthor}>{comment.authorDisplay || "User"}</Text>
+                      {editingTarget.type === "comment" && editingTarget.id === comment.id ? (
+                        <View>
+                          <TextInput
+                            style={styles.editInputSimple}
+                            value={editingText}
+                            onChangeText={setEditingText}
+                            multiline
+                          />
+                          <View style={styles.editActionsSimple}>
+                            <Text onPress={handleCancelEditing} style={styles.editActionText}>Cancel</Text>
+                            <Text onPress={handleSaveEditing} style={[styles.editActionText, { color: "#2563EB" }]}>Save</Text>
+                          </View>
+                        </View>
+                      ) : (
+                        <Text style={styles.commentText}>{comment.content}</Text>
                       )}
+                    </View>
 
-                      {replies[comment.id]?.map((reply) => (
-                        <View key={reply.id} style={styles.replyCard}>
-                          <View style={styles.replyHeader}>
-                            <View style={styles.replyAuthorInfo}>
-                              <Image
-                                source={{
-                                  uri:
-                                    reply.authorAvatarUrl ||
-                                    "https://ui-avatars.com/api/?background=bae6fd&color=0f172a&name=User",
-                                }}
-                                style={styles.replyAvatar}
-                              />
-                              <View>
-                                <Text style={styles.replyAuthor}>{reply.authorDisplay || "Ẩn danh"}</Text>
-                                <Text style={styles.replyDate}>{formatDate(reply.createdAt)}</Text>
+                    <View style={styles.commentFooter}>
+                      <Text style={styles.timeText}>{formatDate(comment.createdAt)}</Text>
+                      <Pressable onPress={() => handleToggleReplies(comment.id, comment.replyCount || 0)}>
+                        <Text style={styles.footerActionText}>
+                          {comment.replyCount > 0 ? `Reply (${comment.replyCount})` : "Reply"}
+                        </Text>
+                      </Pressable>
+                      {canManageComment(comment.authorId) && editingTarget.id !== comment.id && (
+                        <>
+                          <Pressable onPress={() => handleStartEditing("comment", comment.id, comment.content)}>
+                            <Text style={styles.footerActionText}>Edit</Text>
+                          </Pressable>
+                          <Pressable onPress={() => confirmDeleteComment(comment.id)}>
+                            <Text style={[styles.footerActionText, styles.footerDeleteText]}>Delete</Text>
+                          </Pressable>
+                        </>
+                      )}
+                    </View>
+
+                    {expandedComments[comment.id] && (
+                      <View style={styles.repliesContainer}>
+                        {comment.replyCount > 0 && replyLoadingMap[comment.id] && (
+                          <ActivityIndicator size="small" color="#60A5FA" style={{ marginBottom: 8 }} />
+                        )}
+
+                        {replies[comment.id]?.map((reply) => (
+                          <View key={reply.id} style={styles.replyContainer}>
+                            <Image
+                              source={{
+                                uri:
+                                  reply.authorAvatarUrl ||
+                                  "https://ui-avatars.com/api/?background=bae6fd&color=0f172a&name=User",
+                              }}
+                              style={styles.replyAvatar}
+                            />
+                            <View style={styles.commentContentWrapper}>
+                              <View style={styles.commentBubble}>
+                                <Text style={styles.commentAuthor}>{reply.authorDisplay || "User"}</Text>
+                                {editingTarget.type === "reply" && editingTarget.id === reply.id ? (
+                                  <View>
+                                    <TextInput
+                                      style={styles.editInputSimple}
+                                      value={editingText}
+                                      onChangeText={setEditingText}
+                                      multiline
+                                    />
+                                    <View style={styles.editActionsSimple}>
+                                      <Text onPress={handleCancelEditing} style={styles.editActionText}>Cancel</Text>
+                                      <Text onPress={handleSaveEditing} style={[styles.editActionText, { color: "#2563EB" }]}>Save</Text>
+                                    </View>
+                                  </View>
+                                ) : (
+                                  <Text style={styles.commentText}>{reply.content}</Text>
+                                )}
+                              </View>
+                              <View style={styles.commentFooter}>
+                                <Text style={styles.timeText}>{formatDate(reply.createdAt)}</Text>
+                                <Pressable onPress={() => handleReplyToReply(comment.id, reply.authorDisplay)}>
+                                  <Text style={styles.footerActionText}>Reply</Text>
+                                </Pressable>
+                                {canManageComment(reply.authorId) && editingTarget.id !== reply.id && (
+                                  <>
+                                    <Pressable onPress={() => handleStartEditing("reply", reply.id, reply.content, comment.id)}>
+                                      <Text style={styles.footerActionText}>Edit</Text>
+                                    </Pressable>
+                                    <Pressable onPress={() => confirmDeleteComment(reply.id, comment.id)}>
+                                      <Text style={[styles.footerActionText, styles.footerDeleteText]}>Delete</Text>
+                                    </Pressable>
+                                  </>
+                                )}
                               </View>
                             </View>
                           </View>
-                          {editingTarget.type === "reply" && editingTarget.id === reply.id ? (
-                            <View style={styles.editContainer}>
-                              <TextInput
-                                style={styles.editInput}
-                                value={editingText}
-                                onChangeText={setEditingText}
-                                multiline
-                              />
-                              <View style={styles.editActions}>
-                                <Pressable style={[styles.actionButton, styles.cancelButton]} onPress={handleCancelEditing}>
-                                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                                </Pressable>
-                                <Pressable style={[styles.actionButton, styles.saveButton]} onPress={handleSaveEditing}>
-                                  <Text style={styles.saveButtonText}>Save</Text>
-                                </Pressable>
-                              </View>
-                            </View>
-                          ) : (
-                            <Text style={styles.replyContent}>{reply.content}</Text>
-                          )}
-                          {canManageComment(reply.authorId) && editingTarget.id !== reply.id && (
-                            <View style={styles.replyActions}>
-                              <Pressable
-                                style={[styles.manageActionButton, styles.editActionButton]}
-                                onPress={() => handleStartEditing("reply", reply.id, reply.content, comment.id)}
-                              >
-                                <Text style={styles.manageActionText}>Edit</Text>
-                              </Pressable>
-                              <Pressable
-                                style={[styles.manageActionButton, styles.deleteActionButton]}
-                                onPress={() => confirmDeleteComment(reply.id, comment.id)}
-                              >
-                                <Text style={[styles.manageActionText, styles.manageDeleteText]}>Delete</Text>
-                              </Pressable>
-                            </View>
-                          )}
-                        </View>
-                      ))}
+                        ))}
 
-                      <View style={styles.replyInputWrapper}>
-                        <TextInput
-                          style={styles.replyInput}
-                          placeholder="Write a reply..."
-                          placeholderTextColor="#94A3B8"
-                          value={replyInputs[comment.id] || ""}
-                          onChangeText={(value) => handleReplyChange(comment.id, value)}
-                          multiline
-                        />
-                        <Pressable style={styles.submitButton} onPress={() => handleSubmitReply(comment.id)}>
-                          <Text style={styles.submitButtonText}>Reply</Text>
-                        </Pressable>
+                        <View style={styles.replyInputWrapper}>
+                          <TextInput
+                            style={styles.replyInput}
+                            placeholder="Write a reply..."
+                            placeholderTextColor="#94A3B8"
+                            value={replyInputs[comment.id] || ""}
+                            onChangeText={(value) => handleReplyChange(comment.id, value)}
+                          />
+                          <Pressable onPress={() => handleSubmitReply(comment.id)}>
+                            <Icon name="send" size={20} color="#2563EB" />
+                          </Pressable>
+                        </View>
                       </View>
-                    </View>
-                  )}
+                    )}
+                  </View>
                 </View>
               ))
             )}
@@ -857,310 +839,169 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 16,
     left: 16,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 5,
+    zIndex: 10,
   },
   commentsSection: {
-    marginTop: 16,
-    padding: 24,
+    marginTop: 0,
+    padding: 16,
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
   },
   commentsTitle: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "700",
     color: "#0F172A",
-    marginBottom: 20,
-    letterSpacing: -0.5,
+    marginBottom: 16,
   },
   commentInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 24,
+    gap: 10,
   },
   commentInput: {
-    minHeight: 70,
-    borderWidth: 1.5,
-    borderColor: "#CBD5E1",
-    borderRadius: 12,
-    padding: 14,
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     fontSize: 15,
     color: "#0F172A",
-    backgroundColor: "#FFFFFF",
-    marginBottom: 12,
-    lineHeight: 22,
+    backgroundColor: "#F1F5F9",
   },
   submitButton: {
-    alignSelf: "flex-end",
     backgroundColor: "#2563EB",
-    paddingHorizontal: 24,
-    paddingVertical: 11,
-    borderRadius: 24,
-    shadowColor: "#2563EB",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
   submitButtonText: {
     color: "#FFFFFF",
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: 12,
   },
   commentsLoader: {
     paddingVertical: 20,
   },
   emptyCommentsText: {
     color: "#94A3B8",
-    fontSize: 15,
-    fontStyle: "italic",
+    fontSize: 14,
     textAlign: "center",
-    paddingVertical: 24,
+    paddingVertical: 20,
   },
-  commentCard: {
-    marginBottom: 18,
-    padding: 20,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  commentHeader: {
+
+  // New Comment Styles
+  commentContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  commentAuthorInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    marginBottom: 16,
   },
   commentAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#E2E8F0",
-  },
-  commentAuthor: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 2,
-  },
-  commentDate: {
-    fontSize: 12,
-    color: "#94A3B8",
-    fontWeight: "500",
-  },
-  commentContent: {
-    fontSize: 15,
-    color: "#1F2937",
-    marginBottom: 12,
-    lineHeight: 22,
-    marginLeft: 4,
-  },
-  commentActionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-  },
-  replyBadge: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#DBEAFE",
-  },
-  replyBadgeText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#1E40AF",
-  },
-  manageActions: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  manageActionButton: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderWidth: 1.5,
-  },
-  editActionButton: {
-    borderColor: "#93C5FD",
-    backgroundColor: "#EFF6FF",
-  },
-  deleteActionButton: {
-    borderColor: "#FCA5A5",
-    backgroundColor: "#FEF2F2",
-  },
-  manageActionText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#1E40AF",
-    textTransform: "uppercase",
-    letterSpacing: 0.3,
-  },
-  manageDeleteText: {
-    color: "#DC2626",
-  },
-  replySection: {
-    marginTop: 16,
-    paddingLeft: 20,
-    borderLeftWidth: 3,
-    borderLeftColor: "#93C5FD",
-    gap: 8,
-  },
-  replyCard: {
-    marginTop: 12,
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  replyActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 10,
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#F1F5F9",
-  },
-  replyHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  replyAuthorInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  replyAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: "#E2E8F0",
+    marginRight: 10,
   },
-  replyAuthor: {
-    fontSize: 14,
+  commentContentWrapper: {
+    flex: 1,
+  },
+  commentBubble: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignSelf: "flex-start",
+    maxWidth: "100%",
+  },
+  commentAuthor: {
+    fontSize: 13,
     fontWeight: "700",
     color: "#0F172A",
     marginBottom: 2,
   },
-  replyDate: {
-    fontSize: 11,
-    color: "#94A3B8",
-    fontWeight: "500",
-  },
-  replyContent: {
-    fontSize: 14,
-    color: "#1F2937",
-    lineHeight: 20,
-    marginLeft: 2,
-  },
-  replyInputWrapper: {
-    marginTop: 14,
-  },
-  replyInput: {
-    minHeight: 50,
-    borderWidth: 1.5,
-    borderColor: "#CBD5E1",
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 14,
-    color: "#0F172A",
-    backgroundColor: "#F8FAFC",
-    marginBottom: 10,
+  commentText: {
+    fontSize: 15,
+    color: "#1E293B",
     lineHeight: 20,
   },
-  commentActionText: {
-    fontSize: 13,
-    color: "#2563EB",
-    fontWeight: "600",
+  commentFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginTop: 4,
+    marginLeft: 4,
   },
-  deleteActionText: {
-    fontSize: 13,
-    color: "#DC2626",
-    fontWeight: "600",
+  timeText: {
+    fontSize: 12,
+    color: "#64748B",
   },
-  editContainer: {
+  footerActionText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  footerDeleteText: {
+    color: "#EF4444",
+  },
+
+  // Replies
+  repliesContainer: {
+    marginTop: 8,
+  },
+  replyContainer: {
+    flexDirection: "row",
     marginBottom: 12,
   },
-  editInput: {
-    minHeight: 60,
-    borderWidth: 1.5,
-    borderColor: "#CBD5E1",
-    borderRadius: 10,
-    padding: 14,
-    fontSize: 15,
-    color: "#0F172A",
-    backgroundColor: "#FFFFFF",
-    lineHeight: 22,
+  replyAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#E2E8F0",
+    marginRight: 8,
   },
-  editActions: {
+  replyInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 8,
+  },
+  replyInput: {
+    flex: 1,
+    height: 36,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    backgroundColor: "#F1F5F9",
+    color: "#0F172A",
+  },
+
+  // Edit Styles
+  editInputSimple: {
+    fontSize: 15,
+    color: "#1E293B",
+    padding: 0,
+    minWidth: 150,
+  },
+  editActionsSimple: {
     flexDirection: "row",
     justifyContent: "flex-end",
     gap: 12,
-    marginTop: 12,
+    marginTop: 4,
   },
-  actionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cancelButton: {
-    backgroundColor: "#E2E8F0",
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-  },
-  cancelButtonText: {
-    color: "#475569",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-  saveButton: {
-    backgroundColor: "#2563EB",
-  },
-  saveButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 14,
+  editActionText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748B",
   },
 });
