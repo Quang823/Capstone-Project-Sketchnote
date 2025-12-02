@@ -57,4 +57,7 @@ export const blogApiController = {
       params: { page, size }
     });
   },
+  changeBlogStatus: async (id,status) => {
+    return await privateApi.put(`/api/blogs/${id}/publish`, { status });
+  },
 };

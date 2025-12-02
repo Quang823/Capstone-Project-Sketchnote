@@ -38,6 +38,8 @@ import ProfileScreen from "../screens/auth/ProfileScreen/ProfileScreen";
 import VerifyEmailScreen from "../screens/auth/VerifyEmailScreen/VerifyEmailScreen";
 import GalleryScreen from "../screens/drawing/GalleryScreen/GalleryScreen";
 import ChatScreen from "../screens/chat/ChatScreen";
+import CreditScreen from "../screens/credit/CreditScreen";
+import CreditTransactionHistoryScreen from "../screens/credit/CreditTransactionHistoryScreen";
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -67,6 +69,8 @@ export default function AppNavigator() {
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="Wallet" component={WalletScreen} />
+      <Stack.Screen name="CreditScreen" component={CreditScreen} />
+      <Stack.Screen name="CreditTransactionHistory" component={CreditTransactionHistoryScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
