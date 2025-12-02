@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useContext, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import LazyImage from "../../common/LazyImage";
 import { projectService } from "../../service/projectService";
 import * as offlineStorage from "../../utils/offlineStorage";
+import { AuthContext } from "../../context/AuthContext";
+import NetInfo from "@react-native-community/netinfo";
+import SidebarToggleButton from "../../components/navigation/SidebarToggleButton";
 
 const COVER_TEMPLATES = {
   simple: [
@@ -1209,6 +1212,9 @@ export default function NoteSetupScreen({ navigation, route }) {
   const [orientation, setOrientation] = useState("portrait");
   const [paperSize, setPaperSize] = useState("A4");
   const [showFormatDropdown, setShowFormatDropdown] = useState(false);
+
+  // 🔥 Add AuthContext at component level (not inside handleCreate)
+  const { isGuest, user } = useContext(AuthContext);
   const [titleModalVisible, setTitleModalVisible] = useState(false);
 
   const [selectedCover, setSelectedCover] = useState("label");
@@ -1282,30 +1288,70 @@ export default function NoteSetupScreen({ navigation, route }) {
         finalImageUrl = selectedTemplate.imageUrl[orientation] || null;
       }
 
-      // Create project via API
-      const projectData = {
-        name: noteTitle.trim(),
-        description: noteDescription.trim() || "",
-        imageUrl: finalImageUrl || "",
-      };
+      // 🔥 Check if user is guest or offline
+      const netState = await NetInfo.fetch();
+      const isOnline = netState.isConnected && netState.isInternetReachable;
+      const shouldCreateLocally = isGuest || !isOnline || !user;
 
-      // console.log("📝 Creating project with data:", projectData);
-      const createdProject = await projectService.createProject(projectData);
-      //console.log("✅ Project created:", createdProject);
+      let createdProject;
+      let projectId;
 
-      // Get the project ID (backend trả về projectId)
-      const projectId =
-        createdProject?.projectId || createdProject?.id || createdProject?._id;
+      if (shouldCreateLocally) {
+        // ✅ Check guest project limit
+        const { canCreate, currentCount, limit } = await offlineStorage.checkGuestProjectLimit();
 
-      if (!projectId) {
-        throw new Error("Cannot get projectId after creation");
+        if (!canCreate) {
+          setIsCreating(false);
+          Alert.alert(
+            "Project Limit Reached",
+            `Guest mode only allows ${limit} projects. You currently have ${currentCount} projects.\n\nPlease login to create unlimited projects.`,
+            [
+              { text: "OK", style: "cancel" },
+              {
+                text: "Login Now",
+                onPress: () => navigation.navigate("Login")
+              }
+            ]
+          );
+          return;
+        }
+
+        // ✅ Create project LOCALLY (no API call)
+
+        const localProjectData = {
+          name: noteTitle.trim(),
+          description: noteDescription.trim() || "",
+          imageUrl: finalImageUrl || "",
+          orientation,
+          paperSize,
+        };
+
+        createdProject = await projectService.createProjectLocally(localProjectData);
+        projectId = createdProject.projectId;
+
+        // Show info if offline
+        if (!isOnline) {
+          Alert.alert(
+            "Offline Mode",
+            "Project created locally. It will sync to cloud when you're online and logged in."
+          );
+        }
+      } else {
+        // ✅ Create project via API (cloud)
+
+        const projectData = {
+          name: noteTitle.trim(),
+          description: noteDescription.trim() || "",
+          imageUrl: finalImageUrl || "",
+        };
+
+        createdProject = await projectService.createProject(projectData);
+        projectId = createdProject?.projectId || createdProject?.id || createdProject?._id;
+
+        if (!projectId) {
+          throw new Error("Cannot get projectId after creation");
+        }
       }
-
-      // Không gọi lại GET khi vừa tạo để tránh lỗi ID undefined; dùng dữ liệu trả về trực tiếp
-      const projectDetails = createdProject;
-
-      // Không tạo page ngay; để người dùng vào vẽ rồi bấm Save mới presign + tạo page
-      const initialPages = [];
 
       // Lookup selected paper template image by orientation
       const selectedPaperTemplate = Object.values(PAPER_TEMPLATES)
@@ -1331,14 +1377,15 @@ export default function NoteSetupScreen({ navigation, route }) {
         paperSize,
         cover: hasCover
           ? {
-              template: selectedCover,
-              color: coverColor,
-              imageUrl: finalImageUrl,
-            }
+            template: selectedCover,
+            color: coverColor,
+            imageUrl: finalImageUrl,
+          }
           : null,
         paper: { template: selectedPaper, imageUrl: finalPaperImageUrl },
-        pages: initialPages, // Chưa có page nào cho tới khi Save
-        projectDetails: projectDetails, // Include full project details (từ response tạo project)
+        pages: [], // No pages yet until Save
+        projectDetails: createdProject,
+        isLocal: shouldCreateLocally, // 🔥 Mark if it's a local project
       };
 
       await offlineStorage.saveProjectLocally(`${projectId}_meta`, {
@@ -1347,15 +1394,14 @@ export default function NoteSetupScreen({ navigation, route }) {
       });
 
       setIsCreating(false);
-      //   console.log("🚀 Navigating to DrawingScreen with config:", noteConfig);
       navigation.navigate("DrawingScreen", { noteConfig });
     } catch (error) {
       setIsCreating(false);
-      // console.error("❌ Failed to create project:", error);
+      console.error("❌ Failed to create project:", error);
       Alert.alert(
         "Error",
         "Failed to create project. Please try again.\n" +
-          (error.message || "Unknown error")
+        (error.message || "Unknown error")
       );
     }
   };
@@ -1374,10 +1420,10 @@ export default function NoteSetupScreen({ navigation, route }) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.cancelButton}>Cancel</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create note</Text>
+        <View style={styles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <Text style={styles.headerTitle}>Create note</Text>
+        </View>
         <TouchableOpacity onPress={handleCreate} disabled={isCreating}>
           <LinearGradient
             colors={
@@ -1554,7 +1600,7 @@ export default function NoteSetupScreen({ navigation, route }) {
                       style={[
                         styles.orientationTabText,
                         orientation === item.id &&
-                          styles.orientationTabTextActive,
+                        styles.orientationTabTextActive,
                       ]}
                     >
                       {item.label}
@@ -1646,7 +1692,7 @@ export default function NoteSetupScreen({ navigation, route }) {
                           ? styles.coverCardPortrait
                           : styles.coverCardLandscape,
                         selectedCover === template.id &&
-                          styles.coverTemplateCardActive,
+                        styles.coverTemplateCardActive,
                       ]}
                       onPress={() => {
                         setSelectedCover(template.id);
@@ -1745,7 +1791,7 @@ export default function NoteSetupScreen({ navigation, route }) {
                           ? styles.paperCardPortrait
                           : styles.paperCardLandscape,
                         selectedPaper === template.id &&
-                          styles.templateCardActive,
+                        styles.templateCardActive,
                       ]}
                       onPress={() => {
                         setSelectedPaper(template.id);
@@ -1888,13 +1934,30 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#E0F2FE",
+    borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+    letterSpacing: -0.5,
   },
   cancelButton: {
     fontSize: 16,

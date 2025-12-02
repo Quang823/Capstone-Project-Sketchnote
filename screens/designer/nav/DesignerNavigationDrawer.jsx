@@ -25,15 +25,15 @@ export default function DesignerNavigationDrawer({
 
   const displayName = user
     ? user.name ||
-      `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
-      "Designer"
+    `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() ||
+    "Designer"
     : "Guest";
 
   const handleLogout = async () => {
     await logout();
     onToggleDrawer?.();
     navigation.dispatch(
-      CommonActions.reset({ index: 0, routes: [{ name: "Login" }] })
+      CommonActions.reset({ index: 0, routes: [{ name: "GuestHome" }] })
     );
   };
 

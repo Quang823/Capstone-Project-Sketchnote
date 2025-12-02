@@ -493,33 +493,43 @@ export default function DesignerQuickUploadScreen() {
                       </Text>
                     </View>
                   ) : (
-                    projects.map((proj) => (
-                      <Pressable
-                        key={proj.projectId}
-                        onPress={() => setSelectedProjectId(proj.projectId)}
-                        style={[
-                          styles.projectCard,
-                          selectedProjectId === proj.projectId &&
-                            styles.projectCardActive,
-                        ]}
-                      >
-                        <Image
-                          source={{ uri: proj.imageUrl }}
-                          style={styles.projectImage}
-                        />
-                        <View style={styles.projectInfo}>
-                          <Text style={styles.projectName} numberOfLines={1}>
-                            {proj.name}
-                          </Text>
-                          <Text style={styles.projectDesc} numberOfLines={2}>
-                            {proj.description}
-                          </Text>
-                        </View>
-                        {selectedProjectId === proj.projectId && (
-                          <Icon name="check-circle" size={24} color="#084F8C" />
-                        )}
-                      </Pressable>
-                    ))
+                    <ScrollView
+                      style={styles.projectListScroll}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator
+                    >
+                      {projects.map((proj) => (
+                        <Pressable
+                          key={proj.projectId}
+                          onPress={() => setSelectedProjectId(proj.projectId)}
+                          style={[
+                            styles.projectCard,
+                            selectedProjectId === proj.projectId &&
+                              styles.projectCardActive,
+                          ]}
+                        >
+                          <Image
+                            source={{ uri: proj.imageUrl }}
+                            style={styles.projectImage}
+                          />
+                          <View style={styles.projectInfo}>
+                            <Text style={styles.projectName} numberOfLines={1}>
+                              {proj.name}
+                            </Text>
+                            <Text style={styles.projectDesc} numberOfLines={2}>
+                              {proj.description}
+                            </Text>
+                          </View>
+                          {selectedProjectId === proj.projectId && (
+                            <Icon
+                              name="check-circle"
+                              size={24}
+                              color="#084F8C"
+                            />
+                          )}
+                        </Pressable>
+                      ))}
+                    </ScrollView>
                   )}
                 </View>
               )}

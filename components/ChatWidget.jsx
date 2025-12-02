@@ -73,31 +73,25 @@ export default function ChatWidget({ visible, onClose }) {
             // URL gốc: https://sketchnote.litecsys.com/ws
             const wsUrl = apiUrl.replace(/\/$/, "") + "/ws";
 
-
-            console.log(`🔌 Connecting to WebSocket at: ${wsUrl} with UserID: ${currentUserId}`);
-
             webSocketService.connect(
                 wsUrl,
                 () => {
-                    console.log("✅ Mobile WebSocket Connected!");
+
                     setWsConnected(true);
 
                     // Subscribe ngay khi connect thành công
                     const topic = `/queue/private/${currentUserId}`;
-                    console.log(`📥 Subscribing to: ${topic}`);
+
                     webSocketService.subscribe(topic, (msg) => {
-                        console.log("📨 Mobile Received Message:", msg);
                         handleIncomingMessage(msg);
                     });
                 },
                 (error) => {
-                    console.error("❌ Mobile WebSocket Error:", error);
                     setWsConnected(false);
                 }
             );
         } else if (!visible) {
             // Ngắt kết nối khi đóng widget để tiết kiệm tài nguyên
-            console.log("🛑 Widget closed, disconnecting WebSocket...");
             webSocketService.disconnect();
             setWsConnected(false);
         }
@@ -111,12 +105,7 @@ export default function ChatWidget({ visible, onClose }) {
     }, [visible, currentUserId]);
 
     const handleIncomingMessage = (message) => {
-        console.log("📨 Incoming message:", {
-            id: message.id,
-            senderId: message.senderId,
-            receiverId: message.receiverId,
-            content: message.content?.substring(0, 20)
-        });
+
 
         // ⚠️ BỎ QUA tin nhắn từ chính mình (đã được thêm vào UI trong handleSendMessage)
         if (message.senderId === currentUserId) {
@@ -151,7 +140,7 @@ export default function ChatWidget({ visible, onClose }) {
                 });
 
                 if (exists) {
-                    console.log("⚠️ Message already exists, skipping");
+
                     return prev;
                 }
 
@@ -164,8 +153,6 @@ export default function ChatWidget({ visible, onClose }) {
             setTimeout(() => {
                 flatListRef.current?.scrollToEnd({ animated: true });
             }, 100);
-        } else {
-            console.log("❌ Message not for this conversation");
         }
     };
 
@@ -203,12 +190,10 @@ export default function ChatWidget({ visible, onClose }) {
             const newMessages = response.content || [];
             const totalPagesFromAPI = response.totalPages || 0;
 
-            console.log(`📄 Loaded page ${pageToLoad}, total pages: ${totalPagesFromAPI}`);
 
             // Lần đầu load (page = null): load trang CUỐI CÙNG để lấy tin nhắn mới nhất
             if (page === null && totalPagesFromAPI > 0) {
                 const lastPage = totalPagesFromAPI - 1;
-                console.log(`🔄 Loading last page (${lastPage}) for newest messages`);
                 setTotalPages(totalPagesFromAPI);
 
                 // Load lại trang cuối cùng
@@ -232,7 +217,7 @@ export default function ChatWidget({ visible, onClose }) {
                 setHasMore(pageToLoad > 0); // Còn trang cũ hơn không
             }
         } catch (error) {
-            console.log(error);
+
         } finally {
             setLoading(false);
             setLoadingMore(false);
@@ -242,7 +227,7 @@ export default function ChatWidget({ visible, onClose }) {
     const loadMoreMessages = () => {
         if (!loadingMore && hasMore && currentPage !== null && currentPage > 0) {
             const previousPage = currentPage - 1;
-            console.log("📄 Loading older messages, page:", previousPage);
+
             fetchMessages(previousPage, true);
         }
     };
@@ -261,13 +246,11 @@ export default function ChatWidget({ visible, onClose }) {
             };
 
             // 1. Lưu DB
-            console.log("💾 Saving message to DB...");
+
             const newMessage = await chatService.sendMessage(data);
-            console.log("✅ Saved to DB:", newMessage.id);
 
             // 2. Thêm tin nhắn vào UI ngay lập tức (giống web)
             setMessages((prev) => sortMessagesByTime([...prev, newMessage]));
-            console.log("✅ Added message to UI immediately");
 
             // 3. Gửi WebSocket để người khác nhận được
             if (wsConnected) {
@@ -279,7 +262,7 @@ export default function ChatWidget({ visible, onClose }) {
                     content: newMessage.content,
                     timestamp: newMessage.createdAt  // ✅ Backend cần "timestamp"
                 };
-                console.log("🚀 Sending via WebSocket:", wsMessage);
+
                 webSocketService.send("/app/chat.private", wsMessage);
             } else {
                 console.warn("⚠️ WebSocket not connected");

@@ -1,4 +1,4 @@
-// DesignerAnalyticsScreen.js
+// DesignerAnalyticsScreen.js - Enhanced với màu xanh chuyên nghiệp
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -30,6 +30,7 @@ export default function DesignerAnalyticsScreen() {
     setActiveNavItem("analytics");
     setActiveNavItemLocal("analytics");
   }, [setActiveNavItem]);
+
   const [groupBy, setGroupBy] = useState("month");
   const [salesData, setSalesData] = useState(null);
   const [topTemplates, setTopTemplates] = useState([]);
@@ -54,16 +55,11 @@ export default function DesignerAnalyticsScreen() {
       const startStr = startDate.toISOString().slice(0, 10);
       const endStr = endDate.toISOString().slice(0, 10);
 
-      console.log("🔄 Fetching Sales Report...");
-      console.log("📅 Parameters:", { startStr, endStr, groupBy });
-
       const result = await dashboardService.getSalesReport(
         startStr,
         endStr,
         groupBy
       );
-
-      console.log("✅ API Response:", result.data);
 
       setSalesData(result);
     } catch (error) {
@@ -79,7 +75,7 @@ export default function DesignerAnalyticsScreen() {
       const res = await dashboardService.getTopTemplates();
       setTopTemplates(res);
     } catch (error) {
-      console.log("Error fetching top templates:", error);
+
     }
   };
 
@@ -89,7 +85,7 @@ export default function DesignerAnalyticsScreen() {
       const res = await dashboardService.getDashboardSummaryDesigner();
       setSummary(res);
     } catch (error) {
-      console.log("Error fetching summary:", error);
+
     }
   };
 
@@ -207,8 +203,8 @@ export default function DesignerAnalyticsScreen() {
       datasets: [
         {
           data: timelinePoints.map((point) => point.value),
-          color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
-          strokeWidth: 2,
+          color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+          strokeWidth: 3,
         },
       ],
       legend: ["Revenue"],
@@ -216,28 +212,28 @@ export default function DesignerAnalyticsScreen() {
 
     const ranking = rankingPoints.length
       ? {
-          labels: rankingPoints.map((point) => point.shortLabel),
-          datasets: [
-            {
-              data: rankingPoints.map((point) => point.value),
-            },
-          ],
-        }
+        labels: rankingPoints.map((point) => point.shortLabel),
+        datasets: [
+          {
+            data: rankingPoints.map((point) => point.value),
+          },
+        ],
+      }
       : null;
 
     const insights = rankingPoints.length
       ? {
-          bestPeriod: rankingPoints[0]?.longLabel || null,
-          bestValue: rankingPoints[0]?.value || 0,
-          lowestPeriod:
-            rankingPoints.length > 1
-              ? rankingPoints[rankingPoints.length - 1]?.longLabel || null
-              : null,
-          lowestValue:
-            rankingPoints.length > 1
-              ? rankingPoints[rankingPoints.length - 1]?.value || 0
-              : null,
-        }
+        bestPeriod: rankingPoints[0]?.longLabel || null,
+        bestValue: rankingPoints[0]?.value || 0,
+        lowestPeriod:
+          rankingPoints.length > 1
+            ? rankingPoints[rankingPoints.length - 1]?.longLabel || null
+            : null,
+        lowestValue:
+          rankingPoints.length > 1
+            ? rankingPoints[rankingPoints.length - 1]?.value || 0
+            : null,
+      }
       : null;
 
     return { timeline, ranking, insights, rankingDetails: rankingPoints };
@@ -250,11 +246,11 @@ export default function DesignerAnalyticsScreen() {
 
   const hasTimelineData = Boolean(
     timelineChartData?.datasets?.[0]?.data &&
-      timelineChartData.datasets[0].data.some((value) => value > 0)
+    timelineChartData.datasets[0].data.some((value) => value > 0)
   );
   const hasComparisonData = Boolean(
     comparisonChartData?.datasets?.[0]?.data &&
-      comparisonChartData.datasets[0].data.some((value) => value > 0)
+    comparisonChartData.datasets[0].data.some((value) => value > 0)
   );
 
   // Calculate statistics
@@ -290,12 +286,12 @@ export default function DesignerAnalyticsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <SidebarToggleButton iconColor="#111827" iconSize={22} />
+          <SidebarToggleButton iconColor="#1E40AF" iconSize={22} />
           <Text style={styles.headerTitle}>Sales Analytics</Text>
           <View style={{ width: 22 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366F1" />
+          <ActivityIndicator size="large" color="#3B82F6" />
           <Text style={styles.loadingText}>Loading data...</Text>
         </View>
       </View>
@@ -305,7 +301,7 @@ export default function DesignerAnalyticsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <SidebarToggleButton iconColor="#111827" iconSize={22} />
+        <SidebarToggleButton iconColor="#1E40AF" iconSize={22} />
         <Text style={styles.headerTitle}>Sales Analytics</Text>
         <View style={{ width: 22 }} />
       </View>
@@ -319,17 +315,17 @@ export default function DesignerAnalyticsScreen() {
               style={styles.dateButton}
               onPress={() => setShowStartPicker(true)}
             >
-              <Icon name="calendar-today" size={16} color="#6366F1" />
+              <Icon name="calendar-today" size={18} color="#3B82F6" />
               <Text style={styles.dateButtonText}>{formatDate(startDate)}</Text>
             </Pressable>
 
-            <Icon name="arrow-forward" size={16} color="#9CA3AF" />
+            <Icon name="arrow-forward" size={18} color="#94A3B8" />
 
             <Pressable
               style={styles.dateButton}
               onPress={() => setShowEndPicker(true)}
             >
-              <Icon name="calendar-today" size={16} color="#6366F1" />
+              <Icon name="calendar-today" size={18} color="#3B82F6" />
               <Text style={styles.dateButtonText}>{formatDate(endDate)}</Text>
             </Pressable>
           </View>
@@ -411,11 +407,11 @@ export default function DesignerAnalyticsScreen() {
           </View>
         </View>
 
-        {/* Overview Cards - 2x2 Grid */}
+        {/* Overview Cards - 2x2 Grid với màu xanh gradient */}
         <View style={styles.overviewGrid}>
-          <View style={[styles.overviewCard, { backgroundColor: "#F59E0B" }]}>
+          <View style={[styles.overviewCard, styles.cardOrange]}>
             <View style={styles.overviewHeader}>
-              <Icon name="trending-up" size={18} color="#FFF" />
+              <Icon name="trending-up" size={20} color="#FFF" />
               <Text style={[styles.overviewLabel, { color: "#FFF" }]}>
                 Total Revenue
               </Text>
@@ -426,7 +422,7 @@ export default function DesignerAnalyticsScreen() {
             <View style={styles.overviewFooter}>
               <Icon
                 name={stats.trend >= 0 ? "arrow-upward" : "arrow-downward"}
-                size={12}
+                size={14}
                 color="#FFF"
               />
               <Text style={[styles.overviewGrowth, { color: "#FFF" }]}>
@@ -436,9 +432,9 @@ export default function DesignerAnalyticsScreen() {
             </View>
           </View>
 
-          <View style={[styles.overviewCard, { backgroundColor: "#10B981" }]}>
+          <View style={[styles.overviewCard, styles.cardGreen]}>
             <View style={styles.overviewHeader}>
-              <Icon name="show-chart" size={18} color="#FFF" />
+              <Icon name="show-chart" size={20} color="#FFF" />
               <Text style={[styles.overviewLabel, { color: "#FFF" }]}>
                 Average
               </Text>
@@ -447,7 +443,7 @@ export default function DesignerAnalyticsScreen() {
               {formatCurrency(stats.avgRevenue)}
             </Text>
             <View style={styles.overviewFooter}>
-              <Text style={[styles.overviewSubtext, { color: "#FFF" }]}>
+              <Text style={[styles.overviewSubtext, { color: "#E0F2FE" }]}>
                 Per Period
               </Text>
             </View>
@@ -460,32 +456,34 @@ export default function DesignerAnalyticsScreen() {
           <View style={styles.chartCard}>
             {loading ? (
               <View style={styles.chartLoading}>
-                <ActivityIndicator size="small" color="#6366F1" />
+                <ActivityIndicator size="small" color="#3B82F6" />
               </View>
             ) : timelineChartData && hasTimelineData ? (
               <>
                 <LineChart
                   data={timelineChartData}
-                  width={SCREEN_WIDTH - 48}
-                  height={220}
+                  width={SCREEN_WIDTH - 88}
+                  height={240}
                   formatYLabel={formatCurrencyCompact}
                   fromZero
                   chartConfig={{
                     backgroundGradientFromOpacity: 0,
                     backgroundGradientToOpacity: 0,
                     decimalPlaces: 0,
-                    color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
-                    labelColor: (opacity = 1) =>
-                      `rgba(107, 114, 128, ${opacity})`,
+                    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
                     propsForDots: {
-                      r: "4",
+                      r: "5",
                       strokeWidth: "2",
-                      stroke: "#4338CA",
+                      stroke: "#1E40AF",
+                      fill: "#3B82F6",
                     },
-                    fillShadowGradient: "#6366F1",
-                    fillShadowGradientOpacity: 0.12,
+                    fillShadowGradientFrom: "#3B82F6",
+                    fillShadowGradientFromOpacity: 0.3,
+                    fillShadowGradientTo: "#3B82F6",
+                    fillShadowGradientToOpacity: 0.05,
                     propsForBackgroundLines: {
-                      stroke: "#E5E7EB",
+                      stroke: "#E2E8F0",
                       strokeDasharray: "",
                     },
                   }}
@@ -538,7 +536,7 @@ export default function DesignerAnalyticsScreen() {
               </>
             ) : (
               <View style={styles.emptyChart}>
-                <Icon name="insert-chart" size={48} color="#D1D5DB" />
+                <Icon name="insert-chart" size={56} color="#CBD5E1" />
                 <Text style={styles.emptyChartText}>No data available</Text>
               </View>
             )}
@@ -552,8 +550,8 @@ export default function DesignerAnalyticsScreen() {
             <View style={styles.chartCard}>
               <BarChart
                 data={comparisonChartData}
-                width={SCREEN_WIDTH - 48}
-                height={220}
+                width={SCREEN_WIDTH - 88}
+                height={240}
                 fromZero
                 yAxisLabel=""
                 yAxisSuffix=""
@@ -561,17 +559,17 @@ export default function DesignerAnalyticsScreen() {
                   backgroundGradientFromOpacity: 0,
                   backgroundGradientToOpacity: 0,
                   decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(129, 140, 248, ${opacity})`,
-                  labelColor: (opacity = 1) =>
-                    `rgba(107, 114, 128, ${opacity})`,
+                  color: (opacity = 1) => `rgba(14, 165, 233, ${opacity})`,
+                  labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
                   formatYLabel: (value) => formatCurrencyCompact(value),
                   formatXLabel: (value) => value,
                   style: {
                     borderRadius: 16,
                   },
                   propsForBackgroundLines: {
-                    stroke: "#E5E7EB",
+                    stroke: "#E2E8F0",
                   },
+                  barPercentage: 0.7,
                 }}
                 style={{
                   marginVertical: 8,
@@ -581,13 +579,13 @@ export default function DesignerAnalyticsScreen() {
 
               {comparisonDetails.length > 0 && (
                 <View style={styles.chartLegendList}>
-                  {comparisonDetails.map((detail) => (
+                  {comparisonDetails.map((detail, index) => (
                     <View
                       key={detail.shortLabel}
                       style={styles.chartLegendItem}
                     >
                       <View style={styles.chartLegendLabelRow}>
-                        <Icon name="calendar-today" size={14} color="#6366F1" />
+                        <Icon name="calendar-today" size={16} color="#3B82F6" />
                         <Text style={styles.chartLegendLabel}>
                           {detail.longLabel || detail.shortLabel}
                         </Text>

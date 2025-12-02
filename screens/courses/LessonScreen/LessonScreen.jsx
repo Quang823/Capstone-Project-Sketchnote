@@ -210,7 +210,7 @@ export default function LessonScreen() {
                 if (lessonDuration > 0) {
                   const watchPercentage = (time / lessonDuration) * 100;
                   setCanProceed(watchPercentage >= 80);
-                  
+
                   // Auto-save khi đạt 80% lần đầu
                   if (watchPercentage >= 80 && !hasAutoSavedRef.current) {
                     hasAutoSavedRef.current = true;
@@ -236,13 +236,13 @@ export default function LessonScreen() {
           clearInterval(updateTimeRef.current);
           updateTimeRef.current = null;
         }
-        
+
         if (state === "paused") {
           await saveLessonProgress();
         } else if (state === "ended") {
           // Video kết thúc: lưu progress và tự động chuyển bài
           await saveLessonProgress(true);
-          
+
           // Tự động chuyển sang bài tiếp theo nếu không phải bài cuối
           if (currentLessonIndex < course.lessons.length - 1 && course?.lessons) {
             setTimeout(() => {
@@ -353,7 +353,7 @@ export default function LessonScreen() {
 
   const handleComplete = async () => {
     await saveLessonProgress(true);
-    
+
     if (currentLessonIndex < course.lessons.length - 1 && course?.lessons) {
       // Chuyển sang bài tiếp theo
       setCurrentLessonId(course.lessons[currentLessonIndex + 1].lessonId);
@@ -678,7 +678,7 @@ export default function LessonScreen() {
                   lessonStyles.navButtonText,
                   lessonStyles.previousButtonText,
                   currentLessonIndex === 0 &&
-                    lessonStyles.navButtonTextDisabled,
+                  lessonStyles.navButtonTextDisabled,
                 ]}
               >
                 PREVIOUS

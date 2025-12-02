@@ -37,7 +37,7 @@ export default function GlobalSidebar() {
     await logout(); // reset user + remove token
     toggleSidebar(false); // đóng sidebar nếu đang mở
     navigation.dispatch(
-      CommonActions.reset({ index: 0, routes: [{ name: "Login" }] })
+      CommonActions.reset({ index: 0, routes: [{ name: "GuestHome" }] })
     );
   };
 

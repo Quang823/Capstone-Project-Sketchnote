@@ -38,7 +38,6 @@ export default function ChatScreen({ navigation }) {
                 description: error.message || "Failed to load messages",
                 variant: "destructive",
             });
-            console.log(error)
         } finally {
             setLoading(false);
         }
@@ -83,7 +82,6 @@ export default function ChatScreen({ navigation }) {
                 description: error.message || "Failed to send message",
                 variant: "destructive",
             });
-            console.log(error)
             // Restore the input text if failed
             setInputText(messageContent);
         } finally {

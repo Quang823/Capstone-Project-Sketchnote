@@ -27,6 +27,7 @@ export default function ResourceStoreScreen() {
   const [allResources, setAllResources] = useState([]);
   const [popularResources, setPopularResources] = useState([]);
   const [latestResources, setLatestResources] = useState([]);
+  const [ownedResources, setOwnedResources] = useState([]);
   const [categories, setCategories] = useState(["All"]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,26 +39,30 @@ export default function ResourceStoreScreen() {
     try {
       // Fetch Resource By User Id
       try {
-        const resUser = await resourceService.getResourceProjectByUserId(0,20);
+        const resUser = await resourceService.getResourceProjectByUserId(0, 20);
         const userData = Array.isArray(resUser.content) ? resUser.content : [];
-        console.log("✅ Resource By User Id:", userData);
+
         setUserResources(userData);
       } catch (error) {
         console.error("❌ Fetch Resource By User Id Failed:", error);
         setUserResources([]);
       }
-    } catch (error) {}
+    } catch (error) { }
     try {
       setLoading(true);
+      let ownedAccumulator = [];
 
       // Fetch All Resources
       try {
         const resAll = await resourceService.getAllResource(0, 10);
-        const allData = resAll?.content || [];
-        setAllResources(allData);
+        const allRaw = resAll?.content || [];
+        const ownedFromAll = allRaw.filter((r) => r?.isOwner === true);
+        const notOwnedAll = allRaw.filter((r) => !r?.isOwner);
+        setAllResources(notOwnedAll);
+        ownedAccumulator = [...ownedAccumulator, ...ownedFromAll];
 
         // 🔹 Sinh danh sách category từ type
-        const types = [...new Set(allData.map((r) => r.type))];
+        const types = [...new Set(notOwnedAll.map((r) => r.type))];
         setCategories(["All", ...types]);
       } catch (error) {
         console.error("❌ Fetch All Resources Failed:", error);
@@ -67,8 +72,17 @@ export default function ResourceStoreScreen() {
       // Fetch Popular Resources
       try {
         const resPopular = await resourceService.getAllResourcePopular(10);
-        const popularData = resPopular || [];
-        setPopularResources(popularData);
+        const popularRaw = Array.isArray(resPopular?.result)
+          ? resPopular.result
+          : Array.isArray(resPopular?.content)
+            ? resPopular.content
+            : Array.isArray(resPopular)
+              ? resPopular
+              : [];
+        const ownedFromPopular = popularRaw.filter((r) => r?.isOwner === true);
+        const notOwnedPopular = popularRaw.filter((r) => !r?.isOwner);
+        setPopularResources(notOwnedPopular);
+        ownedAccumulator = [...ownedAccumulator, ...ownedFromPopular];
       } catch (error) {
         console.error("❌ Fetch Popular Resources Failed:", error);
         setPopularResources([]);
@@ -77,11 +91,33 @@ export default function ResourceStoreScreen() {
       // Fetch Latest Resources
       try {
         const resLatest = await resourceService.getAllResourceLatest(10);
-        const latestData = resLatest || [];
-        setLatestResources(latestData);
+        const latestRaw = Array.isArray(resLatest?.result)
+          ? resLatest.result
+          : Array.isArray(resLatest?.content)
+            ? resLatest.content
+            : Array.isArray(resLatest)
+              ? resLatest
+              : [];
+        const ownedFromLatest = latestRaw.filter((r) => r?.isOwner === true);
+        const notOwnedLatest = latestRaw.filter((r) => !r?.isOwner);
+        setLatestResources(notOwnedLatest);
+        ownedAccumulator = [...ownedAccumulator, ...ownedFromLatest];
       } catch (error) {
         console.error("❌ Fetch Latest Resources Failed:", error);
         setLatestResources([]);
+      }
+
+      // ✅ Deduplicate owned resources and set to state
+      try {
+        const map = new Map();
+        ownedAccumulator.forEach((item) => {
+          const key = item?.resourceTemplateId ?? item?.id;
+          if (key != null && !map.has(key))
+            map.set(key, { ...item, isOwner: true });
+        });
+        setOwnedResources(Array.from(map.values()));
+      } catch (e) {
+        setOwnedResources([]);
       }
     } catch (error) {
       console.error("❌ Fetch Resource Failed:", error);
@@ -101,9 +137,19 @@ export default function ResourceStoreScreen() {
 
   // ✅ Add to Cart
   const handleAddToCart = (resource, navigateToCart = false) => {
-    const alreadyOwned = Array.isArray(userResources) && userResources.some(
-      (r) => r.resourceTemplateId === resource.resourceTemplateId
-    );
+    if (resource?.isOwner === true) {
+      Toast.show({
+        type: "info",
+        text1: "This is your resource",
+        text2: "You cannot purchase your own resource.",
+      });
+      return;
+    }
+    const alreadyOwned =
+      Array.isArray(userResources) &&
+      userResources.some(
+        (r) => r.resourceTemplateId === resource.resourceTemplateId
+      );
 
     if (alreadyOwned) {
       Toast.show({
@@ -129,8 +175,7 @@ export default function ResourceStoreScreen() {
     }
 
     const designerName = resource.designerInfo
-      ? `${resource.designerInfo.firstName || ""} ${
-          resource.designerInfo.lastName || ""
+      ? `${resource.designerInfo.firstName || ""} ${resource.designerInfo.lastName || ""
         }`.trim()
       : "Updating...";
 
@@ -180,6 +225,7 @@ export default function ResourceStoreScreen() {
           onPress={() =>
             navigation.navigate("ResourceDetail", {
               resourceId: item.resourceTemplateId,
+              owned: item?.isOwner === true,
             })
           }
           style={resourceStoreStyles.resourceCard}
@@ -197,6 +243,23 @@ export default function ResourceStoreScreen() {
                 {item.type || "OTHER"}
               </Text>
             </View>
+            {item?.isOwner === true && (
+              <View
+                style={[
+                  resourceStoreStyles.typeBadge,
+                  { right: 8, top: 12, backgroundColor: "#E5E7EB" },
+                ]}
+              >
+                <Text
+                  style={[
+                    resourceStoreStyles.typeBadgeText,
+                    { color: "#111827" },
+                  ]}
+                >
+                  YOURS RESOURCE
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Info Container */}
@@ -212,44 +275,88 @@ export default function ResourceStoreScreen() {
               {item.description}
             </Text>
 
-            <Text style={resourceStoreStyles.price}>
-              {item.price?.toLocaleString() || "0"} VNĐ
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, marginBottom: 8 }}>
+              <Icon name="event" size={14} color="#9CA3AF" />
+              <Text style={{ fontSize: 12, color: "#6B7280", marginLeft: 4 }}>
+                {item.releaseDate || item.createdAt?.split('T')[0] || "Unknown Date"}
+              </Text>
+            </View>
+
+            {item?.isOwner === true && (
+              <Text style={resourceStoreStyles.price}>
+                {item.price?.toLocaleString() || "0"} VNĐ
+              </Text>
+            )}
 
             {/* Action Buttons */}
-            <View style={resourceStoreStyles.actionButtons}>
-              <Pressable
-                style={[
-                  resourceStoreStyles.actionButton,
-                  resourceStoreStyles.addToCartButton,
-                ]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleAddToCart(item, false);
-                }}
-              >
-                <Icon name="shopping-cart" size={16} color="#fff" />
-                <Text style={resourceStoreStyles.actionButtonTextAddtocart}>
-                  Add to Cart
-                </Text>
-              </Pressable>
+            {item?.isOwner === true ? (
+              <View style={resourceStoreStyles.actionButtons}>
+                <Pressable
+                  style={[
+                    resourceStoreStyles.actionButton,
+                    {
+                      backgroundColor: "#3B82F6",
+                      flex: 1,
+                      borderRadius: 8,
+                      paddingVertical: 8,
+                      flexDirection: "row",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    },
+                  ]}
+                  onPress={() =>
+                    navigation.navigate("ResourceDetail", {
+                      resourceId: item.resourceTemplateId,
+                      owned: true,
+                    })
+                  }
+                >
+                  <Icon name="folder-open" size={16} color="#fff" />
+                  <Text
+                    style={[
+                      resourceStoreStyles.actionButtonText,
+                      { color: "#fff", marginLeft: 6 },
+                    ]}
+                  >
+                    Open Resource
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={resourceStoreStyles.actionButtons}>
+                <Pressable
+                  style={[
+                    resourceStoreStyles.actionButton,
+                    resourceStoreStyles.addToCartButton,
+                  ]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleAddToCart(item, false);
+                  }}
+                >
+                  <Icon name="shopping-cart" size={16} color="#fff" />
+                  <Text style={resourceStoreStyles.actionButtonTextAddtocart}>
+                    Add to Cart
+                  </Text>
+                </Pressable>
 
-              <Pressable
-                style={[
-                  resourceStoreStyles.actionButton,
-                  resourceStoreStyles.buyNowButton,
-                ]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleAddToCart(item, true);
-                }}
-              >
-                <Icon name="flash-on" size={16} color="#fff" />
-                <Text style={resourceStoreStyles.actionButtonText}>
-                  Buy Now
-                </Text>
-              </Pressable>
-            </View>
+                <Pressable
+                  style={[
+                    resourceStoreStyles.actionButton,
+                    resourceStoreStyles.buyNowButton,
+                  ]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleAddToCart(item, true);
+                  }}
+                >
+                  <Icon name="flash-on" size={16} color="#fff" />
+                  <Text style={resourceStoreStyles.actionButtonText}>
+                    Buy Now
+                  </Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         </Pressable>
       </Shadow>
@@ -305,7 +412,7 @@ export default function ResourceStoreScreen() {
           style={resourceStoreStyles.cartButton}
           onPress={() => navigation.navigate("Cart")}
         >
-          <Icon name="shopping-cart" size={24} color="#1F2937" />
+          <Icon name="shopping-cart" size={24} color="#1E40AF" />
           {cart.length > 0 && (
             <View style={resourceStoreStyles.cartBadge}>
               <Text style={resourceStoreStyles.cartBadgeText}>
@@ -320,6 +427,7 @@ export default function ResourceStoreScreen() {
         style={resourceStoreStyles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
+
         {/* Search */}
         <View style={resourceStoreStyles.searchContainer}>
           <Icon
@@ -330,7 +438,7 @@ export default function ResourceStoreScreen() {
           />
           <TextInput
             style={resourceStoreStyles.searchInput}
-            placeholder="Tìm kiếm resource..."
+            placeholder="Search resource..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#9CA3AF"
@@ -350,7 +458,7 @@ export default function ResourceStoreScreen() {
               style={[
                 resourceStoreStyles.categoryButton,
                 selectedCategory === category &&
-                  resourceStoreStyles.selectedCategoryButton,
+                resourceStoreStyles.selectedCategoryButton,
               ]}
               onPress={() => setSelectedCategory(category)}
             >
@@ -358,7 +466,7 @@ export default function ResourceStoreScreen() {
                 style={[
                   resourceStoreStyles.categoryText,
                   selectedCategory === category &&
-                    resourceStoreStyles.selectedCategoryText,
+                  resourceStoreStyles.selectedCategoryText,
                 ]}
               >
                 {category}
@@ -367,11 +475,30 @@ export default function ResourceStoreScreen() {
           ))}
         </ScrollView>
 
+        {/* Your Resources */}
+        {ownedResources.length > 0 && (
+          <View style={resourceStoreStyles.sectionContainer}>
+            <View style={resourceStoreStyles.sectionHeader}>
+              <Icon name="person" size={24} color="#4e90ebff" />
+              <Text style={resourceStoreStyles.sectionTitle}>
+                Your Resources
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16 }}
+            >
+              {ownedResources.map((item) => renderResourceItem(item))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Latest Resources */}
         {latestResources.length > 0 && (
           <View style={resourceStoreStyles.sectionContainer}>
             <View style={resourceStoreStyles.sectionHeader}>
-              <Icon name="new-releases" size={24} color="#4F46E5" />
+              <Icon name="new-releases" size={24} color="#4e90ebff" />
               <Text style={resourceStoreStyles.sectionTitle}>
                 Latest Resources
               </Text>

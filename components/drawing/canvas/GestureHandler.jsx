@@ -76,6 +76,7 @@ export default function GestureHandler(
     rulerPosition,
     onRulerMoveStart,
     onRulerMoveEnd,
+    scrollRef, // 👈 Receive scrollRef
     scrollOffsetY = 0,
     scrollYShared, // ✅ Animated scroll value
     pageOffsetY = 0, // ✅ Page offset trong project
@@ -103,7 +104,7 @@ export default function GestureHandler(
         if (typeof rafIdRef.current === "number") {
           cancelAnimationFrame(rafIdRef.current);
         }
-      } catch {}
+      } catch { }
       rafIdRef.current = null;
       // Reset transient refs to release memory
       rafScheduled.current = false;
@@ -120,12 +121,12 @@ export default function GestureHandler(
         tool === "pencil"
           ? pencilWidth ?? strokeWidth ?? 1
           : tool === "brush"
-          ? brushWidth ?? strokeWidth ?? 1
-          : tool === "calligraphy"
-          ? calligraphyWidth ?? strokeWidth ?? 1
-          : tool === "eraser"
-          ? eraserSize ?? strokeWidth ?? 1
-          : strokeWidth ?? 1;
+            ? brushWidth ?? strokeWidth ?? 1
+            : tool === "calligraphy"
+              ? calligraphyWidth ?? strokeWidth ?? 1
+              : tool === "eraser"
+                ? eraserSize ?? strokeWidth ?? 1
+                : strokeWidth ?? 1;
       // When zoomed out (scale < 1), increase min distance; when zoomed in, allow denser points
       const minDist = Math.max(
         2,
@@ -439,7 +440,7 @@ export default function GestureHandler(
           pressure: point.pressure || 0.5,
         };
       }
-    } catch (error) {}
+    } catch (error) { }
 
     return point;
   };
@@ -491,7 +492,7 @@ export default function GestureHandler(
     try {
       invalidateRulerCache();
       rulerLockRef.current = null;
-    } catch {}
+    } catch { }
   }, [rulerPosition]);
 
   // Reset ruler lock when ruler position changes significantly (indicating movement)
@@ -1092,8 +1093,8 @@ export default function GestureHandler(
             tool === "brush"
               ? brushOpacity
               : tool === "calligraphy"
-              ? calligraphyOpacity
-              : 1,
+                ? calligraphyOpacity
+                : 1,
           ...toolConfig,
           layerId: activeLayerId,
           rotation: 0,
@@ -1305,8 +1306,8 @@ export default function GestureHandler(
                 tool === "sticky"
                   ? "#FFEB3B"
                   : tool === "comment"
-                  ? "#E3F2FD"
-                  : "transparent",
+                    ? "#E3F2FD"
+                    : "transparent",
               padding: tool === "sticky" || tool === "comment" ? 8 : 0,
               layerId: activeLayerId,
             });
@@ -1365,11 +1366,18 @@ export default function GestureHandler(
     });
 
   const pan = Gesture.Pan()
+    .averageTouches(false) // ✅ Disable averaging for precision
     .minDistance(1)
     .minPointers(1)
-    .maxPointers(1) // Chỉ nhận khi có 1 ngón tay để tránh conflict với zoom
+    .maxPointers(1) // ✅ Only accept single finger - two-finger gestures handled by MultiPageCanvas
+    .shouldCancelWhenOutside(false) // ✅ Prevent accidental cancellation
     .runOnJS(true)
     .onStart((e) => {
+      // ✅ Early return cho scroll và zoom tools - không vẽ gì cả
+      if (tool === "scroll" || tool === "zoom") {
+        return;
+      }
+
       // local copy of pointer coords — avoid mutating event directly
       let px = e.x;
       let py = e.y;
@@ -1582,8 +1590,8 @@ export default function GestureHandler(
       // Các logic text/drag init (giữ nguyên) - nhưng dùng px/py thay vì e.x/e.y
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
-          )
+          (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+        )
         : [];
       if (selectedId && draggingText) {
         const base = strokes.find((s) => s.id === selectedId);
@@ -1591,11 +1599,11 @@ export default function GestureHandler(
         setDraggingText((d) => (d ? { ...d, startX: px, startY: py } : d));
         boxOriginRef.current = selectedBox
           ? {
-              x: selectedBox.x,
-              y: selectedBox.y,
-              width: selectedBox.width,
-              height: selectedBox.height,
-            }
+            x: selectedBox.x,
+            y: selectedBox.y,
+            width: selectedBox.width,
+            height: selectedBox.height,
+          }
           : null;
         textPaddingRef.current = base?.padding || 0;
         textFontSizeRef.current = base?.fontSize || 18;
@@ -1707,8 +1715,8 @@ export default function GestureHandler(
       // Các xử lý khác giữ nguyên (text dragging, eraser, normal drawing...)
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
-          )
+          (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+        )
         : [];
 
       // Text dragging (live visual + commit updates)
@@ -1723,20 +1731,20 @@ export default function GestureHandler(
         setSelectedBox((box) =>
           box
             ? {
-                ...box,
-                x:
-                  newX -
-                  (validStrokes.find((s) => s.id === selectedId)?.padding ||
-                    0) -
-                  1,
-                y:
-                  newY -
-                  (validStrokes.find((s) => s.id === selectedId)?.fontSize ||
-                    18) -
-                  (validStrokes.find((s) => s.id === selectedId)?.padding ||
-                    0) -
-                  1,
-              }
+              ...box,
+              x:
+                newX -
+                (validStrokes.find((s) => s.id === selectedId)?.padding ||
+                  0) -
+                1,
+              y:
+                newY -
+                (validStrokes.find((s) => s.id === selectedId)?.fontSize ||
+                  18) -
+                (validStrokes.find((s) => s.id === selectedId)?.padding ||
+                  0) -
+                1,
+            }
             : box
         );
 
@@ -1969,7 +1977,7 @@ export default function GestureHandler(
           if (typeof rafIdRef.current === "number") {
             cancelAnimationFrame(rafIdRef.current);
           }
-        } catch {}
+        } catch { }
         rafIdRef.current = null;
         rafScheduled.current = false;
         liveRef.current = [];
@@ -1980,20 +1988,20 @@ export default function GestureHandler(
         const poly = lassoPoints;
         const insideIds = Array.isArray(strokes)
           ? strokes
-              .filter(
-                (s) =>
-                  s &&
-                  (!activeLayerId || s.layerId === activeLayerId) &&
-                  (s.points || s.x)
-              )
-              .filter((s) => {
-                const bbox = getBoundingBoxForStroke(s);
-                if (!bbox) return false;
-                const cx = (bbox.minX + bbox.maxX) / 2;
-                const cy = (bbox.minY + bbox.maxY) / 2;
-                return pointInPolygon(poly, cx, cy);
-              })
-              .map((s) => s.id)
+            .filter(
+              (s) =>
+                s &&
+                (!activeLayerId || s.layerId === activeLayerId) &&
+                (s.points || s.x)
+            )
+            .filter((s) => {
+              const bbox = getBoundingBoxForStroke(s);
+              if (!bbox) return false;
+              const cx = (bbox.minX + bbox.maxX) / 2;
+              const cy = (bbox.minY + bbox.maxY) / 2;
+              return pointInPolygon(poly, cx, cy);
+            })
+            .map((s) => s.id)
           : [];
 
         if (insideIds.length > 0) {
@@ -2112,8 +2120,8 @@ export default function GestureHandler(
 
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
-            (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
-          )
+          (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
+        )
         : [];
       if (!activeLayerId) return;
 
@@ -2300,8 +2308,8 @@ export default function GestureHandler(
           tool === "brush"
             ? brushOpacity
             : tool === "calligraphy"
-            ? calligraphyOpacity
-            : 1,
+              ? calligraphyOpacity
+              : 1,
         ...toolConfig,
         layerId: activeLayerId,
         rotation: 0,
@@ -2347,7 +2355,7 @@ export default function GestureHandler(
         }
         liveRef.current = [];
         setCurrentPoints([]);
-      } catch {}
+      } catch { }
     };
   }, []);
 
@@ -2441,11 +2449,38 @@ export default function GestureHandler(
     };
   }, [lassoBaseBox, lassoVisualOffset, lassoSelection, strokes]);
 
+  // ✅ Only enable GestureHandler's gestures when in drawing mode
+  // This prevents conflicts with navigation gestures (scroll/zoom)
+  const isDrawingMode = useMemo(() => {
+    return ![
+      "scroll",
+      "zoom",
+      "image",
+      "sticker",
+      "camera",
+      "table",
+    ].includes(tool);
+  }, [tool]);
+
+  // Compose gestures and apply enabled check
+  const composedGesture = useMemo(() => {
+    // Apply enabled check to individual gestures since Race/Simultaneous don't support it directly
+    const activeTap = tap.enabled(isDrawingMode);
+    const activePan = pan.enabled(isDrawingMode);
+
+    if (isDrawingMode) {
+      // ✅ Simplify gesture when drawing to avoid conflicts/crashes
+      // Remove doubleTap and Race overhead when drawing
+      return Gesture.Simultaneous(activeTap, activePan);
+    }
+
+    const activeDoubleTap = doubleTap.enabled(isDrawingMode);
+    return Gesture.Race(activeDoubleTap, Gesture.Simultaneous(activeTap, activePan));
+  }, [doubleTap, tap, pan, isDrawingMode]);
+
   return (
     <>
-      <GestureDetector
-        gesture={Gesture.Race(doubleTap, Gesture.Simultaneous(tap, pan))}
-      >
+      <GestureDetector gesture={composedGesture}>
         {React.cloneElement(children, {
           strokes: children.props.strokes ?? strokes,
           lassoPoints,
@@ -2520,10 +2555,10 @@ export default function GestureHandler(
                 // Offset points nếu có (cho pen, pencil, shapes, etc.)
                 points: s.points
                   ? s.points.map((p) => ({
-                      ...p,
-                      x: p.x + 20,
-                      y: p.y + 20,
-                    }))
+                    ...p,
+                    x: p.x + 20,
+                    y: p.y + 20,
+                  }))
                   : undefined,
               };
               onAddStroke?.(clone);
@@ -2671,11 +2706,11 @@ export default function GestureHandler(
                 typeof snap.lastNewFont === "number"
                   ? snap.lastNewFont
                   : Math.max(
-                      8,
-                      Math.round(
-                        selectedBox?.height - pad * 2 || snap.fontSize || 18
-                      )
-                    );
+                    8,
+                    Math.round(
+                      selectedBox?.height - pad * 2 || snap.fontSize || 18
+                    )
+                  );
 
               const newFont = Math.max(8, Math.round(preferredFont));
               const tx = (selectedBox?.x ?? snap.baseBox?.x ?? 0) + pad;

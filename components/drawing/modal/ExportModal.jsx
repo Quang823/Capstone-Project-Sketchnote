@@ -34,31 +34,55 @@ const ExportModal = ({
     const loadPages = async () => {
       try {
         if (!visible) return;
-        if (projectId) {
-          const data = await projectService.getProjectById(projectId);
-          const pages = Array.isArray(data?.pages) ? data.pages : [];
-          const sorted = pages
-            .slice()
-            .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
-          if (mounted) {
-            setPagePreviews(sorted);
-            setSelectedPageIndex(0);
-          }
-        } else if (Array.isArray(initialPages) && initialPages.length > 0) {
-          const sorted = initialPages
-            .slice()
-            .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
-          if (mounted) {
-            setPagePreviews(sorted);
-            setSelectedPageIndex(0);
+
+        // 🔥 Check if this is a local project
+        const isLocalProject = projectService.isLocalProject(projectId);
+
+        if (isLocalProject) {
+          // ✅ For local projects, use initialPages directly (no API call)
+          if (Array.isArray(initialPages) && initialPages.length > 0) {
+            const sorted = initialPages
+              .slice()
+              .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
+            if (mounted) {
+              setPagePreviews(sorted);
+              setSelectedPageIndex(0);
+            }
+          } else {
+            if (mounted) {
+              setPagePreviews([]);
+              setSelectedPageIndex(0);
+            }
           }
         } else {
-          if (mounted) {
-            setPagePreviews([]);
-            setSelectedPageIndex(0);
+          // ✅ For cloud projects, fetch from API
+          if (projectId) {
+            const data = await projectService.getProjectById(projectId);
+            const pages = Array.isArray(data?.pages) ? data.pages : [];
+            const sorted = pages
+              .slice()
+              .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
+            if (mounted) {
+              setPagePreviews(sorted);
+              setSelectedPageIndex(0);
+            }
+          } else if (Array.isArray(initialPages) && initialPages.length > 0) {
+            const sorted = initialPages
+              .slice()
+              .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
+            if (mounted) {
+              setPagePreviews(sorted);
+              setSelectedPageIndex(0);
+            }
+          } else {
+            if (mounted) {
+              setPagePreviews([]);
+              setSelectedPageIndex(0);
+            }
           }
         }
       } catch (e) {
+        console.error("Failed to load pages in ExportModal:", e);
         if (mounted) {
           setPagePreviews([]);
           setSelectedPageIndex(0);
@@ -106,13 +130,13 @@ const ExportModal = ({
       icon: "https://cdn-icons-png.flaticon.com/512/565/565655.png",
     },
     {
-      key: "picture",
-      label: "Picture",
+      key: "pictures_all",
+      label: "Pictures (All Pages)",
       icon: "https://cdn-icons-png.flaticon.com/512/747/747968.png",
     },
     {
-      key: "sketchnote",
-      label: "SketchNote",
+      key: "sketchnote_s3",
+      label: "SketchNote (S3)",
       icon: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763174915/ctsrrmlfcxxmsmvb9yhm.png",
     },
   ];

@@ -48,7 +48,6 @@ export default function DesignerProductsScreen() {
     try {
       setLoading(true);
       const response = await resourceService.getResourceByUserId(page, size);
-      console.log("API Response:", response);
       setProducts(response.content || []);
       setTotalPages(response.totalPages || 0);
       setTotalElements(response.totalElements || 0);
@@ -498,7 +497,7 @@ export default function DesignerProductsScreen() {
                   style={[
                     designerProductsStyles.modalOption,
                     filter === status.value &&
-                      designerProductsStyles.modalOptionActive,
+                    designerProductsStyles.modalOptionActive,
                   ]}
                   onPress={() => {
                     setFilter(status.value);
@@ -682,7 +681,7 @@ export default function DesignerProductsScreen() {
                             {
                               backgroundColor: getStatusColor(
                                 selectedProduct.status ??
-                                  selectedProduct.isActive
+                                selectedProduct.isActive
                               ),
                             },
                           ]}

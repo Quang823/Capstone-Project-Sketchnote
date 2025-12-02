@@ -5,7 +5,7 @@ import * as FileSystem from "expo-file-system";
 import { parseJsonInBackground } from "../utils/jsonUtils";
 import * as offlineStorage from "../utils/offlineStorage";
 import NetInfo from "@react-native-community/netinfo";
-import SockJS from "sockjs-client";
+// ❌ Removed SockJS - using native WebSocket instead
 
 const getPageLocalKey = (projectId, pageNumber) =>
   `${projectId}_page_${pageNumber}`;
@@ -104,7 +104,7 @@ export const projectService = {
         if (remoteData) {
           try {
             await offlineStorage.saveProjectLocally(localKey, remoteData);
-          } catch {}
+          } catch { }
         }
         return remoteData;
       }
@@ -132,7 +132,7 @@ export const projectService = {
       if (remoteData) {
         try {
           await offlineStorage.saveProjectLocally(localKey, remoteData);
-        } catch {}
+        } catch { }
       }
       return remoteData;
     } catch (error) {
@@ -408,11 +408,6 @@ export const projectService = {
     let heartbeatTimer = null;
     let pendingQueue = [];
     let stompClient = null;
-    // Try SockJS endpoint instead of native WebSocket
-    const WS_GATEWAY_URL = "https://sketchnote.litecsys.com/ws"; // SockJS base URL (no wss://)
-    const WS_DIRECT_URL = "https://sketchnote.litecsys.com/ws";
-    let currentWsUrl = WS_GATEWAY_URL;
-    let triedDirect = false;
 
     const buildFrame = (command, headers = {}, body = "") => {
       const lines = [command];
@@ -458,23 +453,18 @@ export const projectService = {
         activeProjectId = projectId;
         onMessageCb = onMessage;
 
-        console.log("🔵 [Realtime] WS URL:", currentWsUrl);
+        // ✅ Use native WebSocket with wss:// protocol
+        const wsUrl = "wss://sketchnote.litecsys.com/ws";
+        console.log("🔵 [Realtime] WS URL:", wsUrl);
 
         const token = await AsyncStorage.getItem("accessToken");
         console.log("🔵 [Realtime] Token exists:", !!token);
 
-        console.log("🔵 [Realtime] Creating StompClient with SockJS...");
+        console.log("🔵 [Realtime] Creating StompClient with native WebSocket...");
 
         stompClient = new StompClient({
-          // brokerURL is NOT used with webSocketFactory
-
-          webSocketFactory: () => {
-            console.log(
-              "🟢 [Realtime] Creating SockJS connection to:",
-              currentWsUrl
-            );
-            return new SockJS(currentWsUrl);
-          },
+          // ✅ Use brokerURL for native WebSocket (not webSocketFactory)
+          brokerURL: wsUrl,
 
           debug: (str) => {
             console.log("🔍 [STOMP Debug]", str);
@@ -485,8 +475,8 @@ export const projectService = {
           heartbeatOutgoing: 4000,
           connectHeaders: token
             ? {
-                Authorization: `Bearer ${token}`,
-              }
+              Authorization: `Bearer ${token}`,
+            }
             : undefined,
 
           beforeConnect: () => {
@@ -552,10 +542,6 @@ export const projectService = {
             console.log("🔴🔴🔴 [Realtime] WebSocket CLOSED 🔴🔴🔴", e);
             isConnected = false;
             activeProjectId = null;
-
-            // Simple reconnect logic if needed, but StompJS handles reconnects automatically
-            // if reconnectDelay is set.
-            // We only need manual fallback if we want to switch URLs.
           },
         });
 
@@ -572,11 +558,11 @@ export const projectService = {
 
     const disconnect = () => {
       try {
-        console.log("[Realtime] DISCONNECT");
+
         if (stompClient) {
           try {
             stompClient.deactivate();
-          } catch {}
+          } catch { }
         }
       } finally {
         if (heartbeatTimer) {
@@ -585,7 +571,7 @@ export const projectService = {
         }
         try {
           socket?.close?.();
-        } catch {}
+        } catch { }
         socket = null;
         isConnected = false;
         activeProjectId = null;
@@ -612,17 +598,17 @@ export const projectService = {
           console.log("[Realtime] OUTBOUND SEND", { projectId, userId });
           try {
             console.log("[Realtime] OUTBOUND BODY", String(body).slice(0, 500));
-          } catch {}
+          } catch { }
           stompClient.publish({
             destination,
             body,
             headers: { "content-type": "application/json" },
           });
         } else {
-          console.log("[Realtime] QUEUE SEND", { projectId, userId });
+          // console.log("[Realtime] QUEUE SEND", { projectId, userId });
           pendingQueue.push(frame);
         }
-      } catch {}
+      } catch { }
     };
 
     const sendDraw = (projectId, userId, tool, points = []) => {
@@ -641,12 +627,12 @@ export const projectService = {
     ) => {
       const normalizedPoints = Array.isArray(stroke.points)
         ? stroke.points.map((p) => ({
-            x: Number(p?.x) || 0,
-            y: Number(p?.y) || 0,
-            pressure: p?.pressure,
-            thickness: p?.thickness,
-            stabilization: p?.stabilization,
-          }))
+          x: Number(p?.x) || 0,
+          y: Number(p?.y) || 0,
+          pressure: p?.pressure,
+          thickness: p?.thickness,
+          stabilization: p?.stabilization,
+        }))
         : [];
       const fullStroke = {
         id: stroke.id,
@@ -687,12 +673,174 @@ export const projectService = {
           typeof pagePayload === "string"
             ? pagePayload
             : pagePayload && typeof pagePayload === "object"
-            ? JSON.stringify(pagePayload)
-            : undefined,
+              ? JSON.stringify(pagePayload)
+              : undefined,
       };
       sendAction(projectId, userId, "DRAW", payload);
     };
 
     return { connect, disconnect, sendAction, sendDraw, sendStroke };
   })(),
+
+  // ============================================================================
+  // OFFLINE / GUEST PROJECT MANAGEMENT
+  // ============================================================================
+
+  /**
+   * Create a project locally without API call (for guest/offline mode)
+   * @param {object} projectData - Project metadata
+   * @returns {Promise<object>} Created project with local ID
+   */
+  createProjectLocally: async (projectData) => {
+    try {
+      const localId = `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+      const localProject = {
+        projectId: localId,
+        name: projectData.name || "Untitled",
+        description: projectData.description || "",
+        imageUrl: projectData.imageUrl || null,
+        orientation: projectData.orientation || "portrait",
+        paperSize: projectData.paperSize || "A4",
+        pages: projectData.pages || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isLocal: true,
+      };
+
+      // Save to local storage
+      await offlineStorage.saveGuestProject(localId, localProject);
+
+      return localProject;
+    } catch (error) {
+      console.error("Failed to create local project:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all local projects
+   * @returns {Promise<Array>} Array of local projects
+   */
+  getLocalProjects: async () => {
+    try {
+      return await offlineStorage.getAllGuestProjects();
+    } catch (error) {
+      console.error("Failed to get local projects:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Upload a local project to the cloud (after user logs in)
+   * @param {string} localProjectId - The local project ID
+   * @returns {Promise<object>} Created cloud project
+   */
+  uploadLocalProject: async (localProjectId) => {
+    try {
+      // Load local project
+      const localProject = await offlineStorage.loadGuestProject(localProjectId);
+      if (!localProject) {
+        throw new Error("Local project not found");
+      }
+
+      // Create project on server
+      const cloudProject = await projectService.createProject({
+        name: localProject.name,
+        description: localProject.description,
+        imageUrl: localProject.imageUrl,
+        orientation: localProject.orientation,
+        paperSize: localProject.paperSize,
+      });
+
+      const cloudProjectId = cloudProject?.projectId || cloudProject?.id;
+      if (!cloudProjectId) {
+        throw new Error("Failed to get cloud project ID");
+      }
+
+      // Upload pages if any
+      if (Array.isArray(localProject.pages) && localProject.pages.length > 0) {
+        const uploadPromises = localProject.pages.map((page) => {
+          if (page.dataObject && page.pageNumber) {
+            return projectService.uploadPageToS3(
+              cloudProjectId,
+              page.pageNumber,
+              page.dataObject
+            );
+          }
+          return null;
+        });
+
+        const uploadedPages = await Promise.all(uploadPromises.filter(Boolean));
+
+        if (uploadedPages.length > 0) {
+          const payload = {
+            projectId: cloudProjectId,
+            pages: uploadedPages.map(p => ({
+              pageNumber: p.pageNumber,
+              strokeUrl: p.url,
+            })),
+          };
+          await projectService.createPage(payload);
+        }
+      }
+
+      // Optionally delete local project after successful upload
+      // await offlineStorage.deleteGuestProject(localProjectId);
+
+      return cloudProject;
+    } catch (error) {
+      console.error("Failed to upload local project:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Check if a project ID is local
+   * @param {string} projectId - Project ID to check
+   * @returns {boolean} True if local project
+   */
+  isLocalProject: (projectId) => {
+    return typeof projectId === "string" && projectId.startsWith("local_");
+  },
+
+  /**
+   * Get all versions of a project
+   * @param {string} projectId - Project ID
+   * @returns {Promise<Array>} Array of project versions
+   */
+  getProjectVersions: async (projectId) => {
+    try {
+      const response = await projectAPIController.getProjectVersions(projectId);
+      if (response?.data?.result) {
+        return response.data.result;
+      }
+      throw new Error("Invalid response from server");
+    } catch (err) {
+      console.error("❌ Failed to get project versions:", err);
+      throw err;
+    }
+  },
+
+  /**
+   * Restore a specific version of a project
+   * @param {string} projectId - Project ID
+   * @param {string} versionId - Version ID to restore
+   * @returns {Promise<object>} Restore response
+   */
+  restoreProjectVersion: async (projectId, versionId) => {
+    try {
+      const response = await projectAPIController.restoreProjectVersion(
+        projectId,
+        versionId
+      );
+      if (response?.data?.code === 200) {
+        return response.data;
+      }
+      throw new Error("Failed to restore version");
+    } catch (err) {
+      console.error("❌ Failed to restore project version:", err);
+      throw err;
+    }
+  },
 };

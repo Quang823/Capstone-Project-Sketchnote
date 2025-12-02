@@ -286,7 +286,8 @@ export const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
-    height: CARD_WIDTH * 0.55 + 90, // Fixed height: image height + info section
+    height: CARD_WIDTH * 0.55 + 90,
+    width: CARD_WIDTH, // Fixed height: image height + info section
   },
   imageContainer: {
     width: "100%",
@@ -311,6 +312,14 @@ export const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 40,
+  },
+  cardBadges: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    flexDirection: "row",
+    gap: 6,
+    zIndex: 10,
   },
   threeDotButton: {
     position: "absolute",
