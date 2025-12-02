@@ -19,6 +19,7 @@ import { projectService } from "../../service/projectService";
 import * as offlineStorage from "../../utils/offlineStorage";
 import { AuthContext } from "../../context/AuthContext";
 import NetInfo from "@react-native-community/netinfo";
+import SidebarToggleButton from "../../components/navigation/SidebarToggleButton";
 
 const COVER_TEMPLATES = {
   simple: [
@@ -1419,10 +1420,10 @@ export default function NoteSetupScreen({ navigation, route }) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.cancelButton}>Cancel</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create note</Text>
+        <View style={styles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <Text style={styles.headerTitle}>Create note</Text>
+        </View>
         <TouchableOpacity onPress={handleCreate} disabled={isCreating}>
           <LinearGradient
             colors={
@@ -1933,13 +1934,30 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#E0F2FE",
+    borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontFamily: "Pacifico-Regular",
+    color: "#084F8C",
+    letterSpacing: -0.5,
   },
   cancelButton: {
     fontSize: 16,

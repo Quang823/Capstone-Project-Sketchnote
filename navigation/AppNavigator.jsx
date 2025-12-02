@@ -23,6 +23,8 @@ import PaymentWebViewScreen from "../screens/payment/PaymentWebViewScreen";
 import PaymentSuccessScreen from "../screens/payment/PaymentSuccessScreen";
 import PaymentFailedScreen from "../screens/payment/PaymentFailedScreen";
 import NoteSetupScreen from "../screens/note/NoteSetupScreenFinal";
+import CustomNoteSetupScreen from "../screens/note/CustomNoteSetupScreen";
+import TemplateSelectionScreen from "../screens/note/TemplateSelectionScreen";
 import TransactionHistoryScreen from "../screens/store/Transaction/TransactionHistoryScreen";
 import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
 import OrderSuccessScreen from "../screens/store/ResourceStoreScreen/Payment/OrderSuccessScreen";
@@ -51,6 +53,8 @@ export default function AppNavigator() {
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
       <Stack.Screen name="NoteSetupScreen" component={NoteSetupScreen} />
+      <Stack.Screen name="CustomNoteSetupScreen" component={CustomNoteSetupScreen} />
+      <Stack.Screen name="TemplateSelectionScreen" component={TemplateSelectionScreen} />
       <Stack.Screen name="DrawingScreen" component={DrawingScreen} />
       <Stack.Screen name="CourseDetailScreen" component={CourseDetailScreen} />
       <Stack.Screen name="CoursesScreen" component={CoursesScreen} />

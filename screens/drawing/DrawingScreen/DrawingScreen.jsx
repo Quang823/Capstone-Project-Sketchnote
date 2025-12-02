@@ -1350,21 +1350,37 @@ export default function DrawingScreen({ route }) {
     [activePageId]
   ); // ✅ Remove multiPageCanvasRef from deps
 
+  // ✅ FIX: Use ref to prevent creating multiple intervals
+  const handleSaveFileRef = useRef();
+  const isSavingRef = useRef(isSaving);
+
+  useEffect(() => {
+    handleSaveFileRef.current = handleSaveFile;
+    isSavingRef.current = isSaving;
+  });
+
   useEffect(() => {
     const id = setInterval(async () => {
       try {
-        if (!isSaving) {
-          await handleSaveFile({ silent: true });
+        if (!isSavingRef.current && handleSaveFileRef.current) {
+          await handleSaveFileRef.current({ silent: true });
         }
       } catch (err) {
         console.error("[DrawingScreen] Auto-save error:", err);
       }
-    }, 60000);
+    }, 60000); // Auto-save every 60 seconds
 
     return () => {
       clearInterval(id);
     };
-  }, [handleSaveFile, isSaving]); // ✅ Proper dependencies
+  }, []); // ✅ Empty deps - only create ONE interval
+  // ✅ FIX: Use ref for realtimeHandler to prevent reconnection on every render
+  const realtimeHandlerRef = useRef();
+
+  useEffect(() => {
+    realtimeHandlerRef.current = realtimeHandler;
+  });
+
   useEffect(() => {
     const pid = noteConfig?.projectId;
     const uid = user?.id;
@@ -1372,7 +1388,10 @@ export default function DrawingScreen({ route }) {
 
     const enableCollab = !!noteConfig?.projectDetails?.hasCollaboration;
     if (enableCollab) {
-      projectService.realtime.connect(pid, uid, realtimeHandler);
+      // ✅ Use wrapper function that calls current ref
+      projectService.realtime.connect(pid, uid, (msg) => {
+        realtimeHandlerRef.current?.(msg);
+      });
     } else {
       try {
         projectService.realtime.disconnect();
@@ -1388,7 +1407,7 @@ export default function DrawingScreen({ route }) {
     noteConfig?.projectId,
     noteConfig?.projectDetails?.hasCollaboration,
     user?.id,
-    realtimeHandler, // ✅ Add memoized handler
+    // ✅ Removed realtimeHandler from deps to prevent reconnection
   ]);
 
   // 📤 EXPORT (local PDF/PNG)

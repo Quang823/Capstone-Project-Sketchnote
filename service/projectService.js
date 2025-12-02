@@ -558,7 +558,7 @@ export const projectService = {
 
     const disconnect = () => {
       try {
-        console.log("[Realtime] DISCONNECT");
+
         if (stompClient) {
           try {
             stompClient.deactivate();
@@ -802,5 +802,45 @@ export const projectService = {
    */
   isLocalProject: (projectId) => {
     return typeof projectId === "string" && projectId.startsWith("local_");
+  },
+
+  /**
+   * Get all versions of a project
+   * @param {string} projectId - Project ID
+   * @returns {Promise<Array>} Array of project versions
+   */
+  getProjectVersions: async (projectId) => {
+    try {
+      const response = await projectAPIController.getProjectVersions(projectId);
+      if (response?.data?.result) {
+        return response.data.result;
+      }
+      throw new Error("Invalid response from server");
+    } catch (err) {
+      console.error("❌ Failed to get project versions:", err);
+      throw err;
+    }
+  },
+
+  /**
+   * Restore a specific version of a project
+   * @param {string} projectId - Project ID
+   * @param {string} versionId - Version ID to restore
+   * @returns {Promise<object>} Restore response
+   */
+  restoreProjectVersion: async (projectId, versionId) => {
+    try {
+      const response = await projectAPIController.restoreProjectVersion(
+        projectId,
+        versionId
+      );
+      if (response?.data?.code === 200) {
+        return response.data;
+      }
+      throw new Error("Failed to restore version");
+    } catch (err) {
+      console.error("❌ Failed to restore project version:", err);
+      throw err;
+    }
   },
 };

@@ -70,7 +70,7 @@ export const saveDrawingLocally = async (projectId, canvasRef, noteConfig) => {
         });
 
         // Also save metadata to AsyncStorage for quick listing
-        await offlineStorage.saveGuestProject(projectId, {
+        await offlineStorage.saveGuestProjectMetadata(projectId, {
             projectId,
             name: updatedProject.name,
             description: updatedProject.description,

@@ -71,6 +71,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     projectId,
     userId,
     isCover = false,
+    scrollRef, // 👈 Receive scrollRef
   },
   ref
 ) {
@@ -787,7 +788,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     // onAddStroke?.(newStroke);
     addStrokeInternal(newStroke);
 
-    // pushUndo({ type: "add", stroke: newStroke });
+    // pushUndo({type: "add", stroke: newStroke });
   };
 
   const addTextStroke = (strokeData = {}) => {
@@ -814,7 +815,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     // onAddStroke?.(newStroke);
     addStrokeInternal(newStroke);
 
-    // pushUndo({ type: "add", stroke: newStroke });
+    // pushUndo({type: "add", stroke: newStroke });
   };
 
   // ====== API EXPOSED ======
@@ -1359,6 +1360,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             pageOffsetY={pageOffsetY}
             onColorPicked={onColorPicked}
             zoomState={zoomStateMemo}
+            scrollRef={scrollRef} // 👈 Pass scrollRef
             // ⬇️ truyền ref renderer để có thể nâng cấp eyedropper lấy pixel snapshot sau này
             canvasRef={rendererRef}
             getNearestFont={getNearestFont}
