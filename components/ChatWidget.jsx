@@ -107,24 +107,34 @@ export default function ChatWidget({ visible, onClose }) {
     const handleIncomingMessage = (message) => {
 
 
-        // Chỉ xử lý tin nhắn liên quan đến cuộc trò chuyện hiện tại
-        if (message.senderId === RECEIVER_ID || message.receiverId === RECEIVER_ID) {
+        // ⚠️ BỎ QUA tin nhắn từ chính mình (đã được thêm vào UI trong handleSendMessage)
+        if (message.senderId === currentUserId) {
+            console.log("⚠️ Skipping message from myself (already added optimistically)");
+            return;
+        }
+
+        // Chỉ xử lý tin nhắn từ RECEIVER_ID gửi cho mình
+        if (message.senderId === RECEIVER_ID && message.receiverId === currentUserId) {
             setMessages((prev) => {
-                // Chống trùng lặp tin nhắn (giống web)
+                // Chống trùng lặp tin nhắn
                 const exists = prev.some((m) => {
                     // Kiểm tra theo ID trước (chính xác nhất)
-                    if (m.id && message.id) {
-                        const idMatch = m.id === message.id;
-                        if (idMatch) {
-                        }
-                        return idMatch;
+                    if (m.id && message.id && m.id === message.id) {
+                        console.log(`⚠️ Duplicate detected by ID: ${message.id}`);
+                        return true;
                     }
-                    // Fallback: kiểm tra theo content + senderId + timestamp
+
+                    // Fallback: kiểm tra theo content + senderId + timestamp (trong vòng 500ms)
+                    const mTime = new Date(m.createdAt || m.timestamp).getTime();
+                    const msgTime = new Date(message.createdAt || message.timestamp).getTime();
+                    const timeDiff = Math.abs(mTime - msgTime);
+
                     const contentMatch = m.content === message.content &&
                         m.senderId === message.senderId &&
-                        Math.abs(new Date(m.createdAt || m.timestamp) - new Date(message.timestamp || message.createdAt)) < 1000;
+                        timeDiff < 500; // Giảm xuống 500ms để chính xác hơn
 
                     if (contentMatch) {
+                        console.log(`⚠️ Duplicate detected by content+time (diff: ${timeDiff}ms)`);
                     }
                     return contentMatch;
                 });
@@ -133,6 +143,8 @@ export default function ChatWidget({ visible, onClose }) {
 
                     return prev;
                 }
+
+                console.log("➕ Adding new message to UI");
 
                 // Thêm tin nhắn mới và sort lại để đảm bảo thứ tự đúng
                 return sortMessagesByTime([...prev, message]);
@@ -220,14 +232,6 @@ export default function ChatWidget({ visible, onClose }) {
         }
     };
 
-    const formatVNTime = (utcString) => {
-        if (!utcString) return "";
-        return new Date(utcString).toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-    };
-
     const handleSendMessage = async () => {
         if (!inputText.trim()) return;
 
@@ -251,8 +255,12 @@ export default function ChatWidget({ visible, onClose }) {
             // 3. Gửi WebSocket để người khác nhận được
             if (wsConnected) {
                 const wsMessage = {
-                    ...newMessage,
-                    timestamp: new Date().toISOString()
+                    senderId: newMessage.senderId,
+                    senderName: newMessage.senderName,
+                    senderAvatarUrl: newMessage.senderAvatarUrl,
+                    receiverId: newMessage.receiverId,
+                    content: newMessage.content,
+                    timestamp: newMessage.createdAt  // ✅ Backend cần "timestamp"
                 };
 
                 webSocketService.send("/app/chat.private", wsMessage);
@@ -308,7 +316,10 @@ export default function ChatWidget({ visible, onClose }) {
                             isMyMessage ? styles.myMessageTime : styles.theirMessageTime,
                         ]}
                     >
-                        {formatVNTime(item.createdAt || item.timestamp)}
+                        {new Date(item.createdAt || item.timestamp).toLocaleTimeString('vi-VN', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        })}
                     </Text>
                 </View>
             </View>
@@ -367,9 +378,11 @@ export default function ChatWidget({ visible, onClose }) {
                             ref={flatListRef}
                             data={messages}
                             renderItem={renderMessage}
-                            keyExtractor={(item, index) =>
-                                item.id?.toString() || index.toString()
-                            }
+                            keyExtractor={(item, index) => {
+                                // Tạo unique key từ id + timestamp + index để tránh duplicate key warning
+                                const timestamp = item.createdAt || item.timestamp || '';
+                                return item.id ? `msg-${item.id}-${timestamp}` : `msg-temp-${index}-${timestamp}`;
+                            }}
                             contentContainerStyle={styles.messagesList}
                             showsVerticalScrollIndicator={false}
                             onContentSizeChange={() =>
