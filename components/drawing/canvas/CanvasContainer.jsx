@@ -71,6 +71,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     projectId,
     userId,
     isCover = false,
+    scrollRef, // 👈 Receive scrollRef
   },
   ref
 ) {
@@ -106,7 +107,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     return () => {
       try {
         imageRefs.current.clear();
-      } catch {}
+      } catch { }
     };
   }, []);
   const liveUpdateStroke = (strokeId, partial) => {
@@ -185,7 +186,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           cancelAnimationFrame(snapshotUpdateLockRef.rafId);
           snapshotUpdateLockRef.rafId = null;
         }
-      } catch {}
+      } catch { }
     };
   }, []);
 
@@ -324,7 +325,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         console.warn("[CanvasContainer] updateActiveLayer: No activeLayerId");
         return;
       }
-      setInternalLayers((prev) => {
+
+      const updater = (prev) => {
         if (!Array.isArray(prev)) return prev;
         return prev.map((layer) => {
           if (!layer || typeof layer !== "object" || layer.id !== activeLayerId)
@@ -332,21 +334,34 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           const safeStrokes = Array.isArray(layer.strokes) ? layer.strokes : [];
           return { ...layer, strokes: updateFn(safeStrokes) };
         });
-      });
+      };
+
+      // ✅ CRITICAL FIX: Sync to both internal AND parent state
+      setInternalLayers(updater);
+      if (typeof setLayers === 'function') {
+        setLayers(updater);
+      }
     },
-    [activeLayerId]
+    [activeLayerId, setLayers]
   );
 
   const updateLayerById = (layerId, updateFn) => {
     if (!layerId || typeof updateFn !== "function") return;
-    setInternalLayers((prev) => {
+
+    const updater = (prev) => {
       if (!Array.isArray(prev)) return prev;
       return prev.map((l) => {
         if (!l || typeof l !== "object" || l?.id !== layerId) return l;
         const safeStrokes = Array.isArray(l.strokes) ? l.strokes : [];
         return { ...l, strokes: updateFn(safeStrokes) };
       });
-    });
+    };
+
+    // ✅ CRITICAL FIX: Sync to both internal AND parent state
+    setInternalLayers(updater);
+    if (typeof setLayers === 'function') {
+      setLayers(updater);
+    }
   };
 
   const visibleLayers = React.useMemo(
@@ -514,11 +529,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         if (projectId && userId) {
           const layerSummaries = Array.isArray(internalLayers)
             ? internalLayers.map((l) => ({
-                id: l?.id,
-                name: l?.name || (typeof l?.id === "string" ? l.id : "Layer"),
-                visible: l?.visible !== false,
-                locked: !!l?.locked,
-              }))
+              id: l?.id,
+              name: l?.name || (typeof l?.id === "string" ? l.id : "Layer"),
+              visible: l?.visible !== false,
+              locked: !!l?.locked,
+            }))
             : [{ id: "layer1", name: "Layer 1", visible: true, locked: false }];
 
           const pageChunk = {
@@ -540,7 +555,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             pageChunk,
           );
         }
-      } catch {}
+      } catch { }
     } catch (e) {
       console.error("[CanvasContainer] addStrokeInternal error:", e);
     }
@@ -705,7 +720,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           naturalW = size.w;
           naturalH = size.h;
         }
-      } catch {}
+      } catch { }
 
       let width = typeof opts.width === "number" ? opts.width : naturalW ?? 400;
       let height = typeof opts.height === "number" ? opts.height : naturalH ?? 400;
@@ -773,7 +788,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     // onAddStroke?.(newStroke);
     addStrokeInternal(newStroke);
 
-    // pushUndo({ type: "add", stroke: newStroke });
+    // pushUndo({type: "add", stroke: newStroke });
   };
 
   const addTextStroke = (strokeData = {}) => {
@@ -800,7 +815,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     // onAddStroke?.(newStroke);
     addStrokeInternal(newStroke);
 
-    // pushUndo({ type: "add", stroke: newStroke });
+    // pushUndo({type: "add", stroke: newStroke });
   };
 
   // ====== API EXPOSED ======
@@ -1345,6 +1360,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             pageOffsetY={pageOffsetY}
             onColorPicked={onColorPicked}
             zoomState={zoomStateMemo}
+            scrollRef={scrollRef} // 👈 Pass scrollRef
             // ⬇️ truyền ref renderer để có thể nâng cấp eyedropper lấy pixel snapshot sau này
             canvasRef={rendererRef}
             getNearestFont={getNearestFont}

@@ -102,15 +102,15 @@ export const projectAPIController = {
       const payload = pageData.pages
         ? pageData
         : {
-            projectId: pageData.projectId,
-            pages: [
-              {
-                pageNumber: pageData.pageNumber,
-                strokeUrl: pageData.strokeUrl,
-                snapshotUrl: pageData.snapshotUrl || "",
-              },
-            ],
-          };
+          projectId: pageData.projectId,
+          pages: [
+            {
+              pageNumber: pageData.pageNumber,
+              strokeUrl: pageData.strokeUrl,
+              snapshotUrl: pageData.snapshotUrl || "",
+            },
+          ],
+        };
       const res = await privateApi2.post(`/api/pages`, payload);
       return res;
     } catch (err) {
@@ -143,6 +143,30 @@ export const projectAPIController = {
       });
       return res;
     } catch (err) {
+      throw err;
+    }
+  },
+
+  // 🔹 Lấy danh sách version của project
+  getProjectVersions: async (projectId) => {
+    try {
+      const res = await privateApi2.get(`/api/projects/${projectId}/versions`);
+      return res;
+    } catch (err) {
+      console.error("❌ Error getting project versions:", err);
+      throw err;
+    }
+  },
+
+  // 🔹 Restore version của project
+  restoreProjectVersion: async (projectId, versionId) => {
+    try {
+      const res = await privateApi2.post(
+        `/api/projects/${projectId}/versions/${versionId}/restore`
+      );
+      return res;
+    } catch (err) {
+      console.error("❌ Error restoring project version:", err);
       throw err;
     }
   },

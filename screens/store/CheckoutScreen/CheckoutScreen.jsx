@@ -11,6 +11,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { checkoutStyles } from "./CheckoutScreen.styles";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -74,11 +75,10 @@ export default function CheckoutScreen() {
     <View style={checkoutStyles.container}>
       {/* Header */}
       <View style={checkoutStyles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#1F2937" />
-        </Pressable>
-        <Text style={checkoutStyles.headerTitle}>Thanh toán</Text>
-        <View style={{ width: 24 }} />
+        <View style={checkoutStyles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <Text style={checkoutStyles.headerTitle}>Checkout</Text>
+        </View>
       </View>
 
       <ScrollView style={checkoutStyles.content} showsVerticalScrollIndicator={false}>
@@ -90,7 +90,7 @@ export default function CheckoutScreen() {
           style={checkoutStyles.paymentCard}
         >
           <View style={checkoutStyles.cardHeader}>
-            <Text style={checkoutStyles.cardTitle}>Thanh toán</Text>
+            <Text style={checkoutStyles.cardTitle}>Payment</Text>
             <View style={checkoutStyles.cardIconContainer}>
               <Text style={checkoutStyles.cardIcon}>💳</Text>
             </View>
@@ -107,8 +107,8 @@ export default function CheckoutScreen() {
 
         {/* 🛒 Order Summary */}
         <View style={checkoutStyles.summarySection}>
-          <Text style={checkoutStyles.sectionTitle}>Đơn hàng</Text>
-          
+          <Text style={checkoutStyles.sectionTitle}>Order summary</Text>
+
           {cartItems.map((item, index) => (
             <View key={index} style={checkoutStyles.orderItem}>
               <View style={checkoutStyles.orderItemInfo}>
@@ -126,7 +126,7 @@ export default function CheckoutScreen() {
           ))}
 
           <View style={checkoutStyles.orderTotal}>
-            <Text style={checkoutStyles.orderTotalLabel}>Tổng cộng</Text>
+            <Text style={checkoutStyles.orderTotalLabel}>Total</Text>
             <Text style={checkoutStyles.orderTotalAmount}>
               {formatCurrency(totalAmount)}
             </Text>
@@ -135,8 +135,8 @@ export default function CheckoutScreen() {
 
         {/* 💰 Payment Methods */}
         <View style={checkoutStyles.paymentSection}>
-          <Text style={checkoutStyles.sectionTitle}>Phương thức thanh toán</Text>
-          
+          <Text style={checkoutStyles.sectionTitle}>Payment methods</Text>
+
           {paymentMethods.map((method) => (
             <Pressable
               key={method.id}
@@ -155,7 +155,7 @@ export default function CheckoutScreen() {
                   </Text>
                 </View>
               </View>
-              
+
               <View style={checkoutStyles.paymentMethodRight}>
                 <Text style={checkoutStyles.paymentFee}>{method.fee}</Text>
                 {selectedPaymentMethod === method.id && (

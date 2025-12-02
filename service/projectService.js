@@ -558,7 +558,7 @@ export const projectService = {
 
     const disconnect = () => {
       try {
-        console.log("[Realtime] DISCONNECT");
+
         if (stompClient) {
           try {
             stompClient.deactivate();
@@ -605,7 +605,7 @@ export const projectService = {
             headers: { "content-type": "application/json" },
           });
         } else {
-          console.log("[Realtime] QUEUE SEND", { projectId, userId });
+          // console.log("[Realtime] QUEUE SEND", { projectId, userId });
           pendingQueue.push(frame);
         }
       } catch { }
@@ -681,4 +681,166 @@ export const projectService = {
 
     return { connect, disconnect, sendAction, sendDraw, sendStroke };
   })(),
+
+  // ============================================================================
+  // OFFLINE / GUEST PROJECT MANAGEMENT
+  // ============================================================================
+
+  /**
+   * Create a project locally without API call (for guest/offline mode)
+   * @param {object} projectData - Project metadata
+   * @returns {Promise<object>} Created project with local ID
+   */
+  createProjectLocally: async (projectData) => {
+    try {
+      const localId = `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+      const localProject = {
+        projectId: localId,
+        name: projectData.name || "Untitled",
+        description: projectData.description || "",
+        imageUrl: projectData.imageUrl || null,
+        orientation: projectData.orientation || "portrait",
+        paperSize: projectData.paperSize || "A4",
+        pages: projectData.pages || [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isLocal: true,
+      };
+
+      // Save to local storage
+      await offlineStorage.saveGuestProject(localId, localProject);
+
+      return localProject;
+    } catch (error) {
+      console.error("Failed to create local project:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all local projects
+   * @returns {Promise<Array>} Array of local projects
+   */
+  getLocalProjects: async () => {
+    try {
+      return await offlineStorage.getAllGuestProjects();
+    } catch (error) {
+      console.error("Failed to get local projects:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Upload a local project to the cloud (after user logs in)
+   * @param {string} localProjectId - The local project ID
+   * @returns {Promise<object>} Created cloud project
+   */
+  uploadLocalProject: async (localProjectId) => {
+    try {
+      // Load local project
+      const localProject = await offlineStorage.loadGuestProject(localProjectId);
+      if (!localProject) {
+        throw new Error("Local project not found");
+      }
+
+      // Create project on server
+      const cloudProject = await projectService.createProject({
+        name: localProject.name,
+        description: localProject.description,
+        imageUrl: localProject.imageUrl,
+        orientation: localProject.orientation,
+        paperSize: localProject.paperSize,
+      });
+
+      const cloudProjectId = cloudProject?.projectId || cloudProject?.id;
+      if (!cloudProjectId) {
+        throw new Error("Failed to get cloud project ID");
+      }
+
+      // Upload pages if any
+      if (Array.isArray(localProject.pages) && localProject.pages.length > 0) {
+        const uploadPromises = localProject.pages.map((page) => {
+          if (page.dataObject && page.pageNumber) {
+            return projectService.uploadPageToS3(
+              cloudProjectId,
+              page.pageNumber,
+              page.dataObject
+            );
+          }
+          return null;
+        });
+
+        const uploadedPages = await Promise.all(uploadPromises.filter(Boolean));
+
+        if (uploadedPages.length > 0) {
+          const payload = {
+            projectId: cloudProjectId,
+            pages: uploadedPages.map(p => ({
+              pageNumber: p.pageNumber,
+              strokeUrl: p.url,
+            })),
+          };
+          await projectService.createPage(payload);
+        }
+      }
+
+      // Optionally delete local project after successful upload
+      // await offlineStorage.deleteGuestProject(localProjectId);
+
+      return cloudProject;
+    } catch (error) {
+      console.error("Failed to upload local project:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Check if a project ID is local
+   * @param {string} projectId - Project ID to check
+   * @returns {boolean} True if local project
+   */
+  isLocalProject: (projectId) => {
+    return typeof projectId === "string" && projectId.startsWith("local_");
+  },
+
+  /**
+   * Get all versions of a project
+   * @param {string} projectId - Project ID
+   * @returns {Promise<Array>} Array of project versions
+   */
+  getProjectVersions: async (projectId) => {
+    try {
+      const response = await projectAPIController.getProjectVersions(projectId);
+      if (response?.data?.result) {
+        return response.data.result;
+      }
+      throw new Error("Invalid response from server");
+    } catch (err) {
+      console.error("❌ Failed to get project versions:", err);
+      throw err;
+    }
+  },
+
+  /**
+   * Restore a specific version of a project
+   * @param {string} projectId - Project ID
+   * @param {string} versionId - Version ID to restore
+   * @returns {Promise<object>} Restore response
+   */
+  restoreProjectVersion: async (projectId, versionId) => {
+    try {
+      const response = await projectAPIController.restoreProjectVersion(
+        projectId,
+        versionId
+      );
+      if (response?.data?.code === 200) {
+        return response.data;
+      }
+      throw new Error("Failed to restore version");
+    } catch (err) {
+      console.error("❌ Failed to restore project version:", err);
+      throw err;
+    }
+  },
 };

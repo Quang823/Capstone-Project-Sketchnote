@@ -34,31 +34,55 @@ const ExportModal = ({
     const loadPages = async () => {
       try {
         if (!visible) return;
-        if (projectId) {
-          const data = await projectService.getProjectById(projectId);
-          const pages = Array.isArray(data?.pages) ? data.pages : [];
-          const sorted = pages
-            .slice()
-            .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
-          if (mounted) {
-            setPagePreviews(sorted);
-            setSelectedPageIndex(0);
-          }
-        } else if (Array.isArray(initialPages) && initialPages.length > 0) {
-          const sorted = initialPages
-            .slice()
-            .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
-          if (mounted) {
-            setPagePreviews(sorted);
-            setSelectedPageIndex(0);
+
+        // 🔥 Check if this is a local project
+        const isLocalProject = projectService.isLocalProject(projectId);
+
+        if (isLocalProject) {
+          // ✅ For local projects, use initialPages directly (no API call)
+          if (Array.isArray(initialPages) && initialPages.length > 0) {
+            const sorted = initialPages
+              .slice()
+              .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
+            if (mounted) {
+              setPagePreviews(sorted);
+              setSelectedPageIndex(0);
+            }
+          } else {
+            if (mounted) {
+              setPagePreviews([]);
+              setSelectedPageIndex(0);
+            }
           }
         } else {
-          if (mounted) {
-            setPagePreviews([]);
-            setSelectedPageIndex(0);
+          // ✅ For cloud projects, fetch from API
+          if (projectId) {
+            const data = await projectService.getProjectById(projectId);
+            const pages = Array.isArray(data?.pages) ? data.pages : [];
+            const sorted = pages
+              .slice()
+              .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
+            if (mounted) {
+              setPagePreviews(sorted);
+              setSelectedPageIndex(0);
+            }
+          } else if (Array.isArray(initialPages) && initialPages.length > 0) {
+            const sorted = initialPages
+              .slice()
+              .sort((a, b) => (a.pageNumber || 0) - (b.pageNumber || 0));
+            if (mounted) {
+              setPagePreviews(sorted);
+              setSelectedPageIndex(0);
+            }
+          } else {
+            if (mounted) {
+              setPagePreviews([]);
+              setSelectedPageIndex(0);
+            }
           }
         }
       } catch (e) {
+        console.error("Failed to load pages in ExportModal:", e);
         if (mounted) {
           setPagePreviews([]);
           setSelectedPageIndex(0);

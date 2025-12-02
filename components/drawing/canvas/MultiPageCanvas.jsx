@@ -26,6 +26,8 @@ import Animated, {
   useDerivedValue,
   useAnimatedReaction,
   useAnimatedScrollHandler,
+  useAnimatedRef,
+  scrollTo,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import CanvasContainer from "./CanvasContainer";
@@ -189,23 +191,28 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 ) {
   const loadedFonts = usePreloadedFonts();
 
-  // ✨ FIX: Add cleanup effect to dispose of all SkFont objects on unmount
+  // ✅ FIX: Only dispose fonts on component unmount, not when loadedFonts changes
   useEffect(() => {
     return () => {
+      // ✅ Cleanup only when component unmounts
       if (loadedFonts) {
         for (const family in loadedFonts) {
           for (const styleKey in loadedFonts[family]) {
             for (const sz in loadedFonts[family][styleKey]) {
               const font = loadedFonts[family][styleKey][sz];
               if (font && typeof font.dispose === "function") {
-                font.dispose();
+                try {
+                  font.dispose();
+                } catch (e) {
+                  console.warn('[MultiPageCanvas] Font dispose error:', e);
+                }
               }
             }
           }
         }
       }
     };
-  }, [loadedFonts]);
+  }, []); // ✅ Empty deps - only cleanup on unmount
 
   const drawingDataRef = useRef({ pages: {} });
 
@@ -354,7 +361,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const baseProjectTranslateY = useSharedValue(0);
   const lastZoomState = useRef(false);
 
-  const scrollRef = useRef(null);
+  const scrollRef = useAnimatedRef();
   const lastAddedRef = useRef(null);
   const pageRefs = useRef({});
   const templateHistoryRef = useRef(new Map());
@@ -395,6 +402,11 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       loadTimeoutsRef.current.clear();
       if (zoomOverlayTimeoutRef.current) {
         clearTimeout(zoomOverlayTimeoutRef.current);
+      }
+      // ✅ FIX: Add scrollTimeoutRef cleanup
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+        scrollTimeoutRef.current = null;
       }
       if (scrollRafRef.current) {
         cancelAnimationFrame(scrollRafRef.current);
@@ -765,7 +777,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   };
 
   const pinch = Gesture.Pinch()
-    .enabled(!zoomLocked && tool === "zoom")
+    .enabled(!zoomLocked) // ✅ Always enabled (except when locked) - allows zoom during drawing
     .onStart((e) => {
       "worklet";
       try {
@@ -783,39 +795,66 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     .onUpdate((e) => {
       "worklet";
       try {
-        if (typeof e.scale !== "number" || !isFinite(e.scale)) return;
+        // ✅ Strict validation để tránh crash
+        if (
+          typeof e.scale !== "number" ||
+          !isFinite(e.scale) ||
+          e.scale <= 0 ||
+          e.scale > 10
+        )
+          return;
 
-        // Tăng độ nhạy bằng cách nhân thêm hệ số
-        const sensitivityFactor = 1.2;
-        const scaleDelta = (e.scale - 1) * sensitivityFactor + 1;
+        // ✅ Giảm sensitivity xuống 1.2 để ổn định hơn (từ 1.3)
+        const baseSensitivity = 1.2;
+        const scaleDelta = (e.scale - 1) * baseSensitivity + 1;
 
+        // ✅ Strict clamping để tránh giá trị extreme
         const newScale = Math.max(
-          1.0,
-          Math.min(3, baseProjectScale.value * scaleDelta)
+          0.5, // Min 50% để tránh crash
+          Math.min(3.5, baseProjectScale.value * scaleDelta) // Max 350%
         );
-        const prevScale = projectScale.value;
-        if (newScale < 1.0) {
-          projectScale.value = 1.0;
-        } else if (newScale > 3) {
-          projectScale.value = 3;
-        } else {
-          projectScale.value = newScale;
-        }
 
-        // Anchor zoom theo tiêu điểm 2 ngón để cảm giác tự nhiên hơn
+        // ✅ Validate newScale trước khi assign
+        if (!isFinite(newScale) || newScale <= 0) return;
+
+        const prevScale = projectScale.value;
+
+        // ✅ Smooth clamping - nhưng với validation
+        projectScale.value = Math.max(1.0, Math.min(3.0, newScale));
+
+        // ✅ Cải thiện focal point tracking với validation
         if (
           typeof e.focalX === "number" &&
           typeof e.focalY === "number" &&
           isFinite(e.focalX) &&
-          isFinite(e.focalY)
+          isFinite(e.focalY) &&
+          prevScale > 0
         ) {
-          const s = projectScale.value / (prevScale || 1);
-          // Tịnh tiến để giữ tiêu điểm tại chỗ khi scale
-          const dx = e.focalX - width / 2;
-          const dy = e.focalY - height / 2;
-          projectTranslateX.value = (baseProjectTranslateX.value - dx) * s + dx;
-          projectTranslateY.value = (baseProjectTranslateY.value - dy) * s + dy;
-          clampProjectPan();
+          // Tính scale ratio với safety check
+          const scaleRatio = projectScale.value / prevScale;
+          if (!isFinite(scaleRatio) || scaleRatio <= 0) return;
+
+          // Tính offset từ center đến focal point
+          const focalOffsetX = e.focalX - width / 2;
+          const focalOffsetY = e.focalY - height / 2;
+
+          // ✅ Validate offsets
+          if (!isFinite(focalOffsetX) || !isFinite(focalOffsetY)) return;
+
+          // Điều chỉnh translation với validation
+          const newTranslateX =
+            (baseProjectTranslateX.value - focalOffsetX) * scaleRatio +
+            focalOffsetX;
+          const newTranslateY =
+            (baseProjectTranslateY.value - focalOffsetY) * scaleRatio +
+            focalOffsetY;
+
+          // ✅ Validate trước khi assign
+          if (isFinite(newTranslateX) && isFinite(newTranslateY)) {
+            projectTranslateX.value = newTranslateX;
+            projectTranslateY.value = newTranslateY;
+            clampProjectPan();
+          }
         }
       } catch (err) {
         console.warn("[Pinch.onUpdate] Error:", err);
@@ -824,14 +863,17 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     .onEnd((e) => {
       "worklet";
       try {
+        // ✅ Smooth bounce back to limits với timing
         if (projectScale.value < 1) {
-          projectScale.value = withTiming(1, { duration: 300 });
+          projectScale.value = withTiming(1, { duration: 250 });
         }
         if (projectScale.value > 3) {
-          projectScale.value = withTiming(3, { duration: 300 });
+          projectScale.value = withTiming(3, { duration: 250 });
         }
         // Sau khi scale, clamp lại pan để không vượt biên
         clampProjectPan();
+
+        // ✅ Delay hide overlay nếu không phải zoom tool
         runOnJS(setShowZoomOverlay)(false);
         // Re-enable scroll khi zoom xong
         runOnJS(setIsZooming)(false);
@@ -840,37 +882,129 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       }
     });
 
-  // Two-finger pan khi đang zoom để di chuyển project mượt mà
+  // Two-finger pan for panning when zoomed - only enabled when actually zoomed in
   const pan = Gesture.Pan()
     .minPointers(2)
-    .enabled(!zoomLocked && tool === "zoom")
+    .maxPointers(2)
+    .minDistance(5) // ✅ Thêm minDistance để tránh nhầm lẫn với pinch
+    .enabled(!zoomLocked && isZoomedIn) // ✅ Only enabled when zoomed in - allows native scroll when not zoomed
+    .activateAfterLongPress(50) // ✅ Delay nhẹ để phân biệt với pinch
+    .shouldCancelWhenOutside(false) // ✅ Không cancel khi ra ngoài
     .onStart(() => {
       "worklet";
       baseProjectTranslateX.value = projectTranslateX.value;
       baseProjectTranslateY.value = projectTranslateY.value;
-      // Khi pan 2 ngón, disable scroll
       runOnJS(setIsZooming)(true);
     })
     .onUpdate((e) => {
       "worklet";
       try {
+        // ✅ Strict validation
         if (
           typeof e.translationX !== "number" ||
-          typeof e.translationY !== "number"
+          typeof e.translationY !== "number" ||
+          !isFinite(e.translationX) ||
+          !isFinite(e.translationY)
         )
           return;
-        // Chỉ pan khi đã phóng to để tránh conflict với scroll
-        if ((projectScale.value || 1) <= 1) return;
-        projectTranslateX.value = baseProjectTranslateX.value + e.translationX;
-        projectTranslateY.value = baseProjectTranslateY.value + e.translationY;
-        clampProjectPan();
+
+        // ✅ Smooth pan với translation trực tiếp
+        const newTranslateX = baseProjectTranslateX.value + e.translationX;
+        const newTranslateY = baseProjectTranslateY.value + e.translationY;
+
+        // ✅ Validate trước khi assign
+        if (isFinite(newTranslateX) && isFinite(newTranslateY)) {
+          projectTranslateX.value = newTranslateX;
+          projectTranslateY.value = newTranslateY;
+          clampProjectPan();
+        }
       } catch (err) { }
     })
-    .onEnd(() => {
+    .onEnd((e) => {
       "worklet";
-      clampProjectPan();
-      runOnJS(setIsZooming)(false);
+      try {
+        // ✅ Thêm momentum nếu có velocity (với validation nghiêm ngặt)
+        if (
+          typeof e.velocityX === "number" &&
+          typeof e.velocityY === "number" &&
+          isFinite(e.velocityX) &&
+          isFinite(e.velocityY) &&
+          Math.abs(e.velocityX) < 5000 && // ✅ Giới hạn velocity để tránh extreme values
+          Math.abs(e.velocityY) < 5000
+        ) {
+          // Giảm momentum factor để ổn định hơn
+          const momentumFactor = 0.2; // Giảm từ 0.3
+          const newTranslateX =
+            projectTranslateX.value + e.velocityX * momentumFactor;
+          const newTranslateY =
+            projectTranslateY.value + e.velocityY * momentumFactor;
+
+          // ✅ Validate trước khi animate
+          if (isFinite(newTranslateX) && isFinite(newTranslateY)) {
+            projectTranslateX.value = withTiming(newTranslateX, {
+              duration: 400,
+            });
+            projectTranslateY.value = withTiming(newTranslateY, {
+              duration: 400,
+            });
+          }
+        }
+        clampProjectPan();
+        runOnJS(setIsZooming)(false);
+      } catch (err) { }
     });
+
+  // ✅ Single-finger scroll gesture - chỉ hoạt động khi tool === "scroll"
+  // ⚠️ CRITICAL FIX: Sử dụng scrollTo trên UI thread để tránh crash và đảm bảo mượt mà
+  const scrollGesture = Gesture.Pan()
+    .enabled(tool === "scroll") // ✅ Chỉ enable khi scroll tool active
+    .minPointers(1)
+    .maxPointers(1)
+    .minDistance(5) // ✅ Tăng minDistance để tránh conflict
+    .shouldCancelWhenOutside(false) // ✅ Không cancel khi ra ngoài
+    .onStart(() => {
+      "worklet";
+      // Lưu scroll position ban đầu
+      baseProjectTranslateY.value = scrollYShared.value;
+    })
+    .onUpdate((e) => {
+      "worklet";
+      // ✅ Validate inputs
+      if (typeof e.translationY !== "number" || !isFinite(e.translationY))
+        return;
+
+      // ✅ Tính toán scroll position mới với clamping an toàn
+      const maxScroll = Math.max(0, contentHeight - containerHeight);
+      const newScrollY = Math.max(
+        0,
+        Math.min(maxScroll, baseProjectTranslateY.value - e.translationY)
+      );
+
+      // ✅ Scroll trực tiếp trên UI thread (High Performance)
+      scrollTo(scrollRef, 0, newScrollY, false);
+    })
+    .onEnd((e) => {
+      "worklet";
+      // ✅ Thêm momentum cho scroll (an toàn)
+      if (
+        typeof e.velocityY === "number" &&
+        isFinite(e.velocityY) &&
+        Math.abs(e.velocityY) > 200
+      ) {
+        // Tính toán momentum scroll với clamping
+        const momentumFactor = 0.3;
+        const momentumDistance = e.velocityY * momentumFactor;
+        const maxScroll = Math.max(0, contentHeight - containerHeight);
+        const targetScrollY = Math.max(
+          0,
+          Math.min(maxScroll, scrollYShared.value - momentumDistance)
+        );
+
+        // ✅ Scroll có animation trên UI thread
+        scrollTo(scrollRef, 0, targetScrollY, true);
+      }
+    });
+
 
   const derivedZoom = useDerivedValue(() =>
     Math.round(projectScale.value * 100)
@@ -878,7 +1012,12 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   useAnimatedReaction(
     () => derivedZoom.value,
     (val, prev) => {
-      if (val !== prev) runOnJS(setZoomPercent)(val);
+      // ✅ Only update if significant change (>= 5%) - reduces JS thread load
+      if (val !== prev && Math.abs(val - prev) >= 5) runOnJS(setZoomPercent)(val);
+
+      // ✅ Update isZoomedIn state to enable/disable pan gesture
+      const zoomed = val > 101; // > 101% considered zoomed in
+      runOnJS(setIsZoomedIn)(zoomed);
     }
   );
 
@@ -1709,7 +1848,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         }}
       >
         <GestureDetector
-          gesture={Gesture.Simultaneous(pinch, pan)}
+          gesture={Gesture.Simultaneous(pinch, pan, scrollGesture)}
           simultaneousHandlers={scrollRef}
         >
           <Animated.View
@@ -1726,14 +1865,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               scrollEventThrottle={12}
               decelerationRate="normal"
               showsVerticalScrollIndicator={false}
-              // Chế độ scroll-only cho phép scroll ngay cả khi đã zoom
-              scrollEnabled={
-                tool === "scroll"
-                  ? true
-                  : tool === "zoom"
-                    ? false
-                    : !isZooming && !isZoomedIn
-              }
+              // ✅ Always scrollable except in zoom mode - improves responsiveness
+              scrollEnabled={tool !== "zoom"}
               simultaneousHandlers={scrollRef}
               onLayout={(e) => {
                 const h = e?.nativeEvent?.layout?.height;

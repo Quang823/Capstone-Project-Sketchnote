@@ -36,6 +36,8 @@ import { useToast } from "../../../hooks/use-toast";
 import { AuthContext } from "../../../context/AuthContext";
 import ChatWidget from "../../../components/ChatWidget";
 import { notiService } from "../../../service/notiService";
+import VersionSelectionModal from "../../../components/modals/VersionSelectionModal";
+import * as DocumentPicker from "expo-document-picker";
 const { width } = Dimensions.get("window");
 
 const formatDate = (dateString) => {
@@ -70,6 +72,7 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
     },
     { id: "quick_note", label: "Quick note", icon: "flash-on" },
     { id: "custom_note", label: "Custom note", icon: "image" },
+    { id: "template", label: "Template", icon: "stars", badge: "Premium" },
     { id: "import", label: "Import", icon: "cloud-download" },
   ];
 
@@ -162,6 +165,7 @@ const ProjectMenu = React.memo(
 export default function HomeScreen({ navigation }) {
   const [projects, setProjects] = useState([]);
   const [sharedProjects, setSharedProjects] = useState([]);
+  const [localProjects, setLocalProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
@@ -179,6 +183,10 @@ export default function HomeScreen({ navigation }) {
   const [editDesc, setEditDesc] = useState("");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
+  const [versionModalVisible, setVersionModalVisible] = useState(false);
+  const [versions, setVersions] = useState([]);
+  const [loadingVersions, setLoadingVersions] = useState(false);
+  const [selectedProjectForVersion, setSelectedProjectForVersion] = useState(null);
   const { toast } = useToast();
   const { user } = useContext(AuthContext);
   const fade = useSharedValue(0);
@@ -203,12 +211,26 @@ export default function HomeScreen({ navigation }) {
     try {
       setLoading(true);
       setError(null);
-      const [my, shared] = await Promise.all([
+
+      // Load cloud projects and local projects in parallel (Robustly)
+      const results = await Promise.allSettled([
         projectService.getUserProjects(),
         projectService.getSharedProjects(),
+        offlineStorage.getAllGuestProjects(),
       ]);
+
+      const my = results[0].status === "fulfilled" ? results[0].value : [];
+      const shared = results[1].status === "fulfilled" ? results[1].value : [];
+      const local = results[2].status === "fulfilled" ? results[2].value : [];
+
+      // Log errors if any
+      if (results[0].status === "rejected") console.error("Failed to load user projects:", results[0].reason);
+      if (results[1].status === "rejected") console.error("Failed to load shared projects:", results[1].reason);
+      if (results[2].status === "rejected") console.error("Failed to load local projects:", results[2].reason);
+
       setProjects(my || []);
       setSharedProjects(shared || []);
+      setLocalProjects(local || []);
     } catch (err) {
       setError("Failed to load projects. Please try again.");
     } finally {
@@ -233,6 +255,56 @@ export default function HomeScreen({ navigation }) {
 
     loadNotiCount();
   }, []);
+
+  // Render Local Project Item
+  const renderLocalProjectItem = ({ item }) => (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={styles.cardWrapper}
+      onPress={() =>
+        navigation.navigate("DrawingScreen", {
+          noteId: item.projectId,
+          isLocalProject: true, // Flag for local project
+        })
+      }
+    >
+      <View style={styles.card}>
+        <View style={styles.imageContainer}>
+          <LazyImage
+            source={
+              item.imageUrl
+                ? { uri: item.imageUrl }
+                : require("../../../assets/default_image.png")
+            }
+            style={styles.projectImage}
+          />
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.08)"]}
+            style={styles.imageGradient}
+          />
+          <View style={styles.cardBadges}>
+            <View style={[styles.badge, { backgroundColor: "#F59E0B" }]}>
+              <Text style={styles.badgeText}>Local</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.cardInfo}>
+          <Text style={styles.projectTitle} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.projectDescription} numberOfLines={1}>
+            {item.description || "Local Draft"}
+          </Text>
+          <View style={styles.cardFooter}>
+            <View style={styles.dateContainer}>
+              <Icon name="schedule" size={14} color="#60A5FA" />
+              <Text style={styles.dateText}>{formatDate(item.updatedAt)}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   const toggleNotiDropdown = async () => {
     const next = !notiOpen;
@@ -299,38 +371,89 @@ export default function HomeScreen({ navigation }) {
     };
   }, [navigation]);
 
-  // Open project
+  // Open project - Show version selection modal
   const handleProjectClick = useCallback(
     async (project) => {
       try {
-        const details = await projectService.getProjectById(project.projectId);
-        const meta = await offlineStorage.loadProjectLocally(
-          `${details.projectId}_meta`
+
+        setSelectedProjectForVersion(project);
+        setVersionModalVisible(true);
+
+        setLoadingVersions(true);
+        const versionList = await projectService.getProjectVersions(
+          project.projectId
         );
-        const config = {
-          projectId: details.projectId,
-          title: details.name || "Untitled",
-          description: details.description || "",
-          hasCover: !!details.imageUrl,
-          orientation: details.orientation || meta?.orientation || "portrait",
-          paperSize: details.paperSize || meta?.paperSize || "A4",
-          cover: details.imageUrl
-            ? { template: "custom_image", imageUrl: details.imageUrl }
-            : null,
-          paper: { template: "blank" },
-          pages: details.pages || [],
-          projectDetails: details,
-        };
-        navigation.navigate("DrawingScreen", { noteConfig: config });
-      } catch {
+
+        setVersions(versionList || []);
+      } catch (error) {
+        console.error("❌ Error in handleProjectClick:", error);
         toast({
           title: "Error",
-          description: "Failed to open project",
+          description: "Failed to load versions",
+          variant: "destructive",
+        });
+        setVersionModalVisible(false);
+      } finally {
+        setLoadingVersions(false);
+      }
+    },
+    [toast]
+  );
+
+  // Handle version selection and restore
+  const handleVersionSelect = useCallback(
+    async (version) => {
+      try {
+        setVersionModalVisible(false);
+        toast({
+          title: "Restoring...",
+          description: `Restoring version ${version.versionNumber}`,
+        });
+
+        const response = await projectService.restoreProjectVersion(
+          selectedProjectForVersion.projectId,
+          version.projectVersionId
+        );
+
+        if (response?.code === 200) {
+          toast({
+            title: "Success",
+            description: "Version restored successfully",
+            variant: "success",
+          });
+
+          // Load the project and navigate to it
+          const details = await projectService.getProjectById(
+            selectedProjectForVersion.projectId
+          );
+          const meta = await offlineStorage.loadProjectLocally(
+            `${details.projectId}_meta`
+          );
+          const config = {
+            projectId: details.projectId,
+            title: details.name || "Untitled",
+            description: details.description || "",
+            hasCover: !!details.imageUrl,
+            orientation: details.orientation || meta?.orientation || "portrait",
+            paperSize: details.paperSize || meta?.paperSize || "A4",
+            cover: details.imageUrl
+              ? { template: "custom_image", imageUrl: details.imageUrl }
+              : null,
+            paper: { template: "blank" },
+            pages: details.pages || [],
+            projectDetails: details,
+          };
+          navigation.navigate("DrawingScreen", { noteConfig: config });
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to restore version",
           variant: "destructive",
         });
       }
     },
-    [navigation]
+    [selectedProjectForVersion, navigation, toast]
   );
 
   // 3-dot menu
@@ -446,6 +569,164 @@ export default function HomeScreen({ navigation }) {
     },
     [navigation]
   );
+
+  const handleImportJSON = useCallback(async () => {
+    try {
+      // Pick JSON file
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "application/json",
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+      if (!file) {
+        toast({
+          title: "Error",
+          description: "No file selected",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Read file content
+      const response = await fetch(file.uri);
+      const jsonText = await response.text();
+      const importedData = JSON.parse(jsonText);
+
+      // Support both old and new JSON formats
+      const hasNoteConfig = importedData.noteConfig;
+      const config = hasNoteConfig ? importedData.noteConfig : importedData;
+      const pages = importedData.pages || [];
+
+      // Validate JSON structure
+      if (!config.projectId && !config.projectDetails?.projectId) {
+        toast({
+          title: "Invalid File",
+          description: "The selected file is not a valid project export",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!pages || pages.length === 0) {
+        toast({
+          title: "Invalid File",
+          description: "No pages found in the imported file",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Importing...",
+        description: "Creating project from imported data",
+      });
+
+      // Extract project info
+      const projectDetails = config.projectDetails || {};
+      const projectData = {
+        name: config.title || projectDetails.name || "Imported Project",
+        description: config.description || projectDetails.description || "Imported from JSON",
+        imageUrl: config.cover?.imageUrl || projectDetails.imageUrl || "",
+        orientation: config.orientation || "portrait",
+        paperSize: config.paperSize || "A4",
+      };
+
+      const created = await projectService.createProject(projectData);
+      const newProjectId = created?.projectId || created?.id || created?._id;
+
+      if (!newProjectId) throw new Error("Failed to create project");
+
+      // Download and upload pages from strokeUrl
+      const pagePromises = pages.map(async (page) => {
+        try {
+          // Fetch stroke data from URL
+          const strokeResponse = await fetch(page.strokeUrl);
+          const strokeData = await strokeResponse.json();
+
+          // Upload to new project
+          const uploaded = await projectService.uploadPageToS3(
+            newProjectId,
+            page.pageNumber,
+            strokeData
+          );
+
+          return {
+            pageNumber: page.pageNumber,
+            strokeUrl: uploaded.url,
+            snapshotUrl: page.snapshotUrl || null,
+          };
+        } catch (error) {
+          console.error(`Failed to import page ${page.pageNumber}:`, error);
+          return null;
+        }
+      });
+
+      const uploadedPages = (await Promise.all(pagePromises)).filter(Boolean);
+
+      if (uploadedPages.length === 0) {
+        throw new Error("Failed to import any pages");
+      }
+
+      // Create pages in backend
+      await projectService.createPage({
+        projectId: newProjectId,
+        pages: uploadedPages.map(p => ({
+          pageNumber: p.pageNumber,
+          strokeUrl: p.strokeUrl,
+        })),
+      });
+
+      // Save metadata
+      await offlineStorage.saveProjectLocally(`${newProjectId}_meta`, {
+        orientation: projectData.orientation,
+        paperSize: projectData.paperSize,
+      });
+
+      toast({
+        title: "Success",
+        description: `Project imported successfully with ${uploadedPages.length} page(s)!`,
+        variant: "success",
+      });
+
+      // Refresh projects list
+      await fetchProjects();
+
+      // Navigate to drawing screen
+      const noteConfig = {
+        projectId: newProjectId,
+        title: projectData.name,
+        description: projectData.description,
+        hasCover: !!projectData.imageUrl,
+        orientation: projectData.orientation,
+        paperSize: projectData.paperSize,
+        cover: projectData.imageUrl ? {
+          template: "custom_image",
+          imageUrl: projectData.imageUrl
+        } : null,
+        paper: config.paper || { template: "blank" },
+        pages: uploadedPages.map((p, idx) => ({
+          pageId: 10000 + idx,
+          pageNumber: p.pageNumber,
+          strokeUrl: p.strokeUrl,
+          snapshotUrl: p.snapshotUrl,
+        })),
+        projectDetails: created,
+      };
+
+      navigation.navigate("DrawingScreen", { noteConfig });
+    } catch (error) {
+      console.error("Import JSON error:", error);
+      toast({
+        title: "Import Failed",
+        description: error.message || "Failed to import project",
+        variant: "destructive",
+      });
+    }
+  }, [navigation, toast, fetchProjects]);
+
 
   const saveEdit = async () => {
     if (!editName.trim()) {
@@ -711,11 +992,10 @@ export default function HomeScreen({ navigation }) {
             onSelect={(type) => {
               setPopoverVisible(false);
               if (type === "sketchnote") navigation.navigate("NoteSetupScreen");
-              // if (type === "whiteboard")
-              //   navigation.navigate("NoteSetupScreen", {
-              //     mode: "whiteboard",
-              //   });
+              if (type === "custom_note") navigation.navigate("CustomNoteSetupScreen");
               if (type === "quick_note") setQuickNoteModalVisible(true);
+              if (type === "template") navigation.navigate("TemplateSelectionScreen");
+              if (type === "import") handleImportJSON();
             }}
           />
 
@@ -741,7 +1021,7 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
-          ) : projects.length === 0 && sharedProjects.length === 0 ? (
+          ) : projects.length === 0 && sharedProjects.length === 0 && localProjects.length === 0 ? (
             <View style={styles.centerContainer}>
               <Icon name="folder-open" size={64} color="#BFDBFE" />
               <Text style={styles.emptyTitle}>No Projects Found</Text>
@@ -759,6 +1039,55 @@ export default function HomeScreen({ navigation }) {
             </View>
           ) : (
             <>
+              {/* 🔥 LOCAL PROJECTS SECTION */}
+              {localProjects.length > 0 && (
+                <>
+                  <View
+                    style={{
+                      paddingHorizontal: 16,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <Icon name="smartphone" size={22} color="#F59E0B" />
+                        <Text
+                          style={{
+                            fontSize: 19,
+                            fontWeight: "800",
+                            color: "#F59E0B",
+                          }}
+                        >
+                          Local Projects
+                        </Text>
+                      </View>
+                      <TouchableOpacity onPress={() => navigation.navigate("GuestHome")}>
+                        <Text style={{ color: "#3B82F6", fontWeight: "600" }}>Manage</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <FlatList
+                    data={localProjects}
+                    renderItem={renderLocalProjectItem}
+                    keyExtractor={(item) => `local-${item.projectId}`}
+                    numColumns={columns}
+                    columnWrapperStyle={{
+                      gap: CARD_GAP,
+                      paddingHorizontal: 16,
+                      marginBottom: 16,
+                    }}
+                    scrollEnabled={false}
+                  />
+                </>
+              )}
+
               {/* MY PROJECTS */}
               {projects.length > 0 && (
                 <>
@@ -876,7 +1205,7 @@ export default function HomeScreen({ navigation }) {
               Create Quick Note
             </Text>
             <Text style={{ fontSize: 14, color: "#374151", marginBottom: 16 }}>
-              Chọn orientation cho trang đầu tiên
+              Choose orientation for the first page
             </Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
               <TouchableOpacity
@@ -1241,6 +1570,15 @@ export default function HomeScreen({ navigation }) {
 
       {/* Chat Widget */}
       <ChatWidget visible={chatVisible} onClose={() => setChatVisible(false)} />
+
+      {/* Version Selection Modal */}
+      <VersionSelectionModal
+        visible={versionModalVisible}
+        onClose={() => setVersionModalVisible(false)}
+        versions={versions}
+        loading={loadingVersions}
+        onVersionSelect={handleVersionSelect}
+      />
     </View>
   );
 }

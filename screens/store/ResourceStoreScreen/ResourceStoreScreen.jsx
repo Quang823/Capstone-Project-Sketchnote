@@ -41,7 +41,7 @@ export default function ResourceStoreScreen() {
       try {
         const resUser = await resourceService.getResourceProjectByUserId(0, 20);
         const userData = Array.isArray(resUser.content) ? resUser.content : [];
-        console.log("✅ Resource By User Id:", userData);
+
         setUserResources(userData);
       } catch (error) {
         console.error("❌ Fetch Resource By User Id Failed:", error);
