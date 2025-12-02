@@ -69,15 +69,14 @@ export default function DesignerHomeScreen() {
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   };
- const fetchWallet = async () =>{
-  try {
-    const res = await paymentService.getWallet();
- 
-    setWallet(res.result);
-  } catch (error) {
-    console.log(error);
+  const fetchWallet = async () => {
+    try {
+      const res = await paymentService.getWallet();
+
+      setWallet(res.result);
+    } catch (error) {
+    }
   }
- }
   const fetchSashboardSummary = async () => {
     try {
       const res = await dashboardService.getDashboardSummaryDesigner();

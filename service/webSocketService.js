@@ -17,7 +17,6 @@ class WebSocketService {
      */
     async connect(url, onConnected, onError) {
         if (this.client && this.client.active) {
-            console.log("⚠️ Already connected/connecting to WebSocket");
             if (this.connected && onConnected) onConnected();
             return;
         }
@@ -25,19 +24,15 @@ class WebSocketService {
         // Chuyển đổi URL sang WS protocol
         // Server cấu hình Native WebSocket tại /ws (không dùng SockJS), nên không cần thêm /websocket
         const wsUrl = url.replace(/^http/, "ws").replace(/\/$/, "");
-        console.log(`🔌 Connecting to Native WebSocket at: ${wsUrl}`);
-        console.log("🛠️ TextEncoder check:", !!global.TextEncoder);
-
         const token = await AsyncStorage.getItem("accessToken");
-        console.log("🔑 Token found:", !!token);
 
         this.client = new Client({
             brokerURL: wsUrl, // Dùng brokerURL cho Native WebSocket
-            
+
             // Tắt webSocketFactory để StompJS tự dùng Native WebSocket
             // Hoặc force dùng WebSocket global nếu cần
             webSocketFactory: () => {
-                 return new WebSocket(wsUrl);
+                return new WebSocket(wsUrl);
             },
 
             connectHeaders: token ? {
@@ -47,20 +42,15 @@ class WebSocketService {
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
-            
+
             // Quan trọng cho React Native + StompJS v7
             forceBinaryWSFrames: true,
             appendMissingNULLonIncoming: true,
 
-            debug: (str) => {
-                console.log('🔍 [STOMP Debug]', str);
-            },
-
             onConnect: (frame) => {
-                console.log("✅ STOMP Connected!");
                 this.connected = true;
                 if (onConnected) onConnected();
-                
+
                 this.subscriptions.forEach((sub, destination) => {
                     this._doSubscribe(destination, sub.callback);
                 });
@@ -77,7 +67,6 @@ class WebSocketService {
             },
 
             onWebSocketClose: (e) => {
-                console.log("🔴 WebSocket closed");
                 this.connected = false;
             }
         });
@@ -96,15 +85,11 @@ class WebSocketService {
 
         if (this.connected) {
             this._doSubscribe(destination, callback);
-        } else {
-            console.log(`⏳ Queued subscription for: ${destination}`);
         }
     }
 
     _doSubscribe(destination, callback) {
         if (!this.client || !this.connected) return;
-
-        console.log(`📥 Subscribing to: ${destination}`);
         this.client.subscribe(destination, (message) => {
             if (message.body) {
                 try {
@@ -127,8 +112,6 @@ class WebSocketService {
             console.warn("⚠️ Cannot send: WebSocket not connected");
             return;
         }
-
-        console.log(`🚀 Sending to ${destination}:`, body);
         this.client.publish({
             destination: destination,
             body: JSON.stringify(body),
@@ -141,7 +124,6 @@ class WebSocketService {
      */
     disconnect() {
         if (this.client) {
-            console.log("🛑 Disconnecting WebSocket...");
             this.client.deactivate();
             this.client = null;
             this.connected = false;

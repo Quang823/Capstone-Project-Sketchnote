@@ -845,13 +845,16 @@ export default function DrawingScreen({ route }) {
           }
           i += chunkSize;
 
-          // ✅ Check again before scheduling next RAF
-          if (!controller.signal.aborted && multiPageCanvasRef.current) {
-            const rafId = requestAnimationFrame(processChunk);
-            rafIds.add(rafId);
-          } else {
-            resolve();
-          }
+          // ✅ FIXED: Remove old RAF before adding new one to prevent duplicates
+          const rafId = requestAnimationFrame(() => {
+            // ✅ Check abort again before executing next chunk
+            if (!controller.signal.aborted && multiPageCanvasRef.current) {
+              processChunk();
+            } else {
+              resolve();
+            }
+          });
+          rafIds.add(rafId);
         };
 
         const rafId = requestAnimationFrame(processChunk);
@@ -1209,6 +1212,12 @@ export default function DrawingScreen({ route }) {
       try {
 
         if (!msg) return;
+
+        // ✅ Skip messages from current user to avoid duplicate strokes
+        if (msg.userId && user?.id && Number(msg.userId) === Number(user.id)) {
+          return;
+        }
+
         // Prefer a full stroke payload if present
         if (msg.payload?.stroke && typeof msg.payload.stroke === "object") {
           const s = msg.payload.stroke;
@@ -1347,8 +1356,8 @@ export default function DrawingScreen({ route }) {
         console.error("[Realtime] Handler error:", err);
       }
     },
-    [activePageId]
-  ); // ✅ Remove multiPageCanvasRef from deps
+    [activePageId, user?.id]
+  ); // ✅ Added user?.id for filtering own messages
 
   // ✅ FIX: Use ref to prevent creating multiple intervals
   const handleSaveFileRef = useRef();
@@ -2260,7 +2269,8 @@ export default function DrawingScreen({ route }) {
         localUri = manipResult.uri;
         size = { width: manipResult.width, height: manipResult.height };
       }
-      const MAX_DIM = 1600;
+      // ✅ FIXED: Reduced MAX_DIM to 1024 for better performance on low-end tablets
+      const MAX_DIM = 1024; // Reduced from 1600
       if (size.width > MAX_DIM || size.height > MAX_DIM) {
         const scale = MAX_DIM / Math.max(size.width, size.height);
         const newW = Math.round(size.width * scale);
@@ -2284,6 +2294,13 @@ export default function DrawingScreen({ route }) {
         throw new Error(
           "Upload to Cloudinary succeeded but no secure_url was returned."
         );
+      }
+
+      // ✅ FIXED: Delete temporary file after successful upload to free memory
+      try {
+        await FileSystem.deleteAsync(localUri, { idempotent: true });
+      } catch (deleteErr) {
+        console.warn("[DrawingScreen] Failed to delete temp image:", deleteErr);
       }
 
       // Calculate final dimensions for the canvas
@@ -2333,7 +2350,8 @@ export default function DrawingScreen({ route }) {
         setIsUploadingAsset(true);
         let imgWidth = result.assets[0].width;
         let imgHeight = result.assets[0].height;
-        const MAX_DIM = 1600;
+        // ✅ FIXED: Reduced MAX_DIM to 1024 for better performance on low-end tablets
+        const MAX_DIM = 1024; // Reduced from 1600
         let uriToUpload = localUri;
         if (imgWidth > MAX_DIM || imgHeight > MAX_DIM) {
           const scale = MAX_DIM / Math.max(imgWidth, imgHeight);
@@ -2355,6 +2373,14 @@ export default function DrawingScreen({ route }) {
         if (!cloudUrl) {
           throw new Error("Failed to upload image from camera.");
         }
+
+        // ✅ FIXED: Delete temporary file after successful upload
+        try {
+          await FileSystem.deleteAsync(uriToUpload, { idempotent: true });
+        } catch (deleteErr) {
+          console.warn("[DrawingScreen] Failed to delete temp camera image:", deleteErr);
+        }
+
         const maxWidth = 400;
         const scale = Math.min(1, maxWidth / imgWidth);
 
@@ -2399,7 +2425,8 @@ export default function DrawingScreen({ route }) {
         const { width: imgWidth0, height: imgHeight0 } = await getImageSize(
           uri
         );
-        const MAX_DIM = 512;
+        // ✅ FIXED: Reduced MAX_DIM to 384 for stickers (from 512) to save memory
+        const MAX_DIM = 384;
         let imgWidth = imgWidth0;
         let imgHeight = imgHeight0;
         if (imgWidth0 > MAX_DIM || imgHeight0 > MAX_DIM) {
@@ -2421,6 +2448,13 @@ export default function DrawingScreen({ route }) {
         );
         if (!cloudUrl) {
           throw new Error("Failed to upload sticker.");
+        }
+
+        // ✅ FIXED: Delete temporary sticker file after upload
+        try {
+          await FileSystem.deleteAsync(stickerUri, { idempotent: true });
+        } catch (deleteErr) {
+          console.warn("[DrawingScreen] Failed to delete temp sticker:", deleteErr);
         }
 
         const maxWidth = 150;

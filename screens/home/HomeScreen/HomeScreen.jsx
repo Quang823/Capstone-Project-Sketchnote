@@ -249,7 +249,6 @@ export default function HomeScreen({ navigation }) {
         const count = Number(data?.unread ?? 0);
         setNotiCount(count);
       } catch (error) {
-        console.log("loadNotiCount error", error.message);
       }
     };
 
