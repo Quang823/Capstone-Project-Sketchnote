@@ -51,6 +51,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as MediaLibrary from "expo-media-library";
+import { encodeProjectData, decodeProjectData, isEncodedData } from "../../../utils/dataEncoder";
 // Hàm helper để lấy kích thước hình ảnh
 const getImageSize = (uri, abortSignal = null) => {
   return new Promise((resolve, reject) => {
@@ -1673,13 +1674,15 @@ export default function DrawingScreen({ route }) {
           pages: pagesData.map((p) => p.dataObject),
         };
 
-        const jsonString = JSON.stringify(projectData, null, 2);
+        // 🔒 Encode data for security
+        const encodedData = await encodeProjectData(projectData);
+
         let safeName = `${options.fileName || "Untitled"}.sketchnote`;
         safeName = safeName.replace(/\s/g, "_");
         const internalUri =
           (FileSystem.documentDirectory || FileSystem.cacheDirectory) +
           safeName;
-        await FileSystem.writeAsStringAsync(internalUri, jsonString, {
+        await FileSystem.writeAsStringAsync(internalUri, encodedData, {
           encoding: "utf8",
         });
 
@@ -1695,7 +1698,7 @@ export default function DrawingScreen({ route }) {
                   safeName,
                   "application/json"
                 );
-              await FileSystem.writeAsStringAsync(safUri, jsonString, {
+              await FileSystem.writeAsStringAsync(safUri, encodedData, {
                 encoding: FileSystem.EncodingType.UTF8,
               });
 
@@ -1836,13 +1839,15 @@ export default function DrawingScreen({ route }) {
           }),
         };
 
-        const jsonString = JSON.stringify(projectData, null, 2);
+        // 🔒 Encode data for security
+        const encodedData = await encodeProjectData(projectData);
+
         let safeName = `${options.fileName || "Untitled"}.sketchnote`;
         safeName = safeName.replace(/[^a-zA-Z0-9._-]+/g, "_");
 
         const internalUri =
           (FileSystem.documentDirectory || FileSystem.cacheDirectory) + safeName;
-        await FileSystem.writeAsStringAsync(internalUri, jsonString, {
+        await FileSystem.writeAsStringAsync(internalUri, encodedData, {
           encoding: "utf8",
         });
 
@@ -1858,7 +1863,7 @@ export default function DrawingScreen({ route }) {
                   safeName,
                   "application/json"
                 );
-              await FileSystem.writeAsStringAsync(safUri, jsonString, {
+              await FileSystem.writeAsStringAsync(safUri, encodedData, {
                 encoding: FileSystem.EncodingType.UTF8,
               });
 
@@ -2158,10 +2163,13 @@ export default function DrawingScreen({ route }) {
           noteConfig: noteConfig,
           pages: pagesData.map((p) => p.dataObject),
         };
-        const jsonString = JSON.stringify(projectData, null, 2);
+
+        // 🔒 Encode data for security
+        const encodedData = await encodeProjectData(projectData);
+
         const fileName = `${options.fileName || "Untitled"}.sketchnote`;
         const uri = FileSystem.documentDirectory + fileName.replace(/\s/g, "_");
-        await FileSystem.writeAsStringAsync(uri, jsonString, {
+        await FileSystem.writeAsStringAsync(uri, encodedData, {
           encoding: "utf8",
         });
         if (await Sharing.isAvailableAsync()) {

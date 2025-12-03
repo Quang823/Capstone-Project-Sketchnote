@@ -39,6 +39,7 @@ import { notiService } from "../../../service/notiService";
 import VersionSelectionModal from "../../../components/modals/VersionSelectionModal";
 import * as DocumentPicker from "expo-document-picker";
 import PaginationControls from "../../../components/common/PaginationControls";
+import { decodeProjectData, isEncodedData } from "../../../utils/dataEncoder";
 const { width } = Dimensions.get("window");
 
 const formatDate = (dateString) => {
@@ -607,7 +608,28 @@ export default function HomeScreen({ navigation }) {
       // Read file content
       const response = await fetch(file.uri);
       const jsonText = await response.text();
-      const importedData = JSON.parse(jsonText);
+
+      // 🔓 Check if data is encoded and decode if necessary
+      let importedData;
+      if (isEncodedData(jsonText)) {
+        try {
+          importedData = decodeProjectData(jsonText);
+          toast({
+            title: "Decoding...",
+            description: "Decoding secure project file",
+          });
+        } catch (error) {
+          toast({
+            title: "Decode Failed",
+            description: "Failed to decode file. It may be corrupted or invalid.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        // Plain JSON format (backward compatibility)
+        importedData = JSON.parse(jsonText);
+      }
 
       // Support both old and new JSON formats
       const hasNoteConfig = importedData.noteConfig;
