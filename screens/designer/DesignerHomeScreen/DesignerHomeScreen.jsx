@@ -172,13 +172,11 @@ export default function DesignerHomeScreen() {
         const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://sketchnote.litecsys.com/";
         const wsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "") + `/ws-notifications?token=${encodeURIComponent(token)}`;
 
-        console.log(`🔔 Connecting notification WebSocket for user ${currentUserId}`);
 
         notificationWebSocketService.connect(
           wsUrl,
           currentUserId,
           (notification) => {
-            console.log("📨 Received notification:", notification);
             const isRead = notification.isRead ?? false;
             if (!isRead) {
               setNotiCount((prev) => prev + 1);

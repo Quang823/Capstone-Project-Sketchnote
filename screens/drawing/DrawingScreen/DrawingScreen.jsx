@@ -140,6 +140,7 @@ export default function DrawingScreen({ route }) {
   const [exitModalVisible, setExitModalVisible] = useState(false);
   const [aiChatVisible, setAiChatVisible] = useState(false);
   const { toast } = useToast();
+  const [creditRefreshCounter, setCreditRefreshCounter] = useState(0);
 
   // 🔥 Detect if this is a local project (guest mode)
   const isLocalProject = useMemo(() => {
@@ -2272,6 +2273,9 @@ export default function DrawingScreen({ route }) {
         description: "AI-generated image added to canvas",
         variant: "success",
       });
+
+      // Refresh credit balance after successful AI image generation
+      setCreditRefreshCounter((prev) => prev + 1);
     } catch (err) {
       console.error("Error inserting AI image:", err);
       toast({
@@ -2620,6 +2624,7 @@ export default function DrawingScreen({ route }) {
         onExportPress={() => setExportModalVisible(true)}
         projectId={safeNoteConfig?.projectId}
         onAIChat={() => setAiChatVisible(true)}
+        onRefreshCredit={creditRefreshCounter}
       />
       <Modal
         visible={exitModalVisible}
