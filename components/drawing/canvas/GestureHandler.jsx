@@ -1216,6 +1216,7 @@ export default function GestureHandler(
         return;
       }
 
+      // 🖼️ Check if tapping on an image/table - should always show transform box
       const hitImage = hitTestImage(e.x, e.y, strokes);
       if (hitImage) {
         const newBox = {
@@ -1227,69 +1228,24 @@ export default function GestureHandler(
         };
         setSelectedId(hitImage.id);
         setSelectedBox(newBox);
-        onSelectionChange?.(hitImage.id, newBox);
+        onSelectStroke?.(hitImage.id);
         setEditorVisible(false);
         return;
       }
 
+
+      // 📝 Check if tapping on text
       const hit = hitTestText(e.x, e.y, strokes);
       if (!hit) {
-        // If a selection is active, empty tap should only clear it and return
-        const hadSelection = !!(selectedId || selectedBox);
-        if (selectedId && selectedBox) {
-          const stroke = strokes.find((s) => s.id === selectedId);
-          if (
-            stroke &&
-            ["text", "sticky", "comment", "emoji"].includes(stroke.tool)
-          ) {
-            const padding = stroke.padding || 0;
-            const fontSize = stroke.fontSize || 18;
-            const origBoxX = stroke.x - padding - 1;
-            const origBoxY =
-              stroke.tool === "emoji"
-                ? stroke.y - fontSize / 2 - padding - 1
-                : stroke.y - fontSize - padding - 1;
-            const dx = selectedBox.x - origBoxX;
-            const dy = selectedBox.y - origBoxY;
-
-            const index = strokes.findIndex((s) => s.id === selectedId);
-            if (index !== -1 && typeof onModifyStroke === "function") {
-              onModifyStroke(index, {
-                x: (stroke.x ?? 0) + dx,
-                y: (stroke.y ?? 0) + dy,
-              });
-            }
-          }
-        }
-        // If there is a pending text resize, finalize it before clearing selection
-        if (textResizeRef.current && selectedId && selectedBox) {
-          const snap = textResizeRef.current;
-          const s = strokes.find((st) => st.id === selectedId);
-          if (snap && s) {
-            const pad = snap.padding || 0;
-            const newFont = Math.max(
-              8,
-              Math.round((selectedBox.height || 0) - pad * 2)
-            );
-            const tx = (selectedBox.x || 0) + pad;
-            const ty = (selectedBox.y || 0) + newFont + pad;
-            const index = strokes.findIndex((st) => st.id === selectedId);
-            if (index !== -1 && typeof onModifyStroke === "function") {
-              onModifyStroke(index, { x: tx, y: ty, fontSize: newFont });
-            }
-            textResizeRef.current = null;
-          }
-        }
+        // ✅ Tap on empty canvas: immediately clear selection
         setSelectedId(null);
         setSelectedBox(null);
-        onSelectionChange?.(null, null);
+        onSelectStroke?.(null);
         setRealtimeText(null);
-        // After clearing an active selection, do not open editor in the same tap
-        if (hadSelection && ["text", "sticky", "comment"].includes(tool))
-          return;
+        setEditorVisible(false);
 
-        // If no selection was active, and tool is text/sticky/comment, open editor on empty tap
-        if (!hadSelection && ["text", "sticky", "comment"].includes(tool)) {
+        // If tool is text/sticky/comment, open editor on empty tap
+        if (["text", "sticky", "comment"].includes(tool)) {
           const tempId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
           setTempStrokeId(tempId);
           if (!Number.isFinite(e.x) || !Number.isFinite(e.y)) return;
@@ -1314,11 +1270,11 @@ export default function GestureHandler(
           }
           setEditorProps({ x: e.x, y: e.y, tool, data: { id: tempId, tool } });
           setEditorVisible(true);
-          return;
         }
         return;
       }
 
+      // Hit text: handle text selection
       if (hit.tool === "emoji") {
         setSelectedId(hit.id);
         setSelectedBox({
@@ -1361,6 +1317,7 @@ export default function GestureHandler(
         }
       }
 
+      // No match: clear selection
       setSelectedId(null);
       setSelectedBox(null);
     });
@@ -2451,12 +2408,11 @@ export default function GestureHandler(
 
   // ✅ Only enable GestureHandler's gestures when in drawing mode
   // This prevents conflicts with navigation gestures (scroll/zoom)
+  // Note: image/sticker tools need tap gestures enabled to select/deselect images
   const isDrawingMode = useMemo(() => {
     return ![
       "scroll",
       "zoom",
-      "image",
-      "sticker",
       "camera",
       "table",
     ].includes(tool);

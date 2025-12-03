@@ -25,6 +25,7 @@ export default function HeaderToolbar({
   isLayerPanelVisible = false,
   onExportPress,
   projectId,
+  onAIChat,
 }) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -81,6 +82,7 @@ export default function HeaderToolbar({
           {renderButton("arrow-back", onBack, Ionicons)}
           {renderButton("person-add-outline", () => setInviteVisible(true), Ionicons)}
           {renderButton("camera-outline", onCamera, Ionicons)}
+          {onAIChat && renderButton("auto-awesome", onAIChat, MaterialIcons)}
         </View>
 
         {/* Right */}
@@ -184,7 +186,7 @@ export default function HeaderToolbar({
                     setFoundUser(null);
                     setSelectedUserId(null);
                     Toast.show({ type: "success", text1: "Invite successful" });
-                  } catch {} finally {
+                  } catch { } finally {
                     setInviteLoading(false);
                   }
                 }}

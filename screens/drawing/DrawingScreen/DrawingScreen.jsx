@@ -35,6 +35,7 @@ import useOrientation from "../../../hooks/useOrientation";
 import { useNavigation } from "@react-navigation/native";
 import { exportPagesToPdf } from "../../../utils/ExportUtils";
 import ExportModal from "../../../components/drawing/modal/ExportModal";
+import AIImageChatModal from "../../../components/drawing/modal/AIImageChatModal";
 import { projectService } from "../../../service/projectService";
 import { AuthContext } from "../../../context/AuthContext";
 import styles from "./DrawingScreen.styles";
@@ -137,6 +138,7 @@ export default function DrawingScreen({ route }) {
   const { user } = useContext(AuthContext);
   const [isExportModalVisible, setExportModalVisible] = useState(false);
   const [exitModalVisible, setExitModalVisible] = useState(false);
+  const [aiChatVisible, setAiChatVisible] = useState(false);
   const { toast } = useToast();
 
   // 🔥 Detect if this is a local project (guest mode)
@@ -845,13 +847,16 @@ export default function DrawingScreen({ route }) {
           }
           i += chunkSize;
 
-          // ✅ Check again before scheduling next RAF
-          if (!controller.signal.aborted && multiPageCanvasRef.current) {
-            const rafId = requestAnimationFrame(processChunk);
-            rafIds.add(rafId);
-          } else {
-            resolve();
-          }
+          // ✅ FIXED: Remove old RAF before adding new one to prevent duplicates
+          const rafId = requestAnimationFrame(() => {
+            // ✅ Check abort again before executing next chunk
+            if (!controller.signal.aborted && multiPageCanvasRef.current) {
+              processChunk();
+            } else {
+              resolve();
+            }
+          });
+          rafIds.add(rafId);
         };
 
         const rafId = requestAnimationFrame(processChunk);
@@ -1209,6 +1214,12 @@ export default function DrawingScreen({ route }) {
       try {
 
         if (!msg) return;
+
+        // ✅ Skip messages from current user to avoid duplicate strokes
+        if (msg.userId && user?.id && Number(msg.userId) === Number(user.id)) {
+          return;
+        }
+
         // Prefer a full stroke payload if present
         if (msg.payload?.stroke && typeof msg.payload.stroke === "object") {
           const s = msg.payload.stroke;
@@ -1347,8 +1358,8 @@ export default function DrawingScreen({ route }) {
         console.error("[Realtime] Handler error:", err);
       }
     },
-    [activePageId]
-  ); // ✅ Remove multiPageCanvasRef from deps
+    [activePageId, user?.id]
+  ); // ✅ Added user?.id for filtering own messages
 
   // ✅ FIX: Use ref to prevent creating multiple intervals
   const handleSaveFileRef = useRef();
@@ -2229,6 +2240,50 @@ export default function DrawingScreen({ route }) {
     }
   };
 
+  // 🤖 ===== INSERT AI GENERATED IMAGE =====
+  const handleAIImageSelect = async (imageUrl) => {
+    try {
+      if (!imageUrl) return;
+
+      setIsUploadingAsset(true);
+
+      // Get image dimensions
+      const size = await getImageSize(imageUrl);
+
+      // Calculate dimensions for canvas
+      const currentZoom = multiPageCanvasRef.current?.getCurrentZoom?.() || 1;
+      const screenWidth = Dimensions.get("window").width;
+      const maxImageWidth = Math.min((screenWidth * 0.5) / currentZoom, 400);
+      const scale = Math.min(1, maxImageWidth / size.width);
+      const finalWidth = size.width * scale;
+      const finalHeight = size.height * scale;
+
+      // Add the stroke with the AI image URL
+      multiPageCanvasRef.current.addImageStroke({
+        uri: imageUrl,
+        x: 100,
+        y: 100,
+        width: finalWidth,
+        height: finalHeight,
+      });
+
+      toast({
+        title: "Image Added",
+        description: "AI-generated image added to canvas",
+        variant: "success",
+      });
+    } catch (err) {
+      console.error("Error inserting AI image:", err);
+      toast({
+        title: "Insert Image Failed",
+        description: "An error occurred while inserting the AI image.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingAsset(false);
+    }
+  };
+
   // [REWRITTEN] 🖼 ===== INSERT IMAGE FROM GALLERY (with upload) =====
   const handleInsertImage = async () => {
     try {
@@ -2260,7 +2315,8 @@ export default function DrawingScreen({ route }) {
         localUri = manipResult.uri;
         size = { width: manipResult.width, height: manipResult.height };
       }
-      const MAX_DIM = 1600;
+      // ✅ FIXED: Reduced MAX_DIM to 1024 for better performance on low-end tablets
+      const MAX_DIM = 1024; // Reduced from 1600
       if (size.width > MAX_DIM || size.height > MAX_DIM) {
         const scale = MAX_DIM / Math.max(size.width, size.height);
         const newW = Math.round(size.width * scale);
@@ -2284,6 +2340,13 @@ export default function DrawingScreen({ route }) {
         throw new Error(
           "Upload to Cloudinary succeeded but no secure_url was returned."
         );
+      }
+
+      // ✅ FIXED: Delete temporary file after successful upload to free memory
+      try {
+        await FileSystem.deleteAsync(localUri, { idempotent: true });
+      } catch (deleteErr) {
+        console.warn("[DrawingScreen] Failed to delete temp image:", deleteErr);
       }
 
       // Calculate final dimensions for the canvas
@@ -2333,7 +2396,8 @@ export default function DrawingScreen({ route }) {
         setIsUploadingAsset(true);
         let imgWidth = result.assets[0].width;
         let imgHeight = result.assets[0].height;
-        const MAX_DIM = 1600;
+        // ✅ FIXED: Reduced MAX_DIM to 1024 for better performance on low-end tablets
+        const MAX_DIM = 1024; // Reduced from 1600
         let uriToUpload = localUri;
         if (imgWidth > MAX_DIM || imgHeight > MAX_DIM) {
           const scale = MAX_DIM / Math.max(imgWidth, imgHeight);
@@ -2355,6 +2419,14 @@ export default function DrawingScreen({ route }) {
         if (!cloudUrl) {
           throw new Error("Failed to upload image from camera.");
         }
+
+        // ✅ FIXED: Delete temporary file after successful upload
+        try {
+          await FileSystem.deleteAsync(uriToUpload, { idempotent: true });
+        } catch (deleteErr) {
+          console.warn("[DrawingScreen] Failed to delete temp camera image:", deleteErr);
+        }
+
         const maxWidth = 400;
         const scale = Math.min(1, maxWidth / imgWidth);
 
@@ -2399,7 +2471,8 @@ export default function DrawingScreen({ route }) {
         const { width: imgWidth0, height: imgHeight0 } = await getImageSize(
           uri
         );
-        const MAX_DIM = 512;
+        // ✅ FIXED: Reduced MAX_DIM to 384 for stickers (from 512) to save memory
+        const MAX_DIM = 384;
         let imgWidth = imgWidth0;
         let imgHeight = imgHeight0;
         if (imgWidth0 > MAX_DIM || imgHeight0 > MAX_DIM) {
@@ -2421,6 +2494,13 @@ export default function DrawingScreen({ route }) {
         );
         if (!cloudUrl) {
           throw new Error("Failed to upload sticker.");
+        }
+
+        // ✅ FIXED: Delete temporary sticker file after upload
+        try {
+          await FileSystem.deleteAsync(stickerUri, { idempotent: true });
+        } catch (deleteErr) {
+          console.warn("[DrawingScreen] Failed to delete temp sticker:", deleteErr);
         }
 
         const maxWidth = 150;
@@ -2539,6 +2619,7 @@ export default function DrawingScreen({ route }) {
         isLayerPanelVisible={showLayerPanel}
         onExportPress={() => setExportModalVisible(true)}
         projectId={safeNoteConfig?.projectId}
+        onAIChat={() => setAiChatVisible(true)}
       />
       <Modal
         visible={exitModalVisible}
@@ -2819,6 +2900,12 @@ export default function DrawingScreen({ route }) {
           visible={stickerModalVisible}
           onClose={() => setStickerModalVisible(false)}
           onSelect={handleStickerSelect}
+        />
+
+        <AIImageChatModal
+          visible={aiChatVisible}
+          onClose={() => setAiChatVisible(false)}
+          onImageSelect={handleAIImageSelect}
         />
       </View>
 

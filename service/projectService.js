@@ -239,6 +239,26 @@ export const projectService = {
       throw error;
     }
   },
+  getUserProjectsPaged: async (pageNo = 0, pageSize = 4) => {
+    try {
+      const response = await projectAPIController.getUserProjectsPaged(pageNo, pageSize);
+      const r = response?.data?.result ?? response?.data ?? {};
+      const content = Array.isArray(r?.projects)
+        ? r.projects
+        : Array.isArray(r?.content)
+          ? r.content
+          : [];
+      const totalElements =
+        r?.totalElements ?? r?.page?.totalElements ?? r?.pagination?.total ?? content.length;
+      const totalPages =
+        r?.totalPages ?? r?.page?.totalPages ?? r?.pagination?.totalPages ?? Math.max(1, Math.ceil(totalElements / pageSize));
+      const currentPage = r?.pageNo ?? r?.pageNumber ?? r?.page?.number ?? pageNo;
+      return { content, totalElements, totalPages, pageNo: currentPage, pageSize };
+    } catch (error) {
+      console.error("Error in getUserProjectsPaged:", error);
+      throw error;
+    }
+  },
 
   getSharedProjects: async () => {
     try {
@@ -246,7 +266,6 @@ export const projectService = {
       if (response?.data?.result?.projects) {
         return response.data.result.projects;
       }
-      console.log("getSharedProjects response:", response);
       return [];
     } catch (error) {
       console.error("Error in getSharedProjects:", error);
@@ -374,7 +393,6 @@ export const projectService = {
         userId,
         edited,
       });
-      console.log("✅ Invite collaborator response:", response?.data?.result);
       return response?.data?.result;
     } catch (err) {
       const message =
@@ -408,6 +426,7 @@ export const projectService = {
     let heartbeatTimer = null;
     let pendingQueue = [];
     let stompClient = null;
+    let activeSubscription = null; // ✅ FIXED: Track subscription for cleanup
 
     const buildFrame = (command, headers = {}, body = "") => {
       const lines = [command];
@@ -439,14 +458,7 @@ export const projectService = {
 
     const connect = async (projectId, userId, onMessage) => {
       try {
-        console.log("🔵 [Realtime] ========== CONNECT START ==========");
-        console.log("🔵 [Realtime] projectId:", projectId);
-        console.log("🔵 [Realtime] userId:", userId);
-        console.log("🔵 [Realtime] isConnected:", isConnected);
-        console.log("🔵 [Realtime] activeProjectId:", activeProjectId);
-
         if (isConnected && activeProjectId === projectId) {
-          console.log("✅ [Realtime] Already connected to this project");
           return true;
         }
 
@@ -455,24 +467,30 @@ export const projectService = {
 
         // ✅ Use native WebSocket with wss:// protocol
         const wsUrl = "wss://sketchnote.litecsys.com/ws";
-        console.log("🔵 [Realtime] WS URL:", wsUrl);
 
         const token = await AsyncStorage.getItem("accessToken");
-        console.log("🔵 [Realtime] Token exists:", !!token);
-
-        console.log("🔵 [Realtime] Creating StompClient with native WebSocket...");
 
         stompClient = new StompClient({
           // ✅ Use brokerURL for native WebSocket (not webSocketFactory)
           brokerURL: wsUrl,
 
+          // ✅ Force use WebSocket for React Native compatibility
+          webSocketFactory: () => {
+            return new WebSocket(wsUrl);
+          },
+
           debug: (str) => {
-            console.log("🔍 [STOMP Debug]", str);
+
           },
 
           reconnectDelay: 5000,
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
+
+          // ✅ Critical for React Native + StompJS v7
+          forceBinaryWSFrames: true,
+          appendMissingNULLonIncoming: true,
+
           connectHeaders: token
             ? {
               Authorization: `Bearer ${token}`,
@@ -480,21 +498,17 @@ export const projectService = {
             : undefined,
 
           beforeConnect: () => {
-            console.log("🟡 [Realtime] beforeConnect - About to connect...");
           },
 
           onConnect: (frame) => {
-            console.log("✅✅✅ [Realtime] STOMP CONNECTED ✅✅✅");
-            console.log("✅ [Realtime] Connection frame:", frame);
 
             isConnected = true;
 
             const topicPath = `/topic/project/${projectId}`;
-            console.log("🔵 [Realtime] Subscribing to:", topicPath);
 
-            const sub = stompClient.subscribe(topicPath, (message) => {
+            // ✅ FIXED: Store subscription for cleanup
+            activeSubscription = stompClient.subscribe(topicPath, (message) => {
               try {
-                console.log("📥📥📥 [Realtime] MESSAGE RECEIVED 📥📥📥");
                 const json = JSON.parse(message.body || "{}");
                 if (typeof onMessageCb === "function") {
                   onMessageCb(json);
@@ -504,14 +518,10 @@ export const projectService = {
               }
             });
 
-            console.log("✅ [Realtime] Subscription created ID:", sub?.id);
 
             // Flush pending queue
             if (pendingQueue.length > 0) {
-              console.log(
-                "🔵 [Realtime] Flushing pending queue:",
-                pendingQueue.length
-              );
+
               pendingQueue.forEach((f) => {
                 try {
                   const parsed = parseFrame(f);
@@ -539,15 +549,13 @@ export const projectService = {
           },
 
           onWebSocketClose: (e) => {
-            console.log("🔴🔴🔴 [Realtime] WebSocket CLOSED 🔴🔴🔴", e);
             isConnected = false;
             activeProjectId = null;
+            activeSubscription = null; // ✅ Clear subscription reference
           },
         });
 
-        console.log("🔵 [Realtime] Activating StompClient...");
         stompClient.activate();
-        console.log("🔵 [Realtime] StompClient activated");
 
         return true;
       } catch (err) {
@@ -559,23 +567,47 @@ export const projectService = {
     const disconnect = () => {
       try {
 
+        // ✅ FIXED: Unsubscribe before deactivating
+        if (activeSubscription) {
+          try {
+            activeSubscription.unsubscribe();
+          } catch (err) {
+            console.warn("⚠️ [Realtime] Error unsubscribing:", err);
+          }
+          activeSubscription = null;
+        }
+
+        // ✅ Deactivate STOMP client
         if (stompClient) {
           try {
             stompClient.deactivate();
-          } catch { }
+          } catch (err) {
+            console.warn("⚠️ [Realtime] Error deactivating STOMP:", err);
+          }
+          stompClient = null;
         }
       } finally {
+        // ✅ Clear heartbeat timer
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer);
           heartbeatTimer = null;
         }
+
+        // ✅ Close underlying WebSocket if still open
         try {
           socket?.close?.();
-        } catch { }
+        } catch (err) {
+          console.warn("⚠️ [Realtime] Error closing socket:", err);
+        }
         socket = null;
+
+        // ✅ Reset state
         isConnected = false;
         activeProjectId = null;
         onMessageCb = null;
+
+        // ✅ FIXED: Clear pending queue properly
+        pendingQueue.length = 0;
         pendingQueue = [];
       }
     };
@@ -595,17 +627,12 @@ export const projectService = {
           body
         );
         if (stompClient && stompClient.active) {
-          console.log("[Realtime] OUTBOUND SEND", { projectId, userId });
-          try {
-            console.log("[Realtime] OUTBOUND BODY", String(body).slice(0, 500));
-          } catch { }
           stompClient.publish({
             destination,
             body,
             headers: { "content-type": "application/json" },
           });
         } else {
-          // console.log("[Realtime] QUEUE SEND", { projectId, userId });
           pendingQueue.push(frame);
         }
       } catch { }

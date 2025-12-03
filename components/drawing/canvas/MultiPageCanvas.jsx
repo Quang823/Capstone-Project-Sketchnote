@@ -1544,6 +1544,22 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
         const typeStr = String(res.type || "").toUpperCase();
 
+        // Handle AI generated images
+        if (typeStr.includes("AI_IMAGE") || typeStr.includes("AI IMAGE")) {
+          const page = pages[activeIndex];
+          if (!page || page.id == null) return;
+          const pageRef = pageRefs.current[page.id];
+          if (pageRef && typeof pageRef.addImageStroke === "function") {
+            pageRef.addImageStroke({
+              uri: res.imageUrl,
+              width: 300,
+              height: 300,
+            });
+            setOverviewVisible(false);
+          }
+          return;
+        }
+
         if (typeStr.includes("ICON")) {
           const page = pages[activeIndex];
           if (!page || page.id == null) return;

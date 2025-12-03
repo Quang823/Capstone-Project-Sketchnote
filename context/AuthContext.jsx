@@ -15,16 +15,26 @@ export const AuthProvider = ({ children }) => {
     try {
       setIsLoading(true);
       const token = await AsyncStorage.getItem("accessToken");
+
+      // No token means user is not logged in
       if (!token) {
         setUser(null);
         setIsGuest(true);
         return;
       }
+
+      // Try to fetch profile with existing token
       const u = await authService.getMyProfile(token);
       setUser(u);
       setIsGuest(false);
     } catch (err) {
       console.error("Failed to fetch user:", err);
+
+      // If profile fetch fails, it means token is invalid/expired
+      // The interceptor will try to refresh automatically
+      // If refresh also fails, tokens will be cleared by interceptor
+
+      // Clear local state
       setUser(null);
       setIsGuest(true);
     } finally {
