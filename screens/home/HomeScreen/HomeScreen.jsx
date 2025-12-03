@@ -977,6 +977,41 @@ export default function HomeScreen({ navigation }) {
               >
                 <Icon name="account-balance-wallet" size={22} color="#1E40AF" />
               </TouchableOpacity>
+              {/* Credit Button */}
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={() => navigation.navigate("CreditScreen")}
+              >
+                <View style={{ position: "relative" }}>
+                  <Icon name="stars" size={22} color="#FFD700" />
+                  {/* Credit Badge - You can add state for actual credit count */}
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: -8,
+                      right: -8,
+                      minWidth: 18,
+                      height: 18,
+                      borderRadius: 9,
+                      backgroundColor: "#6366F1",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      paddingHorizontal: 4,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#FFF",
+                        fontSize: 9,
+                        fontWeight: "700",
+                      }}
+                      numberOfLines={1}
+                    >
+                      💎
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.iconButton}
                 onPress={() => navigation.navigate("Cart")}

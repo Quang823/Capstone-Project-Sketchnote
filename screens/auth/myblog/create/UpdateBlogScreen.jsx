@@ -43,20 +43,20 @@ export default function UpdateBlogScreen({ route, navigation }) {
         setContents(
           fullBlog.contents && fullBlog.contents.length > 0
             ? fullBlog.contents.map((c, idx) => ({
-                id: c.id,
-                sectionTitle: c.sectionTitle || "",
-                content: c.content || "",
-                contentUrl: c.contentUrl || "",
-                index: idx,
-              }))
+              id: c.id,
+              sectionTitle: c.sectionTitle || "",
+              content: c.content || "",
+              contentUrl: c.contentUrl || "",
+              index: idx,
+            }))
             : [
-                {
-                  sectionTitle: "",
-                  content: "",
-                  contentUrl: "",
-                  index: 0,
-                },
-              ]
+              {
+                sectionTitle: "",
+                content: "",
+                contentUrl: "",
+                index: 0,
+              },
+            ]
         );
       } catch (err) {
         console.error("❌ Fetch blog detail failed:", err);
@@ -122,115 +122,118 @@ export default function UpdateBlogScreen({ route, navigation }) {
 
   // --- Handle Update Blog ---
   const handleUpdateBlog = async () => {
-  // --- Validate main fields ---
-  if (!title.trim()) {
-    Toast.show({
-      type: "error",
-      text1: "Missing Title",
-      text2: "Blog must have a title.",
-    });
-    return;
-  }
-
-  if (!summary.trim()) {
-    Toast.show({
-      type: "error",
-      text1: "Missing Summary",
-      text2: "Summary cannot be empty.",
-    });
-    return;
-  }
-
-  if (!imageUrl) {
-    Toast.show({
-      type: "error",
-      text1: "Missing Featured Image",
-      text2: "Please upload a featured image.",
-    });
-    return;
-  }
-
-  // --- Validate content list ---
-  if (contents.length === 0) {
-    Toast.show({
-      type: "error",
-      text1: "No Content",
-      text2: "Your blog must have at least one content section.",
-    });
-    return;
-  }
-
-  // --- Validate each section ---
-  for (let i = 0; i < contents.length; i++) {
-    const section = contents[i];
-
-    if (!section.sectionTitle.trim()) {
+    // --- Validate main fields ---
+    if (!title.trim()) {
       Toast.show({
         type: "error",
-        text1: "Section Title Missing",
-        text2: `Section ${i + 1} must have a title.`,
+        text1: "Missing Title",
+        text2: "Blog must have a title.",
       });
       return;
     }
 
-    if (!section.content.trim()) {
+    if (!summary.trim()) {
       Toast.show({
         type: "error",
-        text1: "Section Content Missing",
-        text2: `Section ${i + 1} must include content.`,
+        text1: "Missing Summary",
+        text2: "Summary cannot be empty.",
       });
       return;
     }
-  }
 
-  // --- If all valid, proceed update ---
-  try {
-    setLoading(true);
+    if (!imageUrl) {
+      Toast.show({
+        type: "error",
+        text1: "Missing Featured Image",
+        text2: "Please upload a featured image.",
+      });
+      return;
+    }
 
-    // Update main blog
-    const blogData = {
-      title: title.trim(),
-      summary: summary.trim(),
-      imageUrl: imageUrl,
-    };
+    // --- Validate content list ---
+    if (contents.length === 0) {
+      Toast.show({
+        type: "error",
+        text1: "No Content",
+        text2: "Your blog must have at least one content section.",
+      });
+      return;
+    }
 
-    await blogService.updateBlog(blog.id, blogData);
+    // --- Validate each section ---
+    for (let i = 0; i < contents.length; i++) {
+      const section = contents[i];
 
-    // Update or create content
-    const updatePromises = contents.map((section, i) => {
-      const contentData = {
-        sectionTitle: section.sectionTitle.trim(),
-        content: section.content.trim(),
-        contentUrl: section.contentUrl || "",
-        index: i,
+      if (!section.sectionTitle.trim()) {
+        Toast.show({
+          type: "error",
+          text1: "Section Title Missing",
+          text2: `Section ${i + 1} must have a title.`,
+        });
+        return;
+      }
+
+      if (!section.content.trim()) {
+        Toast.show({
+          type: "error",
+          text1: "Section Content Missing",
+          text2: `Section ${i + 1} must include content.`,
+        });
+        return;
+      }
+    }
+
+    // --- If all valid, proceed update ---
+    try {
+      setLoading(true);
+
+      // Update main blog
+      const blogData = {
+        title: title.trim(),
+        summary: summary.trim(),
+        imageUrl: imageUrl,
       };
 
-      if (section.id) {
-        return blogService.updateContent(section.id, contentData);
-      } else {
-        return blogService.createContent(blog.id, contentData);
-      }
-    });
+      await blogService.updateBlog(blog.id, blogData);
 
-    await Promise.all(updatePromises);
+      // Update or create content
+      const updatePromises = contents.map((section, i) => {
+        const contentData = {
+          sectionTitle: section.sectionTitle.trim(),
+          content: section.content.trim(),
+          contentUrl: section.contentUrl || "",
+          index: i,
+        };
 
-    Toast.show({
-      type: "success",
-      text1: "🎉 Blog updated successfully!",
-    });
+        if (section.id) {
+          return blogService.updateContent(section.id, contentData);
+        } else {
+          return blogService.createContent(blog.id, contentData);
+        }
+      });
 
-    navigation.goBack();
-  } catch (err) {
-    console.error("❌ Update error:", err);
-    Toast.show({
-      type: "error",
-      text1: "Update failed",
-      text2: err.message,
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+      await Promise.all(updatePromises);
+
+      // Change status to DRAFT after update
+      await blogService.changeBlogStatus(blog.id, 'DRAFT');
+
+      Toast.show({
+        type: "success",
+        text1: "🎉 Blog updated successfully!",
+      });
+
+      navigation.goBack();
+    } catch (err) {
+      console.error("❌ Update error:", err);
+      Toast.show({
+        type: "error",
+        text1: "Update failed",
+        text2: err.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   // --- Loading State ---
@@ -256,8 +259,8 @@ export default function UpdateBlogScreen({ route, navigation }) {
         <Text style={styles.headerTitle}>✏️ Update Blog</Text>
       </View>
 
-      <ScrollView 
-        style={styles.scrollView} 
+      <ScrollView
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
@@ -349,7 +352,7 @@ export default function UpdateBlogScreen({ route, navigation }) {
                   )}
                 </View>
                 {contents.length > 1 && (
-                  <Pressable 
+                  <Pressable
                     onPress={() => removeContentSection(index)}
                     style={styles.deleteButton}
                   >

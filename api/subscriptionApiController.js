@@ -10,4 +10,5 @@ export const subscriptionApiController = {
   getUserSubscriptions: async () => {
     return await privateApi.get("/api/users/me/subscriptions");
   },
+  
 };

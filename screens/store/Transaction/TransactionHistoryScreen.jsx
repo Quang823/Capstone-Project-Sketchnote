@@ -20,11 +20,35 @@ const screenWidth = Dimensions.get("window").width;
 export default function TransactionHistoryScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { transactions = [] } = route.params || {};
+  const { transactions: initialTransactions = [] } = route.params || {};
 
+  const [transactions, setTransactions] = useState(initialTransactions);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("All");
   const [selectedTx, setSelectedTx] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  useEffect(() => {
+    if (transactions.length === 0) {
+      fetchHistory();
+    }
+  }, []);
+
+  const fetchHistory = async () => {
+    try {
+      setLoading(true);
+      const historyData = await import("../../../service/creditService").then(m => m.creditService.getCreditTransactionHistory());
+      if (Array.isArray(historyData)) {
+        setTransactions(historyData);
+      } else if (historyData && historyData.content && Array.isArray(historyData.content)) {
+        setTransactions(historyData.content);
+      }
+    } catch (error) {
+      console.error("Failed to fetch history", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const translateX = useRef(new Animated.Value(0)).current;
 
@@ -44,18 +68,17 @@ export default function TransactionHistoryScreen() {
           transaction.status === "SUCCESS"
             ? "#16A34A"
             : transaction.status === "PENDING"
-            ? "#F59E0B"
-            : "#DC2626",
+              ? "#F59E0B"
+              : "#DC2626",
         sign: "+",
         label:
           transaction.status === "SUCCESS"
             ? "Deposit Success"
             : transaction.status === "PENDING"
-            ? "Pending Deposit"
-            : "Deposit Failed",
-        description: `Deposit to wallet${
-          transaction.orderCode ? ` • #${transaction.orderCode}` : ""
-        }`,
+              ? "Pending Deposit"
+              : "Deposit Failed",
+        description: `Deposit to wallet${transaction.orderCode ? ` • #${transaction.orderCode}` : ""
+          }`,
         category: "deposit",
       },
       COURSE_FEE: {

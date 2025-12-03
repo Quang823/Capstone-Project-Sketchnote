@@ -22,6 +22,9 @@ import { formatCurrencyVN } from "../../../common/formatCurrencyVN";
 import { notiService } from "../../../service/notiService";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 import { paymentService } from "../../../service/paymentService";
+import { notificationWebSocketService } from "../../../service/notificationWebSocketService";
+import { authService } from "../../../service/authService";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const HEADER_HEIGHT = 180;
@@ -36,6 +39,7 @@ export default function DesignerHomeScreen() {
   const [loadingNoti, setLoadingNoti] = useState(false);
   const [topTemplates, setTopTemplates] = useState([]);
   const [wallet, setWallet] = useState({});
+  const [currentUserId, setCurrentUserId] = useState(null);
   useEffect(() => {
     setActiveNavItem("home");
     setActiveNavItemLocal("home");
@@ -75,6 +79,7 @@ export default function DesignerHomeScreen() {
 
       setWallet(res.result);
     } catch (error) {
+      console.log(error);
     }
   }
   const fetchSashboardSummary = async () => {
@@ -130,12 +135,71 @@ export default function DesignerHomeScreen() {
     }
   };
 
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const profile = await authService.getMyProfile();
+        if (profile && profile.id) {
+          setCurrentUserId(profile.id);
+        }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+      }
+    };
+    getCurrentUser();
+  }, []);
+
   useEffect(() => {
     fetchSashboardSummary();
     fetchTopTemplates();
     loadNotiCount();
     fetchWallet();
   }, []);
+
+  // Connect to WebSocket for real-time notifications
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const connectWebSocket = async () => {
+      try {
+        const token = await AsyncStorage.getItem("accessToken");
+        if (!token) {
+          console.error("❌ No access token, cannot connect WebSocket");
+          return;
+        }
+
+        const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://sketchnote.litecsys.com/";
+        const wsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "") + `/ws-notifications?token=${encodeURIComponent(token)}`;
+
+        console.log(`🔔 Connecting notification WebSocket for user ${currentUserId}`);
+
+        notificationWebSocketService.connect(
+          wsUrl,
+          currentUserId,
+          (notification) => {
+            console.log("📨 Received notification:", notification);
+            const isRead = notification.isRead ?? false;
+            if (!isRead) {
+              setNotiCount((prev) => prev + 1);
+            }
+            if (notiOpen) {
+              setNotifications((prev) => [{ ...notification, read: isRead }, ...prev]);
+            }
+          },
+          (error) => console.error("❌ WebSocket error:", error)
+        );
+      } catch (error) {
+        console.error("❌ Error connecting WebSocket:", error);
+      }
+    };
+
+    connectWebSocket();
+
+    return () => {
+      notificationWebSocketService.disconnect();
+    };
+  }, [currentUserId, notiOpen]);
 
   return (
     <View style={styles.container}>

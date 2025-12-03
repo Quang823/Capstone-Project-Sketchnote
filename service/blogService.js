@@ -141,5 +141,14 @@ export const blogService = {
         throw new Error(message);
       }
     },
-    
+    changeBlogStatus : async (id,status) =>{
+      try {
+        const res = await blogApiController.changeBlogStatus(id,status);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Change blog status failed.";
+        throw new Error(message);
+      }
+    }
 }
