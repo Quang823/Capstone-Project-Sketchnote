@@ -239,6 +239,26 @@ export const projectService = {
       throw error;
     }
   },
+  getUserProjectsPaged: async (pageNo = 0, pageSize = 4) => {
+    try {
+      const response = await projectAPIController.getUserProjectsPaged(pageNo, pageSize);
+      const r = response?.data?.result ?? response?.data ?? {};
+      const content = Array.isArray(r?.projects)
+        ? r.projects
+        : Array.isArray(r?.content)
+          ? r.content
+          : [];
+      const totalElements =
+        r?.totalElements ?? r?.page?.totalElements ?? r?.pagination?.total ?? content.length;
+      const totalPages =
+        r?.totalPages ?? r?.page?.totalPages ?? r?.pagination?.totalPages ?? Math.max(1, Math.ceil(totalElements / pageSize));
+      const currentPage = r?.pageNo ?? r?.pageNumber ?? r?.page?.number ?? pageNo;
+      return { content, totalElements, totalPages, pageNo: currentPage, pageSize };
+    } catch (error) {
+      console.error("Error in getUserProjectsPaged:", error);
+      throw error;
+    }
+  },
 
   getSharedProjects: async () => {
     try {

@@ -12,6 +12,16 @@ export const projectAPIController = {
       throw err;
     }
   },
+  getUserProjectsPaged: async (pageNo = 0, pageSize = 4) => {
+    try {
+      const res = await privateApi.get(`/api/projects/me`, {
+        params: { pageNo, pageSize },
+      });
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  },
   // 🔹 Lấy danh sách project được share cho tôi
   getSharedProjects: async () => {
     try {
