@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   TouchableOpacity,
@@ -14,6 +14,7 @@ import {
 import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
 import { projectService } from "../../../service/projectService";
 import { authService } from "../../../service/authService";
+import { creditService } from "../../../service/creditService";
 import Toast from "react-native-toast-message";
 
 export default function HeaderToolbar({
@@ -26,6 +27,7 @@ export default function HeaderToolbar({
   onExportPress,
   projectId,
   onAIChat,
+  onRefreshCredit,
 }) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -34,6 +36,41 @@ export default function HeaderToolbar({
   const [searching, setSearching] = useState(false);
   const [foundUser, setFoundUser] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState(null);
+  const [creditBalance, setCreditBalance] = useState(null);
+  const [loadingBalance, setLoadingBalance] = useState(true);
+
+  // Fetch credit balance on mount
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const balanceData = await creditService.getCreditBalance();
+        setCreditBalance(balanceData?.currentBalance ?? null);
+      } catch (error) {
+        console.error("Failed to fetch credit balance:", error);
+        setCreditBalance(null);
+      } finally {
+        setLoadingBalance(false);
+      }
+    };
+
+    fetchBalance();
+  }, []);
+
+  // Refresh balance when onRefreshCredit is called
+  useEffect(() => {
+    if (onRefreshCredit) {
+      const fetchBalance = async () => {
+        try {
+          const balanceData = await creditService.getCreditBalance();
+          setCreditBalance(balanceData?.currentBalance ?? null);
+        } catch (error) {
+          console.error("Failed to refresh credit balance:", error);
+        }
+      };
+
+      fetchBalance();
+    }
+  }, [onRefreshCredit]);
 
   const renderButton = (
     icon,
@@ -82,7 +119,15 @@ export default function HeaderToolbar({
           {renderButton("arrow-back", onBack, Ionicons)}
           {renderButton("person-add-outline", () => setInviteVisible(true), Ionicons)}
           {renderButton("camera-outline", onCamera, Ionicons)}
-          {onAIChat && renderButton("auto-awesome", onAIChat, MaterialIcons)}
+          {onAIChat && creditBalance !== null && creditBalance >= 5 && renderButton("auto-awesome", onAIChat, MaterialIcons)}
+          {!loadingBalance && creditBalance !== null && creditBalance >= 5 && (
+            <View style={styles.creditBadge}>
+              <MaterialIcons name="account-balance-wallet" size={14} color="#3B82F6" />
+              <Text style={styles.creditText}>
+                You have {creditBalance} token{creditBalance !== 1 ? 's' : ''} left
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Right */}
@@ -307,5 +352,21 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 12,
     color: "#6B7280",
+  },
+  creditBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  creditText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1E40AF",
   },
 });
