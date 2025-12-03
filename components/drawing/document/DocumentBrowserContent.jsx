@@ -12,6 +12,8 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { MotiView } from "moti";
 import LazyImage from "../../../common/LazyImage.js";
 import { orderService } from "../../../service/orderService.js";
+import { imageService } from "../../../service/imageService.js";
+import PaginationControls from "../../common/PaginationControls";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -31,6 +33,13 @@ const DocumentBrowserContent = ({
   const [activeTab, setActiveTab] = useState("pages");
   const [purchasedTemplates, setPurchasedTemplates] = useState([]);
   const [isLoadingResources, setIsLoadingResources] = useState(false);
+
+  // AI Image history state
+  const [aiImages, setAiImages] = useState([]);
+  const [isLoadingAIImages, setIsLoadingAIImages] = useState(false);
+  const [aiImagesPage, setAiImagesPage] = useState(0);
+  const [aiImagesTotalPages, setAiImagesTotalPages] = useState(1);
+  const [aiImagesPageSize] = useState(10);
   const isImageUrl = (url) => {
     if (!url || typeof url !== "string") return false;
     const u = url.trim().replace(/^`|`$/g, "");
@@ -62,6 +71,29 @@ const DocumentBrowserContent = ({
       fetchTemplates();
     }
   }, [activeTab, visible]);
+
+  // Fetch AI images when AI Images tab is active
+  useEffect(() => {
+    if (activeTab === "ai-images" && visible) {
+      fetchAIImages(aiImagesPage);
+    }
+  }, [activeTab, visible, aiImagesPage]);
+
+  const fetchAIImages = async (page = 0) => {
+    setIsLoadingAIImages(true);
+    try {
+      const result = await imageService.getImageHistory(page, aiImagesPageSize);
+      if (result?.content && Array.isArray(result.content)) {
+        setAiImages(result.content);
+        setAiImagesTotalPages(result.totalPages || 1);
+      }
+    } catch (error) {
+      console.error("Failed to fetch AI image history:", error);
+      setAiImages([]);
+    } finally {
+      setIsLoadingAIImages(false);
+    }
+  };
 
   // Cleanup timeout from DocumentOverviewModal
   useEffect(() => {
@@ -113,6 +145,7 @@ const DocumentBrowserContent = ({
     { id: "resources", label: "Resources", icon: "collections" },
     { id: "icons", label: "Icons", icon: "photo" },
     { id: "templates", label: "Templates", icon: "view-quilt" },
+    { id: "ai-images", label: "AI Images", icon: "auto-awesome" },
     { id: "history", label: "History", icon: "history" },
   ];
 
@@ -141,8 +174,8 @@ const DocumentBrowserContent = ({
                 page.id != null
                   ? String(page.id)
                   : page.pageId != null
-                  ? String(page.pageId)
-                  : `page-${index}`;
+                    ? String(page.pageId)
+                    : `page-${index}`;
 
               return (
                 <Pressable
@@ -150,9 +183,9 @@ const DocumentBrowserContent = ({
                   style={[
                     isListLayout ? styles.pageCardList : styles.pageCardGrid,
                     pageId === safeActivePageId &&
-                      (isListLayout
-                        ? styles.activePageCardList
-                        : styles.activePageCardGrid),
+                    (isListLayout
+                      ? styles.activePageCardList
+                      : styles.activePageCardGrid),
                   ]}
                   onPress={() => handlePageSelect(pageId)}
                 >
@@ -311,6 +344,86 @@ const DocumentBrowserContent = ({
     );
   };
 
+  const renderAIImages = () => {
+    if (isLoadingAIImages) {
+      return (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+          <Text style={styles.emptyStateText}>Loading AI images...</Text>
+        </View>
+      );
+    }
+
+    if (aiImages.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Icon name="auto-awesome" size={48} color="#D1D5DB" />
+          <Text style={styles.emptyStateText}>No AI-generated images yet</Text>
+          <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
+            Generate images using AI chat in the drawing screen
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <ScrollView
+        style={styles.tabContent}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        showsVerticalScrollIndicator={true}
+      >
+        <View style={styles.aiImagesGrid}>
+          {aiImages.map((item, index) => (
+            <MotiView
+              key={item.imagePromptId || index}
+              from={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 60 }}
+            >
+              <Pressable
+                style={styles.aiImageCard}
+                onPress={() => {
+                  const payload = {
+                    type: "AI_IMAGE",
+                    imageUrl: item.imageUrl,
+                    promptId: item.imagePromptId,
+                  };
+                  onResourceSelect?.(payload);
+                }}
+              >
+                <LazyImage
+                  source={{ uri: item.imageUrl }}
+                  style={styles.aiImage}
+                />
+                <View style={styles.aiImageOverlay}>
+                  <Icon name="add-circle" size={32} color="#FFFFFF" />
+                </View>
+                {item.createdAt && (
+                  <View style={styles.aiImageDate}>
+                    <Text style={styles.aiImageDateText}>
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            </MotiView>
+          ))}
+        </View>
+
+        {/* Pagination Controls */}
+        {aiImagesTotalPages > 1 && (
+          <View style={{ marginTop: 16 }}>
+            <PaginationControls
+              currentPage={aiImagesPage}
+              totalPages={aiImagesTotalPages}
+              onPageChange={setAiImagesPage}
+            />
+          </View>
+        )}
+      </ScrollView>
+    );
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "pages":
@@ -321,6 +434,8 @@ const DocumentBrowserContent = ({
         return renderResources("ICONS");
       case "templates":
         return renderResources("TEMPLATES");
+      case "ai-images":
+        return renderAIImages();
       case "history":
         return (
           <View style={styles.tabContent}>
@@ -729,6 +844,58 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "700",
+  },
+  // AI Images specific styles
+  aiImagesGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    justifyContent: "center",
+  },
+  aiImageCard: {
+    width: (SCREEN_WIDTH * 0.9 - 72) / 3,
+    aspectRatio: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    position: "relative",
+  },
+  aiImage: {
+    width: "100%",
+    height: "100%",
+  },
+  aiImageOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(59, 130, 246, 0)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  aiImageDate: {
+    position: "absolute",
+    bottom: 4,
+    left: 4,
+    right: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+  },
+  aiImageDateText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });
 

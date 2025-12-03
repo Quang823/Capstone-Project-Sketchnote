@@ -38,6 +38,7 @@ import ChatWidget from "../../../components/ChatWidget";
 import { notiService } from "../../../service/notiService";
 import VersionSelectionModal from "../../../components/modals/VersionSelectionModal";
 import * as DocumentPicker from "expo-document-picker";
+import PaginationControls from "../../../components/common/PaginationControls";
 const { width } = Dimensions.get("window");
 
 const formatDate = (dateString) => {
@@ -174,6 +175,11 @@ export default function HomeScreen({ navigation }) {
   const [notifications, setNotifications] = useState([]);
   const [loadingNoti, setLoadingNoti] = useState(false);
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [pageSize] = useState(4); // Fixed at 8 items per page
+
   // Menu & Modal states
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
@@ -206,20 +212,20 @@ export default function HomeScreen({ navigation }) {
   //   transform: [{ rotate: `${spin.value * 360}deg` }],
   // }));
 
-  // Fetch data
-  const fetchProjects = useCallback(async () => {
+  // Fetch data with pagination
+  const fetchProjects = useCallback(async (page = currentPage) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Load cloud projects and local projects in parallel (Robustly)
+      // Load cloud projects with pagination, and local projects in parallel
       const results = await Promise.allSettled([
-        projectService.getUserProjects(),
+        projectService.getUserProjectsPaged(page, pageSize),
         projectService.getSharedProjects(),
         offlineStorage.getAllGuestProjects(),
       ]);
 
-      const my = results[0].status === "fulfilled" ? results[0].value : [];
+      const myPaged = results[0].status === "fulfilled" ? results[0].value : { content: [], totalPages: 0 };
       const shared = results[1].status === "fulfilled" ? results[1].value : [];
       const local = results[2].status === "fulfilled" ? results[2].value : [];
 
@@ -228,7 +234,9 @@ export default function HomeScreen({ navigation }) {
       if (results[1].status === "rejected") console.error("Failed to load shared projects:", results[1].reason);
       if (results[2].status === "rejected") console.error("Failed to load local projects:", results[2].reason);
 
-      setProjects(my || []);
+      setProjects(myPaged.content || []);
+      setTotalPages(myPaged.totalPages || 0);
+      setCurrentPage(page);
       setSharedProjects(shared || []);
       setLocalProjects(local || []);
     } catch (err) {
@@ -236,11 +244,18 @@ export default function HomeScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentPage, pageSize]);
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    fetchProjects(0); // Load first page on mount
+  }, []); // Only run once on mount
+
+  // Pagination handlers
+  const handlePageChange = useCallback((newPage) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      fetchProjects(newPage);
+    }
+  }, [totalPages, fetchProjects]);
 
   useEffect(() => {
     const loadNotiCount = async () => {
@@ -249,7 +264,6 @@ export default function HomeScreen({ navigation }) {
         const count = Number(data?.unread ?? 0);
         setNotiCount(count);
       } catch (error) {
-        console.log("loadNotiCount error", error.message);
       }
     };
 
@@ -1164,10 +1178,18 @@ export default function HomeScreen({ navigation }) {
                       marginBottom: 16,
                     }}
                     contentContainerStyle={{
-                      paddingBottom: sharedProjects.length > 0 ? 24 : 140,
+                      paddingBottom: 16,
                     }}
                     showsVerticalScrollIndicator={false}
                     removeClippedSubviews={true}
+                  />
+
+                  {/* Pagination Controls */}
+                  <PaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    hasShared={sharedProjects.length > 0}
                   />
                 </>
               )}

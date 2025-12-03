@@ -1,10 +1,10 @@
-import { privateApi, privateApi2 } from "./axiosInstance";
+import { privateApi } from "./axiosInstance";
 
 export const projectAPIController = {
   // 🔹 Lấy danh sách project của người dùng
   getUserProjects: async () => {
     try {
-      const res = await privateApi2.get(`/api/projects/me`);
+      const res = await privateApi.get(`/api/projects/me`);
       return res;
     } catch (err) {
       // console.error("❌ Error getting user projects:", err);
@@ -12,10 +12,20 @@ export const projectAPIController = {
       throw err;
     }
   },
+  getUserProjectsPaged: async (pageNo = 0, pageSize = 4) => {
+    try {
+      const res = await privateApi.get(`/api/projects/me`, {
+        params: { pageNo, pageSize },
+      });
+      return res;
+    } catch (err) {
+      throw err;
+    }
+  },
   // 🔹 Lấy danh sách project được share cho tôi
   getSharedProjects: async () => {
     try {
-      const res = await privateApi2.get(`/api/projects/me/shared`);
+      const res = await privateApi.get(`/api/projects/me/shared`);
       return res;
     } catch (err) {
       throw err;
@@ -24,7 +34,7 @@ export const projectAPIController = {
   // 🔹 Lấy presigned URL (đổi sang privateApi)
   getPresign: async (fileName, contentType) => {
     try {
-      const res = await privateApi2.get(`/api/projects/storage/presign`, {
+      const res = await privateApi.get(`/api/projects/storage/presign`, {
         params: { fileName, contentType },
       });
       return res;
@@ -37,7 +47,7 @@ export const projectAPIController = {
   // 🔹 Lưu metadata project
   saveProject: async (projectData) => {
     try {
-      const res = await privateApi2.post(`/api/projects/me`, projectData);
+      const res = await privateApi.post(`/api/projects/me`, projectData);
       return res;
     } catch (err) {
       console.error("❌ Error saving project:", err);
@@ -49,7 +59,7 @@ export const projectAPIController = {
   // 🔹 Tạo project mới
   createProject: async (projectData) => {
     try {
-      const res = await privateApi2.post(`/api/projects`, {
+      const res = await privateApi.post(`/api/projects`, {
         name: projectData.name,
         description: projectData.description || "",
         imageUrl: projectData.imageUrl || "",
@@ -63,7 +73,7 @@ export const projectAPIController = {
   },
   updateProject: async (projectId, projectData) => {
     try {
-      const res = await privateApi2.put(`/api/projects/${projectId}`, {
+      const res = await privateApi.put(`/api/projects/${projectId}`, {
         name: projectData.name,
         description: projectData.description || "",
         imageUrl: projectData.imageUrl || "",
@@ -77,7 +87,7 @@ export const projectAPIController = {
 
   deleteProject: async (projectId) => {
     try {
-      const res = await privateApi2.delete(`/api/projects/${projectId}`);
+      const res = await privateApi.delete(`/api/projects/${projectId}`);
       return res;
     } catch (err) {
       console.error("Error deleting project:", err.response?.data || err);
@@ -87,11 +97,11 @@ export const projectAPIController = {
   // 🔹 Lấy chi tiết project theo ID
   getProjectById: async (projectId) => {
     try {
-      const res = await privateApi2.get(`/api/projects/${projectId}`);
+      const res = await privateApi.get(`/api/projects/${projectId}`);
       return res;
     } catch (err) {
-      console.error("❌ Error getting project by ID:", err);
-      console.error("❌ Error response:", err.response?.data);
+      console.error("Error getting project by ID:", err);
+      console.error("Error response:", err.response?.data);
       throw err;
     }
   },
@@ -111,18 +121,18 @@ export const projectAPIController = {
             },
           ],
         };
-      const res = await privateApi2.post(`/api/pages`, payload);
+      const res = await privateApi.post(`/api/pages`, payload);
       return res;
     } catch (err) {
-      console.error("❌ Error creating page:", err);
-      console.error("❌ Error response:", err.response?.data);
+      console.error("Error creating page:", err);
+      console.error("Error response:", err.response?.data);
       throw err;
     }
   },
 
   inviteCollaborator: async ({ projectId, userId, edited }) => {
     try {
-      const res = await privateApi2.post(`/api/collaborations/invite`, {
+      const res = await privateApi.post(`/api/collaborations/invite`, {
         projectId,
         userId,
         edited,
@@ -136,7 +146,7 @@ export const projectAPIController = {
 
   updateCollaboratorPermission: async ({ projectId, email, edited }) => {
     try {
-      const res = await privateApi2.put(`/api/collaborations/permission`, {
+      const res = await privateApi.put(`/api/collaborations/permission`, {
         projectId,
         email,
         edited,
@@ -150,10 +160,10 @@ export const projectAPIController = {
   // 🔹 Lấy danh sách version của project
   getProjectVersions: async (projectId) => {
     try {
-      const res = await privateApi2.get(`/api/projects/${projectId}/versions`);
+      const res = await privateApi.get(`/api/projects/${projectId}/versions`);
       return res;
     } catch (err) {
-      console.error("❌ Error getting project versions:", err);
+      console.error("Error getting project versions:", err);
       throw err;
     }
   },
@@ -161,12 +171,12 @@ export const projectAPIController = {
   // 🔹 Restore version của project
   restoreProjectVersion: async (projectId, versionId) => {
     try {
-      const res = await privateApi2.post(
+      const res = await privateApi.post(
         `/api/projects/${projectId}/versions/${versionId}/restore`
       );
       return res;
     } catch (err) {
-      console.error("❌ Error restoring project version:", err);
+      console.error("Error restoring project version:", err);
       throw err;
     }
   },
