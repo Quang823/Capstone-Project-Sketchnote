@@ -5,8 +5,8 @@ import {
   Pressable,
   Animated,
   ScrollView,
-  Image,
 } from "react-native";
+import { Image } from "expo-image"; // Use expo-image for GIF animation support
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { designerDrawerStyles } from "./DesignerNavigationDrawer.styles";
 import { CommonActions, useNavigation } from "@react-navigation/native";

@@ -96,7 +96,8 @@ const attachAuthInterceptor = (instance) => {
             throw new Error("No access token in refresh response");
           }
         } catch (refreshError) {
-          console.error("Refresh token failed:", refreshError.message);
+          // Log as warning (not error) since expired tokens are expected
+          console.warn("Refresh token expired or invalid - user needs to log in again");
 
           // Clear all auth data on refresh failure
           await AsyncStorage.multiRemove(["accessToken", "refreshToken", "roles"]);

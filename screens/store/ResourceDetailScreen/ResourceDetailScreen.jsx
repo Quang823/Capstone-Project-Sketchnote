@@ -179,7 +179,7 @@ export default function ResourceDetailScreen() {
   };
 
   // ✅ Render stars
-  const renderStars = (rating = 4.5) => {
+  const renderStars = (rating = 0) => {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
@@ -346,9 +346,9 @@ export default function ResourceDetailScreen() {
               {/* Title & Rating */}
               <View style={styles.titleSection}>
                 <View style={styles.ratingRow}>
-                  <View style={styles.starsContainer}>{renderStars(4.5)}</View>
-                  <Text style={styles.ratingText}>4.5</Text>
-                  <Text style={styles.reviewCount}>(128 feedbacks)</Text>
+                  <View style={styles.starsContainer}>{renderStars(resource.averageRating || 0)}</View>
+                  <Text style={styles.ratingText}>{(resource.averageRating || 0).toFixed(1)}</Text>
+                  <Text style={styles.reviewCount}>({resource.feedbackCount || 0} feedbacks)</Text>
                 </View>
               </View>
 
