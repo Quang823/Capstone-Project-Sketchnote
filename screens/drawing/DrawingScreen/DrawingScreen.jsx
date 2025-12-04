@@ -120,9 +120,22 @@ const getImageSize = (uri, abortSignal = null) => {
 export default function DrawingScreen({ route }) {
   const navigation = useNavigation();
   const noteConfig = route?.params?.noteConfig;
+
+  // 🔥 TODO: TEMPORARY HACK - Remove after backend fixes orientation storage
+  // Force project ID 62 to use landscape orientation
+  const patchedNoteConfig = React.useMemo(() => {
+    if (noteConfig?.projectId === 62 || noteConfig?.projectDetails?.projectId === 62) {
+      console.log('🔧 [TEMP FIX] Forcing project 62 to landscape mode');
+      return {
+        ...noteConfig,
+        orientation: 'landscape',
+      };
+    }
+    return noteConfig;
+  }, [noteConfig]);
   const safeNoteConfig = React.useMemo(
     () =>
-      noteConfig || {
+      patchedNoteConfig || {
         projectId: Date.now(),
         title: "Quick Note",
         description: "",
@@ -134,7 +147,7 @@ export default function DrawingScreen({ route }) {
         pages: [],
         projectDetails: null,
       },
-    [noteConfig]
+    [patchedNoteConfig]
   );
   const { user } = useContext(AuthContext);
   const [isExportModalVisible, setExportModalVisible] = useState(false);

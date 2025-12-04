@@ -4,10 +4,10 @@ import {
   Text,
   Pressable,
   ScrollView,
-  Image,
   Animated,
   Easing,
 } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -376,7 +376,7 @@ export default function GlobalSidebar() {
                 source={{
                   uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1762576688/gll0d20tw2f9mbhi3tzi.png",
                 }}
-                style={{ width: 36, height: 36, resizeMode: "contain" }}
+                style={{ width: 36, height: 36, contentFit: "contain" }}
               />
               <Text
                 style={{
@@ -420,9 +420,9 @@ export default function GlobalSidebar() {
                 <Animated.View
                   style={{
                     position: "absolute",
-                    width: 96,
-                    height: 96,
-                    borderRadius: 48,
+                    width: 106,
+                    height: 106,
+                    borderRadius: 53,
                     transform: [
                       {
                         rotate: rotateAnim.interpolate({
@@ -444,9 +444,9 @@ export default function GlobalSidebar() {
               )}
               <View
                 style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
+                  width: 90,
+                  height: 90,
+                  borderRadius: 45,
                   backgroundColor: "#FFFFFF",
                   justifyContent: "center",
                   alignItems: "center",
@@ -457,7 +457,7 @@ export default function GlobalSidebar() {
                 {user?.avatarUrl ? (
                   <Image
                     source={{ uri: user.avatarUrl }}
-                    style={{ width: 72, height: 72, borderRadius: 36 }}
+                    style={{ width: 82, height: 82, borderRadius: 41 }}
                   />
                 ) : (
                   <Icon name="account-circle" size={64} color="#3B82F6" />

@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
       setIsLoading(true);
       const token = await AsyncStorage.getItem("accessToken");
 
-      // No token means user is not logged in
+      // No token means user is not logged in (expected scenario)
       if (!token) {
         setUser(null);
         setIsGuest(true);
@@ -28,13 +28,17 @@ export const AuthProvider = ({ children }) => {
       setUser(u);
       setIsGuest(false);
     } catch (err) {
-      console.error("Failed to fetch user:", err);
-
       // If profile fetch fails, it means token is invalid/expired
       // The interceptor will try to refresh automatically
       // If refresh also fails, tokens will be cleared by interceptor
 
-      // Clear local state
+      // Only log unexpected errors (not auth-related)
+      if (!err.message?.includes("Invalid email or password") &&
+        !err.message?.includes("Unauthorized")) {
+        console.error("Unexpected error fetching user:", err);
+      }
+
+      // Clear local state (this is expected when tokens expire)
       setUser(null);
       setIsGuest(true);
     } finally {
