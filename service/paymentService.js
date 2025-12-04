@@ -21,4 +21,26 @@ export const paymentService = {
           throw new Error(message);
         }
     },
+    withdrawRequest: async (data) => {
+        try {
+            const res = await paymentApiController.withdrawRequest(data);
+            return res.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Withdraw request failed.";
+          throw new Error(message);
+        }
+    },
+    getWithdrawHistory: async (page,size,sortBy,sortDirection) => {
+        try {
+            const res = await paymentApiController.getWithdrawHistory(page,size,sortBy,sortDirection);
+            return res.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Get withdraw history failed.";
+          throw new Error(message);
+        }
+    },
+    
+    
 }

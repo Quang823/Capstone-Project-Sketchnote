@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+
 import {
     View,
     Text,
@@ -12,7 +12,8 @@ import {
     Image,
 } from "react-native";
 
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
@@ -163,49 +164,51 @@ export default function DesignerHomeScreen2() {
     }, []);
 
     // Connect to WebSocket for real-time notifications
-    useEffect(() => {
-        if (!currentUserId) return;
+    useFocusEffect(
+        useCallback(() => {
+            if (!currentUserId) return;
 
-        const connectWebSocket = async () => {
-            try {
-                const token = await AsyncStorage.getItem("accessToken");
-                if (!token) {
-                    console.error("❌ No access token, cannot connect WebSocket");
-                    return;
+            const connectWebSocket = async () => {
+                try {
+                    const token = await AsyncStorage.getItem("accessToken");
+                    if (!token) {
+                        console.error("❌ No access token, cannot connect WebSocket");
+                        return;
+                    }
+
+                    const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://sketchnote.litecsys.com/";
+                    const wsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "") + `/ws-notifications`;
+
+                    notificationWebSocketService.connect(
+                        wsUrl,
+                        currentUserId,
+                        token,
+                        (notification) => {
+                            console.log("🔔 Notification callback triggered in UI:", notification);
+                            const isRead = notification.read ?? false;
+                            if (!isRead) {
+                                console.log("🔔 Incrementing noti count");
+                                setNotiCount((prev) => prev + 1);
+                            }
+                            if (notiOpenRef.current) {
+                                setNotifications((prev) => [{ ...notification, read: isRead }, ...prev]);
+                            }
+                        },
+                        (error) => console.error("❌ WebSocket error:", error)
+                    );
+                } catch (error) {
+                    console.error("❌ Error connecting WebSocket:", error);
                 }
+            };
 
-                const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://sketchnote.litecsys.com/";
-                const wsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "") + `/ws-notifications`;
+            connectWebSocket();
 
-
-                notificationWebSocketService.connect(
-                    wsUrl,
-                    currentUserId,
-                    token,
-                    (notification) => {
-                        console.log("🔔 Notification callback triggered in UI:", notification);
-                        const isRead = notification.read ?? false;
-                        if (!isRead) {
-                            console.log("🔔 Incrementing noti count");
-                            setNotiCount((prev) => prev + 1);
-                        }
-                        if (notiOpenRef.current) {
-                            setNotifications((prev) => [{ ...notification, read: isRead }, ...prev]);
-                        }
-                    },
-                    (error) => console.error("❌ WebSocket error:", error)
-                );
-            } catch (error) {
-                console.error("❌ Error connecting WebSocket:", error);
-            }
-        };
-
-        connectWebSocket();
-
-        return () => {
-            notificationWebSocketService.disconnect();
-        };
-    }, [currentUserId]);
+            return () => {
+                console.log("🔴 Screen blur: Disconnecting WebSocket");
+                notificationWebSocketService.disconnect();
+            };
+        }, [currentUserId])
+    );
 
     return (
         <View style={styles.container}>

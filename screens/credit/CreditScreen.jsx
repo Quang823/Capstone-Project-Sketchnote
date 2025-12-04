@@ -143,8 +143,8 @@ export default function CreditScreen() {
         if (!selectedPackage) return;
         try {
             setPurchasing(true);
-            // Use purchaseCredit with the package's credit amount
-            const result = await creditService.purchaseCredit(selectedPackage.creditAmount);
+            // Use purchaseCreditPackage with the package's ID
+            await creditService.purchaseCreditPackage(selectedPackage.id);
 
             Toast.show({
                 type: 'success',
@@ -252,13 +252,20 @@ export default function CreditScreen() {
     return (
         <View style={styles.container}>
             {/* HEADER */}
-            <View style={styles.header}>
+            <LinearGradient
+                colors={["#E0F2FE", "#FEF3C7"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.header}
+            >
                 <Pressable onPress={() => navigation.goBack()}>
-                    <Icon style={styles.backIcon} name="arrow-back" size={24} color="#1e293b" />
+                    <Icon style={styles.backIcon} name="arrow-back" size={24} color="#1f2937" />
                 </Pressable>
-                <Text style={styles.headerTitle}>Credit Wallet</Text>
-                <View style={{ width: 24 }} />
-            </View>
+                <Text style={styles.headerTitle}>AI Credits</Text>
+                <Pressable style={styles.headerRightBtn} onPress={() => navigation.navigate('CreditTransactionHistory')}>
+                    <Text style={styles.headerRightText}>History</Text>
+                </Pressable>
+            </LinearGradient>
 
             <ScrollView
                 style={styles.content}
@@ -270,6 +277,7 @@ export default function CreditScreen() {
                     style={styles.balanceCard}
                 >
                     <Text style={styles.balanceLabel}>Available Credits</Text>
+                    <Text style={styles.balanceSubtitle}>Power your AI generations</Text>
 
                     <Text style={styles.balanceAmount}>
                         {(creditData?.currentBalance || 0).toLocaleString()}
@@ -283,7 +291,7 @@ export default function CreditScreen() {
                     </View>
 
                     <Pressable style={styles.topUpButton} onPress={handleTopUpPress}>
-                        <Text style={styles.topUpText}>Top Up</Text>
+                        <Text style={styles.topUpText}>Buy Credits</Text>
                     </Pressable>
                 </LinearGradient>
 
