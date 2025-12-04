@@ -82,9 +82,11 @@ export default function DesignerQuickUploadScreen() {
   const getProjectByUserId = async () => {
     try {
       const response = await resourceService.getProjectByUserId();
-      setProjects(response.projects);
+      console.log("response", response);
+      setProjects(response?.content || []);
     } catch (error) {
       console.error("Error fetching project by user ID:", error);
+      setProjects([]);
     }
   };
 
@@ -482,10 +484,10 @@ export default function DesignerQuickUploadScreen() {
               {itemSource === "project" && (
                 <View style={styles.sourceContent}>
                   <Text style={styles.itemTitle}>
-                    Available Projects ({projects.length})
+                    Available Projects ({projects?.length || 0})
                   </Text>
 
-                  {projects.length === 0 ? (
+                  {projects?.length === 0 ? (
                     <View style={styles.emptyState}>
                       <Icon name="folder-open" size={48} color="#CBD5E1" />
                       <Text style={styles.emptyText}>
@@ -498,14 +500,14 @@ export default function DesignerQuickUploadScreen() {
                       nestedScrollEnabled
                       showsVerticalScrollIndicator
                     >
-                      {projects.map((proj) => (
+                      {projects?.map((proj) => (
                         <Pressable
                           key={proj.projectId}
                           onPress={() => setSelectedProjectId(proj.projectId)}
                           style={[
                             styles.projectCard,
                             selectedProjectId === proj.projectId &&
-                              styles.projectCardActive,
+                            styles.projectCardActive,
                           ]}
                         >
                           <Image

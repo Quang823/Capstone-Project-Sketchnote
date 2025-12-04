@@ -23,6 +23,7 @@ import { notiService } from "../../../service/notiService";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 import { paymentService } from "../../../service/paymentService";
 import { notificationWebSocketService } from "../../../service/notificationWebSocketService";
+
 import { authService } from "../../../service/authService";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -170,15 +171,13 @@ export default function DesignerHomeScreen() {
         }
 
         const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://sketchnote.litecsys.com/";
-        const wsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "") + `/ws-notifications?token=${encodeURIComponent(token)}`;
+        const wsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "") + `/ws-notifications`;
 
-        console.log(`🔔 Connecting notification WebSocket for user ${currentUserId}`);
 
         notificationWebSocketService.connect(
           wsUrl,
           currentUserId,
           (notification) => {
-            console.log("📨 Received notification:", notification);
             const isRead = notification.isRead ?? false;
             if (!isRead) {
               setNotiCount((prev) => prev + 1);
@@ -200,6 +199,8 @@ export default function DesignerHomeScreen() {
       notificationWebSocketService.disconnect();
     };
   }, [currentUserId, notiOpen]);
+
+
 
   return (
     <View style={styles.container}>
@@ -305,9 +306,11 @@ export default function DesignerHomeScreen() {
           <View style={styles.statCard}>
             <View style={styles.statContent}>
               <View>
-                <Text style={styles.statNumber}>12</Text>
+                <Text style={styles.statNumber}>
+                  {dashboardSummary?.totalProductCount || 0}
+                </Text>
                 <Text style={styles.statLabel}>Products</Text>
-                <Text style={styles.statChange}>+2 this month</Text>
+
               </View>
               <Image
                 source={{
