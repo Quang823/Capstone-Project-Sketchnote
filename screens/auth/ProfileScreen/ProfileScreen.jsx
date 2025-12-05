@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  Image,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
   useWindowDimensions,
   Easing,
 } from "react-native";
+import { Image } from "expo-image"; // Use expo-image for GIF animation support
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { AuthContext } from "../../../context/AuthContext";
@@ -105,29 +105,36 @@ const ProfileScreen = () => {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.8,
+        allowsEditing: false, // Disabled to preserve GIF animations
+        // Allow all image types including GIF
+        allowsMultipleSelection: false,
       });
 
       if (result.canceled) return;
-      const fileUri = result.assets?.[0]?.uri;
-      if (!fileUri) return;
+
+      const asset = result.assets?.[0];
+      if (!asset?.uri) return;
+
+      const fileUri = asset.uri;
+      const fileSize = asset.fileSize; // Get file size for validation
 
       setUploading(true);
-      const uploadResult = await uploadToCloudinary(fileUri);
+
+      // Pass file size to uploadToCloudinary for validation
+      const uploadResult = await uploadToCloudinary(fileUri, { fileSize });
 
       setUser((prev) => ({ ...prev, avatarUrl: uploadResult.secure_url }));
       setProfile((prev) => ({ ...prev, avatarUrl: uploadResult.secure_url }));
 
       toast({
         title: "Upload Successful!",
-        description: "Avatar updated.",
+        description: `Avatar updated${uploadResult.format === 'gif' ? ' (animated)' : ''}.`,
         variant: "success",
       });
     } catch (err) {
       toast({
         title: "Upload failed",
-        description: err.message,
+        description: err.message || "Failed to upload avatar. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -454,7 +461,7 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: "700",
     color: "#1E3A8A",
-    marginTop: 12,
+    marginTop: 30,
   },
   roleBadge: {
     backgroundColor: "#DBEAFE",

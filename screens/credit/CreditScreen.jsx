@@ -40,7 +40,7 @@ export default function CreditScreen() {
     const fetchCreditData = async () => {
         try {
             const data = await creditService.getCreditBalance();
-            console.log('Credit Balance:', data);
+
             setCreditData(data);
         } catch (error) {
             Toast.show({
@@ -56,7 +56,6 @@ export default function CreditScreen() {
     const getAllCreditPackages = async () => {
         try {
             const packages = await creditService.getAllCreditPackages();
-            console.log('Credit Packages:', packages);
             setCreditPackages(packages);
         } catch (error) {
             Toast.show({
@@ -70,7 +69,6 @@ export default function CreditScreen() {
     const fetchHistory = async () => {
         try {
             const historyData = await creditService.getCreditTransactionHistory();
-            console.log('History:', historyData);
 
             // Handle both array and paginated object response
             if (Array.isArray(historyData)) {
@@ -128,7 +126,7 @@ export default function CreditScreen() {
                 text1: 'Purchase Failed',
                 text2: 'Please check your balance and try again.',
             });
-            console.log('Purchase Error:', error);
+
         } finally {
             setPurchasing(false);
         }

@@ -51,6 +51,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as MediaLibrary from "expo-media-library";
+import { encodeProjectData, decodeProjectData, isEncodedData } from "../../../utils/dataEncoder";
 // Hàm helper để lấy kích thước hình ảnh
 const getImageSize = (uri, abortSignal = null) => {
   return new Promise((resolve, reject) => {
@@ -119,9 +120,22 @@ const getImageSize = (uri, abortSignal = null) => {
 export default function DrawingScreen({ route }) {
   const navigation = useNavigation();
   const noteConfig = route?.params?.noteConfig;
+
+  // 🔥 TODO: TEMPORARY HACK - Remove after backend fixes orientation storage
+  // Force project ID 62 to use landscape orientation
+  const patchedNoteConfig = React.useMemo(() => {
+    if (noteConfig?.projectId === 62 || noteConfig?.projectDetails?.projectId === 62) {
+      console.log('🔧 [TEMP FIX] Forcing project 62 to landscape mode');
+      return {
+        ...noteConfig,
+        orientation: 'landscape',
+      };
+    }
+    return noteConfig;
+  }, [noteConfig]);
   const safeNoteConfig = React.useMemo(
     () =>
-      noteConfig || {
+      patchedNoteConfig || {
         projectId: Date.now(),
         title: "Quick Note",
         description: "",
@@ -133,13 +147,14 @@ export default function DrawingScreen({ route }) {
         pages: [],
         projectDetails: null,
       },
-    [noteConfig]
+    [patchedNoteConfig]
   );
   const { user } = useContext(AuthContext);
   const [isExportModalVisible, setExportModalVisible] = useState(false);
   const [exitModalVisible, setExitModalVisible] = useState(false);
   const [aiChatVisible, setAiChatVisible] = useState(false);
   const { toast } = useToast();
+  const [creditRefreshCounter, setCreditRefreshCounter] = useState(0);
 
   // 🔥 Detect if this is a local project (guest mode)
   const isLocalProject = useMemo(() => {
@@ -1672,13 +1687,15 @@ export default function DrawingScreen({ route }) {
           pages: pagesData.map((p) => p.dataObject),
         };
 
-        const jsonString = JSON.stringify(projectData, null, 2);
+        // 🔒 Encode data for security
+        const encodedData = await encodeProjectData(projectData);
+
         let safeName = `${options.fileName || "Untitled"}.sketchnote`;
         safeName = safeName.replace(/\s/g, "_");
         const internalUri =
           (FileSystem.documentDirectory || FileSystem.cacheDirectory) +
           safeName;
-        await FileSystem.writeAsStringAsync(internalUri, jsonString, {
+        await FileSystem.writeAsStringAsync(internalUri, encodedData, {
           encoding: "utf8",
         });
 
@@ -1694,7 +1711,7 @@ export default function DrawingScreen({ route }) {
                   safeName,
                   "application/json"
                 );
-              await FileSystem.writeAsStringAsync(safUri, jsonString, {
+              await FileSystem.writeAsStringAsync(safUri, encodedData, {
                 encoding: FileSystem.EncodingType.UTF8,
               });
 
@@ -1835,13 +1852,15 @@ export default function DrawingScreen({ route }) {
           }),
         };
 
-        const jsonString = JSON.stringify(projectData, null, 2);
+        // 🔒 Encode data for security
+        const encodedData = await encodeProjectData(projectData);
+
         let safeName = `${options.fileName || "Untitled"}.sketchnote`;
         safeName = safeName.replace(/[^a-zA-Z0-9._-]+/g, "_");
 
         const internalUri =
           (FileSystem.documentDirectory || FileSystem.cacheDirectory) + safeName;
-        await FileSystem.writeAsStringAsync(internalUri, jsonString, {
+        await FileSystem.writeAsStringAsync(internalUri, encodedData, {
           encoding: "utf8",
         });
 
@@ -1857,7 +1876,7 @@ export default function DrawingScreen({ route }) {
                   safeName,
                   "application/json"
                 );
-              await FileSystem.writeAsStringAsync(safUri, jsonString, {
+              await FileSystem.writeAsStringAsync(safUri, encodedData, {
                 encoding: FileSystem.EncodingType.UTF8,
               });
 
@@ -2157,10 +2176,13 @@ export default function DrawingScreen({ route }) {
           noteConfig: noteConfig,
           pages: pagesData.map((p) => p.dataObject),
         };
-        const jsonString = JSON.stringify(projectData, null, 2);
+
+        // 🔒 Encode data for security
+        const encodedData = await encodeProjectData(projectData);
+
         const fileName = `${options.fileName || "Untitled"}.sketchnote`;
         const uri = FileSystem.documentDirectory + fileName.replace(/\s/g, "_");
-        await FileSystem.writeAsStringAsync(uri, jsonString, {
+        await FileSystem.writeAsStringAsync(uri, encodedData, {
           encoding: "utf8",
         });
         if (await Sharing.isAvailableAsync()) {
@@ -2272,6 +2294,9 @@ export default function DrawingScreen({ route }) {
         description: "AI-generated image added to canvas",
         variant: "success",
       });
+
+      // Refresh credit balance after successful AI image generation
+      setCreditRefreshCounter((prev) => prev + 1);
     } catch (err) {
       console.error("Error inserting AI image:", err);
       toast({
@@ -2620,6 +2645,7 @@ export default function DrawingScreen({ route }) {
         onExportPress={() => setExportModalVisible(true)}
         projectId={safeNoteConfig?.projectId}
         onAIChat={() => setAiChatVisible(true)}
+        onRefreshCredit={creditRefreshCounter}
       />
       <Modal
         visible={exitModalVisible}
