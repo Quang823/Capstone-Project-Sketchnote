@@ -27,6 +27,9 @@ const MAIN_CONTENT_WIDTH = SCREEN_WIDTH - SIDEBAR_WIDTH;
 const PLAYER_WIDTH = MAIN_CONTENT_WIDTH - 64;
 const PLAYER_HEIGHT = Math.round((PLAYER_WIDTH * 9) / 16);
 
+// CHANGED: 80% -> 90%
+const COMPLETION_THRESHOLD = 90;
+
 // Helper to format duration
 const formatDuration = (seconds) => {
   if (!seconds) return "0:00";
@@ -145,11 +148,11 @@ export default function LessonScreen() {
 
       const timeSpent = Math.floor(timeSpentRef.current);
 
-      // Tính completed dựa trên % xem video
+      // CHANGED: 80% -> 90%
       const lessonDuration = currentLesson?.duration || 0;
       const watchPercentage =
         lessonDuration > 0 ? (lastPosition / lessonDuration) * 100 : 0;
-      const completed = forceComplete || watchPercentage >= 80;
+      const completed = forceComplete || watchPercentage >= COMPLETION_THRESHOLD;
 
       // Chỉ lưu nếu có thời gian xem
       if (timeSpent > 0 || lastPosition > 0) {
@@ -159,7 +162,7 @@ export default function LessonScreen() {
           completed,
         });
 
-        // Tự động update local lesson status thành COMPLETED khi xem đủ 80%
+        // CHANGED: Tự động update local lesson status thành COMPLETED khi xem đủ 90%
         if (completed && course?.lessons) {
           const updatedLessons = course.lessons.map((lesson) =>
             lesson.lessonId === currentLessonId
@@ -209,10 +212,12 @@ export default function LessonScreen() {
                 const lessonDuration = currentLesson?.duration || 0;
                 if (lessonDuration > 0) {
                   const watchPercentage = (time / lessonDuration) * 100;
-                  setCanProceed(watchPercentage >= 80);
+                  
+                  // CHANGED: 80% -> 90%
+                  setCanProceed(watchPercentage >= COMPLETION_THRESHOLD);
 
-                  // Auto-save khi đạt 80% lần đầu
-                  if (watchPercentage >= 80 && !hasAutoSavedRef.current) {
+                  // CHANGED: Auto-save khi đạt 90% lần đầu
+                  if (watchPercentage >= COMPLETION_THRESHOLD && !hasAutoSavedRef.current) {
                     hasAutoSavedRef.current = true;
                     await saveLessonProgress(true);
                   }
@@ -240,19 +245,15 @@ export default function LessonScreen() {
         if (state === "paused") {
           await saveLessonProgress();
         } else if (state === "ended") {
-          // Video kết thúc: lưu progress và tự động chuyển bài
+          // CHANGED: Video kết thúc: chỉ lưu progress, KHÔNG tự động chuyển bài
           await saveLessonProgress(true);
-
-          // Tự động chuyển sang bài tiếp theo nếu không phải bài cuối
-          if (currentLessonIndex < course.lessons.length - 1 && course?.lessons) {
-            setTimeout(() => {
-              setCurrentLessonId(course.lessons[currentLessonIndex + 1].lessonId);
-            }, 1000);
-          }
+          
+          // REMOVED: Không tự động chuyển sang bài tiếp theo nữa
+          // User phải bấm nút NEXT để chuyển bài
         }
       }
     },
-    [currentLessonId, courseId, currentLesson, course, currentLessonIndex]
+    [currentLessonId, courseId, currentLesson]
   );
 
   const currentLesson = useMemo(() => {
@@ -334,11 +335,11 @@ export default function LessonScreen() {
       return true;
     }
 
-    // Fallback: check if user has watched enough of the video (80%)
+    // CHANGED: Fallback: check if user has watched enough of the video (90%)
     const lessonDuration = currentLesson?.duration || 0;
     if (lessonDuration > 0 && currentTime > 0) {
       const watchPercentage = (currentTime / lessonDuration) * 100;
-      return watchPercentage >= 80;
+      return watchPercentage >= COMPLETION_THRESHOLD;
     }
 
     return false;

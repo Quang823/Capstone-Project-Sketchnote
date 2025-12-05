@@ -15,7 +15,6 @@ import { courseService } from "../../../service/courseService";
 import { useNavigation as useReactNavigation } from "@react-navigation/native";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { feedbackService } from "../../../service/feedbackService";
-import { LinearGradient } from "expo-linear-gradient";
 import { Modal, KeyboardAvoidingView, Platform, Pressable } from "react-native";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
@@ -140,6 +139,12 @@ export default function MyCoursesScreen() {
 
         <View style={myCoursesStyles.courseInfo}>
           <Text style={myCoursesStyles.courseTitle}>{course.title}</Text>
+          <Pressable
+            style={myCoursesStyles.feedbackButtonTopRight}
+            onPress={() => openFeedbackModal(course)}
+          >
+            <Icon name="rate-review" size={18} color="#2563EB" />
+          </Pressable>
 
           <View style={myCoursesStyles.categoryPriceRow}>
             <View
@@ -216,17 +221,12 @@ export default function MyCoursesScreen() {
 
   return (
     <View style={myCoursesStyles.container}>
-      <LinearGradient
-        colors={["#ffffffff", "#ffffffff"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={myCoursesStyles.header}
-      >
+      <View style={myCoursesStyles.header}>
         <View style={myCoursesStyles.headerLeft}>
           <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
           <Text style={myCoursesStyles.headerTitle}>My Courses</Text>
         </View>
-      </LinearGradient>
+      </View>
 
       <ScrollView
         style={myCoursesStyles.content}
