@@ -15,5 +15,8 @@ export const creditApiController = {
     },
     getAllCreditPackages : async () =>{
         return await privateApi.get(`api/credit-packages`)
+    },
+    purchaseCreditPackage : async (creditPackageId) =>{
+        return await privateApi.post(`api/credit-packages/${creditPackageId}/purchase`)
     }
 }

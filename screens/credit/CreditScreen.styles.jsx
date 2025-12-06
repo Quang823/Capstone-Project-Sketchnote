@@ -11,24 +11,33 @@ export const styles = StyleSheet.create({
     /* HEADER */
     header: {
         paddingHorizontal: 18,
-        paddingVertical: 14,
+        paddingVertical: 20,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#ffffff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#e2e8f0',
         paddingBottom: 20,
     },
     headerTitle: {
-        fontSize: 26,
+        fontSize: 24,
         fontFamily: 'Pacifico-Regular',
-        color: '#084F8C',
+        color: '#0f172a',
         letterSpacing: -0.5,
     },
     backIcon: {
         marginRight: 8,
         marginTop: 12,
+    },
+    headerRightBtn: {
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 999,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.35)'
+    },
+    headerRightText: {
+        color: '#0f172a',
+        fontWeight: '700',
     },
 
     /* BALANCE CARD */
@@ -49,6 +58,11 @@ export const styles = StyleSheet.create({
         textTransform: 'uppercase',
         fontWeight: '600',
         marginBottom: 4,
+    },
+    balanceSubtitle: {
+        fontSize: 13,
+        color: '#cbd5e1',
+        marginBottom: 12,
     },
     balanceAmount: {
         fontSize: 42,
@@ -80,17 +94,15 @@ export const styles = StyleSheet.create({
     },
 
     topUpButton: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
+        backgroundColor: '#ffffff',
+        paddingVertical: 10,
+        paddingHorizontal: 18,
         alignSelf: 'flex-start',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.4)',
+        borderRadius: 999,
     },
     topUpText: {
-        color: '#fff',
-        fontWeight: '600',
+        color: '#136bb8ff',
+        fontWeight: '800',
     },
     /* SECTIONS */
     section: {

@@ -29,6 +29,7 @@ import TransactionHistoryScreen from "../screens/store/Transaction/TransactionHi
 import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
 import OrderSuccessScreen from "../screens/store/ResourceStoreScreen/Payment/OrderSuccessScreen";
 import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen";
+import DesignerHomeScreen2 from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen2";
 import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/DesignerProductsScreen";
 import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
 import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
@@ -40,6 +41,8 @@ import GalleryScreen from "../screens/drawing/GalleryScreen/GalleryScreen";
 import ChatScreen from "../screens/chat/ChatScreen";
 import CreditScreen from "../screens/credit/CreditScreen";
 import CreditTransactionHistoryScreen from "../screens/credit/CreditTransactionHistoryScreen";
+import WithdrawalHistoryScreen from "../screens/designer/WithdrawalHistoryScreen/WithdrawalHistoryScreen";
+
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
@@ -102,7 +105,7 @@ export default function AppNavigator() {
       />
 
       {/* Designer Screens */}
-      <Stack.Screen name="DesignerDashboard" component={DesignerHomeScreen} />
+      <Stack.Screen name="DesignerDashboard" component={DesignerHomeScreen2} />
       <Stack.Screen
         name="DesignerProducts"
         component={DesignerProductsScreen}
@@ -115,7 +118,10 @@ export default function AppNavigator() {
         name="DesignerQuickUpload"
         component={DesignerQuickUploadScreen}
       />
+
+
       <Stack.Screen name="DesignerWallet" component={DesignerWalletScreen} />
+      <Stack.Screen name="WithdrawalHistory" component={WithdrawalHistoryScreen} />
     </Stack.Navigator>
   );
 }

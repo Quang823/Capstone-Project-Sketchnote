@@ -54,5 +54,16 @@ export const creditService = {
                 error.response?.data?.message || error.message || "Get all credit packages failed.";
             throw new Error(message);
         }
-    }
+    },
+    
+    purchaseCreditPackage: async (creditPackageId) => {
+        try {
+            const response = await creditApiController.purchaseCreditPackage(creditPackageId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+                error.response?.data?.message || error.message || "Purchase credit package failed.";
+            throw new Error(message);
+        }
+    },
 }

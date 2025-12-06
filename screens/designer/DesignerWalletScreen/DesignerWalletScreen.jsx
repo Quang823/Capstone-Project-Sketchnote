@@ -114,8 +114,14 @@ export default function DesignerWalletScreen() {
     }
 
     try {
-      // In a real app, you would call your API to process the withdrawal
-      // await paymentService.withdraw(amount, bankInfo);
+      const payload = {
+        amount: amount,
+        bankName: bankInfo.bankName,
+        bankAccountNumber: bankInfo.accountNumber,
+        bankAccountHolder: bankInfo.accountName,
+      };
+
+      await paymentService.withdrawRequest(payload);
 
       setShowWithdrawModal(false);
       setWithdrawAmount("");
@@ -134,7 +140,7 @@ export default function DesignerWalletScreen() {
       console.error("Withdrawal error:", error);
       toast({
         title: "Error",
-        description: "Withdrawal failed. Please try again later.",
+        description: error.message || "Withdrawal failed. Please try again later.",
         variant: "destructive",
       });
     }
