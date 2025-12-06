@@ -31,7 +31,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/logo.png"
+      "enabled": false
     },
     "plugins": [
       "expo-font",

@@ -57,18 +57,18 @@ export default function ImageUploader({ onUploaded, existingImage }) {
   const handleUpload = async (uri) => {
     try {
       setUploading(true);
-      
+
       const uploaded = await uploadToCloudinary(uri);
-      
+
       if (uploaded?.secure_url) {
         // Cập nhật state local
         setImageUri(uploaded.secure_url);
-        
+
         // Gọi callback để parent component biết
         if (onUploaded && typeof onUploaded === 'function') {
           onUploaded(uploaded.secure_url);
         }
-        
+
         Toast.show({
           type: "success",
           text1: "Upload success",
@@ -112,7 +112,7 @@ export default function ImageUploader({ onUploaded, existingImage }) {
         onPress={pickImage}
         disabled={uploading}
         style={{
-          backgroundColor: "#4F46E5",
+          backgroundColor: "#084F8C",
           paddingHorizontal: 12,
           paddingVertical: 8,
           borderRadius: 6,
@@ -132,7 +132,7 @@ export default function ImageUploader({ onUploaded, existingImage }) {
       {/* Loading Indicator */}
       {uploading && (
         <View style={{ marginTop: 12, alignItems: "center" }}>
-          <ActivityIndicator size="small" color="#4F46E5" />
+          <ActivityIndicator size="small" color="#084F8C" />
           <Text style={{ marginTop: 6, color: "#666", fontSize: 12 }}>Uploading...</Text>
         </View>
       )}
@@ -156,7 +156,7 @@ export default function ImageUploader({ onUploaded, existingImage }) {
                 borderColor: "#10B981",
               }}
             />
-            
+
             {/* Thumbnail Badge */}
             <View
               style={{
