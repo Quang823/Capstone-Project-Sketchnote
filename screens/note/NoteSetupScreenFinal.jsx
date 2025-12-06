@@ -236,6 +236,7 @@ export default function NoteSetupScreen({ navigation, route }) {
           name: noteTitle.trim(),
           description: noteDescription.trim() || "",
           imageUrl: finalImageUrl || "",
+          orientation, // ✅ Pass orientation to API
         };
 
         createdProject = await projectService.createProject(projectData);

@@ -36,6 +36,7 @@ import { useNavigation } from "@react-navigation/native";
 import { exportPagesToPdf } from "../../../utils/ExportUtils";
 import ExportModal from "../../../components/drawing/modal/ExportModal";
 import AIImageChatModal from "../../../components/drawing/modal/AIImageChatModal";
+import VersionSelectionModal from "../../../components/modals/VersionSelectionModal";
 import { projectService } from "../../../service/projectService";
 import { AuthContext } from "../../../context/AuthContext";
 import styles from "./DrawingScreen.styles";
@@ -121,24 +122,12 @@ export default function DrawingScreen({ route }) {
   const navigation = useNavigation();
   const noteConfig = route?.params?.noteConfig;
 
-  // 🔥 TODO: TEMPORARY HACK - Remove after backend fixes orientation storage
-  // Force project ID 62 to use landscape orientation
-  const patchedNoteConfig = React.useMemo(() => {
-    if (noteConfig?.projectId === 62 || noteConfig?.projectDetails?.projectId === 62) {
-      console.log('🔧 [TEMP FIX] Forcing project 62 to landscape mode');
-      return {
-        ...noteConfig,
-        orientation: 'landscape',
-      };
-    }
-    return noteConfig;
-  }, [noteConfig]);
   const safeNoteConfig = React.useMemo(
     () =>
-      patchedNoteConfig || {
+      noteConfig || {
         projectId: Date.now(),
         title: "Quick Note",
-        description: "",
+        description: "Quick Note",
         hasCover: false,
         orientation: "portrait",
         paperSize: "A4",
@@ -147,7 +136,7 @@ export default function DrawingScreen({ route }) {
         pages: [],
         projectDetails: null,
       },
-    [patchedNoteConfig]
+    [noteConfig]
   );
   const { user } = useContext(AuthContext);
   const [isExportModalVisible, setExportModalVisible] = useState(false);
@@ -155,6 +144,38 @@ export default function DrawingScreen({ route }) {
   const [aiChatVisible, setAiChatVisible] = useState(false);
   const { toast } = useToast();
   const [creditRefreshCounter, setCreditRefreshCounter] = useState(0);
+  const [versionModalVisible, setVersionModalVisible] = useState(false);
+
+  const handleRestoreVersion = useCallback(async (version) => {
+    try {
+      setVersionModalVisible(false);
+      toast({
+        title: "Restoring...",
+        description: `Restoring version ${version.versionNumber}`,
+      });
+
+      const response = await projectService.restoreProjectVersion(
+        safeNoteConfig.projectId,
+        version.projectVersionId
+      );
+
+      if (response?.code === 200) {
+        toast({
+          title: "Success",
+          description: "Version restored successfully",
+          variant: "success",
+        });
+        // Navigate back to Home to reload
+        navigation.navigate("Home");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to restore version",
+        variant: "destructive",
+      });
+    }
+  }, [safeNoteConfig.projectId, navigation, toast]);
 
   // 🔥 Detect if this is a local project (guest mode)
   const isLocalProject = useMemo(() => {
@@ -832,46 +853,43 @@ export default function DrawingScreen({ route }) {
           resolve();
           return;
         }
-        const chunkSize = 25;
+
         let i = 0;
+        const total = allStrokes.length;
+
         const processChunk = () => {
-          // ✅ Check abort signal AND mounted state
-          if (
-            i >= allStrokes.length ||
-            controller.signal.aborted ||
-            !multiPageCanvasRef.current
-          ) {
+          if (controller.signal.aborted || !multiPageCanvasRef.current) {
             resolve();
             return;
           }
-          const chunk = allStrokes.slice(i, i + chunkSize);
-          const sanitizedChunk = chunk
-            .map((s) => (s && typeof s === "object" ? sanitizeStroke(s) : null))
-            .filter(Boolean);
-          if (sanitizedChunk.length > 0 && multiPageCanvasRef.current) {
+
+          const startTime = Date.now();
+          const batch = [];
+
+          // Process as many as possible in 12ms (leaving ~4ms for UI)
+          while (i < total && Date.now() - startTime < 12) {
+            const s = allStrokes[i];
+            if (s && typeof s === "object") {
+              const sanitized = sanitizeStroke(s);
+              if (sanitized) batch.push(sanitized);
+            }
+            i++;
+          }
+
+          if (batch.length > 0) {
             try {
-              multiPageCanvasRef.current.appendStrokesToPage(
-                pageId,
-                sanitizedChunk
-              );
+              multiPageCanvasRef.current.appendStrokesToPage(pageId, batch);
             } catch (err) {
               console.error("[DrawingScreen] Error appending strokes:", err);
-              resolve(); // ✅ Stop on error
-              return;
             }
           }
-          i += chunkSize;
 
-          // ✅ FIXED: Remove old RAF before adding new one to prevent duplicates
-          const rafId = requestAnimationFrame(() => {
-            // ✅ Check abort again before executing next chunk
-            if (!controller.signal.aborted && multiPageCanvasRef.current) {
-              processChunk();
-            } else {
-              resolve();
-            }
-          });
-          rafIds.add(rafId);
+          if (i < total) {
+            const rafId = requestAnimationFrame(processChunk);
+            rafIds.add(rafId);
+          } else {
+            resolve();
+          }
         };
 
         const rafId = requestAnimationFrame(processChunk);
@@ -891,7 +909,16 @@ export default function DrawingScreen({ route }) {
             const localData = await loadDrawingLocally(projectId);
 
             if (localData?.pages && Array.isArray(localData.pages)) {
-              for (const page of localData.pages) {
+              // Sort pages to prioritize active page (default to 1)
+              const sortedPages = [...localData.pages].sort((a, b) => {
+                const idA = a.pageId || a.pageNumber || 0;
+                const idB = b.pageId || b.pageNumber || 0;
+                if (idA === activePageId) return -1;
+                if (idB === activePageId) return 1;
+                return 0;
+              });
+
+              for (const page of sortedPages) {
                 if (controller.signal.aborted) break;
 
                 const pageId = page.pageId || page.pageNumber || 1;
@@ -928,6 +955,15 @@ export default function DrawingScreen({ route }) {
         if (Array.isArray(noteConfig.pages)) {
           pagesToLoad.push(...noteConfig.pages);
         }
+
+        // Sort to prioritize active page
+        pagesToLoad.sort((a, b) => {
+          const idA = getPageId(a);
+          const idB = getPageId(b);
+          if (idA === activePageId) return -1;
+          if (idB === activePageId) return 1;
+          return 0;
+        });
 
         if (pagesToLoad.length === 0 || !multiPageCanvasRef.current) return;
         if (controller.signal.aborted) return;
@@ -1104,8 +1140,7 @@ export default function DrawingScreen({ route }) {
       try {
         // Save all pages locally first (for offline backup)
         for (const page of pagesData) {
-          const localKey = `${noteConfig.projectId}_page_${page.pageNumber}`;
-          await offlineStorage.saveProjectLocally(localKey, page.dataObject);
+          await offlineStorage.saveProjectPageLocally(noteConfig.projectId, page.pageNumber, page.dataObject);
         }
         if (!silent) {
           toast({
@@ -2646,6 +2681,7 @@ export default function DrawingScreen({ route }) {
         projectId={safeNoteConfig?.projectId}
         onAIChat={() => setAiChatVisible(true)}
         onRefreshCredit={creditRefreshCounter}
+        onHistory={() => setVersionModalVisible(true)}
       />
       <Modal
         visible={exitModalVisible}
@@ -2971,6 +3007,12 @@ export default function DrawingScreen({ route }) {
           }}
         />
       )}
+      <VersionSelectionModal
+        visible={versionModalVisible}
+        onClose={() => setVersionModalVisible(false)}
+        projectId={safeNoteConfig.projectId}
+        onVersionSelect={handleRestoreVersion}
+      />
     </View>
   );
 }

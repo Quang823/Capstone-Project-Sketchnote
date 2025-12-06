@@ -61,8 +61,10 @@ export const projectAPIController = {
     try {
       const res = await privateApi.post(`/api/projects`, {
         name: projectData.name,
-        description: projectData.description || "",
+        description: projectData.description || "Quick Note",
         imageUrl: projectData.imageUrl || "",
+        paperSize:
+          projectData.orientation === "landscape" ? "LANDSCAPE" : "PORTRAIT",
       });
       return res;
     } catch (err) {

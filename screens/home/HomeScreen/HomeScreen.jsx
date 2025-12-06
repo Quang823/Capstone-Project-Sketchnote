@@ -36,7 +36,7 @@ import { useToast } from "../../../hooks/use-toast";
 import { AuthContext } from "../../../context/AuthContext";
 
 import { notiService } from "../../../service/notiService";
-import VersionSelectionModal from "../../../components/modals/VersionSelectionModal";
+
 import * as DocumentPicker from "expo-document-picker";
 import PaginationControls from "../../../components/common/PaginationControls";
 import { decodeProjectData, isEncodedData } from "../../../utils/dataEncoder";
@@ -190,10 +190,7 @@ export default function HomeScreen({ navigation }) {
   const [editDesc, setEditDesc] = useState("");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-  const [versionModalVisible, setVersionModalVisible] = useState(false);
-  const [versions, setVersions] = useState([]);
-  const [loadingVersions, setLoadingVersions] = useState(false);
-  const [selectedProjectForVersion, setSelectedProjectForVersion] = useState(null);
+
   const { toast } = useToast();
   const { user } = useContext(AuthContext);
   const fade = useSharedValue(0);
@@ -386,89 +383,47 @@ export default function HomeScreen({ navigation }) {
     };
   }, [navigation]);
 
-  // Open project - Show version selection modal
+  // Open project - Direct navigation
   const handleProjectClick = useCallback(
     async (project) => {
       try {
-
-        setSelectedProjectForVersion(project);
-        setVersionModalVisible(true);
-
-        setLoadingVersions(true);
-        const versionList = await projectService.getProjectVersions(
+        // Load the project and navigate to it
+        const details = await projectService.getProjectById(
           project.projectId
         );
-
-        setVersions(versionList || []);
+        const meta = await offlineStorage.loadProjectLocally(
+          `${details.projectId}_meta`
+        );
+        const config = {
+          projectId: details.projectId,
+          title: details.name || "Untitled",
+          description: details.description || "",
+          hasCover: !!details.imageUrl,
+          orientation:
+            details.paperSize === "LANDSCAPE"
+              ? "landscape"
+              : details.paperSize === "PORTRAIT"
+                ? "portrait"
+                : details.orientation || meta?.orientation || "portrait",
+          paperSize: "A4",
+          cover: details.imageUrl
+            ? { template: "custom_image", imageUrl: details.imageUrl }
+            : null,
+          paper: { template: "blank" },
+          pages: details.pages || [],
+          projectDetails: details,
+        };
+        navigation.navigate("DrawingScreen", { noteConfig: config });
       } catch (error) {
         console.error("❌ Error in handleProjectClick:", error);
         toast({
           title: "Error",
-          description: "Failed to load versions",
-          variant: "destructive",
-        });
-        setVersionModalVisible(false);
-      } finally {
-        setLoadingVersions(false);
-      }
-    },
-    [toast]
-  );
-
-  // Handle version selection and restore
-  const handleVersionSelect = useCallback(
-    async (version) => {
-      try {
-        setVersionModalVisible(false);
-        toast({
-          title: "Restoring...",
-          description: `Restoring version ${version.versionNumber}`,
-        });
-
-        const response = await projectService.restoreProjectVersion(
-          selectedProjectForVersion.projectId,
-          version.projectVersionId
-        );
-
-        if (response?.code === 200) {
-          toast({
-            title: "Success",
-            description: "Version restored successfully",
-            variant: "success",
-          });
-
-          // Load the project and navigate to it
-          const details = await projectService.getProjectById(
-            selectedProjectForVersion.projectId
-          );
-          const meta = await offlineStorage.loadProjectLocally(
-            `${details.projectId}_meta`
-          );
-          const config = {
-            projectId: details.projectId,
-            title: details.name || "Untitled",
-            description: details.description || "",
-            hasCover: !!details.imageUrl,
-            orientation: details.orientation || meta?.orientation || "portrait",
-            paperSize: details.paperSize || meta?.paperSize || "A4",
-            cover: details.imageUrl
-              ? { template: "custom_image", imageUrl: details.imageUrl }
-              : null,
-            paper: { template: "blank" },
-            pages: details.pages || [],
-            projectDetails: details,
-          };
-          navigation.navigate("DrawingScreen", { noteConfig: config });
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to restore version",
+          description: "Failed to load project",
           variant: "destructive",
         });
       }
     },
-    [selectedProjectForVersion, navigation, toast]
+    [navigation, toast]
   );
 
   // 3-dot menu
@@ -1631,14 +1586,7 @@ export default function HomeScreen({ navigation }) {
 
 
 
-      {/* Version Selection Modal */}
-      <VersionSelectionModal
-        visible={versionModalVisible}
-        onClose={() => setVersionModalVisible(false)}
-        versions={versions}
-        loading={loadingVersions}
-        onVersionSelect={handleVersionSelect}
-      />
+
     </View>
   );
 }

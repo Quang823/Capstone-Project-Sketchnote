@@ -2573,6 +2573,16 @@ export default function GestureHandler(
                 text: typeof s.text === "string" ? s.text : "",
               };
             }}
+            onMoveStart={() => {
+              // ✅ FIX: Capture origin position when move starts
+              const s = strokes.find((st) => st.id === selectedId);
+              if (s) {
+                dragOriginRef.current = {
+                  x: s.x ?? 0,
+                  y: s.y ?? 0,
+                };
+              }
+            }}
             onMove={(dx, dy) => {
               setSelectedBox((box) =>
                 box ? { ...box, x: box.x + dx, y: box.y + dy } : box
@@ -2587,6 +2597,20 @@ export default function GestureHandler(
                   );
                 });
               }
+            }}
+            onMoveEnd={(totalDx, totalDy) => {
+              // ✅ FIX: Commit final position to stroke when move ends
+              const index = strokes.findIndex((s) => s.id === selectedId);
+              if (index !== -1 && typeof onModifyStroke === "function") {
+                const origin = dragOriginRef.current;
+                if (origin) {
+                  const newX = origin.x + totalDx;
+                  const newY = origin.y + totalDy;
+                  onModifyStroke(index, { x: newX, y: newY });
+                }
+              }
+              dragOriginRef.current = null;
+              if (typeof setRealtimeText === "function") setRealtimeText(null);
             }}
             onResize={(corner, dx, dy) => {
               const snap = textResizeRef.current;

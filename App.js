@@ -73,6 +73,7 @@ export default function App() {
     "GuestHome",
     "ForgetPassword",
     "ResetPassword",
+    "DrawingScreen",
   ];
 
   const shouldShowChat = !excludedRoutes.includes(currentRoute);

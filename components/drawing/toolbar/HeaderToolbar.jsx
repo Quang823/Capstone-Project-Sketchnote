@@ -28,6 +28,7 @@ export default function HeaderToolbar({
   projectId,
   onAIChat,
   onRefreshCredit,
+  onHistory,
 }) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -133,6 +134,7 @@ export default function HeaderToolbar({
         {/* Right */}
         <View style={[styles.row, { gap: 12 }]}>
           {renderButton("share-outline", onExportPress, Ionicons)}
+          {renderButton("time-outline", onHistory, Ionicons)}
           {renderButton("preview", onPreview, MaterialIcons)}
           {renderButton(
             "layers",

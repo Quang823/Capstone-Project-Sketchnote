@@ -587,9 +587,7 @@ export default function GlobalSidebar() {
               {blogItems.map(renderNavItem)}
 
               {renderSectionTitle("SETTINGS")}
-              {accountNavItems
-                .filter((i) => i.id !== "profile")
-                .map(renderNavItem)}
+              {accountNavItems.map(renderNavItem)}
             </>
           )}
         </ScrollView>
