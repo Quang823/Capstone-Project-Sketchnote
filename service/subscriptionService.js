@@ -37,4 +37,16 @@ export const subscriptionService = {
       throw new Error(message);
     }
   },
+  checkUpgrade: async (planId) => {
+    try {
+      const res = await subscriptionApiController.checkUpgrade(planId);
+      return res.data;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Check upgrade failed.";
+      throw new Error(message);
+    }
+  },
 };

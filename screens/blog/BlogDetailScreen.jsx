@@ -11,6 +11,7 @@ import {
   Pressable,
   StyleSheet,
   TextInput,
+  ImageBackground,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { blogService } from "../../service/blogService";
@@ -20,7 +21,8 @@ import Toast from "react-native-toast-message";
 import { getUserFromToken } from "../../utils/AuthUtils";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../assets/loading.json";
-
+import { LinearGradient } from 'expo-linear-gradient';
+import { styles } from "./BlogDetailScreen.styles";
 const { width } = Dimensions.get("window");
 
 export default function BlogDetailScreen() {
@@ -43,12 +45,12 @@ export default function BlogDetailScreen() {
   const [editingText, setEditingText] = useState("");
   const { width: windowWidth } = useWindowDimensions();
   const isTablet = windowWidth >= 768;
-  const contentMaxWidth = isTablet ? 1000 : windowWidth;
+  const contentMaxWidth = isTablet ? 900 : windowWidth;
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
     return new Date(dateString).toLocaleDateString("en-US", {
-      month: "long",
+      month: "short",
       day: "numeric",
       year: "numeric",
     });
@@ -57,6 +59,7 @@ export default function BlogDetailScreen() {
   const handleBackPress = () => {
     navigation.goBack();
   };
+
   const fetchAuthorProfile = async (userId) => {
     if (!userId && userId !== 0) {
       setAuthorProfile(null);
@@ -71,7 +74,6 @@ export default function BlogDetailScreen() {
     }
   };
 
-  // 🧩 Gọi API thật
   const fetchBlogDetail = async () => {
     try {
       const response = await blogService.getBlogById(blogId);
@@ -332,13 +334,7 @@ export default function BlogDetailScreen() {
 
   if (loading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
+      <View style={styles.loadingContainer}>
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -351,382 +347,267 @@ export default function BlogDetailScreen() {
 
   if (!blog) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-          backgroundColor: "#F8FAFC",
-        }}
-      >
-        <Text style={{ fontSize: 16, color: "#64748B" }}>
-          Không tìm thấy bài viết
-        </Text>
+      <View style={styles.emptyContainer}>
+        <Icon name="article" size={64} color="#CBD5E1" />
+        <Text style={styles.emptyText}>Blog post not found</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
+    <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-
-        {/* Hero Section */}
-        <View style={{ backgroundColor: "#FFFFFF", paddingBottom: 32 }}>
-          {/* Header Image */}
-          {/* Back Button */}
-
-
-          <View style={{ position: "relative" }}>
+        {/* Hero Section with Gradient Overlay */}
+        <View style={styles.heroSection}>
+          <View style={styles.heroImageContainer}>
             {blog.imageUrl && (
-              <Image
-                source={{ uri: blog.imageUrl }}
-                style={{
-                  width: "100%",
-                  height: isTablet ? 350 : 200,
-                  resizeMode: "cover",
-                }}
-              />
+              <>
+                <Image
+                  source={{ uri: blog.imageUrl }}
+                  style={[styles.heroImage, { height: isTablet ? 500 : 280 }]}
+                  blurRadius={0.5}
+                />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.7)']}
+                  style={styles.heroGradient}
+                />
+              </>
             )}
             <Pressable style={styles.backButton} onPress={handleBackPress}>
-              <Icon name="arrow-back" size={24} color="#1F2937" />
+              <Icon name="arrow-back" size={30} color="#3B82F6" />
             </Pressable>
           </View>
 
-          {/* Title + Author */}
-          <View
-            style={{
-              maxWidth: contentMaxWidth,
-              alignSelf: "center",
-              width: "100%",
-              paddingHorizontal: isTablet ? 40 : 20,
-              paddingTop: 32,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: isTablet ? 36 : 28,
-                fontWeight: "700",
-                color: "#1E293B",
-                lineHeight: isTablet ? 44 : 36,
-                marginBottom: 20,
-                letterSpacing: -0.5,
-              }}
-            >
+          {/* Content Overlay on Hero */}
+          <View style={[styles.heroContent, { maxWidth: contentMaxWidth }]}>
+            <View style={styles.categoryBadge}>
+              <Icon name="auto-stories" size={14} color="#3B82F6" />
+              <Text style={styles.categoryText}>Article</Text>
+            </View>
+
+            <Text style={[styles.title, { fontSize: isTablet ? 42 : 32 }]}>
               {blog.title}
             </Text>
 
-            {/* Author Info */}
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                paddingVertical: 16,
-                paddingHorizontal: 20,
-                backgroundColor: "#F8FAFC",
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "#E2E8F0",
-                marginBottom: 28,
-              }}
-            >
+            {/* Author Card - Floating */}
+            <View style={styles.authorCard}>
               <Image
                 source={{
-                  uri:
-                    authorProfile?.avatarUrl ||
-                    `https://ui-avatars.com/api/?background=bae6fd&color=0f172a&name=${encodeURIComponent(
-                      blog.author || "Author"
-                    )}`,
+                  uri: authorProfile?.avatarUrl ||
+                    `https://ui-avatars.com/api/?background=3B82F6&color=fff&name=${encodeURIComponent(blog.author || "Author")}`,
                 }}
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 24,
-                  marginRight: 14,
-                  borderWidth: 1,
-                  borderColor: "#BFDBFE",
-                }}
+                style={styles.authorAvatar}
               />
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "700",
-                    color: "#1E293B",
-                    marginBottom: 4,
-                  }}
-                >
-                  {blog.author}
-                </Text>
-                <Text
-                  style={{ fontSize: 13, color: "#64748B", fontWeight: "500" }}
-                >
-                  {new Date(blog.createdAt).toLocaleDateString("vi-VN")}
-                </Text>
+              <View style={styles.authorInfo}>
+                <Text style={styles.authorName}>{blog.author}</Text>
+                <View style={styles.metaRow}>
+                  <Icon name="schedule" size={14} color="#94A3B8" />
+                  <Text style={styles.metaText}>{formatDate(blog.createdAt)}</Text>
+                  <View style={styles.metaDot} />
+                  <Icon name="visibility" size={14} color="#94A3B8" />
+                  <Text style={styles.metaText}>5 min read</Text>
+                </View>
               </View>
             </View>
-
-            {/* Summary */}
-            {blog.summary && (
-              <View
-                style={{
-                  backgroundColor: "#EFF6FF",
-                  padding: 20,
-                  borderRadius: 12,
-                  marginBottom: 40,
-                  borderLeftWidth: 4,
-                  borderLeftColor: "#60A5FA",
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginBottom: 10,
-                  }}
-                >
-                  <Text style={{ fontSize: 18, marginRight: 8 }}>💡</Text>
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: "700",
-                      color: "#1E40AF",
-                    }}
-                  >
-                    Summary
-                  </Text>
-                </View>
-                <Text
-                  style={{
-                    fontSize: 15,
-                    color: "#1E293B",
-                    lineHeight: 24,
-                    fontWeight: "500",
-                  }}
-                >
-                  {blog.summary}
-                </Text>
-              </View>
-            )}
           </View>
         </View>
 
-        {/* Nội dung bài viết */}
-        <View
-          style={{
-            maxWidth: contentMaxWidth,
-            alignSelf: "center",
-            width: "100%",
-            paddingHorizontal: isTablet ? 40 : 20,
-            paddingVertical: 20,
-          }}
-        >
+        {/* Main Content */}
+        <View style={[styles.contentWrapper, { maxWidth: contentMaxWidth }]}>
+          {/* Summary Card */}
+          {blog.summary && (
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryHeader}>
+                <View style={styles.summaryIconWrapper}>
+                  <Icon name="lightbulb" size={20} color="#F59E0B" />
+                </View>
+                <Text style={styles.summaryTitle}>Key Takeaways</Text>
+              </View>
+              <Text style={styles.summaryText}>{blog.summary}</Text>
+            </View>
+          )}
+
+          {/* Blog Content Sections */}
           {blog.contents?.map((section, index) => {
             const isEven = index % 2 === 0;
-            const showImageLeft = isTablet && isEven;
-            const showImageRight = isTablet && !isEven;
+            // Alternating accent colors
+            const accentColor = isEven ? "#1967abff" : "#4aa051ff";
+            const bgGradient = isEven
+              ? ["#EFF6FF", "#FFFFFF"]
+              : ["#F5F3FF", "#FFFFFF"];
 
             return (
-              <View
-                key={section.id || index}
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  borderRadius: 16,
-                  padding: isTablet ? 32 : 20,
-                  marginBottom: 24,
-                  borderWidth: 1,
-                  borderColor: "#E2E8F0",
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 8,
-                  elevation: 2,
-                }}
-              >
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginBottom: 20,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: 5,
-                      height: 28,
-                      backgroundColor: "#60A5FA",
-                      borderRadius: 3,
-                      marginRight: 12,
-                    }}
-                  />
-                  <Text
-                    style={{
-                      fontSize: isTablet ? 24 : 20,
-                      fontWeight: "700",
-                      color: "#1E293B",
-                      flex: 1,
-                      letterSpacing: -0.5,
-                    }}
-                  >
-                    {section.sectionTitle}
-                  </Text>
+              <View key={section.id || index} style={styles.sectionCard}>
+                {/* Section Number Badge - Floating */}
+                <View style={[styles.sectionNumberBadge, { backgroundColor: accentColor }]}>
+                  <Text style={styles.sectionNumberBadgeText}>{String(index + 1).padStart(2, '0')}</Text>
                 </View>
 
-                {isTablet ? (
-                  <View
-                    style={{
-                      flexDirection: showImageLeft ? "row" : "row-reverse",
-                      gap: 32,
-                    }}
-                  >
-                    {section.contentUrl && (
-                      <View style={{ width: "45%" }}>
-                        <Image
-                          source={{ uri: section.contentUrl }}
-                          style={{
-                            width: "100%",
-                            height: 280,
-                            borderRadius: 12,
-                            resizeMode: "cover",
-                          }}
-                        />
-                      </View>
-                    )}
-                    <View style={{ flex: 1, justifyContent: "center" }}>
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          color: "#475569",
-                          lineHeight: 28,
-                          textAlign: "justify",
-                          fontWeight: "500",
-                        }}
-                      >
-                        {section.content}
-                      </Text>
-                    </View>
+                {/* Full-width Image First */}
+                {section.contentUrl && (
+                  <View style={styles.fullWidthImageContainer}>
+                    <Image
+                      source={{ uri: section.contentUrl }}
+                      style={styles.fullWidthImage}
+                      resizeMode="cover"
+                    />
+                    {/* Gradient Overlay on Image */}
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.4)']}
+                      style={styles.imageGradientOverlay}
+                    />
                   </View>
-                ) : (
-                  <>
-                    {section.contentUrl && (
-                      <Image
-                        source={{ uri: section.contentUrl }}
-                        style={{
-                          width: "100%",
-                          height: 200,
-                          borderRadius: 12,
-                          marginBottom: 16,
-                          resizeMode: "cover",
-                        }}
-                      />
-                    )}
-                    <Text
-                      style={{
-                        fontSize: 16,
-                        color: "#475569",
-                        lineHeight: 28,
-                        textAlign: "justify",
-                        fontWeight: "500",
-                      }}
-                    >
-                      {section.content}
-                    </Text>
-                  </>
                 )}
+
+                {/* Content Section */}
+                <View style={styles.sectionContentPadding}>
+                  {/* Accent Line */}
+                  <View style={[styles.accentLine, { backgroundColor: accentColor }]} />
+
+                  {/* Title */}
+                  <Text style={styles.sectionTitleNew}>
+                    {section.sectionTitle}
+                  </Text>
+
+                  {/* Content Text */}
+                  <Text style={styles.sectionContentNew}>
+                    {section.content}
+                  </Text>
+                </View>
               </View>
             );
           })}
 
-          {/* End marker */}
-          <View
-            style={{
-              marginTop: 20,
-              marginBottom: 40,
-              paddingTop: 24,
-              alignItems: "center",
-              borderTopWidth: 1,
-              borderTopColor: "#E2E8F0",
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <View
-                style={{
-                  width: 40,
-                  height: 1,
-                  backgroundColor: "#CBD5E1",
-                  marginRight: 12,
-                }}
-              />
-              <Text style={{ fontSize: 24 }}>✓</Text>
-              <View
-                style={{
-                  width: 40,
-                  height: 1,
-                  backgroundColor: "#CBD5E1",
-                  marginLeft: 12,
-                }}
-              />
-            </View>
-            <Text
-              style={{
-                marginTop: 12,
-                fontSize: 13,
-                color: "#64748B",
-                fontWeight: "500",
+
+          {/* End Marker - Redesigned */}
+          <View style={styles.endMarkerContainer}>
+            <ImageBackground
+              source={{
+                uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1764996327/qgdhn0jjt3npvq3rjqcb.png",
               }}
+              style={styles.endMarkerCard}
+              imageStyle={{ opacity: 0.22, borderRadius: 16 }}
             >
-              End of the blog
-            </Text>
-          </View>
+              <View style={styles.endMarkerContent}>
 
-          {/* Comments Section */}
-          <View style={styles.commentsSection}>
-            <Text style={styles.commentsTitle}>Comments ({comments.length})</Text>
-
-            <View style={styles.commentInputWrapper}>
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Write a comment..."
-                placeholderTextColor="#94A3B8"
-                value={commentInput}
-                onChangeText={setCommentInput}
-                multiline
-              />
-              <Pressable style={styles.submitButton} onPress={handleSubmitComment}>
-                <Icon name="send" size={20} color="#FFFFFF" />
-              </Pressable>
-            </View>
-
-            {commentsLoading ? (
-              <View style={styles.commentsLoader}>
-                <ActivityIndicator size="small" color="#60A5FA" />
-              </View>
-            ) : comments.length === 0 ? (
-              <Text style={styles.emptyCommentsText}>Be the first to share your thoughts.</Text>
-            ) : (
-              comments.map((comment) => (
-                <View key={comment.id} style={styles.commentContainer}>
+                {/* Ảnh thay cho icon */}
+                <View style={styles.endMarkerIconCircle}>
                   <Image
                     source={{
-                      uri:
-                        comment.authorAvatarUrl ||
-                        "https://ui-avatars.com/api/?background=bae6fd&color=0f172a&name=User",
+                      uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1764996004/esaxlyo29fonqfi5g48c.png",
+                    }}
+                    style={{ width: 40, height: 40 }}
+                    resizeMode="contain"
+                  />
+                </View>
+
+                <Text style={styles.endMarkerTitle}>You've reached the end</Text>
+                <Text style={styles.endMarkerSubtext}>
+                  Thanks for reading! Share your thoughts below 👇
+                </Text>
+
+              </View>
+            </ImageBackground>
+          </View>
+
+
+          {/* Comments Section - Enhanced */}
+          <View style={styles.commentsSection}>
+            {/* Discussion Header with Gradient */}
+            <LinearGradient
+              colors={['#F8FAFC', '#FFFFFF']}
+              style={styles.discussionHeader}
+            >
+              <View style={styles.discussionHeaderContent}>
+                <View style={styles.discussionIconWrapper}>
+                  <LottieView
+                    source={require("../../assets/discussion.json")}
+                    autoPlay
+                    loop
+                    style={{ width: 40, height: 40 }}
+                  />
+                </View>
+                <View style={styles.discussionTitleWrapper}>
+                  <Text style={styles.discussionTitle}>Discussion</Text>
+                  <Text style={styles.discussionSubtitle}>
+                    {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
+                  </Text>
+                </View>
+              </View>
+            </LinearGradient>
+
+            {/* Comment Input */}
+            <View style={styles.commentInputCard}>
+              <Image
+                source={{
+                  uri: currentUser?.avatarUrl || "https://ui-avatars.com/api/?background=3B82F6&color=fff&name=You",
+                }}
+                style={styles.inputAvatar}
+              />
+              <View style={styles.commentInputWrapper}>
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="Share your thoughts..."
+                  placeholderTextColor="#94A3B8"
+                  value={commentInput}
+                  onChangeText={setCommentInput}
+                  multiline
+                />
+                <Pressable style={styles.submitButton} onPress={handleSubmitComment}>
+                  <Icon name="send" size={18} color="#0062ffff" />
+                </Pressable>
+              </View>
+            </View>
+
+            {/* Comments List */}
+            {commentsLoading ? (
+              <View style={styles.commentsLoader}>
+                <ActivityIndicator size="small" color="#084F8C" />
+              </View>
+            ) : comments.length === 0 ? (
+              <View style={styles.emptyComments}>
+                <LottieView
+                  source={require("../../assets/comment.json")}
+                  autoPlay
+                  loop
+                  style={{ width: 100, height: 100 }}
+                />
+                <Text style={styles.emptyCommentsText}>No comments yet</Text>
+                <Text style={styles.emptyCommentsSubtext}>Be the first to share your thoughts</Text>
+              </View>
+            ) : (
+              comments.map((comment) => (
+                <View key={comment.id} style={styles.commentItem}>
+                  <Image
+                    source={{
+                      uri: comment.authorAvatarUrl ||
+                        "https://ui-avatars.com/api/?background=E0E7FF&color=3B82F6&name=User",
                     }}
                     style={styles.commentAvatar}
                   />
-                  <View style={styles.commentContentWrapper}>
+                  <View style={styles.commentContent}>
                     <View style={styles.commentBubble}>
-                      <Text style={styles.commentAuthor}>{comment.authorDisplay || "User"}</Text>
+                      <View style={styles.commentHeader}>
+                        <Text style={styles.commentAuthor}>{comment.authorDisplay || "User"}</Text>
+                        <Text style={styles.commentTime}>{formatDate(comment.createdAt)}</Text>
+                      </View>
+
                       {editingTarget.type === "comment" && editingTarget.id === comment.id ? (
-                        <View>
+                        <View style={styles.editContainer}>
                           <TextInput
-                            style={styles.editInputSimple}
+                            style={styles.editInput}
                             value={editingText}
                             onChangeText={setEditingText}
                             multiline
+                            autoFocus
                           />
-                          <View style={styles.editActionsSimple}>
-                            <Text onPress={handleCancelEditing} style={styles.editActionText}>Cancel</Text>
-                            <Text onPress={handleSaveEditing} style={[styles.editActionText, { color: "#2563EB" }]}>Save</Text>
+                          <View style={styles.editActions}>
+                            <Pressable onPress={handleCancelEditing} style={styles.editButton}>
+                              <Text style={styles.editButtonTextCancel}>Cancel</Text>
+                            </Pressable>
+                            <Pressable onPress={handleSaveEditing} style={[styles.editButton, styles.editButtonSave]}>
+                              <Text style={styles.editButtonTextSave}>Save</Text>
+                            </Pressable>
                           </View>
                         </View>
                       ) : (
@@ -734,73 +615,89 @@ export default function BlogDetailScreen() {
                       )}
                     </View>
 
-                    <View style={styles.commentFooter}>
-                      <Text style={styles.timeText}>{formatDate(comment.createdAt)}</Text>
-                      <Pressable onPress={() => handleToggleReplies(comment.id, comment.replyCount || 0)}>
-                        <Text style={styles.footerActionText}>
-                          {comment.replyCount > 0 ? `Reply (${comment.replyCount})` : "Reply"}
+                    <View style={styles.commentActions}>
+                      <Pressable onPress={() => handleToggleReplies(comment.id, comment.replyCount || 0)} style={styles.actionButton}>
+                        <Icon name={expandedComments[comment.id] ? "expand-less" : "expand-more"} size={18} color="#64748B" />
+                        <Text style={styles.actionText}>
+                          {comment.replyCount > 0 ? `${comment.replyCount} ${comment.replyCount === 1 ? 'Reply' : 'Replies'}` : "Reply"}
                         </Text>
                       </Pressable>
+
                       {canManageComment(comment.authorId) && editingTarget.id !== comment.id && (
                         <>
-                          <Pressable onPress={() => handleStartEditing("comment", comment.id, comment.content)}>
-                            <Text style={styles.footerActionText}>Edit</Text>
+                          <Pressable onPress={() => handleStartEditing("comment", comment.id, comment.content)} style={styles.actionButton}>
+                            <Icon name="edit" size={16} color="#64748B" />
+                            <Text style={styles.actionText}>Edit</Text>
                           </Pressable>
-                          <Pressable onPress={() => confirmDeleteComment(comment.id)}>
-                            <Text style={[styles.footerActionText, styles.footerDeleteText]}>Delete</Text>
+                          <Pressable onPress={() => confirmDeleteComment(comment.id)} style={styles.actionButton}>
+                            <Icon name="delete-outline" size={16} color="#EF4444" />
+                            <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
                           </Pressable>
                         </>
                       )}
                     </View>
 
+                    {/* Replies */}
                     {expandedComments[comment.id] && (
                       <View style={styles.repliesContainer}>
                         {comment.replyCount > 0 && replyLoadingMap[comment.id] && (
-                          <ActivityIndicator size="small" color="#60A5FA" style={{ marginBottom: 8 }} />
+                          <ActivityIndicator size="small" color="#084F8C" style={{ marginVertical: 12 }} />
                         )}
 
                         {replies[comment.id]?.map((reply) => (
-                          <View key={reply.id} style={styles.replyContainer}>
+                          <View key={reply.id} style={styles.replyItem}>
                             <Image
                               source={{
-                                uri:
-                                  reply.authorAvatarUrl ||
-                                  "https://ui-avatars.com/api/?background=bae6fd&color=0f172a&name=User",
+                                uri: reply.authorAvatarUrl ||
+                                  "https://ui-avatars.com/api/?background=E0E7FF&color=3B82F6&name=User",
                               }}
                               style={styles.replyAvatar}
                             />
-                            <View style={styles.commentContentWrapper}>
+                            <View style={styles.commentContent}>
                               <View style={styles.commentBubble}>
-                                <Text style={styles.commentAuthor}>{reply.authorDisplay || "User"}</Text>
+                                <View style={styles.commentHeader}>
+                                  <Text style={styles.commentAuthor}>{reply.authorDisplay || "User"}</Text>
+                                  <Text style={styles.commentTime}>{formatDate(reply.createdAt)}</Text>
+                                </View>
+
                                 {editingTarget.type === "reply" && editingTarget.id === reply.id ? (
-                                  <View>
+                                  <View style={styles.editContainer}>
                                     <TextInput
-                                      style={styles.editInputSimple}
+                                      style={styles.editInput}
                                       value={editingText}
                                       onChangeText={setEditingText}
                                       multiline
+                                      autoFocus
                                     />
-                                    <View style={styles.editActionsSimple}>
-                                      <Text onPress={handleCancelEditing} style={styles.editActionText}>Cancel</Text>
-                                      <Text onPress={handleSaveEditing} style={[styles.editActionText, { color: "#2563EB" }]}>Save</Text>
+                                    <View style={styles.editActions}>
+                                      <Pressable onPress={handleCancelEditing} style={styles.editButton}>
+                                        <Text style={styles.editButtonTextCancel}>Cancel</Text>
+                                      </Pressable>
+                                      <Pressable onPress={handleSaveEditing} style={[styles.editButton, styles.editButtonSave]}>
+                                        <Text style={styles.editButtonTextSave}>Save</Text>
+                                      </Pressable>
                                     </View>
                                   </View>
                                 ) : (
                                   <Text style={styles.commentText}>{reply.content}</Text>
                                 )}
                               </View>
-                              <View style={styles.commentFooter}>
-                                <Text style={styles.timeText}>{formatDate(reply.createdAt)}</Text>
-                                <Pressable onPress={() => handleReplyToReply(comment.id, reply.authorDisplay)}>
-                                  <Text style={styles.footerActionText}>Reply</Text>
+
+                              <View style={styles.commentActions}>
+                                <Pressable onPress={() => handleReplyToReply(comment.id, reply.authorDisplay)} style={styles.actionButton}>
+                                  <Icon name="reply" size={16} color="#64748B" />
+                                  <Text style={styles.actionText}>Reply</Text>
                                 </Pressable>
+
                                 {canManageComment(reply.authorId) && editingTarget.id !== reply.id && (
                                   <>
-                                    <Pressable onPress={() => handleStartEditing("reply", reply.id, reply.content, comment.id)}>
-                                      <Text style={styles.footerActionText}>Edit</Text>
+                                    <Pressable onPress={() => handleStartEditing("reply", reply.id, reply.content, comment.id)} style={styles.actionButton}>
+                                      <Icon name="edit" size={16} color="#64748B" />
+                                      <Text style={styles.actionText}>Edit</Text>
                                     </Pressable>
-                                    <Pressable onPress={() => confirmDeleteComment(reply.id, comment.id)}>
-                                      <Text style={[styles.footerActionText, styles.footerDeleteText]}>Delete</Text>
+                                    <Pressable onPress={() => confirmDeleteComment(reply.id, comment.id)} style={styles.actionButton}>
+                                      <Icon name="delete-outline" size={16} color="#EF4444" />
+                                      <Text style={[styles.actionText, styles.deleteText]}>Delete</Text>
                                     </Pressable>
                                   </>
                                 )}
@@ -809,7 +706,8 @@ export default function BlogDetailScreen() {
                           </View>
                         ))}
 
-                        <View style={styles.replyInputWrapper}>
+                        {/* Reply Input */}
+                        <View style={styles.replyInputContainer}>
                           <TextInput
                             style={styles.replyInput}
                             placeholder="Write a reply..."
@@ -817,8 +715,8 @@ export default function BlogDetailScreen() {
                             value={replyInputs[comment.id] || ""}
                             onChangeText={(value) => handleReplyChange(comment.id, value)}
                           />
-                          <Pressable onPress={() => handleSubmitReply(comment.id)}>
-                            <Icon name="send" size={20} color="#2563EB" />
+                          <Pressable onPress={() => handleSubmitReply(comment.id)} style={styles.replySubmitButton}>
+                            <Icon name="send" size={16} color="#084F8C" />
                           </Pressable>
                         </View>
                       </View>
@@ -833,175 +731,3 @@ export default function BlogDetailScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  backButton: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    zIndex: 10,
-  },
-  commentsSection: {
-    marginTop: 0,
-    padding: 16,
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#E2E8F0",
-  },
-  commentsTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 16,
-  },
-  commentInputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-    gap: 10,
-  },
-  commentInput: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: "#0F172A",
-    backgroundColor: "#F1F5F9",
-  },
-  submitButton: {
-    backgroundColor: "#2563EB",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  submitButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  commentsLoader: {
-    paddingVertical: 20,
-  },
-  emptyCommentsText: {
-    color: "#94A3B8",
-    fontSize: 14,
-    textAlign: "center",
-    paddingVertical: 20,
-  },
-
-  // New Comment Styles
-  commentContainer: {
-    flexDirection: "row",
-    marginBottom: 16,
-  },
-  commentAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#E2E8F0",
-    marginRight: 10,
-  },
-  commentContentWrapper: {
-    flex: 1,
-  },
-  commentBubble: {
-    backgroundColor: "#F1F5F9",
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    alignSelf: "flex-start",
-    maxWidth: "100%",
-  },
-  commentAuthor: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 2,
-  },
-  commentText: {
-    fontSize: 15,
-    color: "#1E293B",
-    lineHeight: 20,
-  },
-  commentFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  timeText: {
-    fontSize: 12,
-    color: "#64748B",
-  },
-  footerActionText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  footerDeleteText: {
-    color: "#EF4444",
-  },
-
-  // Replies
-  repliesContainer: {
-    marginTop: 8,
-  },
-  replyContainer: {
-    flexDirection: "row",
-    marginBottom: 12,
-  },
-  replyAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#E2E8F0",
-    marginRight: 8,
-  },
-  replyInputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-    gap: 8,
-  },
-  replyInput: {
-    flex: 1,
-    height: 36,
-    borderRadius: 18,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    backgroundColor: "#F1F5F9",
-    color: "#0F172A",
-  },
-
-  // Edit Styles
-  editInputSimple: {
-    fontSize: 15,
-    color: "#1E293B",
-    padding: 0,
-    minWidth: 150,
-  },
-  editActionsSimple: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-    marginTop: 4,
-  },
-  editActionText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-});
