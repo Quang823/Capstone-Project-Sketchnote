@@ -700,6 +700,21 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       let path = pathCacheRef.current.get(cacheKey);
       if (!path) {
         path = makePathFromPoints(s.points);
+        // ✅ FIX: Limit cache size to prevent memory leak
+        const MAX_PATH_CACHE_SIZE = 500;
+        if (pathCacheRef.current.size >= MAX_PATH_CACHE_SIZE) {
+          // Remove oldest entries (first 100)
+          const keysToDelete = Array.from(pathCacheRef.current.keys()).slice(0, 100);
+          keysToDelete.forEach(k => {
+            try {
+              const oldPath = pathCacheRef.current.get(k);
+              if (oldPath && typeof oldPath.delete === "function") {
+                oldPath.delete(); // Dispose Skia Path object
+              }
+            } catch { }
+            pathCacheRef.current.delete(k);
+          });
+        }
         pathCacheRef.current.set(cacheKey, path);
       }
       let strokeColor = s.color || "#000000";

@@ -8,12 +8,13 @@ const GUEST_PROJECT_PREFIX = "@GuestProject:";
 const GUEST_PROJECT_LIST_KEY = "@GuestProjectList";
 const MAX_GUEST_PROJECTS = 1;
 const GUEST_DRAWINGS_DIR = `${FileSystem.documentDirectory}guest_drawings/`;
+const PROJECT_PAGES_DIR = `${FileSystem.documentDirectory}project_pages/`;
 
 // Ensure directory exists
-const ensureDirectoryExists = async () => {
-  const dirInfo = await FileSystem.getInfoAsync(GUEST_DRAWINGS_DIR);
+const ensureDirectoryExists = async (dir) => {
+  const dirInfo = await FileSystem.getInfoAsync(dir);
   if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(GUEST_DRAWINGS_DIR, { intermediates: true });
+    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
   }
 };
 
@@ -33,6 +34,26 @@ export const saveProjectLocally = async (projectId, projectData) => {
 };
 
 /**
+ * Saves a project page's data to FileSystem.
+ * @param {string} projectId The ID of the project.
+ * @param {number|string} pageNumber The page number.
+ * @param {object} pageData The page data to save.
+ */
+export const saveProjectPageLocally = async (projectId, pageNumber, pageData) => {
+  try {
+    await ensureDirectoryExists(PROJECT_PAGES_DIR);
+    const fileName = `${projectId}_page_${pageNumber}.json`;
+    const filePath = `${PROJECT_PAGES_DIR}${fileName}`;
+    await FileSystem.writeAsStringAsync(filePath, JSON.stringify(pageData), {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+  } catch (e) {
+    console.error(`Failed to save page ${pageNumber} locally`, e);
+    throw e;
+  }
+};
+
+/**
  * Loads a project's data from local storage.
  * @param {string} projectId The ID of the project.
  * @returns {Promise<object|null>} The project data or null if not found.
@@ -48,6 +69,43 @@ export const loadProjectLocally = async (projectId) => {
     return await parseJsonInBackground(jsonValue);
   } catch (e) {
     console.error("Failed to load project locally", e);
+    return null;
+  }
+};
+
+/**
+ * Loads a project page's data from FileSystem.
+ * @param {string} projectId The ID of the project.
+ * @param {number|string} pageNumber The page number.
+ * @returns {Promise<object|null>} The page data or null if not found.
+ */
+export const loadProjectPageLocally = async (projectId, pageNumber) => {
+  try {
+    const fileName = `${projectId}_page_${pageNumber}.json`;
+    const filePath = `${PROJECT_PAGES_DIR}${fileName}`;
+    const fileInfo = await FileSystem.getInfoAsync(filePath);
+
+    if (fileInfo.exists) {
+      const jsonString = await FileSystem.readAsStringAsync(filePath, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      return await parseJsonInBackground(jsonString);
+    }
+
+    // Fallback: Check AsyncStorage (Legacy)
+    const key = `${OFFLINE_PROJECT_PREFIX}${projectId}_page_${pageNumber}`;
+    const jsonValue = await AsyncStorage.getItem(key);
+    if (jsonValue) {
+      // Migrate to FileSystem
+      const data = await parseJsonInBackground(jsonValue);
+      await saveProjectPageLocally(projectId, pageNumber, data);
+      await AsyncStorage.removeItem(key); // Cleanup legacy
+      return data;
+    }
+
+    return null;
+  } catch (e) {
+    console.error(`Failed to load page ${pageNumber} locally`, e);
     return null;
   }
 };
@@ -112,7 +170,7 @@ export const removeProjectFromSyncQueue = async (projectId) => {
  */
 export const saveGuestProject = async (projectId, projectData) => {
   try {
-    await ensureDirectoryExists();
+    await ensureDirectoryExists(GUEST_DRAWINGS_DIR);
 
     // 1. Save FULL data to FileSystem
     const filePath = `${GUEST_DRAWINGS_DIR}${projectId}.json`;
@@ -195,7 +253,7 @@ export const loadGuestProject = async (projectId) => {
 
       try {
         // 1. Move to FileSystem
-        await ensureDirectoryExists();
+        await ensureDirectoryExists(GUEST_DRAWINGS_DIR);
         const filePath = `${GUEST_DRAWINGS_DIR}${projectId}.json`;
         await FileSystem.writeAsStringAsync(filePath, JSON.stringify(data), {
           encoding: FileSystem.EncodingType.UTF8,
@@ -234,7 +292,7 @@ export const loadGuestProject = async (projectId) => {
  */
 export const loadGuestProjectFull = async (projectId) => {
   try {
-    await ensureDirectoryExists();
+    await ensureDirectoryExists(GUEST_DRAWINGS_DIR);
     const filePath = `${GUEST_DRAWINGS_DIR}${projectId}.json`;
     const fileInfo = await FileSystem.getInfoAsync(filePath);
 

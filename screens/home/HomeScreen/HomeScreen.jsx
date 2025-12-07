@@ -36,8 +36,10 @@ import { useToast } from "../../../hooks/use-toast";
 import { AuthContext } from "../../../context/AuthContext";
 
 import { notiService } from "../../../service/notiService";
-import VersionSelectionModal from "../../../components/modals/VersionSelectionModal";
+
 import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
+import { uploadToCloudinary } from "../../../service/cloudinary";
 import PaginationControls from "../../../components/common/PaginationControls";
 import { decodeProjectData, isEncodedData } from "../../../utils/dataEncoder";
 const { width } = Dimensions.get("window");
@@ -179,7 +181,8 @@ export default function HomeScreen({ navigation }) {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [pageSize] = useState(4); // Fixed at 8 items per page
+  const [pageSize] = useState(8); // Fixed at 8 items per page
+  const [activeTab, setActiveTab] = useState("cloud"); // cloud | local | shared
 
   // Menu & Modal states
   const [menuVisible, setMenuVisible] = useState(false);
@@ -188,12 +191,11 @@ export default function HomeScreen({ navigation }) {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState(null);
+  const [editPaperSize, setEditPaperSize] = useState("");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-  const [versionModalVisible, setVersionModalVisible] = useState(false);
-  const [versions, setVersions] = useState([]);
-  const [loadingVersions, setLoadingVersions] = useState(false);
-  const [selectedProjectForVersion, setSelectedProjectForVersion] = useState(null);
+
   const { toast } = useToast();
   const { user } = useContext(AuthContext);
   const fade = useSharedValue(0);
@@ -386,89 +388,47 @@ export default function HomeScreen({ navigation }) {
     };
   }, [navigation]);
 
-  // Open project - Show version selection modal
+  // Open project - Direct navigation
   const handleProjectClick = useCallback(
     async (project) => {
       try {
-
-        setSelectedProjectForVersion(project);
-        setVersionModalVisible(true);
-
-        setLoadingVersions(true);
-        const versionList = await projectService.getProjectVersions(
+        // Load the project and navigate to it
+        const details = await projectService.getProjectById(
           project.projectId
         );
-
-        setVersions(versionList || []);
+        const meta = await offlineStorage.loadProjectLocally(
+          `${details.projectId}_meta`
+        );
+        const config = {
+          projectId: details.projectId,
+          title: details.name || "Untitled",
+          description: details.description || "",
+          hasCover: !!details.imageUrl,
+          orientation:
+            details.paperSize === "LANDSCAPE"
+              ? "landscape"
+              : details.paperSize === "PORTRAIT"
+                ? "portrait"
+                : details.orientation || meta?.orientation || "portrait",
+          paperSize: "A4",
+          cover: details.imageUrl
+            ? { template: "custom_image", imageUrl: details.imageUrl }
+            : null,
+          paper: { template: "blank" },
+          pages: details.pages || [],
+          projectDetails: details,
+        };
+        navigation.navigate("DrawingScreen", { noteConfig: config });
       } catch (error) {
         console.error("❌ Error in handleProjectClick:", error);
         toast({
           title: "Error",
-          description: "Failed to load versions",
-          variant: "destructive",
-        });
-        setVersionModalVisible(false);
-      } finally {
-        setLoadingVersions(false);
-      }
-    },
-    [toast]
-  );
-
-  // Handle version selection and restore
-  const handleVersionSelect = useCallback(
-    async (version) => {
-      try {
-        setVersionModalVisible(false);
-        toast({
-          title: "Restoring...",
-          description: `Restoring version ${version.versionNumber}`,
-        });
-
-        const response = await projectService.restoreProjectVersion(
-          selectedProjectForVersion.projectId,
-          version.projectVersionId
-        );
-
-        if (response?.code === 200) {
-          toast({
-            title: "Success",
-            description: "Version restored successfully",
-            variant: "success",
-          });
-
-          // Load the project and navigate to it
-          const details = await projectService.getProjectById(
-            selectedProjectForVersion.projectId
-          );
-          const meta = await offlineStorage.loadProjectLocally(
-            `${details.projectId}_meta`
-          );
-          const config = {
-            projectId: details.projectId,
-            title: details.name || "Untitled",
-            description: details.description || "",
-            hasCover: !!details.imageUrl,
-            orientation: details.orientation || meta?.orientation || "portrait",
-            paperSize: details.paperSize || meta?.paperSize || "A4",
-            cover: details.imageUrl
-              ? { template: "custom_image", imageUrl: details.imageUrl }
-              : null,
-            paper: { template: "blank" },
-            pages: details.pages || [],
-            projectDetails: details,
-          };
-          navigation.navigate("DrawingScreen", { noteConfig: config });
-        }
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to restore version",
+          description: "Failed to load project",
           variant: "destructive",
         });
       }
     },
-    [selectedProjectForVersion, navigation, toast]
+    [navigation, toast]
   );
 
   // 3-dot menu
@@ -492,6 +452,8 @@ export default function HomeScreen({ navigation }) {
   const handleEdit = () => {
     setEditName(selectedProject.name || "");
     setEditDesc(selectedProject.description || "");
+    setEditImageUrl(selectedProject.imageUrl || null);
+    setEditPaperSize(selectedProject.paperSize || "PORTRAIT");
     setEditModalVisible(true);
     closeMenu();
   };
@@ -764,6 +726,27 @@ export default function HomeScreen({ navigation }) {
   }, [navigation, toast, fetchProjects]);
 
 
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setEditImageUrl(result.assets[0].uri);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to pick image",
+        variant: "destructive",
+      });
+    }
+  };
+
   const saveEdit = async () => {
     if (!editName.trim()) {
       toast({
@@ -774,15 +757,28 @@ export default function HomeScreen({ navigation }) {
       return;
     }
     try {
-      // Chỉ update name + description, bỏ imageUrl
+      let finalImageUrl = editImageUrl;
+
+      // If image is a local URI, upload it
+      if (editImageUrl && !editImageUrl.startsWith("http")) {
+        toast({
+          title: "Uploading...",
+          description: "Uploading project cover image...",
+        });
+        const uploadResult = await uploadToCloudinary(editImageUrl);
+        finalImageUrl = uploadResult.secure_url;
+      }
+
       await projectService.updateProject(selectedProject.projectId, {
         name: editName.trim(),
         description: editDesc.trim(),
+        imageUrl: finalImageUrl || "",
+        paperSize: editPaperSize,
       });
       setProjects((prev) =>
         prev.map((p) =>
           p.projectId === selectedProject.projectId
-            ? { ...p, name: editName.trim(), description: editDesc.trim() }
+            ? { ...p, name: editName.trim(), description: editDesc.trim(), imageUrl: finalImageUrl || "", paperSize: editPaperSize }
             : p
         )
       );
@@ -792,7 +788,8 @@ export default function HomeScreen({ navigation }) {
         variant: "success",
       });
       setEditModalVisible(false);
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast({
         title: "Error",
         description: "Failed to update project",
@@ -1070,6 +1067,63 @@ export default function HomeScreen({ navigation }) {
             }}
           />
 
+          {/* TABS */}
+          <View style={{ flexDirection: "row", paddingHorizontal: 16, marginBottom: 16, gap: 12 }}>
+            <TouchableOpacity
+              onPress={() => setActiveTab("cloud")}
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                borderRadius: 20,
+                backgroundColor: activeTab === "cloud" ? "#2563EB" : "#E0F2FE",
+              }}
+            >
+              <Text style={{
+                color: activeTab === "cloud" ? "#FFF" : "#2563EB",
+                fontWeight: "700",
+                fontSize: 14
+              }}>
+                My Projects
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setActiveTab("local")}
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                borderRadius: 20,
+                backgroundColor: activeTab === "local" ? "#F59E0B" : "#FEF3C7",
+              }}
+            >
+              <Text style={{
+                color: activeTab === "local" ? "#FFF" : "#D97706",
+                fontWeight: "700",
+                fontSize: 14
+              }}>
+                Local Projects
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setActiveTab("shared")}
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 16,
+                borderRadius: 20,
+                backgroundColor: activeTab === "shared" ? "#10B981" : "#D1FAE5",
+              }}
+            >
+              <Text style={{
+                color: activeTab === "shared" ? "#FFF" : "#059669",
+                fontWeight: "700",
+                fontSize: 14
+              }}>
+                Shared Projects
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* MAIN CONTENT */}
           {loading ? (
             <View style={styles.centerContainer}>
@@ -1092,173 +1146,133 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
             </View>
-          ) : projects.length === 0 && sharedProjects.length === 0 && localProjects.length === 0 ? (
-            <View style={styles.centerContainer}>
-              <Icon name="folder-open" size={64} color="#BFDBFE" />
-              <Text style={styles.emptyTitle}>No Projects Found</Text>
-              <Text style={styles.emptyText}>
-                Start creating your first project!
-              </Text>
-              <TouchableOpacity
-                style={styles.createFirstButton}
-                onPress={() => setPopoverVisible(true)}
-              >
-                <Text style={styles.createFirstButtonText}>
-                  Create First Project
-                </Text>
-              </TouchableOpacity>
-            </View>
           ) : (
             <>
-              {/* 🔥 LOCAL PROJECTS SECTION */}
-              {localProjects.length > 0 && (
+              {/* 🔥 LOCAL PROJECTS TAB */}
+              {activeTab === "local" && (
                 <>
-                  <View
-                    style={{
-                      paddingHorizontal: 16,
-                      marginBottom: 12,
-                    }}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                        <Icon name="smartphone" size={22} color="#F59E0B" />
-                        <Text
-                          style={{
-                            fontSize: 19,
-                            fontWeight: "800",
-                            color: "#F59E0B",
-                          }}
-                        >
-                          Local Projects
+                  {localProjects.length === 0 ? (
+                    <View style={styles.centerContainer}>
+                      <Icon name="smartphone" size={64} color="#FDE68A" />
+                      <Text style={styles.emptyTitle}>No Local Projects</Text>
+                      <Text style={styles.emptyText}>
+                        Projects created offline will appear here.
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      <View
+                        style={{
+                          paddingHorizontal: 16,
+                          marginBottom: 12,
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text style={{ fontSize: 16, color: "#6B7280" }}>
+                          Showing {localProjects.length} local project(s)
                         </Text>
+                        <TouchableOpacity onPress={() => navigation.navigate("GuestHome")}>
+                          <Text style={{ color: "#3B82F6", fontWeight: "600" }}>Manage</Text>
+                        </TouchableOpacity>
                       </View>
-                      <TouchableOpacity onPress={() => navigation.navigate("GuestHome")}>
-                        <Text style={{ color: "#3B82F6", fontWeight: "600" }}>Manage</Text>
+
+                      <FlatList
+                        data={localProjects}
+                        renderItem={renderLocalProjectItem}
+                        keyExtractor={(item) => `local-${item.projectId}`}
+                        numColumns={columns}
+                        columnWrapperStyle={{
+                          gap: CARD_GAP,
+                          paddingHorizontal: 16,
+                          marginBottom: 16,
+                        }}
+                        contentContainerStyle={{ paddingBottom: 100 }}
+                        showsVerticalScrollIndicator={false}
+                      />
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* MY PROJECTS TAB */}
+              {activeTab === "cloud" && (
+                <>
+                  {projects.length === 0 ? (
+                    <View style={styles.centerContainer}>
+                      <Icon name="cloud-off" size={64} color="#BFDBFE" />
+                      <Text style={styles.emptyTitle}>No Cloud Projects</Text>
+                      <Text style={styles.emptyText}>
+                        Create a new project to get started!
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.createFirstButton}
+                        onPress={() => setPopoverVisible(true)}
+                      >
+                        <Text style={styles.createFirstButtonText}>
+                          Create First Project
+                        </Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  ) : (
+                    <>
+                      <FlatList
+                        data={projects}
+                        renderItem={renderProjectItem}
+                        keyExtractor={(item) => `my-${item.projectId}`}
+                        numColumns={columns}
+                        columnWrapperStyle={{
+                          gap: CARD_GAP,
+                          paddingHorizontal: 16,
+                          marginBottom: 10,
+                        }}
+                        contentContainerStyle={{
+                          paddingBottom: 10,
+                        }}
+                        showsVerticalScrollIndicator={false}
+                        removeClippedSubviews={true}
+                      />
 
-                  <FlatList
-                    data={localProjects}
-                    renderItem={renderLocalProjectItem}
-                    keyExtractor={(item) => `local-${item.projectId}`}
-                    numColumns={columns}
-                    columnWrapperStyle={{
-                      gap: CARD_GAP,
-                      paddingHorizontal: 16,
-                      marginBottom: 16,
-                    }}
-                    scrollEnabled={false}
-                  />
+                      {/* Pagination Controls */}
+                      <PaginationControls
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={handlePageChange}
+                        hasShared={false}
+                      />
+                    </>
+                  )}
                 </>
               )}
 
-              {/* MY PROJECTS */}
-              {projects.length > 0 && (
+              {/* SHARED PROJECTS TAB */}
+              {activeTab === "shared" && (
                 <>
-                  <View
-                    style={{
-                      paddingHorizontal: 16,
-
-                      marginBottom: 12,
-                    }}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
-                      <Icon name="person" size={22} color="#084F8C" />
-                      <Text
-                        style={{
-                          fontSize: 19,
-                          fontWeight: "800",
-                          color: "#084F8C",
-                        }}
-                      >
-                        My Projects
+                  {sharedProjects.length === 0 ? (
+                    <View style={styles.centerContainer}>
+                      <Icon name="folder-shared" size={64} color="#A7F3D0" />
+                      <Text style={styles.emptyTitle}>No Shared Projects</Text>
+                      <Text style={styles.emptyText}>
+                        Projects shared with you will appear here.
                       </Text>
                     </View>
-                  </View>
-
-                  <FlatList
-                    data={projects}
-                    renderItem={renderProjectItem}
-                    keyExtractor={(item) => `my-${item.projectId}`}
-                    numColumns={columns}
-                    columnWrapperStyle={{
-                      gap: CARD_GAP,
-                      paddingHorizontal: 16,
-                      marginBottom: 16,
-                    }}
-                    contentContainerStyle={{
-                      paddingBottom: 16,
-                    }}
-                    showsVerticalScrollIndicator={false}
-                    removeClippedSubviews={true}
-                  />
-
-                  {/* Pagination Controls */}
-                  <PaginationControls
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={handlePageChange}
-                    hasShared={sharedProjects.length > 0}
-                  />
-                </>
-              )}
-
-              {/* SHARED PROJECTS */}
-              {sharedProjects.length > 0 && (
-                <>
-                  <View
-                    style={{
-                      paddingHorizontal: 16,
-
-                      marginBottom: 12,
-                    }}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 8,
+                  ) : (
+                    <FlatList
+                      data={sharedProjects}
+                      renderItem={renderProjectItem}
+                      keyExtractor={(item) => `shared-${item.projectId}`}
+                      numColumns={columns}
+                      columnWrapperStyle={{
+                        gap: CARD_GAP,
+                        paddingHorizontal: 16,
+                        marginBottom: 16,
                       }}
-                    >
-                      <Icon name="groups" size={22} color="#084F8C" />
-                      <Text
-                        style={{
-                          fontSize: 19,
-                          fontWeight: "800",
-                          color: "#084F8C",
-                        }}
-                      >
-                        Shared Projects
-                      </Text>
-                    </View>
-                  </View>
-
-                  <FlatList
-                    data={sharedProjects}
-                    renderItem={renderProjectItem}
-                    keyExtractor={(item) => `shared-${item.projectId}`}
-                    numColumns={columns}
-                    columnWrapperStyle={{
-                      gap: CARD_GAP,
-                      paddingHorizontal: 16,
-                    }}
-                    // contentContainerStyle={{ paddingBottom: 140 }}
-                    showsVerticalScrollIndicator={false}
-                    removeClippedSubviews={true}
-                  />
+                      contentContainerStyle={{ paddingBottom: 100 }}
+                      showsVerticalScrollIndicator={false}
+                      removeClippedSubviews={true}
+                    />
+                  )}
                 </>
               )}
             </>
@@ -1527,6 +1541,37 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.modalTitle}>Edit Project</Text>
             </View>
 
+            {/* Image Picker */}
+            <View style={{ marginBottom: 16, alignItems: 'center' }}>
+              <TouchableOpacity onPress={pickImage} style={{ position: 'relative' }}>
+                <LazyImage
+                  source={editImageUrl ? { uri: editImageUrl } : require("../../../assets/default_image.png")}
+                  style={{
+                    width: 200,
+                    height: 120,
+                    borderRadius: 12,
+                    backgroundColor: '#F1F5F9'
+                  }}
+                  resizeMode="cover"
+                />
+                <View style={{
+                  position: 'absolute',
+                  bottom: -10,
+                  right: -10,
+                  backgroundColor: '#3B82F6',
+                  padding: 8,
+                  borderRadius: 20,
+                  borderWidth: 2,
+                  borderColor: '#FFF'
+                }}>
+                  <Icon name="camera-alt" size={20} color="#FFF" />
+                </View>
+              </TouchableOpacity>
+              <Text style={{ marginTop: 12, color: '#64748B', fontSize: 13 }}>
+                Tap to change cover image
+              </Text>
+            </View>
+
             {/* Input tên */}
             <View style={styles.inputWrapper}>
               <Icon
@@ -1541,7 +1586,6 @@ export default function HomeScreen({ navigation }) {
                 onChangeText={setEditName}
                 placeholder="Project Name"
                 placeholderTextColor="#94A3B8"
-                autoFocus
               />
             </View>
 
@@ -1556,7 +1600,7 @@ export default function HomeScreen({ navigation }) {
               <TextInput
                 style={[
                   styles.modalInput,
-                  { height: 100, textAlignVertical: "top", paddingTop: 14 },
+                  { height: 80, textAlignVertical: "top", paddingTop: 14 },
                 ]}
                 value={editDesc}
                 onChangeText={setEditDesc}
@@ -1564,6 +1608,25 @@ export default function HomeScreen({ navigation }) {
                 placeholderTextColor="#94A3B8"
                 multiline
               />
+            </View>
+
+            {/* Read-only Paper Size */}
+            <View style={styles.inputWrapper}>
+              <Icon
+                name="aspect-ratio"
+                size={18}
+                color="#64748B"
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: '#F1F5F9', color: '#64748B' }]}
+                value={editPaperSize}
+                editable={false}
+                placeholder="Paper Size"
+              />
+              <View style={{ position: 'absolute', right: 12, top: 20 }}>
+                <Icon name="lock" size={16} color="#94A3B8" />
+              </View>
             </View>
 
             {/* Nút */}
@@ -1631,14 +1694,7 @@ export default function HomeScreen({ navigation }) {
 
 
 
-      {/* Version Selection Modal */}
-      <VersionSelectionModal
-        visible={versionModalVisible}
-        onClose={() => setVersionModalVisible(false)}
-        versions={versions}
-        loading={loadingVersions}
-        onVersionSelect={handleVersionSelect}
-      />
+
     </View>
   );
 }

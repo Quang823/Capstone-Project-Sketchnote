@@ -32,6 +32,7 @@ export default function SubscriptionPlansScreen() {
   const [upgradeCheckData, setUpgradeCheckData] = useState(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState({ title: "", message: "" });
+  const [isInsufficientFunds, setIsInsufficientFunds] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const errorScaleAnim = useRef(new Animated.Value(0.85)).current;
   useEffect(() => {
@@ -105,6 +106,7 @@ export default function SubscriptionPlansScreen() {
       const res = await subscriptionService.createUserSubscription({
         planId: plan.planId,
         autoRenew: true,
+        confirmUpgrade: true,
       });
       Toast.show({
         type: "success",
@@ -113,7 +115,16 @@ export default function SubscriptionPlansScreen() {
       });
       await loadUserSubscriptions();
     } catch (e) {
-      setErrorMessage({ title: "Purchase failed", message: e.message });
+      const msg = e.message || "";
+      setErrorMessage({ title: "Purchase failed", message: msg });
+      if (
+        msg.toLowerCase().includes("insufficient wallet balance") ||
+        msg.toLowerCase().includes("số dư ví không đủ")
+      ) {
+        setIsInsufficientFunds(true);
+      } else {
+        setIsInsufficientFunds(false);
+      }
       setShowErrorModal(true);
     } finally {
       setBuyingPlanId(null);
@@ -479,12 +490,35 @@ export default function SubscriptionPlansScreen() {
 
             <Text style={styles.errorText}>{errorMessage.message}</Text>
 
-            <TouchableOpacity
-              style={styles.errorButton}
-              onPress={() => setShowErrorModal(false)}
-            >
-              <Text style={styles.errorButtonText}>OK</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 12, justifyContent: "center", width: "100%" }}>
+              {isInsufficientFunds && (
+                <TouchableOpacity
+                  style={[styles.errorButton, { backgroundColor: "#3B82F6" }]}
+                  onPress={() => {
+                    setShowErrorModal(false);
+                    navigation.navigate("Wallet");
+                  }}
+                >
+                  <Text style={styles.errorButtonText}>Back to Wallet</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.errorButton,
+                  isInsufficientFunds && { backgroundColor: "#E5E7EB" },
+                ]}
+                onPress={() => setShowErrorModal(false)}
+              >
+                <Text
+                  style={[
+                    styles.errorButtonText,
+                    isInsufficientFunds && { color: "#374151" },
+                  ]}
+                >
+                  OK
+                </Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         </View>
       </Modal>
