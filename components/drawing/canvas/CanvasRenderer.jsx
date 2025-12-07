@@ -125,7 +125,6 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     realtimeText,
     onSelectImage,
     imageRefs,
-    hasRuler = false,
     backgroundColor = "#FFFFFF", // 👈 Add backgroundColor prop
     pageTemplate = "blank", // 👈 Add template prop
     backgroundImageUrl = null, // 👈 Add backgroundImageUrl prop
@@ -1401,7 +1400,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
           const basePath = makePathFromPoints(
             // Khi có thước, bỏ smoothing để preview bám cạnh thước thẳng tuyệt đối
-            hasRuler ? currentPoints : smoothPoints(currentPoints, dynamicStab)
+            smoothPoints(currentPoints, dynamicStab)
           );
           const effWidth = computeEffectiveWidth(
             toolWidth,
@@ -1448,9 +1447,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
           if (tool === "airbrush") {
             const baseDots = makeSprayDots(
-              hasRuler
-                ? currentPoints
-                : smoothPoints(currentPoints, dynamicStab),
+              smoothPoints(currentPoints, dynamicStab),
               Math.min(1, airbrushDensity * 1.0),
               airbrushSpread,
               Math.max(4, effWidth)

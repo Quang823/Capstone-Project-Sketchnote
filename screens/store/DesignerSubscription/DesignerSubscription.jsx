@@ -496,7 +496,7 @@ export default function SubscriptionPlansScreen() {
                   style={[styles.errorButton, { backgroundColor: "#3B82F6" }]}
                   onPress={() => {
                     setShowErrorModal(false);
-                    navigation.navigate("Wallet");
+                    navigation.navigate("DesignerWallet");
                   }}
                 >
                   <Text style={styles.errorButtonText}>Back to Wallet</Text>
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#FFFFFF",
-    paddingTop: 60,
+    paddingTop: 40,
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
     shadowColor: "#000",

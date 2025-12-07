@@ -15,12 +15,13 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { paymentService } from "../../../service/paymentService";
 import { useToast } from "../../../hooks/use-toast";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
-
+import styles from "./DesignerWalletScreen.styles";
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
 export default function DesignerWalletScreen() {
@@ -37,7 +38,9 @@ export default function DesignerWalletScreen() {
     totalWithdrawn: 0,
   });
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showDepositModal, setShowDepositModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [depositAmount, setDepositAmount] = useState("");
   const [bankInfo, setBankInfo] = useState({
     bankName: "",
     accountNumber: "",
@@ -64,10 +67,41 @@ export default function DesignerWalletScreen() {
   // Fetch wallet data
   const fetchWallet = async () => {
     try {
-      // In a real app, you would fetch this from your API
+      // Fetch wallet balance and transactions
       const data = await paymentService.getWallet();
 
-      setWalletData(data.result);
+      // Fetch withdrawal history to calculate total withdrawn
+      try {
+        const withdrawalData = await paymentService.getWithdrawHistory(0, 1000, "createdAt", "DESC");
+        let withdrawals = [];
+
+        if (withdrawalData && Array.isArray(withdrawalData.content)) {
+          withdrawals = withdrawalData.content;
+        } else if (Array.isArray(withdrawalData)) {
+          withdrawals = withdrawalData;
+        } else if (withdrawalData && Array.isArray(withdrawalData.result)) {
+          withdrawals = withdrawalData.result;
+        }
+
+        // Calculate total withdrawn amount from successful withdrawals
+        const totalWithdrawn = withdrawals
+          .filter(w =>
+            w.status === "SUCCESS" ||
+            w.status === "COMPLETED" ||
+            w.status === "APPROVED"
+          )
+          .reduce((sum, w) => sum + (w.amount || 0), 0);
+
+        // Update wallet data with calculated totalWithdrawn
+        setWalletData({
+          ...data.result,
+          totalWithdrawn: totalWithdrawn,
+        });
+      } catch (withdrawalError) {
+        console.error("Error fetching withdrawal history:", withdrawalError);
+        // Continue with wallet data even if withdrawal fetch fails
+        setWalletData(data.result);
+      }
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
 
@@ -146,6 +180,33 @@ export default function DesignerWalletScreen() {
     }
   };
 
+  // Handle deposit request
+  const handleDeposit = async () => {
+    const amount = parseInt(depositAmount);
+    if (!amount || amount < 5000) {
+      toast({
+        title: "Error",
+        description: "Minimum deposit amount is 5,000 VND",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const url = await paymentService.depositWallet(amount);
+      setShowDepositModal(false);
+      setDepositAmount("");
+      navigation.navigate("PaymentWebView", { paymentUrl: url.message });
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast({
+        title: "Failed",
+        description: "Deposit failed. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     fetchWallet();
     const unsubscribe = navigation.addListener("focus", fetchWallet);
@@ -163,16 +224,68 @@ export default function DesignerWalletScreen() {
   const isPortrait = !isLandscape;
   const isWide = windowWidth > 900;
 
+  // Get transaction icon and color
+  const getTransactionStyle = (transaction) => {
+    const typeConfig = {
+      DEPOSIT: {
+        icon: "account-balance-wallet",
+        color:
+          transaction.status === "SUCCESS"
+            ? "#10B981"
+            : transaction.status === "PENDING"
+              ? "#F59E0B"
+              : "#EF4444",
+        sign: "+",
+        label:
+          transaction.status === "SUCCESS"
+            ? "Deposit Success"
+            : transaction.status === "PENDING"
+              ? "Pending Deposit"
+              : "Deposit Failed",
+        description: `Deposit to wallet${transaction.orderCode ? ` • #${transaction.orderCode}` : ""
+          }`,
+      },
+      WITHDRAWAL: {
+        icon: "account-balance",
+        color: "#EF4444",
+        sign: "-",
+        label: "Withdrawal",
+        description: "Withdraw to bank account",
+      },
+      COURSE_FEE: {
+        icon: "school",
+        color: "#8B5CF6",
+        sign: "-",
+        label: "Course Fee",
+        description: "Course enrollment payment",
+      },
+      PAYMENT: {
+        icon: "payment",
+        color: "#EF4444",
+        sign: "-",
+        label: "Payment",
+        description: "Payment transaction",
+      },
+      PURCHASE: {
+        icon: "shopping-cart",
+        color: "#EF4444",
+        sign: "-",
+        label: "Purchase",
+        description: "Product purchase",
+      },
+    };
+
+    return typeConfig[transaction.type] || typeConfig.PURCHASE;
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <SidebarToggleButton
-          style={styles.backButton}
-          iconColor="#084F8C"
-          iconSize={24}
-        />
-        <Text style={styles.headerTitle}>Designer Wallet</Text>
+        <View style={styles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <Text style={styles.headerTitle}>Wallet</Text>
+        </View>
         <View style={{ width: 40 }} />
       </View>
 
@@ -192,20 +305,58 @@ export default function DesignerWalletScreen() {
               isLandscape && { flex: 1, maxWidth: "100%", marginRight: 16 },
             ]}
           >
-            <Text style={styles.balanceLabelNew}>Available Balance</Text>
-            <Text style={styles.balanceAmountNew}>
-              {formatCurrency(walletData.balance)}
-            </Text>
+            <View style={styles.balanceHeaderRow}>
+              <View>
+                <Text style={styles.balanceLabelNew}>Available Balance</Text>
+                <Text style={styles.balanceAmountNew}>
+                  {formatCurrency(walletData.balance)}
+                </Text>
+              </View>
+              <View style={styles.walletIconLarge}>
+                <MaterialCommunityIcons
+                  name="wallet"
+                  size={42}
+                  color="#084F8C"
+                />
+                <Text style={styles.walletLabel}>Wallet</Text>
+              </View>
+            </View>
 
+            <View style={styles.miniStats}>
+              <View style={styles.miniStat}>
+                <Text style={styles.miniStatLabel}>Earnings</Text>
+                <Text style={styles.miniStatValue}>
+                  {formatCurrency(walletData.totalEarnings)}
+                </Text>
+              </View>
 
+              <View style={styles.miniStatDivider} />
 
-            <TouchableOpacity
-              style={styles.withdrawButtonNew}
-              onPress={() => setShowWithdrawModal(true)}
-            >
-              <Icon name="account-balance-wallet" size={20} color="#FFFFFF" />
-              <Text style={styles.withdrawButtonTextNew}>Withdraw Funds</Text>
-            </TouchableOpacity>
+              <View style={styles.miniStat}>
+                <Text style={styles.miniStatLabel}>Withdrawn</Text>
+                <Text style={styles.miniStatValueNegative}>
+                  {formatCurrency(walletData.totalWithdrawn)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={styles.withdrawButtonNew}
+                onPress={() => setShowWithdrawModal(true)}
+              >
+                <Icon name="account-balance" size={18} color="#FFFFFF" />
+                <Text style={styles.withdrawButtonTextNew}>Withdraw</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.depositButtonNew}
+                onPress={() => setShowDepositModal(true)}
+              >
+                <Icon name="add-circle" size={18} color="#084F8C" />
+                <Text style={styles.depositButtonTextNew}>Deposit</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* RIGHT – ACTION CARD */}
@@ -289,114 +440,119 @@ export default function DesignerWalletScreen() {
         </View>
 
         {/* RECENT TRANSACTIONS */}
-        <View style={[styles.recentCard, isWide && styles.recentCardLimit]}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+        <View style={styles.historySection}>
+          {/* Header Outside Card */}
+          <View style={styles.historySectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Recent Transactions</Text>
+              <Text style={styles.transactionCount}>
+                {recentTransactions.length} of {walletData.transactions.length}
+              </Text>
+            </View>
+            {walletData.transactions.length > 0 && (
+              <Pressable
+                style={styles.viewAllButton}
+                onPress={() =>
+                  navigation.navigate("TransactionHistory", {
+                    transactions: walletData.transactions || [],
+                  })
+                }
+              >
+                <Text style={styles.viewAllText}>View All</Text>
+                <Icon name="arrow-forward" size={16} color="#3B82F6" />
+              </Pressable>
+            )}
           </View>
 
+          {/* Transaction List in White Card */}
           {recentTransactions.length > 0 ? (
-            recentTransactions.map((transaction, idx) => (
-              <View
-                key={
-                  transaction?.transactionId ??
-                  transaction?.id ??
-                  `${transaction?.type || "TX"}-${transaction?.createdAt || ""
-                  }-${idx}`
-                }
-                style={styles.transactionItemNew}
-              >
-                <View style={styles.transIconWrap}>
-                  <Icon
-                    name={
-                      transaction.type === "DEPOSIT"
-                        ? "arrow-downward"
-                        : transaction.type === "WITHDRAWAL"
-                          ? "arrow-upward"
-                          : "shopping-cart"
+            <View style={[styles.recentCard, isWide && styles.recentCardLimit]}>
+              {recentTransactions.map((transaction, idx) => {
+                const style = getTransactionStyle(transaction);
+                return (
+                  <View
+                    key={
+                      transaction?.transactionId ??
+                      transaction?.id ??
+                      `${transaction?.type || "TX"}-${transaction?.createdAt || ""
+                      }-${idx}`
                     }
-                    size={20}
-                    color={
-                      transaction.type === "DEPOSIT"
-                        ? "#16A34A"
-                        : transaction.type === "WITHDRAWAL"
-                          ? "#DC2626"
-                          : "#084F8C"
-                    }
-                  />
-                </View>
-
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.transactionTitleNew}>
-                    {transaction.type === "DEPOSIT"
-                      ? "Deposit"
-                      : transaction.type === "WITHDRAWAL"
-                        ? "Withdrawal"
-                        : "Purchase"}
-                  </Text>
-                  <Text style={styles.transactionDateNew}>
-                    {formatDate(transaction.createdAt)}
-                  </Text>
-                  {transaction.orderCode && (
-                    <Text style={styles.transactionDateNew}>
-                      Order: {transaction.orderCode}
-                    </Text>
-                  )}
-                </View>
-
-                <View style={styles.transactionRightNew}>
-                  <Text
-                    style={[
-                      styles.transactionAmountNew,
-                      {
-                        color:
-                          transaction.amount > 0
-                            ? "#16A34A"
-                            : "#DC2626",
-                      },
-                    ]}
+                    style={styles.transactionItemNew}
                   >
-                    {transaction.amount > 0 ? "+" : "-"}
-                    {formatCurrency(Math.abs(transaction.amount))}
-                  </Text>
-                  {typeof transaction.balance === "number" && (
-                    <Text style={styles.transactionBalanceNew}>
-                      Balance: {formatCurrency(transaction.balance)}
-                    </Text>
-                  )}
-                  {transaction.status && (
                     <View
                       style={[
-                        styles.statusBadgeNew,
-                        {
-                          backgroundColor:
-                            transaction.status === "SUCCESS"
-                              ? "#10B98115"
-                              : transaction.status === "PENDING"
-                                ? "#F59E0B15"
-                                : "#EF444415",
-                        },
+                        styles.transIconWrap,
+                        { backgroundColor: `${style.color}15` },
                       ]}
                     >
+                      <Icon name={style.icon} size={24} color={style.color} />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.transactionTitleNew}>
+                        {style.label}
+                      </Text>
+                      <Text style={styles.transactionDateNew}>
+                        {formatDate(transaction.createdAt)}
+                      </Text>
+                      {transaction.orderCode && (
+                        <Text style={styles.transactionDateNew}>
+                          Order: {transaction.orderCode}
+                        </Text>
+                      )}
+                    </View>
+
+                    <View style={styles.transactionRightNew}>
                       <Text
                         style={[
-                          styles.statusTextNew,
-                          {
-                            color:
-                              transaction.status === "SUCCESS"
-                                ? "#10B981"
-                                : transaction.status === "PENDING"
-                                  ? "#F59E0B"
-                                  : "#EF4444",
-                          },
+                          styles.transactionAmountNew,
+                          { color: style.color },
                         ]}
                       >
-                        {transaction.status}
+                        {style.sign}
+                        {formatCurrency(Math.abs(transaction.amount))}
                       </Text>
+                      {typeof transaction.balance === "number" && (
+                        <Text style={styles.transactionBalanceNew}>
+                          Balance: {formatCurrency(transaction.balance)}
+                        </Text>
+                      )}
+                      {transaction.status && (
+                        <View
+                          style={[
+                            styles.statusBadgeNew,
+                            {
+                              backgroundColor:
+                                transaction.status === "SUCCESS"
+                                  ? "#10B98115"
+                                  : transaction.status === "PENDING"
+                                    ? "#F59E0B15"
+                                    : "#EF444415",
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.statusTextNew,
+                              {
+                                color:
+                                  transaction.status === "SUCCESS"
+                                    ? "#10B981"
+                                    : transaction.status === "PENDING"
+                                      ? "#F59E0B"
+                                      : "#EF4444",
+                              },
+                            ]}
+                          >
+                            {transaction.status}
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                  )}
-                </View>
-              </View>
-            ))
+                  </View>
+                );
+              })}
+            </View>
           ) : (
             <View style={styles.emptyState}>
               <Icon name="receipt" size={48} color="#CBD5E1" />
@@ -537,447 +693,119 @@ export default function DesignerWalletScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Deposit Modal */}
+      <Modal
+        visible={showDepositModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowDepositModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent]}>
+            {/* Header Outside ScrollView */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Deposit Funds</Text>
+              <Pressable onPress={() => setShowDepositModal(false)}>
+                <Icon name="close" size={24} color="#0F172A" />
+              </Pressable>
+            </View>
+
+            {/* Scrollable Content */}
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={styles.modalBody}
+            >
+              {/* Amount Input */}
+              <View style={styles.amountSection}>
+                <Text style={styles.amountLabel}>Deposit Amount</Text>
+                <View style={styles.amountInputContainer}>
+                  <Text style={styles.currencySymbol}>₫</Text>
+                  <TextInput
+                    style={styles.amountInput}
+                    value={depositAmount}
+                    onChangeText={setDepositAmount}
+                    placeholder="Enter amount"
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={styles.quickAmounts}>
+                  {quickAmounts.map((amt) => (
+                    <Pressable
+                      key={amt}
+                      style={[
+                        styles.quickAmountButton,
+                        depositAmount === amt.toString() &&
+                        styles.quickAmountButtonActive,
+                      ]}
+                      onPress={() => setDepositAmount(amt.toString())}
+                    >
+                      <Text
+                        style={[
+                          styles.quickAmountText,
+                          depositAmount === amt.toString() &&
+                          styles.quickAmountTextActive,
+                        ]}
+                      >
+                        {formatCurrency(amt)}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Payment Method */}
+              <View style={styles.paymentSection}>
+                <Text style={styles.paymentLabel}>Payment Method</Text>
+                <View
+                  style={[
+                    styles.paymentMethod,
+                    styles.selectedPaymentMethod,
+                  ]}
+                >
+                  <View style={styles.paymentMethodLeft}>
+                    <Text style={styles.paymentIcon}>💳</Text>
+                    <View>
+                      <Text style={styles.paymentName}>PayOS</Text>
+                      <Text style={styles.paymentFee}>Free</Text>
+                    </View>
+                  </View>
+                  <Icon name="check-circle" size={24} color="#3B82F6" />
+                </View>
+              </View>
+
+              {/* Buttons */}
+              <View style={styles.modalFooterNew}>
+                <Pressable
+                  style={[styles.buttonNew, styles.cancelButtonNew]}
+                  onPress={() => setShowDepositModal(false)}
+                >
+                  <Text
+                    style={[styles.buttonTextNew, { color: "#64748B" }]}
+                  >
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[
+                    styles.buttonNew,
+                    styles.confirmButtonNew,
+                  ]}
+                  onPress={handleDeposit}
+                >
+                  <Text
+                    style={[styles.buttonTextNew, { color: "#FFFFFF" }]}
+                  >
+                    Confirm
+                  </Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center", // căn giữa tuyệt đối
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-
-  backButton: {
-    position: "absolute",
-    left: 20,
-    padding: 12, // vùng chạm lớn hơn
-    borderRadius: 30,
-    backgroundColor: "#F8FAFC",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-
-  headerTitle: {
-    fontSize: 26,
-    fontFamily: "Pacifico-Regular",
-    color: "#084F8C",
-    letterSpacing: -0.5,
-  },
-
-  /* TOP 2 COLUMNS */
-  topWrapper: { padding: 20 },
-  topWrapperRow: {
-    flexDirection: "row",
-    gap: 20,
-    alignItems: "stretch",
-  },
-  topWrapperLimit: {
-    width: "90%",
-    alignSelf: "center",
-  },
-
-  leftCol: { flex: 60 },
-  rightCol: { flex: 1, maxWidth: 370 },
-
-  /* BALANCE CARD */
-  balanceCardNew: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: "#084F8C",
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: "#E0E7FF",
-    flex: 1,
-  },
-
-  balanceLabelNew: {
-    fontSize: 15,
-    color: "#64748B",
-    fontWeight: "600",
-  },
-
-  balanceAmountNew: {
-    fontSize: 38,
-    fontWeight: "800",
-    color: "#084F8C",
-    marginTop: 6,
-  },
-  statsRowNew: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#E0E7FF",
-  },
-  statBox: {
-    alignItems: "center",
-    flex: 1,
-    paddingHorizontal: 8,
-  },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: "#E0E7FF",
-  },
-  statValueNew: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#084F8C",
-  },
-
-  statLabelNew: {
-    fontSize: 12,
-    color: "#94A3B8",
-    marginTop: 4,
-  },
-
-  withdrawButtonNew: {
-    backgroundColor: "#084F8C",
-    borderRadius: 16,
-    paddingVertical: 14,
-    marginTop: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "45%",
-    flexDirection: "row",
-    shadowColor: "#062b7cff",
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-
-    // 👇 THÊM DÒNG NÀY
-    alignSelf: "center",
-  },
-
-  withdrawButtonTextNew: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginLeft: 8,
-  },
-
-  /* ACTION CARD */
-  actionCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: "#084F8C",
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: "#E0E7FF",
-  },
-  actionCardTitle: {
-    fontSize: 15,
-    color: "#084F8C",
-    fontWeight: "600",
-    marginBottom: 16,
-  },
-
-  actionList: { gap: 16 },
-  oneActionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 5,
-    paddingHorizontal: 5,
-    borderRadius: 16,
-    backgroundColor: "#F8FAFF",
-    // width sẽ được override trong JSX
-    shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-
-  actionCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#084F8C",
-  },
-
-  /* RECENT TRANSACTIONS */
-  recentCard: {
-    margin: 20,
-    backgroundColor: "#FFFFFF",
-    padding: 20,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  recentCardLimit: {
-    alignSelf: "center",
-    width: "88%",
-  },
-
-  sectionHeader: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#084F8C",
-  },
-
-  transactionItemNew: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  transIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  transactionTitleNew: { fontSize: 15, fontWeight: "600", color: "#1E293B" },
-  transactionDateNew: { fontSize: 12, color: "#94A3B8", marginTop: 2 },
-  transactionAmountNew: { fontSize: 15, fontWeight: "700" },
-  transactionRightNew: {
-    alignItems: "flex-end",
-  },
-  transactionBalanceNew: {
-    fontSize: 11,
-    color: "#6B7280",
-    marginTop: 2,
-  },
-  statusBadgeNew: {
-    marginTop: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  statusTextNew: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: "#94A3B8",
-    marginTop: 12,
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "flex-end",
-  },
-
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    maxHeight: "92%",
-    paddingBottom: 10,
-    shadowColor: "#084F8C",
-    shadowOpacity: 0.15,
-    shadowRadius: 25,
-    elevation: 12,
-    borderWidth: 1,
-    borderColor: "#E0E7FF",
-  },
-
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E6E9F5",
-  },
-
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#084F8C",
-  },
-
-  modalBody: {
-    padding: 24,
-    flexGrow: 1, // cho ScrollView chiếm đủ không gian
-  },
-
-  /* INPUT LABEL */
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#475569",
-    marginBottom: 6,
-  },
-
-  /* AMOUNT INPUT */
-  amountInputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    height: 56,
-    paddingHorizontal: 18,
-    borderWidth: 1.5,
-    borderColor: "#D4DAF3",
-    backgroundColor: "#F8FAFF",
-    borderRadius: 16,
-  },
-  currencySymbol: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0F172A",
-    marginRight: 10,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0F172A",
-    padding: 0,
-  },
-
-  /* QUICK AMOUNTS */
-  quickAmountsNew: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 4,
-  },
-  quickAmountButtonNew: {
-    backgroundColor: "#F1F5FF",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E0E7FF",
-  },
-  quickAmountTextNew: {
-    color: "#084F8C",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-
-  /* BANK GRID */
-  bankGrid: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 12,
-  },
-  bankGridItem: {
-    flex: 1,
-  },
-  bankInfoLabel: {
-    fontSize: 13,
-    color: "#475569",
-    marginBottom: 6,
-    fontWeight: "600",
-  },
-  bankInfoInputNew: {
-    backgroundColor: "#F8FAFF",
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1.5,
-    borderColor: "#D4DAF3",
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-
-  /* NOTE BOX */
-  noteContainerNew: {
-    flexDirection: "row",
-    backgroundColor: "#F1F5FF",
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 20,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: "#E0E7FF",
-  },
-  noteTextNew: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-    color: "#475569",
-    fontWeight: "500",
-  },
-
-  /* FOOTER */
-  modalFooterNew: {
-    flexDirection: "row",
-    justifyContent: "center", // canh giữa
-    paddingHorizontal: 20,
-    gap: 60, // khoảng cách giữa 2 nút
-  },
-
-  buttonNew: {
-    width: "28%", // mỗi nút khoảng 50%
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  cancelButtonNew: {
-    backgroundColor: "#F1F5F9",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-
-  confirmButtonNew: {
-    backgroundColor: "#084F8C",
-    shadowColor: "#084F8C",
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-
-  buttonTextNew: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});

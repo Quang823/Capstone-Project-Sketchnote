@@ -26,7 +26,7 @@ export const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: CONTENT_PADDING,
-    paddingTop: 60,
+    paddingTop: 40,
   },
 
   // Header
@@ -34,8 +34,8 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
-    paddingBottom: 16,
+    marginBottom: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#E0E7FF",
   },

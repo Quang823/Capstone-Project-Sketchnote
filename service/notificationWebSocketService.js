@@ -23,7 +23,6 @@ class NotificationWebSocketService {
      */
     connect(url, userId, token, onMessage, onError) {
         if (this.client && this.client.active) {
-            console.log("Already connected to Notification WebSocket, updating callback");
             this.onMessageCallback = onMessage;
             return;
         }
@@ -31,20 +30,15 @@ class NotificationWebSocketService {
         this.userId = userId;
         this.onMessageCallback = onMessage;
 
-        console.log(`🔌 Creating WebSocket connection to: ${url}`);
-
         this.client = new Client({
             brokerURL: url,
             connectHeaders: {
                 Authorization: `Bearer ${token}`
             },
-            debug: (str) => {
-                console.log('STOMP Debug:', str);
-            },
             reconnectDelay: 5000,
             heartbeatIncoming: 4000,
             heartbeatOutgoing: 4000,
-            
+
             // React Native specific: Use native WebSocket
             webSocketFactory: () => {
                 return new WebSocket(url);
@@ -55,19 +49,15 @@ class NotificationWebSocketService {
             appendMissingNULLonIncoming: true,
 
             onConnect: (frame) => {
-                console.log("✅ Notification WebSocket connected");
                 this.connected = true;
-                
+
                 // Subscribe to user-specific notification queue
                 // Based on user's previous request: /queue/notifications/{userId}
                 const destination = `/queue/notifications/${this.userId}`;
-                
-                console.log(`📥 Subscribing to ${destination}`);
                 this.client.subscribe(destination, (message) => {
                     if (message.body) {
                         try {
                             const notification = JSON.parse(message.body);
-                            console.log("📨 Received notification:", notification);
                             if (this.onMessageCallback) {
                                 this.onMessageCallback(notification);
                             }
@@ -85,12 +75,10 @@ class NotificationWebSocketService {
             },
 
             onWebSocketClose: () => {
-                console.log("🔴 Notification WebSocket disconnected");
                 this.connected = false;
             },
-            
+
             onWebSocketError: (event) => {
-                console.error("❌ WebSocket Error:", event);
                 if (onError) onError(event);
             }
         });
@@ -106,7 +94,6 @@ class NotificationWebSocketService {
             this.client.deactivate();
             this.client = null;
             this.connected = false;
-            console.log("🔴 Disconnected from Notification WebSocket");
         }
     }
 

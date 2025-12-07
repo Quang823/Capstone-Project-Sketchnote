@@ -140,7 +140,6 @@ export const projectAPIController = {
         userId,
         edited,
       });
-      //console.log("✅ Invite collaborator response:", res.data);
       return res;
     } catch (err) {
       throw err;

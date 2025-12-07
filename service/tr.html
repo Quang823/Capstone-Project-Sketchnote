@@ -244,8 +244,6 @@
             entry.innerHTML = `<span class="timestamp">[${time}]</span> ${message}`;
             messagesDiv.appendChild(entry);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-            console.log(`[${time}] ${message}`);
         }
 
         function clearLogs() {

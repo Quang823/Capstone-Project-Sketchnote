@@ -738,18 +738,6 @@ export default function ToolbarContainer({
           />
         </View>
 
-        <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="ruler"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          onPress={() => setTool("ruler")}
-          active={tool === "ruler"}
-        />
-
         {/* Eyedropper Tool */}
         <EyeDropperTool
           tool={tool}
@@ -784,14 +772,14 @@ export default function ToolbarContainer({
           // others
           "fill",
         ].includes(tool) && (
-          <ColorPalette
-            colors={colors}
-            selectedColor={selectedColor}
-            colorHistory={colorHistory}
-            onSelectColor={handleSelectColor}
-            onSelectColorSet={handleSelectColorSet}
-          />
-        )}
+            <ColorPalette
+              colors={colors}
+              selectedColor={selectedColor}
+              colorHistory={colorHistory}
+              onSelectColor={handleSelectColor}
+              onSelectColorSet={handleSelectColorSet}
+            />
+          )}
 
         <View style={styles.divider} />
 
@@ -799,54 +787,54 @@ export default function ToolbarContainer({
         <View style={styles.widthGroup}>
           {tool.includes("eraser")
             ? // Hiển thị 3 kích thước gôm
-              [8, 20, 40].map((size) => (
-                <ToolButton
-                  key={size}
-                  icon={
-                    <View
-                      style={[
-                        styles.widthDot,
-                        {
-                          width: size / 2,
-                          height: size / 2,
-                          borderRadius: size / 2,
-                          backgroundColor:
-                            eraserSize === size ? "#2563EB" : "#475569",
-                          opacity: 0.8,
-                        },
-                      ]}
-                    />
-                  }
-                  active={eraserSize === size}
-                  onPress={() => setEraserSize(size)}
-                />
-              ))
+            [8, 20, 40].map((size) => (
+              <ToolButton
+                key={size}
+                icon={
+                  <View
+                    style={[
+                      styles.widthDot,
+                      {
+                        width: size / 2,
+                        height: size / 2,
+                        borderRadius: size / 2,
+                        backgroundColor:
+                          eraserSize === size ? "#2563EB" : "#475569",
+                        opacity: 0.8,
+                      },
+                    ]}
+                  />
+                }
+                active={eraserSize === size}
+                onPress={() => setEraserSize(size)}
+              />
+            ))
             : // Hiển thị 3 kích thước bút
-              [2, 4, 6].map((size) => (
-                <ToolButton
-                  key={size}
-                  icon={
-                    <View
-                      style={[
-                        styles.widthDot,
-                        {
-                          width: size * 2,
-                          height: size * 2,
-                          borderRadius: size,
-                          backgroundColor:
-                            strokeWidth === size ? "#2563EB" : "#475569",
-                        },
-                      ]}
-                    />
-                  }
-                  active={strokeWidth === size}
-                  onPress={() =>
-                    onSelectBaseWidth
-                      ? onSelectBaseWidth(size)
-                      : setStrokeWidth(size)
-                  }
-                />
-              ))}
+            [2, 4, 6].map((size) => (
+              <ToolButton
+                key={size}
+                icon={
+                  <View
+                    style={[
+                      styles.widthDot,
+                      {
+                        width: size * 2,
+                        height: size * 2,
+                        borderRadius: size,
+                        backgroundColor:
+                          strokeWidth === size ? "#2563EB" : "#475569",
+                      },
+                    ]}
+                  />
+                }
+                active={strokeWidth === size}
+                onPress={() =>
+                  onSelectBaseWidth
+                    ? onSelectBaseWidth(size)
+                    : setStrokeWidth(size)
+                }
+              />
+            ))}
         </View>
       </ScrollView>
 

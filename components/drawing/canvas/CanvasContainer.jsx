@@ -56,7 +56,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     onZoomChange,
     toolConfigs = {},
     eraserMode,
-    rulerPosition,
     scrollOffsetY = 0,
     scrollYShared, // ✅ Animated scroll value
     pageOffsetY = 0, // ✅ Page offset trong project
@@ -779,7 +778,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       };
 
       addStrokeInternal(newStroke);
-      // console.log("Image added:", newStroke);
     } catch (err) {
       console.error("Failed to add image:", err);
       Alert.alert("Lỗi ảnh", "Không thể đọc hoặc hiển thị ảnh này.");
@@ -1383,7 +1381,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             stabilization={activeConfig.stabilization}
             configByTool={toolConfigs}
             setRealtimeText={setRealtimeText}
-            rulerPosition={rulerPosition}
             scrollOffsetY={scrollOffsetY}
             scrollYShared={scrollYShared}
             pageOffsetY={pageOffsetY}
@@ -1419,7 +1416,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               page={page}
               canvasHeight={canvasHeight}
               shapeType={shapeType}
-              hasRuler={!!rulerPosition}
               backgroundColor={backgroundColor}
               pageTemplate={pageTemplate}
               backgroundImageUrl={backgroundImageUrl}

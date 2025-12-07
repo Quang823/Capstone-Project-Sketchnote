@@ -82,7 +82,6 @@ export default function DesignerQuickUploadScreen() {
   const getProjectByUserId = async () => {
     try {
       const response = await resourceService.getProjectByUserId();
-      console.log("response", response);
       setProjects(response?.content || []);
     } catch (error) {
       console.error("Error fetching project by user ID:", error);
@@ -205,12 +204,13 @@ export default function DesignerQuickUploadScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <SidebarToggleButton
-          style={styles.headerButton}
-          iconColor="#084F8C"
-          iconSize={24}
-        />
-        <Text style={styles.headerTitle}>Upload Template</Text>
+        <View style={styles.headerLeft}>
+          <SidebarToggleButton
+            iconColor="#084F8C"
+            iconSize={26}
+          />
+          <Text style={styles.headerTitle}>Upload Template</Text>
+        </View>
         <Pressable
           onPress={handleUpload}
           disabled={isUploading}

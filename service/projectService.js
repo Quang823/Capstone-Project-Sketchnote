@@ -50,7 +50,6 @@ export const projectService = {
    * This function does NOT call the createPage API.
    */
   uploadPageToS3: async (projectId, pageNumber, dataObject) => {
-    // console.log(`☁️ [Service] Uploading page to S3: PageNumber=${pageNumber}`);
     const fileName = `${projectId}_page_${pageNumber}_${Date.now()}.json`;
 
     const presignData = await projectService.getPresign(fileName, "JSON");
@@ -71,13 +70,8 @@ export const projectService = {
    */
   createPage: async (pageData) => {
     try {
-      // console.log(
-      //   "🚀 [Service] Calling createPage API with payload:",
-      //   JSON.stringify(pageData, null, 2)
-      // );
       const response = await projectAPIController.createPage(pageData);
       if (response?.data?.result) {
-        // console.log("✅ [Service] createPage API call successful.");
         return response.data.result;
       }
       throw new Error("Invalid response from createPage API");
@@ -104,7 +98,6 @@ export const projectService = {
         const is403 = error.message?.includes("403") || error.message?.includes("Access Denied");
 
         if (is403 && url) {
-          console.log(`⚠️ [Service] 403 Access Denied for ${url}. Attempting to refresh URL...`);
           try {
             // Extract filename from URL (assuming it's the last part of the path)
             // Example: .../projectId_page_1_timestamp.json?...
@@ -113,7 +106,6 @@ export const projectService = {
             if (fileName) {
               const presignData = await projectService.getPresign(fileName, "JSON");
               if (presignData?.strokeUrl) {
-                console.log(`✅ [Service] Refreshed URL for ${fileName}`);
                 // Retry with new URL
                 return await projectService.getProjectFile(presignData.strokeUrl, options);
               }
@@ -375,7 +367,6 @@ export const projectService = {
       return await parseJsonInBackground(text);
     } catch (err) {
       if (err.name === "AbortError") {
-        //  console.log(`[Service] Fetch aborted for URL: ${url}`);
       } else {
         console.error("❌ Error loading JSON:", err);
       }

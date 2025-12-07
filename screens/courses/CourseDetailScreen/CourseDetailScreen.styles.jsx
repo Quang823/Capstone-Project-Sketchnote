@@ -12,7 +12,7 @@ export const courseDetailStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 40,
     paddingBottom: 16,
     backgroundColor: "white",
     borderBottomWidth: 1,

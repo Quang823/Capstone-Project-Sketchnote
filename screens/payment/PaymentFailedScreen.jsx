@@ -144,7 +144,7 @@ export default function PaymentFailedScreen() {
               shadowRadius: 4,
               elevation: 3,
             })}
-            onPress={() => navigation.navigate("Wallet")}
+            onPress={() => navigation.navigate("DesignerWallet")}
           >
             <Text style={{ color: "white", fontSize: 16, fontWeight: "600" }}>
               Back to Wallet

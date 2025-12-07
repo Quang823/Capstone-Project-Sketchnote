@@ -25,7 +25,6 @@ import * as ImagePicker from "expo-image-picker";
 import HeaderToolbar from "../../../components/drawing/toolbar/HeaderToolbar";
 import ToolbarContainer from "../../../components/drawing/toolbar/ToolbarContainer";
 import MultiPageCanvas from "../../../components/drawing/canvas/MultiPageCanvas";
-import RulerOverlay from "../../../components/drawing/ruler/RulerOverlay";
 import StickerModal from "../../../components/drawing/media/StickerModal";
 import LayerPanel from "../../../components/drawing/layer/LayerPanel";
 import PenSettingsPanel from "../../../components/drawing/toolbar/PenSettingsPanel";
@@ -609,10 +608,6 @@ export default function DrawingScreen({ route }) {
     gridType: "square",
   });
   const [gridDropdownVisible, setGridDropdownVisible] = useState(false);
-
-  // 📏 RULER
-  const [rulerVisible, setRulerVisible] = useState(false);
-  const [rulerPosition, setRulerPosition] = useState(null);
 
   // ✏️ ===== WIDTH & OPACITY =====
   const [strokeWidth, setStrokeWidth] = useState(2);
@@ -2352,7 +2347,6 @@ export default function DrawingScreen({ route }) {
         quality: 1,
         exif: true,
       });
-      // console.log("result", result);
       if (result.canceled) return;
 
       let localUri = result.assets?.[0]?.uri;
@@ -2390,11 +2384,8 @@ export default function DrawingScreen({ route }) {
         size = { width: resizeResult.width, height: resizeResult.height };
       }
 
-      // Upload the corrected image
-      // console.log(`☁️ Uploading ${localUri} to Cloudinary...`);
       const cloudinaryResponse = await uploadToCloudinary(localUri);
       const cloudUrl = cloudinaryResponse.secure_url;
-      //  console.log("✅ Uploaded to Cloudinary, URL:", cloudUrl);
 
       if (!cloudUrl) {
         throw new Error(
@@ -2817,24 +2808,6 @@ export default function DrawingScreen({ route }) {
         <ToolbarContainer
           tool={tool}
           setTool={(name) => {
-            if (name === "ruler") {
-              // Toggle ruler overlay without changing current drawing tool
-              setRulerVisible((prev) => {
-                const next = !prev;
-                return next;
-              });
-              if (!rulerPosition) {
-                setRulerPosition({
-                  x: 0,
-                  y: 120,
-                  width: undefined,
-                  height: 60,
-                  rotation: 0,
-                  scale: 1,
-                });
-              }
-              return;
-            }
             setTool(name);
             if (name === "image") handleInsertImage();
             else if (name === "camera") handleOpenCamera();
@@ -2941,7 +2914,6 @@ export default function DrawingScreen({ route }) {
           thickness={activeConfig.thickness}
           stabilization={activeConfig.stabilization}
           toolConfigs={toolConfigs}
-          rulerPosition={rulerPosition}
           registerPageRef={registerPageRef}
           onActivePageChange={setActivePageId}
           onColorPicked={handleColorPicked}
@@ -2951,13 +2923,6 @@ export default function DrawingScreen({ route }) {
             }
           }}
         />
-
-        <RulerOverlay
-          visible={rulerVisible}
-          position={rulerPosition}
-          onChange={(pos) => setRulerPosition(pos)}
-        />
-
         <StickerModal
           visible={stickerModalVisible}
           onClose={() => setStickerModalVisible(false)}
