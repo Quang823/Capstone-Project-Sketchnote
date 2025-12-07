@@ -145,14 +145,16 @@ export default function CreditTransactionHistoryScreen() {
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Pressable
-                    onPress={() => navigation.goBack()}
-                    style={styles.backButton}
-                >
-                    <Icon name="arrow-back" size={24} color="#084F8C" />
-                </Pressable>
-                <Text style={styles.headerTitle}>Credit History</Text>
-                <View style={{ width: 24 }} />
+                <View style={styles.headerLeft}>
+                    <Pressable
+                        onPress={() => navigation.goBack()}
+                        style={styles.backButton}
+                    >
+                        <Icon name="arrow-back" size={24} color="#084F8C" />
+                    </Pressable>
+                    <Text style={styles.headerTitle}>Credit History</Text>
+                    <View style={{ width: 24 }} />
+                </View>
             </View>
 
             {/* Tabs */}
@@ -293,29 +295,67 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#F8FAFC",
     },
-    centerContainer: {
+    header: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        backgroundColor: "#FFFFFF",
+        paddingTop: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: "#E2E8F0",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    headerLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 15,
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center'
+    },
+    headerTitle: {
+        fontSize: 26,
+        fontFamily: "Pacifico-Regular",
+        color: "#084F8C",
+        letterSpacing: -0.5,
+    },
+    container: {
+        flex: 1,
+        backgroundColor: "#F8FAFC",
     },
     header: {
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "space-between",
         paddingHorizontal: 20,
-        paddingTop: 16,
-        paddingBottom: 16,
-        backgroundColor: "rgba(255,255,255,0.96)",
+        paddingVertical: 16,
+        backgroundColor: "#FFFFFF",
+        paddingTop: 10,
         borderBottomWidth: 1,
         borderBottomColor: "#E2E8F0",
         shadowColor: "#000",
-        shadowOpacity: 0.06,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
         shadowRadius: 8,
-        elevation: 4,
+        elevation: 2,
+    },
+    headerLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 15,
+        flex: 1,
+    },
+    headerTitle: {
+        fontSize: 26,
+        fontFamily: "Pacifico-Regular",
+        color: "#084F8C",
+        letterSpacing: -0.5,
     },
     backButton: {
-        position: "absolute",
-        left: 20,
         padding: 12,
         borderRadius: 30,
         backgroundColor: "#F8FAFC",
@@ -323,12 +363,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 6,
         elevation: 3,
-    },
-    headerTitle: {
-        fontSize: 22,
-        fontWeight: "700",
-        color: "#084F8C",
-        letterSpacing: -0.5,
     },
     tabBar: {
         flexDirection: "row",

@@ -145,7 +145,7 @@ export default function CourseDetailScreen() {
 
   const handleConfirmGoToWallet = () => {
     setShowConfirmModal(false);
-    navigation.navigate("Wallet");
+    navigation.navigate("DesignerWallet");
   };
 
   const handleCancelGoToWallet = () => {

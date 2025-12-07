@@ -6,16 +6,14 @@ import {
   Pressable,
   FlatList,
   Modal,
-  Dimensions,
   ScrollView,
-  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import styles from "./TransactionHistoryScreen.styles";
 
 const TABS = ["All", "Deposits", "Expenses", "Pending"];
-const screenWidth = Dimensions.get("window").width;
 
 export default function TransactionHistoryScreen() {
   const navigation = useNavigation();
@@ -192,14 +190,16 @@ export default function TransactionHistoryScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        >
-          <Icon name="arrow-back" size={24} color="#084F8C" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Transaction History</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerLeft}>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Icon name="arrow-back" size={24} color="#084F8C" />
+          </Pressable>
+          <Text style={styles.headerTitle}>Transaction History</Text>
+          <View style={{ width: 24 }} />
+        </View>
       </View>
 
       {/* Summary */}
@@ -430,209 +430,3 @@ export default function TransactionHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center", // căn giữa tuyệt đối
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-
-  backButton: {
-    position: "absolute",
-    left: 20,
-    padding: 12, // vùng chạm lớn hơn
-    borderRadius: 30,
-    backgroundColor: "#F8FAFC",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-
-  headerTitle: {
-    fontSize: 26,
-    fontFamily: "Pacifico-Regular",
-    color: "#084F8C",
-    letterSpacing: -0.5,
-  },
-
-  summaryBox: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#FFFFFF",
-    margin: 20,
-    borderRadius: 20,
-    paddingVertical: 16,
-    shadowColor: "#084F8C",
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 8,
-    borderWidth: 2,
-    borderColor: "#E0E7FF",
-  },
-  summaryItem: { alignItems: "center", flex: 1 },
-  summaryLabel: {
-    fontSize: 12,
-    color: "#94A3B8",
-    marginBottom: 4,
-    fontWeight: "600",
-  },
-  summaryValue: { fontSize: 16, fontWeight: "700" },
-  divider: { width: 1, backgroundColor: "#E0E7FF", marginHorizontal: 8 },
-
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    marginHorizontal: 20,
-    marginBottom: 10,
-    overflow: "hidden",
-    elevation: 2,
-  },
-  tab: { flex: 1, paddingVertical: 12, alignItems: "center" },
-  tabText: { fontSize: 14, color: "#64748B", fontWeight: "600" },
-  tabTextActive: { color: "#084F8C" },
-  tabIndicator: {
-    position: "absolute",
-    bottom: 0,
-    width: screenWidth / 4,
-    height: 3,
-    backgroundColor: "#084F8C",
-  },
-
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#084F8C",
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    elevation: 6,
-  },
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#1E293B",
-    marginBottom: 2,
-  },
-  cardDescription: { fontSize: 13, color: "#94A3B8", marginBottom: 2 },
-  cardDate: { fontSize: 12, color: "#64748B" },
-  cardCode: { fontSize: 11, color: "#94A3B8", marginTop: 2 },
-  amount: { fontSize: 15, fontWeight: "700" },
-  badge: {
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginTop: 4,
-  },
-  badgeText: { fontSize: 10, fontWeight: "600" },
-
-  emptyBox: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-  },
-  emptyText: { fontSize: 14, color: "#94A3B8", marginTop: 12 },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 24,
-    maxHeight: "85%",
-    shadowColor: "#084F8C",
-    shadowOpacity: 0.15,
-    shadowRadius: 25,
-    elevation: 12,
-    borderWidth: 1,
-    borderColor: "#E0E7FF",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E7FF",
-    paddingBottom: 12,
-  },
-  modalTitle: { fontSize: 20, fontWeight: "800", color: "#084F8C" },
-
-  modalIconSection: {
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  modalIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  modalLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#64748B",
-    marginBottom: 8,
-  },
-  modalAmount: { fontSize: 28, fontWeight: "700", color: "#1E293B" },
-
-  detailSection: {
-    backgroundColor: "#F8FAFF",
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E7FF",
-  },
-  detailLabel: { fontSize: 14, color: "#64748B", fontWeight: "500" },
-  detailValue: { fontSize: 14, color: "#1E293B", fontWeight: "600" },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
-  statusBadgeText: { fontSize: 12, fontWeight: "600" },
-
-  closeBtn: {
-    backgroundColor: "#084F8C",
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: "center",
-  },
-  closeBtnText: { color: "#FFF", fontWeight: "700", fontSize: 16 },
-});

@@ -96,7 +96,6 @@ export default function PaymentWebViewScreen() {
 
   const handleLoadEnd = () => {
     if (!isMounted.current) return;
-    // console.log('[PaymentWebView] Load ended');
   };
 
   const handleErrorBoundary = (error, errorInfo) => {

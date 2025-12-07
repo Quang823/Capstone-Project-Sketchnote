@@ -31,7 +31,7 @@ export const coursesStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#FFFFFF",
-    paddingTop: 60,
+    paddingTop: 40,
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
     shadowColor: "#000",

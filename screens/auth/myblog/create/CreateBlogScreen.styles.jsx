@@ -41,7 +41,7 @@ export const styles = StyleSheet.create({
 
   // Header with Gradient
   headerGradient: {
-    paddingTop: 60,
+    paddingTop: 40,
     paddingBottom: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },

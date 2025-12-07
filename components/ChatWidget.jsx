@@ -105,22 +105,13 @@ export default function ChatWidget({ visible, onClose }) {
     }, [visible, currentUserId]);
 
     const handleIncomingMessage = (message) => {
-
-
-        // ⚠️ BỎ QUA tin nhắn từ chính mình (đã được thêm vào UI trong handleSendMessage)
         if (message.senderId === currentUserId) {
-            console.log("⚠️ Skipping message from myself (already added optimistically)");
             return;
         }
-
-        // Chỉ xử lý tin nhắn từ RECEIVER_ID gửi cho mình
         if (message.senderId === RECEIVER_ID && message.receiverId === currentUserId) {
             setMessages((prev) => {
-                // Chống trùng lặp tin nhắn
                 const exists = prev.some((m) => {
-                    // Kiểm tra theo ID trước (chính xác nhất)
                     if (m.id && message.id && m.id === message.id) {
-                        console.log(`⚠️ Duplicate detected by ID: ${message.id}`);
                         return true;
                     }
 
@@ -133,9 +124,6 @@ export default function ChatWidget({ visible, onClose }) {
                         m.senderId === message.senderId &&
                         timeDiff < 500; // Giảm xuống 500ms để chính xác hơn
 
-                    if (contentMatch) {
-                        console.log(`⚠️ Duplicate detected by content+time (diff: ${timeDiff}ms)`);
-                    }
                     return contentMatch;
                 });
 
@@ -143,8 +131,6 @@ export default function ChatWidget({ visible, onClose }) {
 
                     return prev;
                 }
-
-                console.log("➕ Adding new message to UI");
 
                 // Thêm tin nhắn mới và sort lại để đảm bảo thứ tự đúng
                 return sortMessagesByTime([...prev, message]);

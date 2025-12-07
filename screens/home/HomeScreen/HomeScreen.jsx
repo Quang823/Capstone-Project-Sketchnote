@@ -29,6 +29,8 @@ import SidebarToggleButton from "../../../components/navigation/SidebarToggleBut
 import { styles, columns, CARD_GAP } from "./HomeScreen.styles";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
+import premiumAnimation from "../../../assets/Premium Gold.json";
+import diamondAnimation from "../../../assets/Diamond.json";
 import LazyImage from "../../../common/LazyImage";
 import * as offlineStorage from "../../../utils/offlineStorage";
 import TypeFloatText from "./TypeFloatText";
@@ -992,7 +994,7 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.iconButton}
-                onPress={() => navigation.navigate("Wallet")}
+                onPress={() => navigation.navigate("DesignerWallet")}
               >
                 <Icon name="account-balance-wallet" size={22} color="#1E40AF" />
               </TouchableOpacity>
@@ -1002,32 +1004,33 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => navigation.navigate("CreditScreen")}
               >
                 <View style={{ position: "relative" }}>
-                  <Icon name="stars" size={22} color="#FFD700" />
+                  <LottieView
+                    source={premiumAnimation}
+                    autoPlay
+                    loop
+                    style={{ width: 35, height: 35 }}
+                  />
                   {/* Credit Badge - You can add state for actual credit count */}
                   <View
                     style={{
                       position: "absolute",
-                      top: -8,
+                      top: -12,
                       right: -8,
-                      minWidth: 18,
-                      height: 18,
-                      borderRadius: 9,
-                      backgroundColor: "#6366F1",
+                      minWidth: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      backgroundColor: "#3375f0ff",
                       justifyContent: "center",
                       alignItems: "center",
-                      paddingHorizontal: 4,
+
                     }}
                   >
-                    <Text
-                      style={{
-                        color: "#FFF",
-                        fontSize: 9,
-                        fontWeight: "700",
-                      }}
-                      numberOfLines={1}
-                    >
-                      💎
-                    </Text>
+                    <LottieView
+                      source={diamondAnimation}
+                      autoPlay
+                      loop
+                      style={{ width: 25, height: 25 }}
+                    />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -1068,7 +1071,7 @@ export default function HomeScreen({ navigation }) {
           />
 
           {/* TABS */}
-          <View style={{ flexDirection: "row", paddingHorizontal: 16, marginBottom: 16, gap: 12 }}>
+          <View style={{ flexDirection: "row", paddingHorizontal: 16, marginBottom: 12, gap: 12 }}>
             <TouchableOpacity
               onPress={() => setActiveTab("cloud")}
               style={{

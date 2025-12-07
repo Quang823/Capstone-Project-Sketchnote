@@ -9,22 +9,27 @@ export const styles = StyleSheet.create({
     backgroundColor: "#F0F4F8",
   },
 
-  // Header với gradient xanh
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingVertical: 16,
     backgroundColor: "#FFFFFF",
+    paddingTop: 40,
     borderBottomWidth: 1,
-    borderBottomColor: "#E1E8ED",
-    shadowColor: "#1E40AF",
+    borderBottomColor: "#E2E8F0",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    flex: 1,
   },
   headerTitle: {
     fontSize: 26,
@@ -32,7 +37,6 @@ export const styles = StyleSheet.create({
     color: "#084F8C",
     letterSpacing: -0.5,
   },
-
   // Content
   content: {
     flex: 1,
