@@ -561,7 +561,7 @@ export const styles = StyleSheet.create({
     padding: 32,
     borderRadius: 24,
     width: "90%",
-    maxWidth: 420,
+    maxWidth: 550,
     alignItems: "center",
     elevation: 30,
     shadowColor: "#000",
@@ -612,7 +612,7 @@ export const styles = StyleSheet.create({
   },
   inputIcon1: {
     marginRight: 12,
-    bottom: 24,
+    bottom: 14,
   },
   modalInput: {
     flex: 1,

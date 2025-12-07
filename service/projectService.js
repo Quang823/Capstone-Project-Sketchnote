@@ -289,7 +289,7 @@ export const projectService = {
       throw error;
     }
   },
-  getUserProjectsPaged: async (pageNo = 0, pageSize = 4) => {
+  getUserProjectsPaged: async (pageNo = 0, pageSize = 8) => {
     try {
       const response = await projectAPIController.getUserProjectsPaged(pageNo, pageSize);
       const r = response?.data?.result ?? response?.data ?? {};

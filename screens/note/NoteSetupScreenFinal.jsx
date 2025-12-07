@@ -449,7 +449,7 @@ export default function NoteSetupScreen({ navigation, route }) {
               <Text style={styles.settingLabel}>Description</Text>
               <TextInput
                 style={styles.descriptionInput}
-                placeholder="Enter project description (optional)"
+                placeholder="Enter project description"
                 placeholderTextColor="#94a3b8"
                 value={noteDescription}
                 onChangeText={setNoteDescription}

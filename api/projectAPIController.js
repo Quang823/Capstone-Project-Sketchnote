@@ -61,7 +61,7 @@ export const projectAPIController = {
     try {
       const res = await privateApi.post(`/api/projects`, {
         name: projectData.name,
-        description: projectData.description || "Quick Note",
+        description: projectData.description || "Your project description",
         imageUrl: projectData.imageUrl || "",
         paperSize:
           projectData.orientation === "landscape" ? "LANDSCAPE" : "PORTRAIT",
@@ -77,8 +77,9 @@ export const projectAPIController = {
     try {
       const res = await privateApi.put(`/api/projects/${projectId}`, {
         name: projectData.name,
-        description: projectData.description || "",
+        description: projectData.description || "Your project description",
         imageUrl: projectData.imageUrl || "",
+        paperSize: projectData.paperSize,
       });
       return res;
     } catch (err) {

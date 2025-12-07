@@ -108,7 +108,7 @@ export default function App() {
                             style={{
                               position: "absolute",
                               right: 20,
-                              bottom: 90,
+                              bottom: 40,
                               zIndex: 50,
                             }}
                           >
