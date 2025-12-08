@@ -77,6 +77,9 @@ export default function GlobalSidebar() {
         case "profile":
           navigation.navigate("Profile");
           break;
+        case "policy":
+          navigation.navigate("Policy");
+          break;
         case "settings":
           navigation.navigate("Settings");
           break;
@@ -123,6 +126,9 @@ export default function GlobalSidebar() {
           break;
         case "profile":
           navigation.navigate("Profile");
+          break;
+        case "policy":
+          navigation.navigate("Policy");
           break;
         case "settings":
           navigation.navigate("Settings");
@@ -209,6 +215,7 @@ export default function GlobalSidebar() {
 
   const accountNavItems = [
     { icon: "person", label: "Profile", id: "profile", gradient: ["#6366F1", "#4F46E5"] },
+    { icon: "policy", label: "Policy", id: "policy", gradient: ["#64748B", "#475569"] },
     { icon: "settings", label: "Settings", id: "settings", gradient: ["#64748B", "#475569"] },
   ];
 
