@@ -10,6 +10,7 @@ import {
     KeyboardAvoidingView,
     Platform,
     Animated,
+    Image,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,10 +18,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { chatService } from "../service/chatService";
 import { webSocketService } from "../service/webSocketService";
 import { useToast } from "../hooks/use-toast";
-import { styles } from "./ChatWidget.styles";
+import styles from "./ChatWidget.styles";
 import { authService } from "../service/authService";
 
-const RECEIVER_ID = 8; // ID của người nhận (User A - Web)
+const RECEIVER_ID = 8;
 
 export default function ChatWidget({ visible, onClose }) {
     const [messages, setMessages] = useState([]);
@@ -30,8 +31,7 @@ export default function ChatWidget({ visible, onClose }) {
     const [wsConnected, setWsConnected] = useState(false);
     const [currentUserId, setCurrentUserId] = useState(null);
 
-    // Pagination states
-    const [currentPage, setCurrentPage] = useState(null); // null = chưa load
+    const [currentPage, setCurrentPage] = useState(null);
     const [totalPages, setTotalPages] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -40,15 +40,34 @@ export default function ChatWidget({ visible, onClose }) {
     const flatListRef = useRef(null);
     const { toast } = useToast();
     const slideAnim = useRef(new Animated.Value(500)).current;
+    const pulseAnim = useRef(new Animated.Value(1)).current;
 
-    // Helper function để sort tin nhắn theo thời gian
+    // Pulse animation cho status dot
+    useEffect(() => {
+        const pulse = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1.3,
+                    duration: 1000,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 1000,
+                    useNativeDriver: true,
+                }),
+            ])
+        );
+        pulse.start();
+        return () => pulse.stop();
+    }, []);
+
     const sortMessagesByTime = (messages) => {
         return [...messages].sort((a, b) =>
-            new Date(a.createdAt || a.timestamp) - new Date(b.createdAt || b.timestamp)
+            new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp)
         );
     };
 
-    // 1. Lấy User ID khi component mount
     useEffect(() => {
         const getUser = async () => {
             try {
@@ -63,25 +82,16 @@ export default function ChatWidget({ visible, onClose }) {
         getUser();
     }, []);
 
-    // 2. Quản lý WebSocket Connection
     useEffect(() => {
-        // Chỉ connect khi Widget hiện và đã có UserId
         if (visible && currentUserId) {
-
-            // Build WebSocket URL from API base URL (giống web)
             const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://sketchnote.litecsys.com/";
-            // URL gốc: https://sketchnote.litecsys.com/ws
             const wsUrl = apiUrl.replace(/\/$/, "") + "/ws";
 
             webSocketService.connect(
                 wsUrl,
                 () => {
-
                     setWsConnected(true);
-
-                    // Subscribe ngay khi connect thành công
                     const topic = `/queue/private/${currentUserId}`;
-
                     webSocketService.subscribe(topic, (msg) => {
                         handleIncomingMessage(msg);
                     });
@@ -91,12 +101,10 @@ export default function ChatWidget({ visible, onClose }) {
                 }
             );
         } else if (!visible) {
-            // Ngắt kết nối khi đóng widget để tiết kiệm tài nguyên
             webSocketService.disconnect();
             setWsConnected(false);
         }
 
-        // Cleanup khi unmount
         return () => {
             if (visible) {
                 webSocketService.disconnect();
@@ -115,34 +123,26 @@ export default function ChatWidget({ visible, onClose }) {
                         return true;
                     }
 
-                    // Fallback: kiểm tra theo content + senderId + timestamp (trong vòng 500ms)
                     const mTime = new Date(m.createdAt || m.timestamp).getTime();
                     const msgTime = new Date(message.createdAt || message.timestamp).getTime();
                     const timeDiff = Math.abs(mTime - msgTime);
 
                     const contentMatch = m.content === message.content &&
                         m.senderId === message.senderId &&
-                        timeDiff < 500; // Giảm xuống 500ms để chính xác hơn
+                        timeDiff < 500;
 
                     return contentMatch;
                 });
 
                 if (exists) {
-
                     return prev;
                 }
 
-                // Thêm tin nhắn mới và sort lại để đảm bảo thứ tự đúng
                 return sortMessagesByTime([...prev, message]);
             });
-
-            setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-            }, 100);
         }
     };
 
-    // Animation & Fetch History
     useEffect(() => {
         if (visible) {
             Animated.spring(slideAnim, {
@@ -152,10 +152,9 @@ export default function ChatWidget({ visible, onClose }) {
                 friction: 11,
             }).start();
 
-            // Reset pagination và fetch messages MỚI NHẤT
             setCurrentPage(null);
             setHasMore(true);
-            fetchMessages(null, false); // null = load trang cuối cùng
+            fetchMessages(null, false);
         } else {
             Animated.timing(slideAnim, {
                 toValue: 500,
@@ -170,27 +169,22 @@ export default function ChatWidget({ visible, onClose }) {
             if (!append) setLoading(true);
             else setLoadingMore(true);
 
-            // Nếu page = null, load trang đầu tiên để lấy totalPages
             const pageToLoad = page !== null ? page : 0;
             const response = await chatService.getMessagesByUserId(RECEIVER_ID, pageToLoad, PAGE_SIZE);
             const newMessages = response.content || [];
             const totalPagesFromAPI = response.totalPages || 0;
 
-
-            // Lần đầu load (page = null): load trang CUỐI CÙNG để lấy tin nhắn mới nhất
             if (page === null && totalPagesFromAPI > 0) {
                 const lastPage = totalPagesFromAPI - 1;
                 setTotalPages(totalPagesFromAPI);
 
-                // Load lại trang cuối cùng
                 const lastPageResponse = await chatService.getMessagesByUserId(RECEIVER_ID, lastPage, PAGE_SIZE);
                 const lastPageMessages = lastPageResponse.content || [];
 
                 setMessages(sortMessagesByTime(lastPageMessages));
                 setCurrentPage(lastPage);
-                setHasMore(lastPage > 0); // Còn trang cũ hơn để load không
+                setHasMore(lastPage > 0);
             } else {
-                // Load more: thêm tin nhắn cũ hơn
                 setTotalPages(totalPagesFromAPI);
 
                 if (append) {
@@ -200,10 +194,10 @@ export default function ChatWidget({ visible, onClose }) {
                 }
 
                 setCurrentPage(pageToLoad);
-                setHasMore(pageToLoad > 0); // Còn trang cũ hơn không
+                setHasMore(pageToLoad > 0);
             }
         } catch (error) {
-
+            console.error("Fetch messages error:", error);
         } finally {
             setLoading(false);
             setLoadingMore(false);
@@ -213,7 +207,6 @@ export default function ChatWidget({ visible, onClose }) {
     const loadMoreMessages = () => {
         if (!loadingMore && hasMore && currentPage !== null && currentPage > 0) {
             const previousPage = currentPage - 1;
-
             fetchMessages(previousPage, true);
         }
     };
@@ -231,14 +224,9 @@ export default function ChatWidget({ visible, onClose }) {
                 content: messageContent,
             };
 
-            // 1. Lưu DB
-
             const newMessage = await chatService.sendMessage(data);
-
-            // 2. Thêm tin nhắn vào UI ngay lập tức (giống web)
             setMessages((prev) => sortMessagesByTime([...prev, newMessage]));
 
-            // 3. Gửi WebSocket để người khác nhận được
             if (wsConnected) {
                 const wsMessage = {
                     senderId: newMessage.senderId,
@@ -246,17 +234,13 @@ export default function ChatWidget({ visible, onClose }) {
                     senderAvatarUrl: newMessage.senderAvatarUrl,
                     receiverId: newMessage.receiverId,
                     content: newMessage.content,
-                    timestamp: newMessage.createdAt  // ✅ Backend cần "timestamp"
+                    timestamp: newMessage.createdAt
                 };
 
                 webSocketService.send("/app/chat.private", wsMessage);
             } else {
                 console.warn("⚠️ WebSocket not connected");
             }
-
-            setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-            }, 100);
 
         } catch (error) {
             console.error("Send failed:", error);
@@ -273,41 +257,70 @@ export default function ChatWidget({ visible, onClose }) {
 
     const renderMessage = ({ item }) => {
         const isMyMessage = item.senderId !== RECEIVER_ID;
+        const avatarUrl = item.senderAvatarUrl;
 
         return (
             <View
                 style={[
-                    styles.messageContainer,
-                    isMyMessage ? styles.myMessageContainer : styles.theirMessageContainer,
+                    styles.messageRow,
+                    isMyMessage ? styles.messageRowMy : styles.messageRowTheir,
                 ]}
             >
-                <View
-                    style={[
-                        styles.messageBubble,
-                        isMyMessage ? styles.myMessageBubble : styles.theirMessageBubble,
-                    ]}
-                >
-                    <Text
-                        style={[
-                            styles.messageText,
-                            isMyMessage ? styles.myMessageText : styles.theirMessageText,
-                        ]}
-                    >
-                        {item.content}
-                    </Text>
+                {!isMyMessage && (
+                    <View style={styles.messageAvatar}>
+                        {avatarUrl ? (
+                            <Image
+                                source={{ uri: avatarUrl }}
+                                style={{ width: 34, height: 34, borderRadius: 17 }}
+                            />
+                        ) : (
+                            <Icon name="support-agent" size={22} color="rgba(70, 58, 237, 1)" />
+                        )}
+                    </View>
+                )}
 
-                    <Text
+                <View style={styles.messageContainer}>
+                    <View
                         style={[
-                            styles.messageTime,
-                            isMyMessage ? styles.myMessageTime : styles.theirMessageTime,
+                            styles.messageBubble,
+                            isMyMessage ? styles.myMessageBubble : styles.theirMessageBubble,
                         ]}
                     >
-                        {new Date(item.createdAt || item.timestamp).toLocaleTimeString('vi-VN', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        })}
-                    </Text>
+                        <Text
+                            style={[
+                                styles.messageText,
+                                isMyMessage ? styles.myMessageText : styles.theirMessageText,
+                            ]}
+                        >
+                            {item.content}
+                        </Text>
+
+                        <Text
+                            style={[
+                                styles.messageTime,
+                                isMyMessage ? styles.myMessageTime : styles.theirMessageTime,
+                            ]}
+                        >
+                            {new Date(item.createdAt || item.timestamp).toLocaleTimeString('vi-VN', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })}
+                        </Text>
+                    </View>
                 </View>
+
+                {isMyMessage && (
+                    <View style={styles.messageAvatar}>
+                        {avatarUrl ? (
+                            <Image
+                                source={{ uri: avatarUrl }}
+                                style={{ width: 34, height: 34, borderRadius: 17 }}
+                            />
+                        ) : (
+                            <Icon name="person" size={22} color="rgba(70, 58, 237, 1)" />
+                        )}
+                    </View>
+                )}
             </View>
         );
     };
@@ -326,24 +339,35 @@ export default function ChatWidget({ visible, onClose }) {
                         { transform: [{ translateY: slideAnim }] },
                     ]}
                 >
-                    {/* Header */}
-                    <LinearGradient colors={["#3B82F6", "#2563EB"]} style={styles.header}>
+                    {/* Header với Sketch branding */}
+                    <LinearGradient
+                        colors={["#5c66f6ff", "rgba(70, 58, 237, 1)", "rgba(55, 45, 205, 1)"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.header}
+                    >
                         <View style={styles.headerContent}>
                             <View style={styles.avatar}>
-                                <Icon name="person" size={20} color="#3B82F6" />
+                                <Icon name="draw" size={24} color="#5c66f6ff" />
                             </View>
                             <View style={styles.headerText}>
-                                <Text style={styles.headerTitle}>Chat Support</Text>
+                                <Text style={styles.headerTitle}>Sketch Support</Text>
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <View style={{
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: 4,
-                                        backgroundColor: wsConnected ? '#4ADE80' : '#EF4444',
-                                        marginRight: 6
-                                    }} />
+                                    <Animated.View
+                                        style={{
+                                            transform: [{ scale: pulseAnim }],
+                                        }}
+                                    >
+                                        <View style={{
+                                            width: 8,
+                                            height: 8,
+                                            borderRadius: 4,
+                                            backgroundColor: wsConnected ? '#10B981' : '#EF4444',
+                                            marginRight: 6
+                                        }} />
+                                    </Animated.View>
                                     <Text style={styles.headerSubtitle}>
-                                        {wsConnected ? "Online" : "Connecting..."}
+                                        {wsConnected ? "Always here to help" : "Connecting..."}
                                     </Text>
                                 </View>
                             </View>
@@ -356,8 +380,8 @@ export default function ChatWidget({ visible, onClose }) {
                     {/* Messages */}
                     {loading ? (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#3B82F6" />
-                            <Text style={styles.loadingText}>Loading...</Text>
+                            <ActivityIndicator size="large" color="#5c66f6ff" />
+                            <Text style={styles.loadingText}>Loading messages...</Text>
                         </View>
                     ) : (
                         <FlatList
@@ -365,22 +389,19 @@ export default function ChatWidget({ visible, onClose }) {
                             data={messages}
                             renderItem={renderMessage}
                             keyExtractor={(item, index) => {
-                                // Tạo unique key từ id + timestamp + index để tránh duplicate key warning
                                 const timestamp = item.createdAt || item.timestamp || '';
                                 return item.id ? `msg-${item.id}-${timestamp}` : `msg-temp-${index}-${timestamp}`;
                             }}
+                            inverted
                             contentContainerStyle={styles.messagesList}
                             showsVerticalScrollIndicator={false}
-                            onContentSizeChange={() =>
-                                flatListRef.current?.scrollToEnd({ animated: true })
-                            }
                             onEndReached={loadMoreMessages}
                             onEndReachedThreshold={0.5}
                             ListHeaderComponent={
                                 loadingMore ? (
                                     <View style={{ padding: 16, alignItems: 'center' }}>
-                                        <ActivityIndicator size="small" color="#3B82F6" />
-                                        <Text style={{ marginTop: 8, color: '#64748B', fontSize: 12 }}>
+                                        <ActivityIndicator size="small" color="#5c66f6ff" />
+                                        <Text style={{ marginTop: 8, color: '#64748B', fontSize: 12, fontWeight: '600' }}>
                                             Loading more messages...
                                         </Text>
                                     </View>
@@ -388,10 +409,10 @@ export default function ChatWidget({ visible, onClose }) {
                             }
                             ListEmptyComponent={
                                 <View style={styles.emptyContainer}>
-                                    <Icon name="chat-bubble-outline" size={48} color="#BFDBFE" />
-                                    <Text style={styles.emptyText}>No messages yet</Text>
+                                    <Icon name="brush" size={56} color="#C4B5FD" />
+                                    <Text style={styles.emptyText}>Start Sketching!</Text>
                                     <Text style={styles.emptySubtext}>
-                                        Start a conversation!
+                                        Send your first message to begin the conversation
                                     </Text>
                                 </View>
                             }
@@ -409,7 +430,7 @@ export default function ChatWidget({ visible, onClose }) {
                                     style={styles.input}
                                     value={inputText}
                                     onChangeText={setInputText}
-                                    placeholder="Type a message..."
+                                    placeholder="Sketch your message..."
                                     placeholderTextColor="#94A3B8"
                                     multiline
                                     maxLength={1000}
@@ -426,7 +447,7 @@ export default function ChatWidget({ visible, onClose }) {
                                     {sending ? (
                                         <ActivityIndicator size="small" color="#FFF" />
                                     ) : (
-                                        <Icon name="send" size={18} color="#FFF" />
+                                        <Icon name="send" size={20} color="#FFF" />
                                     )}
                                 </TouchableOpacity>
                             </View>
