@@ -134,4 +134,63 @@ export const authService = {
       throw new Error(message);
     }
   },
+  loginGoogle: async (code, redirectUri) => {
+    try {
+      const res = await authApiController.loginGoogle(code, redirectUri);
+      if (res?.data?.result) {
+        const { accessToken, refreshToken } = res.data.result;
+
+        await AsyncStorage.setItem("accessToken", accessToken);
+        await AsyncStorage.setItem("refreshToken", refreshToken);
+
+        try {
+          const decoded = jwtDecode(accessToken);
+          const roles = decoded?.realm_access?.roles || [];
+          await AsyncStorage.setItem("roles", JSON.stringify(roles));
+
+          // Return consistent structure with login
+          return { accessToken, refreshToken, roles };
+        } catch (decodeError) {
+          console.error("Error decoding token during Google login:", decodeError);
+          // Still return tokens even if decoding fails, but roles will be missing
+          return { accessToken, refreshToken, roles: [] };
+        }
+      }
+      throw new Error("Login failed. Token not received.");
+    } catch (err) {
+      console.error("Google Login Error:", err);
+      const message =
+        err.response?.data?.message || err.message || "Login failed.";
+      throw new Error(message);
+    }
+  },
+  // Login Google for mobile using idToken
+  loginGoogleMobile: async (idToken) => {
+    try {
+      const res = await authApiController.loginGoogleMobile(idToken);
+      if (res?.data?.result) {
+        const { accessToken, refreshToken } = res.data.result;
+
+        await AsyncStorage.setItem("accessToken", accessToken);
+        await AsyncStorage.setItem("refreshToken", refreshToken);
+
+        try {
+          const decoded = jwtDecode(accessToken);
+          const roles = decoded?.realm_access?.roles || [];
+          await AsyncStorage.setItem("roles", JSON.stringify(roles));
+
+          return { accessToken, refreshToken, roles };
+        } catch (decodeError) {
+          console.error("Error decoding token during Google mobile login:", decodeError);
+          return { accessToken, refreshToken, roles: [] };
+        }
+      }
+      throw new Error("Login failed. Token not received.");
+    } catch (err) {
+      console.error("Google Mobile Login Error:", err);
+      const message =
+        err.response?.data?.message || err.message || "Login failed.";
+      throw new Error(message);
+    }
+  },
 };

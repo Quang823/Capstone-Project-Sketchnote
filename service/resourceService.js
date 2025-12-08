@@ -90,5 +90,99 @@ export const resourceService = {
             error.response?.message || error.message || "Get resource project by user id failed.";
           throw new Error(message);
         }
-    }
+    },
+    /////////////////////////////////////////////////////////
+    createResourceVersion : async (resourceId,data)=>{
+        try {
+            const response = await resourceController.createResourceVersion(resourceId,data);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Create resource version failed.";
+          throw new Error(message);
+        }
+    },
+    getAllProductBuyDesigner : async (page,size,sortBy,sortDir,search,isArchived)=>{
+        try {
+            const response = await resourceController.getAllProductBuyDesigner(page,size,sortBy,sortDir,search,isArchived);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Get all product buy designer failed.";
+          throw new Error(message);
+        }
+    },
+    republishResourceVersionWhenStaffNotConfirm : async (versionId)=>{
+        try {
+            const response = await resourceController.republishResourceVersionWhenStaffNotConfirm(versionId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Republish resource version when staff not confirm failed.";
+          throw new Error(message);
+        }
+    },
+    archiveResourceTemplate : async (resourceTemplateId)=>{
+        try {
+            const response = await resourceController.archiveResourceTemplate(resourceTemplateId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Archive resource template failed.";
+          throw new Error(message);
+        }
+    },
+    unarchiveResourceVersion : async (resourceTemplateId)=>{
+        try {
+            const response = await resourceController.unarchiveResourceVersion(resourceTemplateId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Unarchive resource version failed.";
+          throw new Error(message);
+        }
+    },
+    deleteResourceVersion : async (versionId)=>{
+        try {
+            const response = await resourceController.deleteResourceVersion(versionId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Delete resource version failed.";
+          throw new Error(message);
+        }
+    },
+    pubicResourceVersion : async (versionId)=>{
+        try {
+            const response = await resourceController.pubicResourceVersion(versionId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Public resource version failed.";
+          throw new Error(message);
+        }
+    },
+
+    archiveResourceTemplate: async (resourceTemplateId) => {
+        try {
+            const response = await resourceController.archiveResourceTemplate(resourceTemplateId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Archive resource template failed.";
+          throw new Error(message);
+        }
+    },
+
+    unarchiveResourceTemplate: async (resourceTemplateId) => {
+        try {
+            const response = await resourceController.unarchiveResourceTemplate(resourceTemplateId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Unarchive resource template failed.";
+          throw new Error(message);
+        }
+    },
+
 }

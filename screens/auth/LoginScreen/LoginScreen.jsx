@@ -32,6 +32,23 @@ import { MotiView, MotiImage } from "moti";
 import LottieView from "lottie-react-native";
 import AnimatedBackground from "./AnimatedBackground";
 
+// Google Sign-In for native build (requires expo prebuild)
+// Will gracefully fail in Expo Go
+let GoogleSignin = null;
+let statusCodes = null;
+let isGoogleSignInAvailable = false;
+
+try {
+  const googleSignIn = require('@react-native-google-signin/google-signin');
+  GoogleSignin = googleSignIn.GoogleSignin;
+  statusCodes = googleSignIn.statusCodes;
+  isGoogleSignInAvailable = true;
+} catch (e) {
+  console.log('Google Sign-In not available (running in Expo Go?)');
+}
+
+import { authService } from "../../../service/authService";
+
 export default function LoginScreen({ onBack }) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -44,10 +61,97 @@ export default function LoginScreen({ onBack }) {
   const { width } = useWindowDimensions();
   const { login } = useContext(AuthContext);
 
-  // chỉ giữ animation cho button và icon (không đụng layout)
+  // Configure Google Sign-In (only if available)
+  useEffect(() => {
+    if (isGoogleSignInAvailable && GoogleSignin) {
+      try {
+        GoogleSignin.configure({
+          webClientId: '344952841102-b6movtu6pin8ps01m749irn85qo64acs.apps.googleusercontent.com',
+          offlineAccess: true,
+          scopes: ['profile', 'email'],
+        });
+      } catch (e) {
+        console.log('Failed to configure Google Sign-In:', e);
+      }
+    }
+  }, []);
+
+  // Handle Google Login
+  const handleGoogleLogin = async () => {
+    // Check if Google Sign-In is available (not in Expo Go)
+    if (!isGoogleSignInAvailable || !GoogleSignin) {
+      toast({
+        title: "Google Sign-In not available",
+        description: "Please use a development build (npx expo run:android)",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      // Check Play Services
+      await GoogleSignin.hasPlayServices();
+
+      // Sign in with Google
+      const userInfo = await GoogleSignin.signIn();
+
+      // Lấy idToken từ Google Sign-In
+      const idToken = userInfo?.data?.idToken || userInfo?.idToken;
+
+      if (!idToken) {
+        throw new Error('Failed to get ID token from Google');
+      }
+
+      console.log('✅ Got Google ID token');
+
+      // Call backend API với idToken
+      const loginResult = await authService.loginGoogleMobile(idToken);
+
+      toast({ title: "Login successfully! 🎉", variant: "success" });
+
+      const { roles } = loginResult;
+      if (roles.includes("DESIGNER")) {
+        navigation.navigate("DesignerDashboard");
+      } else {
+        navigation.navigate("Home");
+      }
+
+    } catch (error) {
+      console.error("Google Login Error:", error);
+
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        toast({
+          title: "Login cancelled",
+          description: "You cancelled the Google sign-in",
+          variant: "destructive"
+        });
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        toast({
+          title: "Sign in in progress",
+          variant: "destructive"
+        });
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        toast({
+          title: "Play Services not available",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Login failed",
+          description: error.message || "Failed to sign in with Google",
+          variant: "destructive"
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Animation variables
   const buttonScale = useSharedValue(1);
   const rotateIcon = useSharedValue(0);
-
   const animatedButtonStyle = useAnimatedStyle(() => ({
     transform: [{ scale: buttonScale.value }],
   }));
@@ -67,7 +171,7 @@ export default function LoginScreen({ onBack }) {
   const handlePasswordToggle = () => {
     rotateIcon.value = withTiming(rotateIcon.value + 180, { duration: 300 });
     setShowPassword((prev) => !prev);
-  };
+  }
 
   const handleLogin = async () => {
     if (!email || !password)
@@ -84,8 +188,6 @@ export default function LoginScreen({ onBack }) {
 
       const { roles } = loginResult;
       if (roles.includes("DESIGNER")) navigation.navigate("DesignerDashboard");
-      else if (roles.includes("CUSTOMER")) navigation.navigate("Home");
-      else if (isCustomer) navigation.navigate("Home");
       else navigation.navigate("Home");
     } catch (error) {
       toast({
@@ -99,10 +201,14 @@ export default function LoginScreen({ onBack }) {
   };
 
   const handleSocialLogin = (provider) => {
-    toast({
-      title: `Login with ${provider}`,
-      description: `This feature will be updated soon`,
-    });
+    if (provider === "Google") {
+      handleGoogleLogin();
+    } else {
+      toast({
+        title: `Login with ${provider}`,
+        description: `This feature will be updated soon`,
+      });
+    }
   };
 
   return (
