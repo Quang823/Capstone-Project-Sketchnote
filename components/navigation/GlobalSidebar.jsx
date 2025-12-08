@@ -77,6 +77,9 @@ export default function GlobalSidebar() {
         case "profile":
           navigation.navigate("Profile");
           break;
+        case "policy":
+          navigation.navigate("Policy");
+          break;
         case "settings":
           navigation.navigate("Settings");
           break;
@@ -123,6 +126,9 @@ export default function GlobalSidebar() {
           break;
         case "profile":
           navigation.navigate("Profile");
+          break;
+        case "policy":
+          navigation.navigate("Policy");
           break;
         case "settings":
           navigation.navigate("Settings");
@@ -186,29 +192,30 @@ export default function GlobalSidebar() {
   ];
 
   const designerAccountItems = [
-    { icon: "account-balance-wallet", label: "Designer Wallet", id: "wallet", gradient: ["#14B8A6", "#0D9488"] },
+    { icon: "account-balance-wallet", label: "Wallet", id: "wallet", gradient: ["#14B8A6", "#0D9488"] },
     { icon: "person", label: "Profile", id: "profile", gradient: ["#6366F1", "#4F46E5"] },
   ];
 
   const mainItems = [
-    { icon: "home", label: "Home", id: "home", gradient: ["#3B82F6", "#2563EB"] },
+    { icon: "home", label: "Workspace", id: "home", gradient: ["#3B82F6", "#2563EB"] },
     { icon: "school", label: "Courses", id: "courses", gradient: ["#8B5CF6", "#7C3AED"] },
     { icon: "menu-book", label: "My Courses", id: "myCourses", gradient: ["#10B981", "#059669"] },
     { icon: "photo-library", label: "Gallery", id: "gallery", gradient: ["#EC4899", "#DB2777"] },
   ];
 
   const storeItems = [
-    { icon: "store", label: "Resource Store", id: "store", gradient: ["#F59E0B", "#D97706"] },
+    { icon: "store", label: "Marketplace", id: "store", gradient: ["#F59E0B", "#D97706"] },
     { icon: "receipt-long", label: "Order History", id: "orderHistory", gradient: ["#14B8A6", "#0D9488"] },
   ];
 
   const blogItems = [
-    { icon: "dynamic-feed", label: "All Blogs", id: "blogAll", gradient: ["#6366F1", "#4F46E5"] },
+    { icon: "dynamic-feed", label: "Blogs", id: "blogAll", gradient: ["#6366F1", "#4F46E5"] },
     { icon: "person-outline", label: "My Blogs", id: "blogMine", gradient: ["#EF4444", "#DC2626"] },
   ];
 
   const accountNavItems = [
     { icon: "person", label: "Profile", id: "profile", gradient: ["#6366F1", "#4F46E5"] },
+    { icon: "policy", label: "Policy", id: "policy", gradient: ["#64748B", "#475569"] },
     { icon: "settings", label: "Settings", id: "settings", gradient: ["#64748B", "#475569"] },
   ];
 
@@ -555,7 +562,7 @@ export default function GlobalSidebar() {
               {renderSectionTitle("DESIGNER")}
               {designerMainItems.map(renderNavItem)}
 
-              {renderSectionTitle("WORKSPACE")}
+              {renderSectionTitle("RESOURCE")}
               {designerWorkspaceItems.map(renderNavItem)}
 
               {renderSectionTitle("ACCOUNT")}
@@ -587,9 +594,7 @@ export default function GlobalSidebar() {
               {blogItems.map(renderNavItem)}
 
               {renderSectionTitle("SETTINGS")}
-              {accountNavItems
-                .filter((i) => i.id !== "profile")
-                .map(renderNavItem)}
+              {accountNavItems.map(renderNavItem)}
             </>
           )}
         </ScrollView>

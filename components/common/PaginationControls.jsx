@@ -17,7 +17,7 @@ export default function PaginationControls({
             alignItems: 'center',
             paddingHorizontal: 16,
             paddingVertical: 12,
-            marginBottom: hasShared ? 24 : 80,
+            marginBottom: hasShared ? 30 : 30,
             gap: 12,
         }}>
             {/* Previous Button */}

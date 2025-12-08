@@ -15,7 +15,6 @@ import ResourceStoreScreen from "../screens/store/ResourceStoreScreen/ResourceSt
 import ResourceDetailScreen from "../screens/store/ResourceDetailScreen/ResourceDetailScreen";
 import CartScreen from "../screens/store/CartScreen/CartScreen";
 import CheckoutScreen from "../screens/store/CheckoutScreen/CheckoutScreen";
-import WalletScreen from "../screens/store/WalletScreen/WalletScreen";
 import MyBlogScreen from "../screens/auth/myblog/MyBlogScreen";
 import CreateBlogScreen from "../screens/auth/myblog/create/CreateBlogScreen";
 import UpdateBlogScreen from "../screens/auth/myblog/create/UpdateBlogScreen";
@@ -29,7 +28,6 @@ import TransactionHistoryScreen from "../screens/store/Transaction/TransactionHi
 import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
 import OrderSuccessScreen from "../screens/store/ResourceStoreScreen/Payment/OrderSuccessScreen";
 import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen";
-import DesignerHomeScreen2 from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen2";
 import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/DesignerProductsScreen";
 import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
 import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
@@ -43,6 +41,7 @@ import ChatScreen from "../screens/chat/ChatScreen";
 import CreditScreen from "../screens/credit/CreditScreen";
 import CreditTransactionHistoryScreen from "../screens/credit/CreditTransactionHistoryScreen";
 import WithdrawalHistoryScreen from "../screens/designer/WithdrawalHistoryScreen/WithdrawalHistoryScreen";
+import SketchNotePolicy from "../screens/policy/SketchNotePolicy";
 
 const Stack = createNativeStackNavigator();
 
@@ -72,7 +71,6 @@ export default function AppNavigator() {
       <Stack.Screen name="ResourceDetail" component={ResourceDetailScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
-      <Stack.Screen name="Wallet" component={WalletScreen} />
       <Stack.Screen name="CreditScreen" component={CreditScreen} />
       <Stack.Screen name="CreditTransactionHistory" component={CreditTransactionHistoryScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
@@ -106,7 +104,7 @@ export default function AppNavigator() {
       />
 
       {/* Designer Screens */}
-      <Stack.Screen name="DesignerDashboard" component={DesignerHomeScreen2} />
+      <Stack.Screen name="DesignerDashboard" component={DesignerHomeScreen} />
       <Stack.Screen
         name="DesignerProducts"
         component={DesignerProductsScreen}
@@ -127,6 +125,7 @@ export default function AppNavigator() {
 
       <Stack.Screen name="DesignerWallet" component={DesignerWalletScreen} />
       <Stack.Screen name="WithdrawalHistory" component={WithdrawalHistoryScreen} />
+      <Stack.Screen name="Policy" component={SketchNotePolicy} />
     </Stack.Navigator>
   );
 }

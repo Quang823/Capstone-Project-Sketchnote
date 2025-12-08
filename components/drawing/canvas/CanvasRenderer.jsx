@@ -125,7 +125,6 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     realtimeText,
     onSelectImage,
     imageRefs,
-    hasRuler = false,
     backgroundColor = "#FFFFFF", // 👈 Add backgroundColor prop
     pageTemplate = "blank", // 👈 Add template prop
     backgroundImageUrl = null, // 👈 Add backgroundImageUrl prop
@@ -700,6 +699,21 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       let path = pathCacheRef.current.get(cacheKey);
       if (!path) {
         path = makePathFromPoints(s.points);
+        // ✅ FIX: Limit cache size to prevent memory leak
+        const MAX_PATH_CACHE_SIZE = 500;
+        if (pathCacheRef.current.size >= MAX_PATH_CACHE_SIZE) {
+          // Remove oldest entries (first 100)
+          const keysToDelete = Array.from(pathCacheRef.current.keys()).slice(0, 100);
+          keysToDelete.forEach(k => {
+            try {
+              const oldPath = pathCacheRef.current.get(k);
+              if (oldPath && typeof oldPath.delete === "function") {
+                oldPath.delete(); // Dispose Skia Path object
+              }
+            } catch { }
+            pathCacheRef.current.delete(k);
+          });
+        }
         pathCacheRef.current.set(cacheKey, path);
       }
       let strokeColor = s.color || "#000000";
@@ -1386,7 +1400,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
           const basePath = makePathFromPoints(
             // Khi có thước, bỏ smoothing để preview bám cạnh thước thẳng tuyệt đối
-            hasRuler ? currentPoints : smoothPoints(currentPoints, dynamicStab)
+            smoothPoints(currentPoints, dynamicStab)
           );
           const effWidth = computeEffectiveWidth(
             toolWidth,
@@ -1433,9 +1447,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
           if (tool === "airbrush") {
             const baseDots = makeSprayDots(
-              hasRuler
-                ? currentPoints
-                : smoothPoints(currentPoints, dynamicStab),
+              smoothPoints(currentPoints, dynamicStab),
               Math.min(1, airbrushDensity * 1.0),
               airbrushSpread,
               Math.max(4, effWidth)

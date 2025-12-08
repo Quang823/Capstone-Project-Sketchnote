@@ -32,7 +32,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/logo.png"
+      "enabled": false
     },
 
     "extra": {

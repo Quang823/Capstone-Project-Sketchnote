@@ -16,6 +16,7 @@ import { projectService } from "../../../service/projectService";
 import { authService } from "../../../service/authService";
 import { creditService } from "../../../service/creditService";
 import Toast from "react-native-toast-message";
+import LottieView from "lottie-react-native";
 
 export default function HeaderToolbar({
   onBack,
@@ -28,6 +29,7 @@ export default function HeaderToolbar({
   projectId,
   onAIChat,
   onRefreshCredit,
+  onHistory,
 }) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -118,11 +120,21 @@ export default function HeaderToolbar({
         <View style={[styles.row, { gap: 12 }]}>
           {renderButton("arrow-back", onBack, Ionicons)}
           {renderButton("person-add-outline", () => setInviteVisible(true), Ionicons)}
+
           {renderButton("camera-outline", onCamera, Ionicons)}
-          {onAIChat && creditBalance !== null && creditBalance >= 5 && renderButton("auto-awesome", onAIChat, MaterialIcons)}
+          {onAIChat && creditBalance !== null && creditBalance >= 5 && (
+            <TouchableOpacity onPress={onAIChat} style={styles.iconButton}>
+              <LottieView
+                source={require("../../../assets/AI loading.json")}
+                style={{ width: 35, height: 35 }}
+                autoPlay
+                loop
+              />
+            </TouchableOpacity>
+          )}
           {!loadingBalance && creditBalance !== null && creditBalance >= 5 && (
             <View style={styles.creditBadge}>
-              <MaterialIcons name="account-balance-wallet" size={14} color="#3B82F6" />
+              <MaterialIcons name="auto-awesome" size={14} color="#3B82F6" />
               <Text style={styles.creditText}>
                 You have {creditBalance} token{creditBalance !== 1 ? 's' : ''} left
               </Text>
@@ -133,6 +145,7 @@ export default function HeaderToolbar({
         {/* Right */}
         <View style={[styles.row, { gap: 12 }]}>
           {renderButton("share-outline", onExportPress, Ionicons)}
+          {renderButton("time-outline", onHistory, Ionicons)}
           {renderButton("preview", onPreview, MaterialIcons)}
           {renderButton(
             "layers",
@@ -151,7 +164,7 @@ export default function HeaderToolbar({
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Mời thành viên</Text>
+            <Text style={styles.modalTitle}>Invite member</Text>
             <View style={styles.inputRow}>
               <Text style={styles.label}>Email</Text>
               <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
@@ -214,7 +227,7 @@ export default function HeaderToolbar({
               </TouchableOpacity>
             ) : null}
             <View style={[styles.inputRow, { justifyContent: "space-between" }]}>
-              <Text style={styles.label}>Quyền chỉnh sửa</Text>
+              <Text style={styles.label}>Edit permission</Text>
               <Switch value={inviteEdit} onValueChange={setInviteEdit} />
             </View>
             <View style={{ flexDirection: "row", gap: 12, marginTop: 16 }}>
@@ -236,13 +249,13 @@ export default function HeaderToolbar({
                   }
                 }}
               >
-                <Text style={styles.actionText}>Gửi lời mời</Text>
+                <Text style={styles.actionText}>Send invite</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: "#E5E7EB" }]}
                 onPress={() => setInviteVisible(false)}
               >
-                <Text style={[styles.actionText, { color: "#111827" }]}>Đóng</Text>
+                <Text style={[styles.actionText, { color: "#111827" }]}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -15,7 +15,6 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 16,
     paddingBottom: 16,
     backgroundColor: "rgba(255,255,255,0.96)",
     borderBottomWidth: 1,
@@ -24,7 +23,13 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 4,
-    marginTop: 16,
+    paddingTop: 20,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    flex: 1,
   },
   headerButton: {
     width: 44,

@@ -26,7 +26,7 @@ export const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: CONTENT_PADDING,
-    paddingTop: 60,
+    paddingTop: 40,
   },
 
   // Header
@@ -34,8 +34,8 @@ export const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
-    paddingBottom: 16,
+    marginBottom: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#E0E7FF",
   },
@@ -561,7 +561,7 @@ export const styles = StyleSheet.create({
     padding: 32,
     borderRadius: 24,
     width: "90%",
-    maxWidth: 420,
+    maxWidth: 550,
     alignItems: "center",
     elevation: 30,
     shadowColor: "#000",
@@ -612,7 +612,7 @@ export const styles = StyleSheet.create({
   },
   inputIcon1: {
     marginRight: 12,
-    bottom: 24,
+    bottom: 14,
   },
   modalInput: {
     flex: 1,

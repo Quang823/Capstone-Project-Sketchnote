@@ -184,7 +184,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     pageLayers, // 👈 Changed from layers to pageLayers
     activeLayerId,
     setPageLayers, // 👈 Changed from setLayers to setPageLayers
-    rulerPosition,
     onColorPicked,
   },
   ref
@@ -1969,7 +1968,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                                 : updater,
                           }));
                         }, // 👈 Update page-specific layers
-                        rulerPosition,
                         onColorPicked,
                         scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
                         scrollYShared, // ✅ Animated scroll value

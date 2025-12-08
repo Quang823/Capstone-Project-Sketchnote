@@ -195,7 +195,6 @@ export default function LoginScreen({ onBack }) {
         description: error.message,
         variant: "destructive",
       });
-      console.log(error.message);
     } finally {
       setIsLoading(false);
     }

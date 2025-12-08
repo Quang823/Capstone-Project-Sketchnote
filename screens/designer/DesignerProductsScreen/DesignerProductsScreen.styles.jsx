@@ -23,6 +23,13 @@ export const designerProductsStyles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 4,
+    paddingTop: 40,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+    flex: 1,
   },
   headerTitle: {
     fontSize: 26,

@@ -34,14 +34,6 @@ import LassoSelectionBox from "../lasso/LassoSelectionBox";
 import useLassoTransform from "../../../hooks/useLassoTransform";
 
 import debounce from "lodash/debounce";
-import {
-  getRulerEdges,
-  projectPointOnSegment,
-  constrainToRulerBarrier,
-  distanceToSegment,
-  SNAP_THRESHOLD,
-} from "../ruler/rulerUtils.jsx";
-
 export default function GestureHandler(
   {
     page,
@@ -73,9 +65,6 @@ export default function GestureHandler(
     onSelectStroke,
     activeLayerId,
     onLiveUpdateStroke,
-    rulerPosition,
-    onRulerMoveStart,
-    onRulerMoveEnd,
     scrollRef, // 👈 Receive scrollRef
     scrollOffsetY = 0,
     scrollYShared, // ✅ Animated scroll value
@@ -87,12 +76,6 @@ export default function GestureHandler(
   },
   ref
 ) {
-  // Expose resetRulerLock function to parent components
-  useImperativeHandle(ref, () => ({
-    resetRulerLock: () => {
-      rulerLockRef.current = null;
-    },
-  }));
 
   // Track last scheduled requestAnimationFrame ID to cancel on unmount
   const rafIdRef = useRef(null);
@@ -368,8 +351,6 @@ export default function GestureHandler(
   const liveRef = useRef([]);
   const rafScheduled = useRef(false);
   const lastEraserPointRef = useRef(null);
-  // Ruler lock state: store only which edge to lock to ('top'|'bottom') to avoid stale coords
-  const rulerLockRef = useRef(null); // { edge: 'top'|'bottom' } or null
   const [selectedBox, setSelectedBox] = useState(selectedBoxProp);
   const [selectedId, setSelectedId] = useState(selectedIdProp);
   const [editorVisible, setEditorVisible] = useState(false);
@@ -410,40 +391,6 @@ export default function GestureHandler(
   }, [strokes, activeLayerId]);
 
   const [lassoPoints, setLassoPoints] = useState([]);
-
-  // Hàm xử lý snap point dựa trên ruler
-  const snapPointToRuler = (point) => {
-    if (!rulerPosition || !point) return point;
-
-    try {
-      // Chuyển đổi tọa độ từ màn hình sang canvas nếu cần
-      const canvasPoint = convertOverlayToCanvas
-        ? convertOverlayToCanvas(point, zoomState)
-        : point;
-
-      // QUAN TRỌNG: Luôn sử dụng vị trí mới nhất của ruler, không sử dụng cache
-      // Điều này đảm bảo rằng khi ruler được di chuyển, vị trí mới sẽ được sử dụng ngay lập tức
-      const canvasRuler = screenRulerToCanvasRuler(rulerPosition, false);
-      if (!canvasRuler) return point;
-
-      // Áp dụng snap to ruler với vị trí ruler đã chuyển đổi
-      const snappedPoint = snapToRuler(canvasPoint, canvasRuler);
-
-      // Nếu điểm bị snap
-      if (
-        snappedPoint.x !== canvasPoint.x ||
-        snappedPoint.y !== canvasPoint.y
-      ) {
-        return {
-          x: snappedPoint.x,
-          y: snappedPoint.y,
-          pressure: point.pressure || 0.5,
-        };
-      }
-    } catch (error) { }
-
-    return point;
-  };
   const [lassoSelection, setLassoSelection] = useState([]);
   const [isMovingLasso, setIsMovingLasso] = useState(false);
   const [isCommittingMove, setIsCommittingMove] = useState(false);
@@ -477,135 +424,6 @@ export default function GestureHandler(
 
   // Mirror zoom shared values into React state to avoid reading .value in render
   const [zoomMirror, setZoomMirror] = useState({ scale: 1, x: 0, y: 0 });
-
-  // Store ruler move callbacks in refs to avoid stale closures
-  const onRulerMoveStartRef = useRef(onRulerMoveStart);
-  const onRulerMoveEndRef = useRef(onRulerMoveEnd);
-
-  useEffect(() => {
-    onRulerMoveStartRef.current = onRulerMoveStart;
-    onRulerMoveEndRef.current = onRulerMoveEnd;
-  }, [onRulerMoveStart, onRulerMoveEnd]);
-
-  // Invalidate cached ruler conversion and clear lock whenever rulerPosition updates
-  useEffect(() => {
-    try {
-      invalidateRulerCache();
-      rulerLockRef.current = null;
-    } catch { }
-  }, [rulerPosition]);
-
-  // Reset ruler lock when ruler position changes significantly (indicating movement)
-  const lastRulerPositionForLock = useRef(null);
-  useEffect(() => {
-    if (rulerPosition && lastRulerPositionForLock.current) {
-      const prev = lastRulerPositionForLock.current;
-      const curr = rulerPosition;
-
-      // Check if ruler moved significantly (more than 5 pixels)
-      const dx = Math.abs(curr.x - prev.x);
-      const dy = Math.abs(curr.y - prev.y);
-      const dRot = Math.abs((curr.rotation || 0) - (prev.rotation || 0));
-
-      if (dx > 5 || dy > 5 || dRot > 1) {
-        // Ruler moved significantly, reset lock
-        rulerLockRef.current = null;
-      }
-    }
-
-    if (rulerPosition) {
-      lastRulerPositionForLock.current = { ...rulerPosition };
-    }
-  }, [rulerPosition]);
-
-  // Cache canvas ruler to avoid recalculating every frame
-  const canvasRulerCache = useRef(null);
-  const lastRulerPositionRef = useRef(null);
-
-  // convert ruler coordinates (from overlay / screen) -> canvas coordinates used by e.x/e.y
-  const screenRulerToCanvasRuler = (r, useCache = false) => {
-    // Mặc định KHÔNG sử dụng cache
-    if (!r) {
-      canvasRulerCache.current = null;
-      lastRulerPositionRef.current = null;
-      return null;
-    }
-
-    // QUAN TRỌNG: Luôn sử dụng vị trí mới nhất của ruler từ prop, không sử dụng cache
-    // Điều này đảm bảo rằng khi ruler được di chuyển, vị trí mới sẽ được sử dụng ngay lập tức
-    if (
-      useCache === false ||
-      !canvasRulerCache.current ||
-      !lastRulerPositionRef.current
-    ) {
-      // Không sử dụng cache khi useCache=false hoặc chưa có cache
-    } else {
-      // Kiểm tra xem vị trí ruler có thay đổi không
-      const positionChanged =
-        Math.abs(r.x - lastRulerPositionRef.current.x) > 0.1 ||
-        Math.abs(r.y - lastRulerPositionRef.current.y) > 0.1 ||
-        r.rotation !== lastRulerPositionRef.current.rotation ||
-        r.scale !== lastRulerPositionRef.current.scale;
-
-      // Nếu vị trí không thay đổi, trả về cache
-      if (!positionChanged) {
-        return canvasRulerCache.current;
-      }
-
-      // Log khi phát hiện thay đổi vị trí
-    }
-
-    // Log input values for debugging - LUÔN HIỂN THỊ GIÁ TRỊ MỚI NHẤT
-    const rawW = Number.isFinite(r.width) ? r.width : undefined;
-    const rawH = Number.isFinite(r.height) ? r.height : undefined;
-
-    let useWidth = Number.isFinite(rawW) && rawW > 0 ? rawW : page?.w ?? 600;
-    let useHeight = Number.isFinite(rawH) && rawH > 0 ? rawH : 60;
-
-    const s = zoomMirror?.scale || 1;
-    const tx = zoomMirror?.x || 0;
-    const ty = zoomMirror?.y || 0;
-
-    const canvasX = (r.x - (page?.x ?? 0) - tx) / s;
-    const canvasY = (r.y - (page?.y ?? 0) - ty - (scrollOffsetY || 0)) / s;
-
-    const screenW = useWidth * (r.scale ?? 1);
-    const screenH = useHeight * (r.scale ?? 1);
-    const canvasW = screenW / s;
-    const canvasH = screenH / s;
-
-    const result = {
-      x: canvasX,
-      y: canvasY,
-      rotation: r.rotation ?? 0,
-      width: canvasW,
-      height: canvasH,
-      scale: 1,
-      strokeWidth: r.strokeWidth ?? 2,
-      _originalScreenPosition: { x: r.x, y: r.y }, // Keep original for debugging
-    };
-
-    // ✅ cache only the latest result, without blocking updates
-    canvasRulerCache.current = result;
-    lastRulerPositionRef.current = {
-      x: r.x,
-      y: r.y,
-      rotation: r.rotation ?? 0,
-      scale: r.scale ?? 1,
-      width: canvasW,
-      height: canvasH,
-      strokeWidth: r.strokeWidth ?? 2,
-    };
-
-    return result;
-  };
-
-  // Function to invalidate cache
-  const invalidateRulerCache = () => {
-    canvasRulerCache.current = null;
-    lastRulerPositionRef.current = null;
-  };
-
   useAnimatedReaction(
     () => ({
       s: zoomState?.scale?.value ?? 1,
@@ -614,7 +432,6 @@ export default function GestureHandler(
     }),
     (vals) => {
       runOnJS(setZoomMirror)({ scale: vals.s, x: vals.x, y: vals.y });
-      runOnJS(invalidateRulerCache)();
     }
   );
 
@@ -1340,96 +1157,6 @@ export default function GestureHandler(
       let py = e.y;
       const pressure = e.pressure ?? 0.5;
 
-      // Snap to ruler removed - no longer needed
-
-      // === defensive hit-test + RULER logic: chuyển screen -> canvas, tính cạnh, set lock, apply barrier ===
-      try {
-        if (rulerPosition && typeof screenRulerToCanvasRuler === "function") {
-          const canvasRuler = screenRulerToCanvasRuler(rulerPosition, false);
-          // debug (tạm)
-          // console.debug('[RULER] canvasRuler', canvasRuler);
-
-          if (canvasRuler) {
-            // compute edges once
-            const edges = getRulerEdges(canvasRuler);
-            if (edges && edges.topEdge && edges.bottomEdge) {
-              // distances from initial pointer to both edges
-              const dTop = distanceToSegment(
-                px,
-                py,
-                edges.topEdge.x1,
-                edges.topEdge.y1,
-                edges.topEdge.x2,
-                edges.topEdge.y2
-              );
-              const dBottom = distanceToSegment(
-                px,
-                py,
-                edges.bottomEdge.x1,
-                edges.bottomEdge.y1,
-                edges.bottomEdge.x2,
-                edges.bottomEdge.y2
-              );
-
-              const minD = Math.min(dTop, dBottom);
-              const snapThreshold =
-                typeof SNAP_THRESHOLD !== "undefined" ? SNAP_THRESHOLD : 30;
-              const isNearEdge = minD <= snapThreshold;
-
-              // Nếu pointer nằm bên trong vùng ruler bounding box + margin, treat as starting on/near ruler
-              const RULER_TOUCH_MARGIN = 8;
-              const rx = canvasRuler.x ?? 0;
-              const ry = canvasRuler.y ?? 0;
-              const rw = canvasRuler.width ?? canvasRuler.w ?? 0;
-              const rh = canvasRuler.height ?? canvasRuler.h ?? 0;
-              const insideRect =
-                px >= rx - RULER_TOUCH_MARGIN &&
-                px <= rx + rw + RULER_TOUCH_MARGIN &&
-                py >= ry - RULER_TOUCH_MARGIN &&
-                py <= ry + rh + RULER_TOUCH_MARGIN;
-
-              // set precise lock if very near an edge
-              if (isNearEdge && insideRect) {
-                rulerLockRef.current = {
-                  edge: dTop <= dBottom ? "top" : "bottom",
-                };
-              } else {
-                rulerLockRef.current = null;
-              }
-
-              // apply barrier/snap for first point (prevPoint = null)
-              try {
-                // Luôn lấy vị trí ruler mới nhất, không sử dụng cache
-                const latestCanvasRuler = screenRulerToCanvasRuler(
-                  rulerPosition,
-                  false
-                );
-                const constrained = constrainToRulerBarrier(
-                  { x: px, y: py },
-                  null,
-                  latestCanvasRuler || canvasRuler
-                );
-                if (
-                  constrained &&
-                  Number.isFinite(constrained.x) &&
-                  Number.isFinite(constrained.y)
-                ) {
-                  px = constrained.x;
-                  py = constrained.y;
-                }
-              } catch (errCon) {
-                // Silent fail - avoid console spam in gesture handlers
-              }
-
-              // debug info
-              // console.debug('[RULER] dTop,dBottom,minD,isNearEdge,lock', dTop, dBottom, minD, isNearEdge, rulerLockRef.current);
-            }
-          }
-        }
-      } catch (err) {
-        // Silent fail - avoid console spam in gesture handlers
-      }
-
       // 🎨 Eyedropper tool - pick color from stroke (trong pan gesture)
       if (tool === "eyedropper") {
         const visible = Array.isArray(allVisibleStrokes)
@@ -1749,10 +1476,6 @@ export default function GestureHandler(
                     (s) => s.id === validStrokes[i].id
                   );
                   if (globalIndex !== -1) {
-                    // Reset ruler lock khi xóa nét vẽ
-                    if (rulerLockRef.current) {
-                      rulerLockRef.current = null;
-                    }
                     onDeleteStroke(globalIndex);
                   }
                 }
@@ -1847,54 +1570,8 @@ export default function GestureHandler(
         stabilization: 0.2,
       };
 
-      // Apply ruler snapping / barrier
       let point = { x: e.x, y: e.y };
       const prevPoint = liveRef.current.at(-1) || null;
-
-      if (rulerLockRef.current && rulerPosition) {
-        try {
-          // Luôn lấy vị trí ruler mới nhất, không sử dụng cache
-          const canvasRuler = screenRulerToCanvasRuler(rulerPosition, false);
-          const edges = canvasRuler ? getRulerEdges(canvasRuler) : null;
-          const edgeSeg =
-            rulerLockRef.current.edge === "bottom"
-              ? edges?.bottomEdge
-              : edges?.topEdge;
-          if (edgeSeg) {
-            point = projectPointOnSegment(
-              point.x,
-              point.y,
-              edgeSeg.x1,
-              edgeSeg.y1,
-              edgeSeg.x2,
-              edgeSeg.y2
-            );
-          }
-        } catch (err) {
-          // Silent fail - avoid console spam in gesture handlers
-        }
-      } else if (rulerPosition && !["lasso", "eraser"].includes(tool)) {
-        try {
-          // Luôn lấy vị trí ruler mới nhất, không sử dụng cache
-          const canvasRuler = screenRulerToCanvasRuler(rulerPosition, false);
-          if (canvasRuler) {
-            const constrainedPoint = constrainToRulerBarrier(
-              point,
-              prevPoint,
-              canvasRuler
-            );
-            if (
-              constrainedPoint &&
-              Number.isFinite(constrainedPoint.x) &&
-              Number.isFinite(constrainedPoint.y)
-            ) {
-              point = constrainedPoint;
-            }
-          }
-        } catch (err) {
-          // Silent fail - avoid console spam in gesture handlers
-        }
-      }
 
       liveRef.current.push({
         x: point.x,
@@ -2068,9 +1745,6 @@ export default function GestureHandler(
       const livePath = canvasRef?.current?.livePath;
       if (livePath) livePath.reset();
 
-      // Clear ruler lock when stroke ends
-      rulerLockRef.current = null;
-
       const finalPoints = liveRef.current;
       liveRef.current = [];
       setCurrentPoints([]);
@@ -2128,10 +1802,6 @@ export default function GestureHandler(
           .map((m) => m.globalIndex)
           .sort((a, b) => b - a)
           .forEach((idx) => {
-            // Reset ruler lock khi xóa nhiều nét vẽ
-            if (rulerLockRef.current) {
-              rulerLockRef.current = null;
-            }
             onDeleteStroke?.(idx);
           });
 
@@ -2526,9 +2196,6 @@ export default function GestureHandler(
               .map((s, i) => (lassoSelection.includes(s.id) ? i : -1))
               .filter((i) => i !== -1)
               .sort((a, b) => b - a); // Sort descending để xóa từ cuối lên
-            if (indices.length > 0 && rulerLockRef.current) {
-              rulerLockRef.current = null;
-            }
             indices.forEach((i) => onDeleteStroke?.(i));
             setLassoSelection([]);
           }}
@@ -2537,9 +2204,6 @@ export default function GestureHandler(
               .map((s, i) => (lassoSelection.includes(s.id) ? i : -1))
               .filter((i) => i !== -1)
               .sort((a, b) => b - a); // Sort descending để xóa từ cuối lên
-            if (indices.length > 0 && rulerLockRef.current) {
-              rulerLockRef.current = null;
-            }
             indices.forEach((i) => onDeleteStroke?.(i));
             setLassoSelection([]);
           }}
@@ -2573,6 +2237,16 @@ export default function GestureHandler(
                 text: typeof s.text === "string" ? s.text : "",
               };
             }}
+            onMoveStart={() => {
+              // ✅ FIX: Capture origin position when move starts
+              const s = strokes.find((st) => st.id === selectedId);
+              if (s) {
+                dragOriginRef.current = {
+                  x: s.x ?? 0,
+                  y: s.y ?? 0,
+                };
+              }
+            }}
             onMove={(dx, dy) => {
               setSelectedBox((box) =>
                 box ? { ...box, x: box.x + dx, y: box.y + dy } : box
@@ -2587,6 +2261,20 @@ export default function GestureHandler(
                   );
                 });
               }
+            }}
+            onMoveEnd={(totalDx, totalDy) => {
+              // ✅ FIX: Commit final position to stroke when move ends
+              const index = strokes.findIndex((s) => s.id === selectedId);
+              if (index !== -1 && typeof onModifyStroke === "function") {
+                const origin = dragOriginRef.current;
+                if (origin) {
+                  const newX = origin.x + totalDx;
+                  const newY = origin.y + totalDy;
+                  onModifyStroke(index, { x: newX, y: newY });
+                }
+              }
+              dragOriginRef.current = null;
+              if (typeof setRealtimeText === "function") setRealtimeText(null);
             }}
             onResize={(corner, dx, dy) => {
               const snap = textResizeRef.current;

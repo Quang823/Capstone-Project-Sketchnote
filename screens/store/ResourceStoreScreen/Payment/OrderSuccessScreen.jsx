@@ -125,8 +125,8 @@ export default function OrderSuccessScreen() {
                 isPaymentSuccess
                   ? styles.iconCircleSuccess
                   : isPaymentFailed
-                  ? styles.iconCircleFailed
-                  : styles.iconCirclePending,
+                    ? styles.iconCircleFailed
+                    : styles.iconCirclePending,
               ]}
             >
               <Text style={styles.headerIcon}>
@@ -183,8 +183,8 @@ export default function OrderSuccessScreen() {
                       isPaymentSuccess
                         ? styles.statusSuccess
                         : isPaymentFailed
-                        ? styles.statusFailed
-                        : styles.statusPending,
+                          ? styles.statusFailed
+                          : styles.statusPending,
                     ]}
                   >
                     <Text
@@ -193,8 +193,8 @@ export default function OrderSuccessScreen() {
                         isPaymentSuccess
                           ? styles.statusTextSuccess
                           : isPaymentFailed
-                          ? styles.statusTextFailed
-                          : styles.statusTextPending,
+                            ? styles.statusTextFailed
+                            : styles.statusTextPending,
                       ]}
                     >
                       {order?.paymentStatus || "UNKNOWN"}
@@ -211,8 +211,8 @@ export default function OrderSuccessScreen() {
                       order?.orderStatus?.toUpperCase() === "CANCELLED"
                         ? styles.statusFailed
                         : order?.orderStatus?.toUpperCase() === "CONFIRMED"
-                        ? styles.statusPending
-                        : styles.statusSuccess,
+                          ? styles.statusPending
+                          : styles.statusSuccess,
                     ]}
                   >
                     <Text
@@ -221,8 +221,8 @@ export default function OrderSuccessScreen() {
                         order?.orderStatus?.toUpperCase() === "CANCELLED"
                           ? styles.statusTextFailed
                           : order?.orderStatus?.toUpperCase() === "CONFIRMED"
-                          ? styles.statusTextPending
-                          : styles.statusTextSuccess,
+                            ? styles.statusTextPending
+                            : styles.statusTextSuccess,
                       ]}
                     >
                       {order?.orderStatus || "UNKNOWN"}
@@ -263,7 +263,7 @@ export default function OrderSuccessScreen() {
                 {isPaymentFailed && (
                   <Pressable
                     style={styles.button}
-                    onPress={() => navigation.navigate("Wallet")}
+                    onPress={() => navigation.navigate("DesignerWallet")}
                   >
                     <LinearGradient
                       colors={["#10B981", "#059669"]}

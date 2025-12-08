@@ -29,7 +29,12 @@ export default function SubscriptionPlansScreen() {
   const [activePlanId, setActivePlanId] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [upgradeCheckData, setUpgradeCheckData] = useState(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState({ title: "", message: "" });
+  const [isInsufficientFunds, setIsInsufficientFunds] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
+  const errorScaleAnim = useRef(new Animated.Value(0.85)).current;
   useEffect(() => {
     const loadPlans = async () => {
       try {
@@ -54,6 +59,19 @@ export default function SubscriptionPlansScreen() {
       }).start();
     }
   }, [showConfirmModal]);
+
+  useEffect(() => {
+    if (showErrorModal) {
+      Animated.spring(errorScaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        friction: 6,
+        tension: 50,
+      }).start();
+    } else {
+      errorScaleAnim.setValue(0.85);
+    }
+  }, [showErrorModal]);
   const loadUserSubscriptions = async () => {
     try {
       const res = await subscriptionService.getUserSubscriptions();
@@ -88,6 +106,7 @@ export default function SubscriptionPlansScreen() {
       const res = await subscriptionService.createUserSubscription({
         planId: plan.planId,
         autoRenew: true,
+        confirmUpgrade: true,
       });
       Toast.show({
         type: "success",
@@ -96,15 +115,48 @@ export default function SubscriptionPlansScreen() {
       });
       await loadUserSubscriptions();
     } catch (e) {
-      Toast.show({ type: "error", text1: "Purchase failed", text2: e.message });
+      const msg = e.message || "";
+      setErrorMessage({ title: "Purchase failed", message: msg });
+      if (
+        msg.toLowerCase().includes("insufficient wallet balance") ||
+        msg.toLowerCase().includes("số dư ví không đủ")
+      ) {
+        setIsInsufficientFunds(true);
+      } else {
+        setIsInsufficientFunds(false);
+      }
+      setShowErrorModal(true);
     } finally {
       setBuyingPlanId(null);
     }
   };
 
-  const handleChoosePlan = (plan) => {
-    setSelectedPlan(plan);
-    setShowConfirmModal(true);
+  const handleChoosePlan = async (plan) => {
+    if (!plan?.planId) return;
+    if (buyingPlanId) return;
+
+    try {
+      // Call check upgrade API
+      const checkResult = await subscriptionService.checkUpgrade(plan.planId);
+
+      if (checkResult?.result) {
+        setUpgradeCheckData(checkResult.result);
+        setSelectedPlan(plan);
+        setShowConfirmModal(true);
+      } else {
+        setErrorMessage({
+          title: "Cannot proceed",
+          message: "Unable to check upgrade eligibility"
+        });
+        setShowErrorModal(true);
+      }
+    } catch (e) {
+      setErrorMessage({
+        title: "Check failed",
+        message: e.message
+      });
+      setShowErrorModal(true);
+    }
   };
 
   return (
@@ -196,16 +248,16 @@ export default function SubscriptionPlansScreen() {
                           isActivePlan
                             ? ["#136bb8ff", "#0251c7ff"]
                             : isPopular
-                            ? ["#5eadf2ff", "#1d7accff"]
-                            : ["#E0F2FE", "#BAE6FD"]
+                              ? ["#5eadf2ff", "#1d7accff"]
+                              : ["#E0F2FE", "#BAE6FD"]
                         }
                         style={[
                           styles.planCardCompact,
                           isActivePlan
                             ? styles.planCardActiveCompact
                             : isPopular
-                            ? styles.planCardPopularCompact
-                            : styles.planCardInactiveCompact,
+                              ? styles.planCardPopularCompact
+                              : styles.planCardInactiveCompact,
                         ]}
                       >
                         {/* Badge Popular */}
@@ -271,24 +323,20 @@ export default function SubscriptionPlansScreen() {
                         <TouchableOpacity
                           style={[
                             styles.chooseBtnCompact,
-                            hasActiveSubscription
-                              ? styles.chooseBtnDisabledCompact
-                              : isPopular
+                            isPopular
                               ? styles.chooseBtnPopularCompact
                               : styles.chooseBtnNormalCompact,
                           ]}
-                          disabled={!!hasActiveSubscription || !!buyingPlanId}
+                          disabled={!!buyingPlanId}
                           onPress={() => handleChoosePlan(plan)}
                         >
                           <Text
                             style={[
                               styles.chooseBtnTextCompact,
-                              hasActiveSubscription
-                                ? { color: "#9CA3AF" }
-                                : { color: "#136bb8ff" },
+                              { color: "#136bb8ff" },
                             ]}
                           >
-                            {isActivePlan ? "Current Plan" : "Choose Plan"}
+                            {isActivePlan ? "Manage Plan" : "Choose Plan"}
                           </Text>
                         </TouchableOpacity>
 
@@ -344,34 +392,130 @@ export default function SubscriptionPlansScreen() {
           >
             <View style={styles.topAccent} />
 
-            <Text style={styles.modalTitle}>Confirm Purchase</Text>
+            <Text style={styles.modalTitle}>
+              {upgradeCheckData?.hasActiveSubscription ? "Upgrade Plan" : "Confirm Purchase"}
+            </Text>
 
-            <Text style={styles.modalText}>
-              {selectedPlan?.price === 0
-                ? `Activate ${selectedPlan?.planName} plan?`
-                : `Buy ${selectedPlan?.planName} for ${(
+            {/* Warning message from API */}
+            {upgradeCheckData?.warningMessage && (
+              <View style={styles.warningBox}>
+                <Icon name="warning" size={24} color="#F59E0B" />
+                <Text style={styles.warningText}>
+                  {upgradeCheckData.warningMessage}
+                </Text>
+              </View>
+            )}
+
+            {/* Current and new plan details */}
+            {upgradeCheckData?.currentSubscription && (
+              <View style={styles.planDetailsBox}>
+                <Text style={styles.planDetailLabel}>Current Plan:</Text>
+                <Text style={styles.planDetailText}>
+                  {upgradeCheckData.currentSubscription.planName}
+                </Text>
+                <Text style={styles.planDetailSubtext}>
+                  {upgradeCheckData.currentSubscription.remainingDays} days remaining
+                </Text>
+              </View>
+            )}
+
+            {upgradeCheckData?.newPlan && (
+              <View style={styles.planDetailsBox}>
+                <Text style={styles.planDetailLabel}>New Plan:</Text>
+                <Text style={styles.planDetailText}>
+                  {upgradeCheckData.newPlan.planName}
+                </Text>
+                <Text style={styles.planDetailSubtext}>
+                  {upgradeCheckData.newPlan.price.toLocaleString("vi-VN")}đ for {upgradeCheckData.newPlan.durationDays} days
+                </Text>
+              </View>
+            )}
+
+            {/* Default message if no warning */}
+            {!upgradeCheckData?.warningMessage && (
+              <Text style={styles.modalText}>
+                {selectedPlan?.price === 0
+                  ? `Activate ${selectedPlan?.planName} plan?`
+                  : `Buy ${selectedPlan?.planName} for ${(
                     selectedPlan?.price ?? 0
                   ).toLocaleString("vi-VN")}đ / month?`}
-            </Text>
+              </Text>
+            )}
 
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancel}
-                onPress={() => setShowConfirmModal(false)}
+                onPress={() => {
+                  setShowConfirmModal(false);
+                  setUpgradeCheckData(null);
+                }}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.modalConfirm, buyingPlanId && { opacity: 0.7 }]}
-                disabled={!!buyingPlanId}
+                disabled={!!buyingPlanId || !upgradeCheckData?.canUpgrade}
                 onPress={async () => {
                   await confirmBuy(selectedPlan);
                   setShowConfirmModal(false);
+                  setUpgradeCheckData(null);
                 }}
               >
                 <Text style={styles.modalConfirmText}>
-                  {buyingPlanId ? "Processing..." : "Buy"}
+                  {buyingPlanId ? "Processing..." : upgradeCheckData?.hasActiveSubscription ? "Upgrade" : "Buy"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showErrorModal}
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View
+            style={[styles.modalContent, { transform: [{ scale: errorScaleAnim }] }]}
+          >
+            <View style={styles.errorIconContainer}>
+              <Icon name="error" size={56} color="#EF4444" />
+            </View>
+
+            <Text style={styles.errorTitle}>{errorMessage.title}</Text>
+
+            <Text style={styles.errorText}>{errorMessage.message}</Text>
+
+            <View style={{ flexDirection: "row", gap: 12, justifyContent: "center", width: "100%" }}>
+              {isInsufficientFunds && (
+                <TouchableOpacity
+                  style={[styles.errorButton, { backgroundColor: "#3B82F6" }]}
+                  onPress={() => {
+                    setShowErrorModal(false);
+                    navigation.navigate("DesignerWallet");
+                  }}
+                >
+                  <Text style={styles.errorButtonText}>Back to Wallet</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.errorButton,
+                  isInsufficientFunds && { backgroundColor: "#E5E7EB" },
+                ]}
+                onPress={() => setShowErrorModal(false)}
+              >
+                <Text
+                  style={[
+                    styles.errorButtonText,
+                    isInsufficientFunds && { color: "#374151" },
+                  ]}
+                >
+                  OK
                 </Text>
               </TouchableOpacity>
             </View>
@@ -391,7 +535,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#FFFFFF",
-    paddingTop: 60,
+    paddingTop: 40,
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
     shadowColor: "#000",
@@ -651,8 +795,8 @@ const styles = StyleSheet.create({
   },
 
   modalContent: {
-    width: "85%",
-    maxWidth: 360,
+    width: "92%",
+    maxWidth: 450,
     backgroundColor: "#fff",
     borderRadius: 20,
     padding: 22,
@@ -719,5 +863,93 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "700",
     fontSize: 15,
+  },
+
+  warningBox: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 14,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+
+  warningText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#92400E",
+    lineHeight: 20,
+  },
+
+  planDetailsBox: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+  },
+
+  planDetailLabel: {
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+
+  planDetailText: {
+    fontSize: 16,
+    color: "#0F172A",
+    fontWeight: "700",
+  },
+
+  planDetailSubtext: {
+    fontSize: 13,
+    color: "#475569",
+    marginTop: 2,
+  },
+
+  errorIconContainer: {
+    alignSelf: "center",
+    marginBottom: 16,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 50,
+    width: 80,
+    height: 80,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  errorTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    textAlign: "center",
+    color: "#DC2626",
+    marginBottom: 12,
+  },
+
+  errorText: {
+    fontSize: 15,
+    textAlign: "center",
+    color: "#64748B",
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+
+  errorButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    backgroundColor: "#EF4444",
+    alignSelf: "center",
+    minWidth: 120,
+  },
+
+  errorButtonText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+    textAlign: "center",
   },
 });

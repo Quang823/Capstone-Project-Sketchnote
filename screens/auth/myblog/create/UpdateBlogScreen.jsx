@@ -235,15 +235,15 @@ export default function UpdateBlogScreen({ route, navigation }) {
     }
   };
 
-
   // --- Loading State ---
   if (initialLoading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={{ marginTop: 16, fontSize: 16, color: "#6B7280" }}>
-          Loading blog data...
-        </Text>
+      <View style={styles.loadingContainer}>
+        <View style={styles.loadingCard}>
+          <ActivityIndicator size="large" color="#084F8C" />
+          <Text style={styles.loadingText}>Loading blog data...</Text>
+          <Text style={styles.loadingSubtext}>Please wait a moment</Text>
+        </View>
       </View>
     );
   }
@@ -251,103 +251,170 @@ export default function UpdateBlogScreen({ route, navigation }) {
   // --- Render ---
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header with Gradient */}
+
       <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={isTablet ? 28 : 24} color="#1F2937" />
-        </Pressable>
-        <Text style={styles.headerTitle}>✏️ Update Blog</Text>
+        <View style={styles.headerLeft}>
+          <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Icon name="arrow-back" size={30} color="#084F8C" />
+          </Pressable>
+
+          {/* Wrap hai dòng text vào một View */}
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Update Blog Post</Text>
+            <Text style={styles.headerSubtitle}>Make your changes and save</Text>
+          </View>
+        </View>
       </View>
+
 
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={styles.scrollContent}
       >
+        {/* Progress Indicator */}
+        <View style={styles.progressCard}>
+          <View style={styles.progressItem}>
+            <View style={[styles.progressIcon, { backgroundColor: title.trim() ? '#DCFCE7' : '#FEE2E2' }]}>
+              <Icon name={title.trim() ? 'check' : 'title'} size={20} color={title.trim() ? '#16A34A' : '#DC2626'} />
+            </View>
+            <Text style={styles.progressText}>Title</Text>
+          </View>
+          <View style={styles.progressDivider} />
+          <View style={styles.progressItem}>
+            <View style={[styles.progressIcon, { backgroundColor: summary.trim() ? '#DCFCE7' : '#FEE2E2' }]}>
+              <Icon name={summary.trim() ? 'check' : 'description'} size={20} color={summary.trim() ? '#16A34A' : '#DC2626'} />
+            </View>
+            <Text style={styles.progressText}>Summary</Text>
+          </View>
+          <View style={styles.progressDivider} />
+          <View style={styles.progressItem}>
+            <View style={[styles.progressIcon, { backgroundColor: imageUrl ? '#DCFCE7' : '#FEE2E2' }]}>
+              <Icon name={imageUrl ? 'check' : 'image'} size={20} color={imageUrl ? '#16A34A' : '#DC2626'} />
+            </View>
+            <Text style={styles.progressText}>Image</Text>
+          </View>
+          <View style={styles.progressDivider} />
+          <View style={styles.progressItem}>
+            <View style={[styles.progressIcon, { backgroundColor: contents.length > 0 ? '#DCFCE7' : '#FEE2E2' }]}>
+              <Icon name={contents.length > 0 ? 'check' : 'article'} size={20} color={contents.length > 0 ? '#16A34A' : '#DC2626'} />
+            </View>
+            <Text style={styles.progressText}>Content</Text>
+          </View>
+        </View>
+
         {/* Main Content - 2 columns on tablet */}
         <View style={styles.mainContent}>
           {/* Left Column - Basic Info */}
           <View style={styles.leftColumn}>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter an engaging title..."
-              placeholderTextColor="#9CA3AF"
-              value={title}
-              onChangeText={setTitle}
-            />
+            <View style={styles.inputCard}>
+              <View style={styles.inputHeader}>
+                <Icon name="title" size={20} color="#084F8C" />
+                <Text style={styles.inputLabel}>Blog Title</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter an engaging title..."
+                placeholderTextColor="#94A3B8"
+                value={title}
+                onChangeText={setTitle}
+              />
+              <Text style={styles.inputHint}>
+                {title.length}/100 characters
+              </Text>
+            </View>
 
-            <TextInput
-              style={[styles.input, { height: isTablet ? 140 : 80, textAlignVertical: "top" }]}
-              placeholder="Write a compelling summary..."
-              placeholderTextColor="#9CA3AF"
-              value={summary}
-              onChangeText={setSummary}
-              multiline
-            />
+            <View style={styles.inputCard}>
+              <View style={styles.inputHeader}>
+                <Icon name="description" size={20} color="#084F8C" />
+                <Text style={styles.inputLabel}>Summary</Text>
+              </View>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Write a compelling summary that captures attention..."
+                placeholderTextColor="#94A3B8"
+                value={summary}
+                onChangeText={setSummary}
+                multiline
+              />
+              <Text style={styles.inputHint}>
+                {summary.length}/500 characters
+              </Text>
+            </View>
           </View>
 
           {/* Right Column - Main Image */}
           <View style={styles.rightColumn}>
-            <View style={styles.imageSection}>
-              <Text style={styles.sectionLabel}>📸 Featured Image</Text>
+            <View style={styles.inputCard}>
+              <View style={styles.inputHeader}>
+                <Icon name="photo-camera" size={20} color="#084F8C" />
+                <Text style={styles.inputLabel}>Featured Image</Text>
+              </View>
               <ImageUploader
                 onUploaded={(url) => setImageUrl(url)}
                 existingImage={imageUrl}
               />
-            </View>
-          </View>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Content Sections */}
-        <View style={styles.contentSectionsHeader}>
-          <Text style={styles.sectionLabel}>📝 Content Sections</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ fontSize: isTablet ? 16 : 14, color: "#6B7280", fontWeight: "600", marginRight: 8 }}>
-              {contents.length} {contents.length === 1 ? 'Section' : 'Sections'}
-            </Text>
-            <View style={{
-              backgroundColor: '#FEF3C7',
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 12,
-            }}>
-              <Text style={{ fontSize: 12, color: '#92400E', fontWeight: '700' }}>
-                {contents.filter(c => c.id).length} Existing | {contents.filter(c => !c.id).length} New
+              <Text style={styles.inputHint}>
+                This image will be the main visual for your blog
               </Text>
             </View>
           </View>
         </View>
 
+        {/* Content Sections Header */}
+        <View style={styles.sectionHeaderCard}>
+          <View style={styles.sectionHeaderLeft}>
+            <View style={styles.sectionIconWrapper}>
+              <Icon name="article" size={24} color="#084F8C" />
+            </View>
+            <View>
+              <Text style={styles.sectionHeaderTitle}>Content Sections</Text>
+              <Text style={styles.sectionHeaderSubtitle}>
+                Add multiple sections to structure your blog
+              </Text>
+            </View>
+          </View>
+          <View style={styles.sectionStats}>
+            <View style={styles.statBadge}>
+              <Text style={styles.statNumber}>{contents.length}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={[styles.statBadge, { backgroundColor: '#DBEAFE' }]}>
+              <Text style={[styles.statNumber, { color: '#1E40AF' }]}>
+                {contents.filter(c => c.id).length}
+              </Text>
+              <Text style={[styles.statLabel, { color: '#1E40AF' }]}>Existing</Text>
+            </View>
+            <View style={[styles.statBadge, { backgroundColor: '#D1FAE5' }]}>
+              <Text style={[styles.statNumber, { color: '#065F46' }]}>
+                {contents.filter(c => !c.id).length}
+              </Text>
+              <Text style={[styles.statLabel, { color: '#065F46' }]}>New</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Content Cards */}
         <View style={styles.contentCardsContainer}>
           {contents.map((section, index) => (
             <View key={section.id || `new-${index}`} style={styles.contentCard}>
-              <View style={styles.contentHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={styles.contentIndex}>Section {index + 1}</Text>
+              {/* Card Header */}
+              <View style={styles.contentCardHeader}>
+                <View style={styles.contentCardLeft}>
+                  <View style={styles.sectionNumberBadge}>
+                    <Text style={styles.sectionNumberText}>{index + 1}</Text>
+                  </View>
+                  <Text style={styles.sectionTitle}>Section {index + 1}</Text>
                   {section.id ? (
-                    <View style={{
-                      backgroundColor: '#DBEAFE',
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 12,
-                    }}>
-                      <Text style={{ fontSize: 11, color: '#1E40AF', fontWeight: '700' }}>
-                        EXISTING
-                      </Text>
+                    <View style={styles.existingBadge}>
+                      <Icon name="cloud-done" size={12} color="#1E40AF" />
+                      <Text style={styles.existingBadgeText}>SAVED</Text>
                     </View>
                   ) : (
-                    <View style={{
-                      backgroundColor: '#D1FAE5',
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 12,
-                    }}>
-                      <Text style={{ fontSize: 11, color: '#065F46', fontWeight: '700' }}>
-                        NEW
-                      </Text>
+                    <View style={styles.newBadge}>
+                      <Icon name="fiber-new" size={12} color="#065F46" />
+                      <Text style={styles.newBadgeText}>NEW</Text>
                     </View>
                   )}
                 </View>
@@ -356,34 +423,46 @@ export default function UpdateBlogScreen({ route, navigation }) {
                     onPress={() => removeContentSection(index)}
                     style={styles.deleteButton}
                   >
-                    <Icon name="delete" size={isTablet ? 22 : 20} color="#EF4444" />
+                    <Icon name="delete-outline" size={22} color="#EF4444" />
                   </Pressable>
                 )}
               </View>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Section title (optional)..."
-                placeholderTextColor="#9CA3AF"
-                value={section.sectionTitle}
-                onChangeText={(text) =>
-                  updateContentSection(index, "sectionTitle", text)
-                }
-              />
+              {/* Section Title Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.fieldLabel}>Section Title</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., Introduction, Main Points, Conclusion..."
+                  placeholderTextColor="#94A3B8"
+                  value={section.sectionTitle}
+                  onChangeText={(text) =>
+                    updateContentSection(index, "sectionTitle", text)
+                  }
+                />
+              </View>
 
-              <TextInput
-                style={[styles.input, { height: isTablet ? 140 : 120, textAlignVertical: "top" }]}
-                placeholder="Write your section content here..."
-                placeholderTextColor="#9CA3AF"
-                value={section.content}
-                onChangeText={(text) =>
-                  updateContentSection(index, "content", text)
-                }
-                multiline
-              />
+              {/* Section Content Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.fieldLabel}>Section Content</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Write your section content here..."
+                  placeholderTextColor="#94A3B8"
+                  value={section.content}
+                  onChangeText={(text) =>
+                    updateContentSection(index, "content", text)
+                  }
+                  multiline
+                />
+                <Text style={styles.inputHint}>
+                  {section.content.length} characters
+                </Text>
+              </View>
 
-              <View style={styles.imageSection}>
-                <Text style={styles.imageLabel}>🖼️ Section Image (optional)</Text>
+              {/* Section Image */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.fieldLabel}>Section Image (Optional)</Text>
                 <ImageUploader
                   onUploaded={(url) =>
                     updateContentSection(index, "contentUrl", url)
@@ -395,28 +474,36 @@ export default function UpdateBlogScreen({ route, navigation }) {
           ))}
         </View>
 
-        {/* Add Section Button */}
-        <Pressable onPress={addContentSection} style={styles.addSectionButton}>
-          <Icon name="add-circle-outline" size={isTablet ? 24 : 20} color="#4F46E5" />
-          <Text style={styles.addSectionText}>Add Another Section</Text>
-        </Pressable>
+        {/* Bottom Action Buttons - Side by Side */}
+        <View style={styles.bottomActionsContainer}>
+          {/* Add Section Button */}
+          <Pressable onPress={addContentSection} style={styles.addSectionButtonRow}>
+            <Icon name="add-circle-outline" size={20} color="#084F8C" />
+            <Text style={styles.addSectionTextRow}>Add Section</Text>
+          </Pressable>
 
-        {/* Update Button */}
-        <View style={styles.submitButtonContainer}>
-          <Pressable onPress={handleUpdateBlog} disabled={loading}>
+          {/* Update Button */}
+          <Pressable
+            onPress={handleUpdateBlog}
+            disabled={loading}
+            style={styles.submitWrapperRow}
+          >
             <LinearGradient
-              colors={["#6366F1", "#8B5CF6"]}
+              colors={loading ? ["#94A3B8", "#64748B"] : ["#084F8C", "#06396b"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.submitButton}
+              style={styles.submitButtonRow}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" size={isTablet ? "large" : "small"} />
+                <>
+                  <ActivityIndicator color="#fff" size="small" />
+                  <Text style={styles.submitTextRow}>Updating...</Text>
+                </>
               ) : (
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Icon name="update" size={isTablet ? 24 : 20} color="#fff" style={{ marginRight: 8 }} />
-                  <Text style={styles.submitText}>Update Blog</Text>
-                </View>
+                <>
+                  <Icon name="check-circle" size={20} color="#fff" />
+                  <Text style={styles.submitTextRow}>Update Blog</Text>
+                </>
               )}
             </LinearGradient>
           </Pressable>

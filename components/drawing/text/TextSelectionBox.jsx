@@ -15,6 +15,8 @@ export default function TextSelectionBox({
   width,
   height,
   onMove, // (dx, dy) incremental deltas
+  onMoveStart, // () - called when drag starts
+  onMoveEnd, // (totalDx, totalDy) - called when drag ends with total delta
   onResize, // (corner, dx, dy)
   onResizeStart, // (corner)
   onResizeEnd, // ()
@@ -39,6 +41,8 @@ export default function TextSelectionBox({
   const framePendingRef = useRef(false);
   const rafIdRef = useRef(null);
   const pendingDeltaRef = useRef({ x: 0, y: 0 });
+  // Track total delta from gesture start for onMoveEnd
+  const totalDeltaRef = useRef({ x: 0, y: 0 });
 
   const dotSize = 10;
   const half = dotSize / 2;
@@ -110,14 +114,21 @@ export default function TextSelectionBox({
         draggingRef.current = true;
         // lastReportedRef is the last absolute position we used for diff calculations
         lastReportedRef.current = { ...startBoxRef.current };
-        // reset pending
+        // reset pending and total delta
         pendingDeltaRef.current = { x: 0, y: 0 };
+        totalDeltaRef.current = { x: 0, y: 0 };
         framePendingRef.current = false;
         if (rafIdRef.current) {
           cancelAnimationFrame(rafIdRef.current);
           rafIdRef.current = null;
         }
         startTime.current = Date.now();
+        // Notify parent that move started
+        try {
+          onMoveStart?.();
+        } catch (e) {
+          console.warn("onMoveStart error:", e);
+        }
       },
       onPanResponderMove: (_, g) => {
         const dx = g.moveX - startPos.current.x;
@@ -133,9 +144,12 @@ export default function TextSelectionBox({
         // compute incremental delta since lastReportedRef, accumulate to pending
         const diffX = newX - lastReportedRef.current.x;
         const diffY = newY - lastReportedRef.current.y;
-        // accumulate
+        // accumulate for throttled onMove
         pendingDeltaRef.current.x += diffX;
         pendingDeltaRef.current.y += diffY;
+        // accumulate total delta for onMoveEnd
+        totalDeltaRef.current.x += diffX;
+        totalDeltaRef.current.y += diffY;
         // move lastReportedRef forward so next diff is relative to this move
         lastReportedRef.current = { x: newX, y: newY };
 
@@ -170,7 +184,19 @@ export default function TextSelectionBox({
         // if it was a quick tap (tiny movement) interpret as edit/tap
         if (duration < 200 && dist < 3) {
           requestAnimationFrame(() => onEdit?.());
+        } else {
+          // ✅ FIX: Call onMoveEnd with total delta to commit position to stroke
+          const totalDx = totalDeltaRef.current.x;
+          const totalDy = totalDeltaRef.current.y;
+          if (Math.abs(totalDx) >= 0.5 || Math.abs(totalDy) >= 0.5) {
+            try {
+              onMoveEnd?.(totalDx, totalDy);
+            } catch (e) {
+              console.warn("onMoveEnd error:", e);
+            }
+          }
         }
+        totalDeltaRef.current = { x: 0, y: 0 };
 
         // ensure final sync with parent values (parent normally updates via onMove)
         lastReportedRef.current = { ...boxRef.current };
@@ -188,9 +214,18 @@ export default function TextSelectionBox({
               framePendingRef.current = false;
             }
             onMove?.(pd2.x, pd2.y);
-          } catch (e) {}
+          } catch (e) { }
+        }
+        // Also call onMoveEnd on terminate if there was meaningful movement
+        const totalDx = totalDeltaRef.current.x;
+        const totalDy = totalDeltaRef.current.y;
+        if (Math.abs(totalDx) >= 0.5 || Math.abs(totalDy) >= 0.5) {
+          try {
+            onMoveEnd?.(totalDx, totalDy);
+          } catch (e) { }
         }
         pendingDeltaRef.current = { x: 0, y: 0 };
+        totalDeltaRef.current = { x: 0, y: 0 };
         lastReportedRef.current = { ...boxRef.current };
       },
     })

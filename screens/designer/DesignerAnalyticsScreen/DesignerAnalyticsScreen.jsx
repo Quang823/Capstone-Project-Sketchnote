@@ -286,9 +286,11 @@ export default function DesignerAnalyticsScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <SidebarToggleButton iconColor="#1E40AF" iconSize={22} />
-          <Text style={styles.headerTitle}>Sales Analytics</Text>
-          <View style={{ width: 22 }} />
+          <View style={styles.headerLeft}>
+            <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+            <Text style={styles.headerTitle}>Sales Analytics</Text>
+          </View>
+          <View style={{ width: 40 }} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3B82F6" />
@@ -301,11 +303,12 @@ export default function DesignerAnalyticsScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <SidebarToggleButton iconColor="#1E40AF" iconSize={22} />
-        <Text style={styles.headerTitle}>Sales Analytics</Text>
-        <View style={{ width: 22 }} />
+        <View style={styles.headerLeft}>
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <Text style={styles.headerTitle}>Sales Analytics</Text>
+        </View>
+        <View style={{ width: 40 }} />
       </View>
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Date Range Selector */}
         <View style={styles.filterSection}>

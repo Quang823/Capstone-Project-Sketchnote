@@ -50,7 +50,6 @@ export const projectService = {
    * This function does NOT call the createPage API.
    */
   uploadPageToS3: async (projectId, pageNumber, dataObject) => {
-    // console.log(`☁️ [Service] Uploading page to S3: PageNumber=${pageNumber}`);
     const fileName = `${projectId}_page_${pageNumber}_${Date.now()}.json`;
 
     const presignData = await projectService.getPresign(fileName, "JSON");
@@ -71,13 +70,8 @@ export const projectService = {
    */
   createPage: async (pageData) => {
     try {
-      // console.log(
-      //   "🚀 [Service] Calling createPage API with payload:",
-      //   JSON.stringify(pageData, null, 2)
-      // );
       const response = await projectAPIController.createPage(pageData);
       if (response?.data?.result) {
-        // console.log("✅ [Service] createPage API call successful.");
         return response.data.result;
       }
       throw new Error("Invalid response from createPage API");
@@ -95,15 +89,41 @@ export const projectService = {
     const preferRemote = options.preferRemote === true;
     const skipLocal = options.skipLocal === true;
 
+    // Helper to fetch with retry on 403
+    const fetchWithRetry = async (url) => {
+      try {
+        return await projectService.getProjectFile(url, options);
+      } catch (error) {
+        // Check if error is 403 (Access Denied)
+        const is403 = error.message?.includes("403") || error.message?.includes("Access Denied");
+
+        if (is403 && url) {
+          try {
+            // Extract filename from URL (assuming it's the last part of the path)
+            // Example: .../projectId_page_1_timestamp.json?...
+            const fileName = decodeURIComponent(url.split("?")[0].split("/").pop());
+
+            if (fileName) {
+              const presignData = await projectService.getPresign(fileName, "JSON");
+              if (presignData?.strokeUrl) {
+                // Retry with new URL
+                return await projectService.getProjectFile(presignData.strokeUrl, options);
+              }
+            }
+          } catch (refreshError) {
+            console.error("❌ [Service] Failed to refresh URL:", refreshError);
+          }
+        }
+        throw error;
+      }
+    };
+
     try {
       if (preferRemote) {
-        const remoteData = await projectService.getProjectFile(
-          remoteUrl,
-          options
-        );
+        const remoteData = await fetchWithRetry(remoteUrl);
         if (remoteData) {
           try {
-            await offlineStorage.saveProjectLocally(localKey, remoteData);
+            await offlineStorage.saveProjectPageLocally(projectId, pageNumber, remoteData);
           } catch { }
         }
         return remoteData;
@@ -118,20 +138,17 @@ export const projectService = {
     }
 
     if (!skipLocal) {
-      const localData = await offlineStorage.loadProjectLocally(localKey);
+      const localData = await offlineStorage.loadProjectPageLocally(projectId, pageNumber);
       if (localData) {
         return localData;
       }
     }
 
     try {
-      const remoteData = await projectService.getProjectFile(
-        remoteUrl,
-        options
-      );
+      const remoteData = await fetchWithRetry(remoteUrl);
       if (remoteData) {
         try {
-          await offlineStorage.saveProjectLocally(localKey, remoteData);
+          await offlineStorage.saveProjectPageLocally(projectId, pageNumber, remoteData);
         } catch { }
       }
       return remoteData;
@@ -180,29 +197,54 @@ export const projectService = {
           (remoteProject?.pages || []).map((p) => [p.pageNumber, p])
         );
 
-        // 4. Load local data for pending pages
-        const localPagesData = [];
-        for (const key of projectKeys) {
-          const pageData = await offlineStorage.loadProjectLocally(key);
-          const pageNumber = parseInt(key.split("_")[2], 10);
-          if (pageData && !isNaN(pageNumber)) {
-            localPagesData.push({ pageNumber, dataObject: pageData });
+        // 4. Process pages in batches to save memory
+        const BATCH_SIZE = 2;
+        const processedKeys = [];
+
+        for (let i = 0; i < projectKeys.length; i += BATCH_SIZE) {
+          const batchKeys = projectKeys.slice(i, i + BATCH_SIZE);
+          const localPagesData = [];
+
+          // Load data for this batch only
+          for (const key of batchKeys) {
+            try {
+              const pageNumber = parseInt(key.split("_")[2], 10);
+              const pageData = await offlineStorage.loadProjectPageLocally(projectId, pageNumber);
+              if (pageData && !isNaN(pageNumber)) {
+                localPagesData.push({ pageNumber, dataObject: pageData });
+              }
+              processedKeys.push(key);
+            } catch (err) {
+              console.warn(`Failed to load local data for ${key}`, err);
+            }
           }
+
+          if (localPagesData.length === 0) continue;
+
+          // 5. Upload pending pages to S3 (Batch)
+          const uploadPromises = localPagesData.map((p) =>
+            projectService.uploadPageToS3(projectId, p.pageNumber, p.dataObject)
+          );
+
+          try {
+            const uploadedPages = await Promise.all(uploadPromises);
+
+            // 6. Merge remote pages with newly uploaded pages
+            uploadedPages.forEach((uploadedPage) => {
+              remotePagesMap.set(uploadedPage.pageNumber, {
+                pageNumber: uploadedPage.pageNumber,
+                strokeUrl: uploadedPage.url,
+              });
+            });
+          } catch (uploadErr) {
+            console.error(`Failed to upload batch for project ${projectId}`, uploadErr);
+            // Continue to next batch? Or stop? 
+            // If upload fails, we shouldn't update remotePagesMap for these pages.
+          }
+
+          // Explicitly clear data to free memory
+          localPagesData.length = 0;
         }
-
-        // 5. Upload pending pages to S3
-        const uploadPromises = localPagesData.map((p) =>
-          projectService.uploadPageToS3(projectId, p.pageNumber, p.dataObject)
-        );
-        const uploadedPages = await Promise.all(uploadPromises);
-
-        // 6. Merge remote pages with newly uploaded pages
-        uploadedPages.forEach((uploadedPage) => {
-          remotePagesMap.set(uploadedPage.pageNumber, {
-            pageNumber: uploadedPage.pageNumber,
-            strokeUrl: uploadedPage.url,
-          });
-        });
 
         const finalPagesList = Array.from(remotePagesMap.values());
         // 7. Call the final batch update API
@@ -213,7 +255,7 @@ export const projectService = {
         await projectService.createPage(payload);
 
         // 8. Clean up the sync queue for this project
-        for (const key of projectKeys) {
+        for (const key of processedKeys) {
           await offlineStorage.removeProjectFromSyncQueue(key);
         }
       } catch (error) {
@@ -239,7 +281,7 @@ export const projectService = {
       throw error;
     }
   },
-  getUserProjectsPaged: async (pageNo = 0, pageSize = 4) => {
+  getUserProjectsPaged: async (pageNo = 0, pageSize = 8) => {
     try {
       const response = await projectAPIController.getUserProjectsPaged(pageNo, pageSize);
       const r = response?.data?.result ?? response?.data ?? {};
@@ -325,7 +367,6 @@ export const projectService = {
       return await parseJsonInBackground(text);
     } catch (err) {
       if (err.name === "AbortError") {
-        //  console.log(`[Service] Fetch aborted for URL: ${url}`);
       } else {
         console.error("❌ Error loading JSON:", err);
       }

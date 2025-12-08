@@ -13,7 +13,7 @@ export const myCoursesStyles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
-    paddingTop: 60,
+    paddingTop: 40,
     borderBottomWidth: 0,
   },
   headerLeft: {
@@ -109,7 +109,7 @@ export const myCoursesStyles = StyleSheet.create({
 
   // Course Card
   courseCard: {
-     position: "relative",
+    position: "relative",
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -419,17 +419,17 @@ export const myCoursesStyles = StyleSheet.create({
     color: "#FFFFFF",
   },
   feedbackButtonTopRight: {
-  position: "absolute",
-  top: 10,
-  right: 10,
-  backgroundColor: "white",
-  padding: 6,
-  borderRadius: 20,
-  elevation: 3, // Android shadow
-  shadowColor: "#000", // iOS shadow
-  shadowOpacity: 0.15,
-  shadowOffset: { width: 0, height: 1 },
-  shadowRadius: 2,
-},
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "white",
+    padding: 6,
+    borderRadius: 20,
+    elevation: 3, // Android shadow
+    shadowColor: "#000", // iOS shadow
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+  },
 
 });

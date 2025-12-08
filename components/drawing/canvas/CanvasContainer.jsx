@@ -56,7 +56,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     onZoomChange,
     toolConfigs = {},
     eraserMode,
-    rulerPosition,
     scrollOffsetY = 0,
     scrollYShared, // ✅ Animated scroll value
     pageOffsetY = 0, // ✅ Page offset trong project
@@ -110,6 +109,35 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       } catch { }
     };
   }, []);
+
+  // ✅ FIX: Sync imageRefs with current strokes to remove stale references
+  useEffect(() => {
+    if (!Array.isArray(internalLayers)) return;
+
+    // Collect all current stroke IDs
+    const currentStrokeIds = new Set();
+    internalLayers.forEach(layer => {
+      if (Array.isArray(layer?.strokes)) {
+        layer.strokes.forEach(s => {
+          if (s?.id) currentStrokeIds.add(s.id);
+        });
+      }
+    });
+
+    // Remove refs for strokes that no longer exist
+    const refsToDelete = [];
+    imageRefs.current.forEach((_, id) => {
+      if (!currentStrokeIds.has(id)) {
+        refsToDelete.push(id);
+      }
+    });
+
+    refsToDelete.forEach(id => {
+      try {
+        imageRefs.current.delete(id);
+      } catch { }
+    });
+  }, [internalLayers]);
   const liveUpdateStroke = (strokeId, partial) => {
     const ref = imageRefs.current.get(strokeId);
     if (ref && typeof ref.setLiveTransform === "function") {
@@ -750,7 +778,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       };
 
       addStrokeInternal(newStroke);
-      // console.log("Image added:", newStroke);
     } catch (err) {
       console.error("Failed to add image:", err);
       Alert.alert("Lỗi ảnh", "Không thể đọc hoặc hiển thị ảnh này.");
@@ -1354,7 +1381,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             stabilization={activeConfig.stabilization}
             configByTool={toolConfigs}
             setRealtimeText={setRealtimeText}
-            rulerPosition={rulerPosition}
             scrollOffsetY={scrollOffsetY}
             scrollYShared={scrollYShared}
             pageOffsetY={pageOffsetY}
@@ -1390,7 +1416,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               page={page}
               canvasHeight={canvasHeight}
               shapeType={shapeType}
-              hasRuler={!!rulerPosition}
               backgroundColor={backgroundColor}
               pageTemplate={pageTemplate}
               backgroundImageUrl={backgroundImageUrl}

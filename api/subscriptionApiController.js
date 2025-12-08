@@ -10,5 +10,7 @@ export const subscriptionApiController = {
   getUserSubscriptions: async () => {
     return await privateApi.get("/api/users/me/subscriptions");
   },
-  
+  checkUpgrade: async (planId) => {
+    return await privateApi.get(`/api/users/me/subscriptions/check-upgrade?planId=${planId}`);
+  },
 };

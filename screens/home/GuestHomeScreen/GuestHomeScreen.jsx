@@ -235,7 +235,7 @@ export default function GuestHomeScreen({ navigation }) {
                                 source={require("../../../assets/cat.json")}
                                 autoPlay
                                 loop
-                                style={{ width: 80, height: 70, marginLeft: -10 }}
+                                style={{ width: 80, height: 70, marginLeft: -30 }}
                             />
                         </View>
                         <View style={styles.headerRight}>

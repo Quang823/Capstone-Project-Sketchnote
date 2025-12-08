@@ -272,8 +272,10 @@ export default function DesignerProductsScreen() {
     <View style={designerProductsStyles.container}>
       {/* Header */}
       <View style={designerProductsStyles.header}>
-        <SidebarToggleButton iconColor="#084F8C" iconSize={24} />
-        <Text style={designerProductsStyles.headerTitle}>Products</Text>
+        <View style={designerProductsStyles.headerLeft}>
+          <SidebarToggleButton iconColor="#084F8C" iconSize={26} />
+          <Text style={designerProductsStyles.headerTitle}>Products</Text>
+        </View>
         <View style={designerProductsStyles.headerActions}>
           <Pressable
             onPress={() => setShowFilterModal(true)}
