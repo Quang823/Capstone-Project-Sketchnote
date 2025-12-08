@@ -2,6 +2,7 @@
   "expo": {
     "name": "SketchNote",
     "slug": "SketchNoteApp",
+    "scheme": "sketchnoteapp",
     "version": "1.0.0",
     "orientation": "default",
     "icon": "./assets/logo.png",
@@ -33,6 +34,16 @@
     "web": {
       "favicon": "./assets/logo.png"
     },
+
+    "extra": {
+      "googleWebClientId": "344952841102-b6movtu6pin8ps01m749irn85qo64acs.apps.googleusercontent.com",
+      "googleAndroidClientId": "344952841102-0nv4upmksce529gvgigqanjftlo0m1p5.apps.googleusercontent.com",
+
+      "eas": {
+        "projectId": "ed0dcf01-092f-4444-98d8-4c2566156375"
+      }
+    },
+
     "plugins": [
       "expo-font",
       [
@@ -43,12 +54,8 @@
           "addAudioPermissions": false,
           "readOnly": true
         }
-      ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "ed0dcf01-092f-4444-98d8-4c2566156375"
-      }
-    }
+      ],
+      "expo-web-browser"
+    ]
   }
 }
