@@ -60,10 +60,7 @@ export default function BlogScreen() {
       const response = await blogService.getAllBlogs(0, 10);
 
       // ✅ FIX: Truy cập đúng cấu trúc dữ liệu từ API
-      // response có cấu trúc: { data: { code, message, result: { content: [...] } } }
       const data = response.result?.content || [];
-
-      //console.log("Fetched blogs:", data);
       setBlogs(data);
       setFilteredBlogs(data);
     } catch (error) {
