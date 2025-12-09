@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,9 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  Dimensions,
+  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -22,8 +25,10 @@ import loadingAnimation from "../../../assets/loading.json";
 import LottieView from "lottie-react-native";
 import Toast from "react-native-toast-message";
 import { feedbackService } from "../../../service/feedbackService";
-
-const ITEMS_PER_PAGE = 5;
+import { useToast } from "../../../hooks/use-toast";
+const ITEMS_PER_PAGE = 10; // Increased for better list view
+const screenWidth = Dimensions.get("window").width;
+const TABS = ["All", "Pending", "Completed", "Cancelled"];
 
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
@@ -32,7 +37,10 @@ export default function OrderHistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [retryingOrderId, setRetryingOrderId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [order, setOrder] = useState(null);
+  const { toast } = useToast();
+  // Tab State
+  const [activeTab, setActiveTab] = useState("All");
+  const translateX = useRef(new Animated.Value(0)).current;
 
   // Feedback Modal States
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
@@ -49,7 +57,6 @@ export default function OrderHistoryScreen() {
     try {
       setLoading(true);
       const response = await orderService.getOrderByUserId();
-      setOrder(response);
 
       // Sắp xếp orders theo ngày mới nhất lên trên
       const sortedOrders = (response || []).sort((a, b) => {
@@ -73,6 +80,40 @@ export default function OrderHistoryScreen() {
     fetchOrders();
   };
 
+  const handleTabPress = (tab, index) => {
+    setActiveTab(tab);
+    setCurrentPage(1); // Reset page when changing tab
+    Animated.spring(translateX, {
+      toValue: ((screenWidth - 40) / 4) * index,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  // Filter Orders based on Tab
+  const getFilteredOrders = () => {
+    if (activeTab === "All") return allOrders;
+    if (activeTab === "Pending") return allOrders.filter(o => o.orderStatus === "PENDING" || o.paymentStatus === "PENDING");
+    if (activeTab === "Completed") return allOrders.filter(o => o.orderStatus === "COMPLETED" || o.orderStatus === "SUCCESS");
+    if (activeTab === "Cancelled") return allOrders.filter(o => o.orderStatus === "CANCELLED" || o.orderStatus === "FAILED");
+    return allOrders;
+  };
+
+  const filteredOrders = getFilteredOrders();
+
+  // Pagination
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIdx = startIdx + ITEMS_PER_PAGE;
+  const ordersToDisplay = filteredOrders.slice(startIdx, endIdx);
+
+  // Stats Calculation
+  const totalSpent = allOrders
+    .filter(o => o.paymentStatus === "PAID" || o.paymentStatus === "SUCCESS")
+    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+  const pendingCount = allOrders.filter(o => o.orderStatus === "PENDING").length;
+  const completedCount = allOrders.filter(o => o.orderStatus === "COMPLETED" || o.orderStatus === "SUCCESS").length;
+
   const openFeedbackModal = (item) => {
     setSelectedItem(item);
     setRating(0);
@@ -89,21 +130,31 @@ export default function OrderHistoryScreen() {
 
   const createFeedback = async () => {
     if (rating === 0) {
-      Alert.alert("Rating Required", "Please select a rating before submitting.");
+      toast({
+        type: "error",
+        text1: "Rating Required",
+        text2: "Please select a rating before submitting.",
+        variant: "destructive",
+      });
+
       return;
     }
 
     if (!comment.trim()) {
-      Alert.alert("Comment Required", "Please write a comment about your experience.");
+      toast({
+        type: "error",
+        text1: "Comment Required",
+        text2: "Please write a comment about your experience.",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
       setSubmittingFeedback(true);
 
-
       const payload = {
-        resourceId: selectedItem.resourceTemplateId, // hoặc selectedItem.resourceId nếu có
+        resourceId: selectedItem.resourceTemplateId,
         rating: rating,
         comment: comment.trim(),
         validTarget: true,
@@ -111,11 +162,12 @@ export default function OrderHistoryScreen() {
 
       await feedbackService.postFeedbackResource(payload);
 
-      Alert.alert(
-        "Success!",
-        "Thank you for your feedback!",
-        [{ text: "OK", onPress: closeFeedbackModal }]
-      );
+      toast({
+        type: "success",
+        text1: "Feedback Submitted",
+        text2: "Thank you for sharing your experience!",
+        variant: "destructive",
+      });
 
       Toast.show({
         type: "success",
@@ -125,11 +177,12 @@ export default function OrderHistoryScreen() {
 
     } catch (error) {
       console.error("Error creating feedback:", error.message);
-      Alert.alert(
-        "Error",
-        error.message || "Failed to submit feedback. Please try again.",
-        [{ text: "OK" }]
-      );
+      toast({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to submit feedback. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setSubmittingFeedback(false);
     }
@@ -141,19 +194,19 @@ export default function OrderHistoryScreen() {
       await orderService.createOrderRetry(orderId);
       await fetchOrders();
 
-      Alert.alert(
-        "Retry Successful",
-        "Payment has been retried successfully.",
-        [{ text: "OK" }],
-        { cancelable: true }
-      );
+      toast({
+        type: "success",
+        text1: "Retry Successful",
+        text2: "Payment has been retried successfully.",
+        variant: "destructive",
+      });
     } catch (error) {
-      Alert.alert(
-        "Retry Failed",
-        error.message || "Insufficient balance in wallet",
-        [{ text: "OK" }],
-        { cancelable: true }
-      );
+      toast({
+        type: "error",
+        text1: "Retry Failed",
+        text2: error.message || "Insufficient balance in wallet",
+        variant: "destructive",
+      });
     } finally {
       setRetryingOrderId(null);
     }
@@ -161,48 +214,37 @@ export default function OrderHistoryScreen() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "PENDING":
-        return "#FFD54F";
-      case "COMPLETED":
-        return "#81C784";
-      case "CANCELLED":
-        return "#E57373";
-      case "CONFIRMED":
-        return "#64B5F6";
-      case "PAID":
-        return "#9575CD";
-      case "FAILED":
-        return "#FF8A80";
-      default:
-        return "#BA68C8";
+      case "PENDING": return "#F59E0B";
+      case "COMPLETED": return "#10B981";
+      case "SUCCESS": return "#10B981";
+      case "CANCELLED": return "#EF4444";
+      case "CONFIRMED": return "#3B82F6";
+      case "PAID": return "#8B5CF6";
+      case "FAILED": return "#EF4444";
+      default: return "#64748B";
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "PENDING":
-        return "schedule";
-      case "COMPLETED":
-        return "check-circle";
-      case "CANCELLED":
-        return "cancel";
-      case "CONFIRMED":
-        return "check";
-      case "FAILED":
-        return "error";
-      default:
-        return "info";
+      case "PENDING": return "schedule";
+      case "COMPLETED": return "check-circle";
+      case "SUCCESS": return "check-circle";
+      case "CANCELLED": return "cancel";
+      case "CONFIRMED": return "check";
+      case "FAILED": return "error";
+      default: return "info";
     }
   };
 
   const renderStars = () => {
     return (
-      <View style={feedbackStyles.starsContainer}>
+      <View style={styles.starsContainer}>
         {[1, 2, 3, 4, 5].map((star) => (
           <Pressable
             key={star}
             onPress={() => setRating(star)}
-            style={feedbackStyles.starButton}
+            style={styles.starButton}
           >
             <Icon
               name={star <= rating ? "star" : "star-border"}
@@ -214,12 +256,6 @@ export default function OrderHistoryScreen() {
       </View>
     );
   };
-
-  // Tính toán phân trang
-  const totalPages = Math.ceil(allOrders.length / ITEMS_PER_PAGE);
-  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIdx = startIdx + ITEMS_PER_PAGE;
-  const ordersToDisplay = allOrders.slice(startIdx, endIdx);
 
   if (loading) {
     return (
@@ -234,39 +270,63 @@ export default function OrderHistoryScreen() {
     );
   }
 
-  if (allOrders.length === 0) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
-            <Text style={styles.headerTitle}>Order History</Text>
-          </View>
-        </View>
-        <View style={styles.emptyContainer}>
-          <Icon name="receipt-long" size={100} color="#B0BEC5" />
-          <Text style={styles.emptyTitle}>No orders yet</Text>
-          <Text style={styles.emptyText}>
-            Start shopping to see your order history
-          </Text>
-          <Pressable
-            style={styles.shopBtn}
-            onPress={() => navigation.navigate("ResourceStore")}
-          >
-            <Text style={styles.shopBtnText}>Shop Now</Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
           <Text style={styles.headerTitle}>Order History</Text>
         </View>
+      </View>
+
+      {/* Summary Box */}
+      <View style={styles.summaryBox}>
+        <View style={styles.summaryItem}>
+          <Icon name="shopping-bag" size={20} color="#084F8C" style={{ marginBottom: 4 }} />
+          <Text style={styles.summaryLabel}>Total Spent</Text>
+          <Text style={[styles.summaryValue, { color: "#084F8C" }]}>
+            {totalSpent.toLocaleString()} đ
+          </Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.summaryItem}>
+          <Icon name="check-circle" size={20} color="#10B981" style={{ marginBottom: 4 }} />
+          <Text style={styles.summaryLabel}>Completed</Text>
+          <Text style={[styles.summaryValue, { color: "#10B981" }]}>
+            {completedCount}
+          </Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.summaryItem}>
+          <Icon name="schedule" size={20} color="#F59E0B" style={{ marginBottom: 4 }} />
+          <Text style={styles.summaryLabel}>Pending</Text>
+          <Text style={[styles.summaryValue, { color: "#F59E0B" }]}>
+            {pendingCount}
+          </Text>
+        </View>
+      </View>
+
+      {/* Tabs */}
+      <View style={styles.tabBar}>
+        <Animated.View
+          style={[styles.tabIndicator, { transform: [{ translateX }] }]}
+        />
+        {TABS.map((tab, index) => (
+          <Pressable
+            key={tab}
+            style={styles.tab}
+            onPress={() => handleTabPress(tab, index)}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === tab && styles.tabTextActive,
+              ]}
+            >
+              {tab}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
       <ScrollView
@@ -276,185 +336,185 @@ export default function OrderHistoryScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {ordersToDisplay?.map((order) => (
-          <View key={order.orderId} style={styles.orderCard}>
-            {/* Header */}
-            <View style={styles.orderHeader}>
-              <View style={styles.orderHeaderLeft}>
-                <Icon name="receipt" size={20} color="#4FC3F7" />
-                <Text style={styles.invoiceNumber}>{order.invoiceNumber}</Text>
-              </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: `${getStatusColor(order.orderStatus)}80` },
-                ]}
+        {ordersToDisplay.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <LottieView
+              source={require("../../../assets/transaction.json")}
+              autoPlay
+              loop
+              style={{ width: 100, height: 100 }}
+            />
+            <Text style={styles.emptyTitle}>No orders found</Text>
+            <Text style={styles.emptyText}>
+              {activeTab === "All"
+                ? "Start shopping to see your order history"
+                : `No ${activeTab.toLowerCase()} orders found`}
+            </Text>
+            {activeTab === "All" && (
+              <Pressable
+                style={styles.shopBtn}
+                onPress={() => navigation.navigate("ResourceStore")}
               >
-                <Icon
-                  name={getStatusIcon(order.orderStatus)}
-                  size={14}
-                  color="#1F2937"
-                />
-                <Text style={[styles.statusText, { color: "#1F2937" }]}>
-                  {order.orderStatus}
-                </Text>
-              </View>
-            </View>
-
-            {/* Info */}
-            <View style={styles.orderInfo}>
-              <View style={styles.infoRow}>
-                <Icon name="event" size={16} color="#90A4AE" />
-                <Text style={styles.infoText}>
-                  {new Date(order.issueDate).toLocaleDateString()}
-                </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Icon name="shopping-bag" size={16} color="#90A4AE" />
-                <Text style={styles.infoText}>
-                  {order.items.length} item
-                  {order.items.length > 1 ? "s" : ""}
-                </Text>
-              </View>
-            </View>
-
-            {/* Items */}
-            <View style={styles.itemsContainer}>
-              {order?.items?.map((item) => {
-
-
-                // Check điều kiện hiển thị feedback button
-                const canShowFeedback =
-                  (order.orderStatus === "COMPLETED" || order.orderStatus === "SUCCESS") &&
-                  order.paymentStatus === "PAID" &&
-                  item.resourceTemplateId;
-
-                return (
-                  <View key={item.orderDetailId} style={styles.itemRow}>
-                    <View style={styles.itemInfo}>
-                      <Text style={styles.itemName}>{item.templateName}</Text>
-                      <Text style={styles.itemDesc}>
-                        {item.templateDescription}
-                      </Text>
-                      <View style={styles.typeBadge}>
-                        <Text style={styles.typeBadgeText}>
-                          {item.templateType}
-                        </Text>
-                      </View>
-
-                      {/* Feedback Button */}
-                      {canShowFeedback && (
-                        <Pressable
-                          style={feedbackStyles.feedbackButton}
-                          onPress={() => openFeedbackModal(item)}
-                        >
-                          <Icon name="rate-review" size={16} color="#1E40AF" />
-                          <Text style={feedbackStyles.feedbackButtonText}>
-                            Write Review
-                          </Text>
-                        </Pressable>
-                      )}
-                    </View>
-                    <View style={styles.itemRight}>
-                      <Text style={styles.itemPrice}>
-                        {item.unitPrice.toLocaleString()} đ
-                      </Text>
-                      {item.discount > 0 && (
-                        <Text style={styles.discountText}>
-                          -{item.discount.toLocaleString()} đ
-                        </Text>
-                      )}
-                    </View>
+                <Text style={styles.shopBtnText}>Shop Now</Text>
+              </Pressable>
+            )}
+          </View>
+        ) : (
+          ordersToDisplay.map((order) => (
+            <View key={order.orderId} style={styles.orderCard}>
+              {/* Header */}
+              <View style={styles.orderHeader}>
+                <View style={styles.orderHeaderLeft}>
+                  <View style={[styles.iconWrap, { backgroundColor: "#F1F5F9", padding: 8, borderRadius: 12 }]}>
+                    <Icon name="receipt" size={20} color="#084F8C" />
                   </View>
-                );
-              })}
-            </View>
-
-            {/* Footer */}
-            <View style={styles.orderFooter}>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total Amount</Text>
-                <Text style={styles.totalAmount}>
-                  {order.totalAmount.toLocaleString()} đ
-                </Text>
-              </View>
-
-              <View style={styles.actionRow}>
+                  <View>
+                    <Text style={styles.invoiceNumber}>#{order.invoiceNumber}</Text>
+                    <Text style={styles.cardDate}>{new Date(order.issueDate).toLocaleDateString()}</Text>
+                  </View>
+                </View>
                 <View
                   style={[
-                    styles.paymentBadge,
-                    {
-                      backgroundColor: `${getStatusColor(
-                        order.paymentStatus
-                      )}80`,
-                    },
+                    styles.statusBadge,
+                    { backgroundColor: `${getStatusColor(order.orderStatus)}15`, borderColor: `${getStatusColor(order.orderStatus)}30` },
                   ]}
                 >
-                  <Icon
-                    name={
-                      order.paymentStatus === "PENDING"
-                        ? "payment"
-                        : order.paymentStatus === "FAILED"
-                          ? "error"
-                          : "check-circle"
-                    }
-                    size={14}
-                    color="#1F2937"
-                  />
-                  <Text style={[styles.paymentText, { color: "#1F2937" }]}>
-                    {order.paymentStatus}
+                  <Text style={[styles.statusText, { color: getStatusColor(order.orderStatus) }]}>
+                    {order.orderStatus}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Items */}
+              <View style={styles.itemsContainer}>
+                {order?.items?.map((item) => {
+                  const canShowFeedback =
+                    (order.orderStatus === "COMPLETED" || order.orderStatus === "SUCCESS") &&
+                    order.paymentStatus === "PAID" &&
+                    item.resourceTemplateId;
+
+                  return (
+                    <View key={item.orderDetailId} style={styles.itemRow}>
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemName} numberOfLines={1}>{item.templateName}</Text>
+                        <Text style={styles.itemDesc} numberOfLines={1}>
+                          {item.templateType}
+                        </Text>
+
+                        {/* Feedback Button */}
+                        {canShowFeedback && (
+                          <Pressable
+                            style={styles.feedbackButton}
+                            onPress={() => openFeedbackModal(item)}
+                          >
+                            <Icon name="rate-review" size={14} color="#1E40AF" />
+                            <Text style={styles.feedbackButtonText}>
+                              Write Review
+                            </Text>
+                          </Pressable>
+                        )}
+                      </View>
+                      <View style={styles.itemRight}>
+                        <Text style={styles.itemPrice}>
+                          {item.unitPrice.toLocaleString()} đ
+                        </Text>
+                        {item.discount > 0 && (
+                          <Text style={styles.discountText}>
+                            -{item.discount.toLocaleString()} đ
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* Footer */}
+              <View style={styles.orderFooter}>
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Total Amount</Text>
+                  <Text style={styles.totalAmount}>
+                    {order.totalAmount.toLocaleString()} đ
                   </Text>
                 </View>
 
-                {order.paymentStatus === "PENDING" && (
-                  <Pressable
-                    style={styles.checkoutBtn}
-                    onPress={() =>
-                      navigation.navigate("PaymentSuccess", {
-                        orderId: order.orderId,
-                        invoiceNumber: order.invoiceNumber,
-                        totalAmount: order.totalAmount,
-                      })
-                    }
-                  >
-                    <Text style={styles.checkoutBtnText}>Pay Now</Text>
-                    <Icon name="arrow-forward" size={16} color="#FFFFFF" />
-                  </Pressable>
-                )}
-
-                {order.paymentStatus === "FAILED" &&
-                  order.orderStatus === "CANCELLED" && (
-                    <Pressable
-                      style={[
-                        styles.checkoutBtn,
-                        { backgroundColor: "#FF6B6B" },
-                        retryingOrderId === order.orderId && { opacity: 0.6 },
-                      ]}
-                      onPress={() =>
-                        handleRetryPayment(
-                          order.orderId,
-                          order.invoiceNumber,
-                          order.totalAmount
-                        )
+                <View style={styles.actionRow}>
+                  <View
+                    style={[
+                      styles.paymentBadge,
+                      {
+                        backgroundColor: order.paymentStatus === "PAID" ? "#ECFDF5" : "#F1F5F9",
+                        borderColor: order.paymentStatus === "PAID" ? "#A7F3D0" : "#E2E8F0",
+                        borderWidth: 1
                       }
-                      disabled={retryingOrderId === order.orderId}
+                    ]}
+                  >
+                    <Icon
+                      name={
+                        order.paymentStatus === "PENDING"
+                          ? "payment"
+                          : order.paymentStatus === "FAILED"
+                            ? "error"
+                            : "check-circle"
+                      }
+                      size={14}
+                      color={order.paymentStatus === "PAID" ? "#059669" : "#64748B"}
+                    />
+                    <Text style={[styles.paymentText, { color: order.paymentStatus === "PAID" ? "#059669" : "#64748B" }]}>
+                      {order.paymentStatus}
+                    </Text>
+                  </View>
+
+                  {order.paymentStatus === "PENDING" && (
+                    <Pressable
+                      style={styles.checkoutBtn}
+                      onPress={() =>
+                        navigation.navigate("PaymentSuccess", {
+                          orderId: order.orderId,
+                          invoiceNumber: order.invoiceNumber,
+                          totalAmount: order.totalAmount,
+                        })
+                      }
                     >
-                      {retryingOrderId === order.orderId ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      ) : (
-                        <>
-                          <Icon name="refresh" size={16} color="#FFFFFF" />
-                          <Text style={styles.checkoutBtnText}>
-                            Retry Payment
-                          </Text>
-                        </>
-                      )}
+                      <Text style={styles.checkoutBtnText}>Pay Now</Text>
+                      <Icon name="arrow-forward" size={16} color="#FFFFFF" />
                     </Pressable>
                   )}
+
+                  {order.paymentStatus === "FAILED" &&
+                    order.orderStatus === "CANCELLED" && (
+                      <Pressable
+                        style={[
+                          styles.checkoutBtn,
+                          { backgroundColor: "#EF4444" },
+                          retryingOrderId === order.orderId && { opacity: 0.6 },
+                        ]}
+                        onPress={() =>
+                          handleRetryPayment(
+                            order.orderId,
+                            order.invoiceNumber,
+                            order.totalAmount
+                          )
+                        }
+                        disabled={retryingOrderId === order.orderId}
+                      >
+                        {retryingOrderId === order.orderId ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <>
+                            <Icon name="refresh" size={16} color="#FFFFFF" />
+                            <Text style={styles.checkoutBtnText}>
+                              Retry Payment
+                            </Text>
+                          </>
+                        )}
+                      </Pressable>
+                    )}
+                </View>
               </View>
             </View>
-          </View>
-        ))}
+          ))
+        )}
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
@@ -470,7 +530,7 @@ export default function OrderHistoryScreen() {
               <Icon
                 name="chevron-left"
                 size={20}
-                color={currentPage === 1 ? "#BDC3C7" : "#1E40AF"}
+                color={currentPage === 1 ? "#BDC3C7" : "#084F8C"}
               />
             </Pressable>
 
@@ -509,7 +569,7 @@ export default function OrderHistoryScreen() {
               <Icon
                 name="chevron-right"
                 size={20}
-                color={currentPage === totalPages ? "#BDC3C7" : "#1E40AF"}
+                color={currentPage === totalPages ? "#BDC3C7" : "#084F8C"}
               />
             </Pressable>
           </View>
@@ -527,18 +587,18 @@ export default function OrderHistoryScreen() {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={feedbackStyles.modalOverlay}
+          style={styles.modalOverlay}
         >
           <Pressable
-            style={feedbackStyles.modalBackdrop}
+            style={styles.modalBackdrop}
             onPress={closeFeedbackModal}
           />
-          <View style={feedbackStyles.modalContent}>
+          <View style={styles.modalContent}>
             {/* Header */}
-            <View style={feedbackStyles.modalHeader}>
+            <View style={styles.modalHeader}>
               <View>
-                <Text style={feedbackStyles.modalTitle}>Write a Review</Text>
-                <Text style={feedbackStyles.modalSubtitle}>
+                <Text style={styles.modalTitle}>Write a Review</Text>
+                <Text style={styles.modalSubtitle}>
                   {selectedItem?.templateName}
                 </Text>
               </View>
@@ -548,11 +608,11 @@ export default function OrderHistoryScreen() {
             </View>
 
             {/* Rating */}
-            <View style={feedbackStyles.section}>
-              <Text style={feedbackStyles.sectionTitle}>Your Rating</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Your Rating</Text>
               {renderStars()}
               {rating > 0 && (
-                <Text style={feedbackStyles.ratingText}>
+                <Text style={styles.ratingText}>
                   {rating === 1 && "Poor"}
                   {rating === 2 && "Fair"}
                   {rating === 3 && "Good"}
@@ -563,10 +623,10 @@ export default function OrderHistoryScreen() {
             </View>
 
             {/* Comment */}
-            <View style={feedbackStyles.section}>
-              <Text style={feedbackStyles.sectionTitle}>Your Comment</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Your Comment</Text>
               <TextInput
-                style={feedbackStyles.commentInput}
+                style={styles.commentInput}
                 placeholder="Share your experience with this resource..."
                 placeholderTextColor="#94A3B8"
                 multiline
@@ -575,25 +635,25 @@ export default function OrderHistoryScreen() {
                 onChangeText={setComment}
                 textAlignVertical="top"
               />
-              <Text style={feedbackStyles.charCount}>
+              <Text style={styles.charCount}>
                 {comment.length} characters
               </Text>
             </View>
 
             {/* Action Buttons */}
-            <View style={feedbackStyles.buttonRow}>
+            <View style={styles.buttonRow}>
               <Pressable
-                style={feedbackStyles.cancelButton}
+                style={styles.cancelButton}
                 onPress={closeFeedbackModal}
               >
-                <Text style={feedbackStyles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </Pressable>
 
               <Pressable
                 style={[
-                  feedbackStyles.submitButton,
+                  styles.submitButton,
                   (submittingFeedback || rating === 0 || !comment.trim()) &&
-                  feedbackStyles.submitButtonDisabled,
+                  styles.submitButtonDisabled,
                 ]}
                 onPress={createFeedback}
                 disabled={submittingFeedback || rating === 0 || !comment.trim()}
@@ -603,7 +663,7 @@ export default function OrderHistoryScreen() {
                 ) : (
                   <>
                     <Icon name="send" size={18} color="#FFFFFF" />
-                    <Text style={feedbackStyles.submitButtonText}>
+                    <Text style={styles.submitButtonText}>
                       Submit Review
                     </Text>
                   </>
@@ -616,150 +676,3 @@ export default function OrderHistoryScreen() {
     </SafeAreaView>
   );
 }
-
-// Feedback Modal Styles
-const feedbackStyles = {
-  feedbackButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: "#EFF6FF",
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-    alignSelf: "flex-start",
-  },
-  feedbackButtonText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#1E40AF",
-    marginLeft: 6,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalBackdrop: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    maxHeight: "85%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 24,
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    marginTop: 4,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 12,
-  },
-  starsContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-  },
-  starButton: {
-    padding: 4,
-  },
-  ratingText: {
-    textAlign: "center",
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFB300",
-    marginTop: 8,
-  },
-  commentInput: {
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 15,
-    color: "#1F2937",
-    minHeight: 120,
-  },
-  charCount: {
-    fontSize: 12,
-    color: "#94A3B8",
-    textAlign: "right",
-    marginTop: 8,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 8,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  submitButton: {
-    flex: 1,
-    flexDirection: "row",
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: "#1E40AF",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    shadowColor: "#1E40AF",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  submitButtonDisabled: {
-    backgroundColor: "#CBD5E1",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-  },
-};
