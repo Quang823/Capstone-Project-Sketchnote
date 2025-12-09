@@ -25,7 +25,7 @@ export const myBlogStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#FFFFFF",
-    paddingTop: 40,
+    paddingTop: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
     shadowColor: "#000",

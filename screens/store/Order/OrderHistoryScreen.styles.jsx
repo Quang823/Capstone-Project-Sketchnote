@@ -1,11 +1,12 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Dimensions } from "react-native";
+
+const screenWidth = Dimensions.get("window").width;
 
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -13,7 +14,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#FFFFFF",
-    paddingTop: 40,
+    paddingTop: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
     shadowColor: "#000",
@@ -34,30 +35,56 @@ export const styles = StyleSheet.create({
     color: "#084F8C",
     letterSpacing: -0.5,
   },
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+
+  // Summary Box (New)
+  summaryBox: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    backgroundColor: "#FFFFFF",
+    margin: 20,
+    borderRadius: 20,
+    paddingVertical: 16,
+    shadowColor: "#084F8C",
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: "#E0E7FF",
   },
-  loadingText: {
-    fontSize: 16,
-    color: "#64748B",
-    fontWeight: "500",
+  summaryItem: { alignItems: "center", flex: 1 },
+  summaryLabel: {
+    fontSize: 12,
+    color: "#94A3B8",
+    marginBottom: 4,
+    fontWeight: "600",
   },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: "#F1F5F9",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
+  summaryValue: { fontSize: 16, fontWeight: "700" },
+  divider: { width: 1, backgroundColor: "#E0E7FF", marginHorizontal: 8 },
+
+  // Tabs (New)
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    overflow: "hidden",
+    elevation: 2,
+  },
+  tab: { flex: 1, paddingVertical: 12, alignItems: "center" },
+  tabText: { fontSize: 14, color: "#64748B", fontWeight: "600" },
+  tabTextActive: { color: "#084F8C" },
+  tabIndicator: {
+    position: "absolute",
+    bottom: 0,
+    width: (screenWidth - 40) / 4, // Assuming 4 tabs
+    height: 3,
+    backgroundColor: "#084F8C",
   },
 
   content: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 20,
   },
 
   centerContainer: {
@@ -72,14 +99,12 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     padding: 32,
   },
-
   emptyTitle: {
     fontSize: 22,
     fontWeight: "700",
     color: "#1E293B",
     marginTop: 16,
   },
-
   emptyText: {
     fontSize: 14,
     color: "#64748B",
@@ -87,7 +112,6 @@ export const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "500",
   },
-
   shopBtn: {
     marginTop: 24,
     paddingHorizontal: 32,
@@ -100,76 +124,67 @@ export const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-
   shopBtnText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
   },
 
+  // Order Card
   orderCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 18,
     marginBottom: 16,
+    shadowColor: "#084F8C",
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: "#F1F5F9",
   },
-
   orderHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
-
   orderHeaderLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
   },
-
   invoiceNumber: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: "#1E293B",
   },
-
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
   },
 
   orderInfo: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 14,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    gap: 20,
+    marginBottom: 16,
   },
-
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
-
   infoText: {
     fontSize: 13,
     color: "#64748B",
@@ -178,64 +193,54 @@ export const styles = StyleSheet.create({
 
   itemsContainer: {
     gap: 12,
-    marginBottom: 14,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    marginBottom: 16,
+    backgroundColor: "#F8FAFC",
+    padding: 12,
+    borderRadius: 12,
   },
-
   itemRow: {
     flexDirection: "row",
     justifyContent: "space-between",
   },
-
   itemInfo: {
     flex: 1,
     marginRight: 12,
   },
-
   itemName: {
     fontSize: 14,
-    fontWeight: "700",
-    color: "#1E293B",
+    fontWeight: "600",
+    color: "#334155",
     marginBottom: 4,
   },
-
   itemDesc: {
     fontSize: 12,
-    color: "#64748B",
+    color: "#94A3B8",
     marginBottom: 6,
-    fontWeight: "500",
   },
-
   typeBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-
   typeBadgeText: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#64748B",
   },
-
   itemRight: {
     alignItems: "flex-end",
   },
-
   itemPrice: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#1E293B",
   },
-
   discountText: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#10B981",
     marginTop: 2,
     fontWeight: "600",
@@ -244,107 +249,255 @@ export const styles = StyleSheet.create({
   orderFooter: {
     gap: 12,
   },
-
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   totalLabel: {
     fontSize: 14,
     fontWeight: "600",
     color: "#64748B",
   },
-
   totalAmount: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1E293B",
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#084F8C",
   },
-
   actionRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 4,
   },
-
   paymentBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 7,
+    paddingVertical: 6,
     borderRadius: 8,
-    borderWidth: 1,
+    backgroundColor: "#F1F5F9",
   },
-
   paymentText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "600",
+    color: "#475569",
   },
-
   checkoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#60A5FA",
+    backgroundColor: "#084F8C",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
-    shadowColor: "#60A5FA",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 12,
+    shadowColor: "#084F8C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-
   checkoutBtnText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
   },
+
+  // Pagination
   paginationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 20,
-    marginHorizontal: 16,
   },
   paginationBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   paginationBtnDisabled: {
     opacity: 0.5,
+    backgroundColor: "#F1F5F9",
   },
   pageIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    marginHorizontal: 12,
+    marginHorizontal: 16,
+    gap: 8,
   },
   pageDot: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    marginHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#E2E8F0',
   },
   pageDotActive: {
-    backgroundColor: '#1E40AF',
-    borderColor: '#1E40AF',
+    backgroundColor: '#084F8C',
+    borderColor: '#084F8C',
+    shadowColor: "#084F8C",
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
   },
   pageNumber: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1E40AF',
+    color: '#64748B',
   },
   pageNumberActive: {
     color: '#FFFFFF',
+  },
+
+  // Feedback Styles (Moved from JSX)
+  feedbackButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: "#EFF6FF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    alignSelf: "flex-start",
+  },
+  feedbackButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1E40AF",
+    marginLeft: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalBackdrop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  modalContent: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    maxHeight: "85%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1E293B",
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 4,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 12,
+  },
+  starsContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+  },
+  starButton: {
+    padding: 4,
+  },
+  ratingText: {
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFB300",
+    marginTop: 8,
+  },
+  commentInput: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 15,
+    color: "#1F2937",
+    minHeight: 120,
+  },
+  charCount: {
+    fontSize: 12,
+    color: "#94A3B8",
+    textAlign: "right",
+    marginTop: 8,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  submitButton: {
+    flex: 1,
+    flexDirection: "row",
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: "#084F8C",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#084F8C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitButtonDisabled: {
+    backgroundColor: "#CBD5E1",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  submitButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
 });
