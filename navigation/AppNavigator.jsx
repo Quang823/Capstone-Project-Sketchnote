@@ -8,7 +8,7 @@ import CourseDetailScreen from "../screens/courses/CourseDetailScreen/CourseDeta
 import CoursesScreen from "../screens/courses/CoursesScreen/CoursesScreen";
 import LessonScreen from "../screens/courses/LessonScreen/LessonScreen";
 import MyCoursesScreen from "../screens/courses/MyCoursesScreen/MyCoursesScreen";
-
+import BankAccountsScreen from "../screens/BankAccountsScreen/BankAccountsScreen";
 import BlogScreen from "../screens/blog/BlogScreen";
 import BlogDetailScreen from "../screens/blog/BlogDetailScreen";
 import ResourceStoreScreen from "../screens/store/ResourceStoreScreen/ResourceStoreScreen";
@@ -76,6 +76,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+      <Stack.Screen name="BankAccounts" component={BankAccountsScreen} />
       <Stack.Screen
         name="DesignerSubscription"
         component={DesignerSubscription}

@@ -11,12 +11,15 @@ import {
   ImageBackground,
   useWindowDimensions,
   Easing,
+  Modal,
 } from "react-native";
 import { Image } from "expo-image"; // Use expo-image for GIF animation support
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import { Picker } from "@react-native-picker/picker";
 import { AuthContext } from "../../../context/AuthContext";
 import { authService } from "../../../service/authService";
+import { bankAccountService } from "../../../service/bankAccountService";
 import { uploadToCloudinary } from "../../../service/cloudinary";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useToast } from "../../../hooks/use-toast";
@@ -29,6 +32,16 @@ const ProfileScreen = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  // Bank account states
+  const [banks, setBanks] = useState([]);
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [selectedBank, setSelectedBank] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [accountHolderName, setAccountHolderName] = useState("");
+  const [addingAccount, setAddingAccount] = useState(false);
 
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scaleAnim = useState(new Animated.Value(0.9))[0];
@@ -88,6 +101,35 @@ const ProfileScreen = () => {
       ).start();
     }
   }, [profile?.hasActiveSubscription]);
+
+
+
+  // Fetch banks from VietQR
+  useEffect(() => {
+    const fetchBanks = async () => {
+      try {
+        const banksData = await bankAccountService.getBanks();
+        setBanks(banksData);
+      } catch (err) {
+        console.error("Failed to fetch banks:", err);
+      }
+    };
+    fetchBanks();
+  }, []);
+
+  // Fetch user's bank accounts
+  useEffect(() => {
+    const fetchBankAccounts = async () => {
+      try {
+        if (!user) return;
+        const accounts = await bankAccountService.getBankAccounts();
+        setBankAccounts(accounts);
+      } catch (err) {
+        console.error("Failed to fetch bank accounts:", err);
+      }
+    };
+    fetchBankAccounts();
+  }, [user]);
 
   // --- Handle Avatar Upload ---
   const handleChooseAvatar = async () => {
@@ -172,6 +214,77 @@ const ProfileScreen = () => {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // --- Handle Add Bank Account ---
+  const handleAddBankAccount = async () => {
+    try {
+      // Validation
+      if (!selectedBank) {
+        toast({
+          title: "Validation Error",
+          description: "Please select a bank",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!accountNumber.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Please enter account number",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!accountHolderName.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Please enter account holder name",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setAddingAccount(true);
+
+      const accountData = {
+        bankName: selectedBank.name,
+        accountNumber: accountNumber.trim(),
+        accountHolderName: accountHolderName.trim(),
+        branch: selectedBank.shortName, // Use shortName as specified
+        logoUrl: selectedBank.logo, // Pass bank logo
+        isDefault: true, // Set to true as specified
+      };
+
+      await bankAccountService.createBankAccount(accountData);
+
+      // Refresh bank accounts list
+      const accounts = await bankAccountService.getBankAccounts();
+      setBankAccounts(accounts);
+
+      // Reset form
+      setAccountNumber("");
+      setAccountHolderName("");
+      setSelectedBank(null);
+      setSearchQuery("");
+      setShowBankModal(false);
+
+      toast({
+        title: "Success!",
+        description: "Bank account added successfully.",
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to add bank account",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setAddingAccount(false);
     }
   };
 
@@ -336,6 +449,79 @@ const ProfileScreen = () => {
                   ? new Date(profile.subscriptionEndDate).toLocaleString()
                   : "-"}
               </Text>
+
+              {/* Bank Account Section */}
+              <View style={styles.bankAccountSection}>
+                <View style={styles.bankAccountHeader}>
+                  <Text style={styles.inputLabel}>Bank Accounts</Text>
+                  <TouchableOpacity
+                    style={styles.addBankButton}
+                    onPress={() => setShowBankModal(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.addBankButtonText}>+ Add Bank</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {bankAccounts.length > 0 ? (
+                  <View style={styles.bankAccountsList}>
+                    {bankAccounts.map((account, index) => {
+                      return (
+                        <View key={index} style={styles.bankAccountCard}>
+                          {/* Bank Logo */}
+                          {account.logoUrl && (
+                            <Image
+                              source={{ uri: account.logoUrl }}
+                              style={styles.bankAccountLogo}
+                              contentFit="contain"
+                            />
+                          )}
+
+                          {/* Account Info */}
+                          <View style={styles.bankAccountInfo}>
+                            <View style={styles.bankAccountHeader}>
+                              <Text style={styles.bankName}>
+                                {account.branch}
+                                {account.bankName && (
+                                  <Text style={styles.bankNameSeparator}> - </Text>
+                                )}
+                                <Text style={styles.bankFullNameText}>
+                                  {account.bankName}
+                                </Text>
+                              </Text>
+                            </View>
+                            <View style={styles.accountDetails}>
+                              <View style={styles.accountRow}>
+                                <Text style={styles.accountLabel}>Account:</Text>
+                                <Text style={styles.accountNumber}>
+                                  {account.accountNumber}
+                                </Text>
+                              </View>
+                              <View style={styles.accountRow}>
+                                <Text style={styles.accountLabel}>Holder:</Text>
+                                <Text style={styles.accountHolder}>
+                                  {account.accountHolderName}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+
+                          {/* Default Badge */}
+                          {account.isDefault && (
+                            <View style={styles.defaultBadge}>
+                              <Text style={styles.defaultText}>⭐ Default</Text>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.noBankText}>
+                    No bank accounts added yet
+                  </Text>
+                )}
+              </View>
             </View>
             <TouchableOpacity activeOpacity={0.8} onPress={handleSave}>
               <LinearGradient
@@ -351,10 +537,143 @@ const ProfileScreen = () => {
                 )}
               </LinearGradient>
             </TouchableOpacity>
+          </View >
+        </View >
+      </ScrollView >
+
+      {/* Bank Account Modal */}
+      < Modal
+        visible={showBankModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setShowBankModal(false);
+          setSearchQuery("");
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Bank Account</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowBankModal(false);
+                  setSearchQuery("");
+                  setSelectedBank(null);
+                  setAccountNumber("");
+                  setAccountHolderName("");
+                }}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Bank Selection */}
+            <Text style={[styles.inputLabel, { marginHorizontal: 20 }]}>Select Bank</Text>
+
+            {/* Search Input */}
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search bank name..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#9CA3AF"
+            />
+
+            {/* Bank List with Logos */}
+            <ScrollView style={styles.bankListContainer} showsVerticalScrollIndicator={false}>
+              {banks
+                .filter(
+                  (bank) =>
+                    bank.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    bank.shortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    bank.code.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((bank) => (
+                  <TouchableOpacity
+                    key={bank.id}
+                    style={[
+                      styles.bankItem,
+                      selectedBank?.id === bank.id && styles.bankItemSelected,
+                    ]}
+                    onPress={() => setSelectedBank(bank)}
+                    activeOpacity={0.7}
+                  >
+                    <Image
+                      source={{ uri: bank.logo }}
+                      style={styles.bankLogo}
+                      contentFit="contain"
+                    />
+                    <View style={styles.bankInfo}>
+                      <Text style={styles.bankShortName}>{bank.shortName}</Text>
+                      <Text style={styles.bankFullName} numberOfLines={2}>
+                        {bank.name}
+                      </Text>
+                    </View>
+                    {selectedBank?.id === bank.id && (
+                      <View style={styles.checkmark}>
+                        <Text style={styles.checkmarkText}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+
+            {/* Account Details Form */}
+            <Text style={[styles.inputLabel, { marginHorizontal: 20, marginTop: 16 }]}>
+              Account Number
+            </Text>
+            <TextInput
+              style={[styles.input, { marginHorizontal: 20 }]}
+              value={accountNumber}
+              onChangeText={setAccountNumber}
+              placeholder="Enter account number"
+              keyboardType="numeric"
+            />
+
+            <Text style={[styles.inputLabel, { marginHorizontal: 20 }]}>
+              Account Holder Name
+            </Text>
+            <TextInput
+              style={[styles.input, { marginHorizontal: 20 }]}
+              value={accountHolderName}
+              onChangeText={setAccountHolderName}
+              placeholder="Enter account holder name"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setShowBankModal(false);
+                  setSelectedBank(null);
+                  setSearchQuery("");
+                  setAccountNumber("");
+                  setAccountHolderName("");
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleAddBankAccount}
+                activeOpacity={0.7}
+                disabled={addingAccount}
+              >
+                {addingAccount ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Add Account</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </ScrollView>
-    </View>
+      </Modal >
+    </View >
   );
 };
 
@@ -372,7 +691,7 @@ const styles = StyleSheet.create({
 
   headerBackground: {
     width: "100%",
-    height: 200,
+    height: 150,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -517,5 +836,295 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  // Bank Account Styles
+  bankAccountSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  bankAccountHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  addBankButton: {
+    backgroundColor: "#3B82F6",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  addBankButtonText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  bankAccountsList: {
+    gap: 12,
+  },
+  bankAccountCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#BFDBFE",
+    borderRadius: 16,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    shadowColor: "#3B82F6",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  bankAccountLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+  },
+  bankAccountInfo: {
+    flex: 1,
+  },
+  bankAccountHeader: {
+    marginBottom: 4,
+  },
+  bankName: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1E3A8A",
+    lineHeight: 20,
+  },
+  bankNameSeparator: {
+    fontWeight: "400",
+    color: "#9CA3AF",
+  },
+  bankFullNameText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#6B7280",
+  },
+  accountDetails: {
+    gap: 2,
+  },
+  accountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  accountLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#9CA3AF",
+    minWidth: 55,
+  },
+  accountNumber: {
+    fontSize: 15,
+    color: "#3B82F6",
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  accountHolder: {
+    fontSize: 14,
+    color: "#1F2937",
+    fontWeight: "600",
+  },
+  defaultBadge: {
+    backgroundColor: "#10B981",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  defaultText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  noBankText: {
+    fontSize: 14,
+    color: "#9CA3AF",
+    fontStyle: "italic",
+    textAlign: "center",
+    paddingVertical: 20,
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 0,
+    width: "100%",
+    maxWidth: 550,
+    maxHeight: "85%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
+    overflow: "hidden",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: "#3B82F6",
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#fff",
+    flex: 1,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeButtonText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  searchInput: {
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#1F2937",
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  bankListContainer: {
+    maxHeight: 300,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  bankItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+    backgroundColor: "#fff",
+  },
+  bankItemSelected: {
+    backgroundColor: "#EFF6FF",
+    borderLeftWidth: 4,
+    borderLeftColor: "#3B82F6",
+  },
+  bankLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: "#fff",
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  bankInfo: {
+    flex: 1,
+  },
+  bankShortName: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 2,
+  },
+  bankFullName: {
+    fontSize: 13,
+    color: "#6B7280",
+    lineHeight: 18,
+  },
+  checkmark: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#10B981",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  checkmarkText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  pickerContainer: {
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+    borderRadius: 10,
+    marginBottom: 16,
+    overflow: "hidden",
+    marginHorizontal: 20,
+  },
+  picker: {
+    height: 50,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#F3F4F6",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  cancelButtonText: {
+    color: "#374151",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  submitButton: {
+    flex: 1,
+    backgroundColor: "#3B82F6",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: "#3B82F6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
