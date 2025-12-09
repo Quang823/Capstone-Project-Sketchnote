@@ -30,4 +30,11 @@ export const authApiController = {
   getMyProfile: async (config) => {
     return await privateApi.get(`/api/users/me/profile`, config);
   },
+  loginGoogle: async (code, redirectUri) => {
+    return await publicApi.post(`/api/auth/login-google`, { code, redirectUri });
+  },
+  // Login Google for mobile (using idToken)
+  loginGoogleMobile: async (idToken) => {
+    return await publicApi.post(`/api/auth/login-google-mobile`, { idToken });
+  },
 };
