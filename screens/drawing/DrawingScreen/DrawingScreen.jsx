@@ -1254,6 +1254,47 @@ export default function DrawingScreen({ route }) {
     [noteConfig?.projectId, isSaving, toast, isLocalProject, safeNoteConfig]
   ); // ✅ Add all dependencies
 
+  /**
+   * Decompress points that were sent using delta encoding
+   * @param {Object} compressedPoints - Compressed points data
+   * @returns {Array} Array of point objects with x, y
+   */
+  const decompressPoints = useCallback((compressedPoints) => {
+    if (!compressedPoints) return [];
+
+    // Handle non-compressed format (simple array of [x, y])
+    if (!compressedPoints.compressed && Array.isArray(compressedPoints.data)) {
+      return compressedPoints.data.map(p =>
+        Array.isArray(p) ? { x: p[0], y: p[1] } : p
+      );
+    }
+
+    // Handle compressed format with delta encoding
+    if (compressedPoints.compressed && compressedPoints.base && compressedPoints.deltas) {
+      const points = [];
+      const [baseX, baseY] = compressedPoints.base;
+      points.push({ x: baseX, y: baseY });
+
+      let prevX = baseX;
+      let prevY = baseY;
+      const deltas = compressedPoints.deltas;
+
+      // Deltas are stored as flat array: [dx1, dy1, dx2, dy2, ...]
+      for (let i = 0; i < deltas.length; i += 2) {
+        const dx = deltas[i] / 100; // Convert back from integer
+        const dy = deltas[i + 1] / 100;
+        prevX += dx;
+        prevY += dy;
+        points.push({ x: prevX, y: prevY });
+      }
+
+      return points;
+    }
+
+    // Fallback: return empty if unrecognized format
+    return [];
+  }, []);
+
   const realtimeHandler = useCallback(
     (msg) => {
       try {
@@ -1268,6 +1309,29 @@ export default function DrawingScreen({ route }) {
         // Prefer a full stroke payload if present
         if (msg.payload?.stroke && typeof msg.payload.stroke === "object") {
           const s = msg.payload.stroke;
+
+          // ✅ Handle compressed points if present
+          let points = [];
+          if (msg.payload?.points && typeof msg.payload.points === "object") {
+            // New compressed format
+            points = decompressPoints(msg.payload.points);
+          } else if (Array.isArray(s.points)) {
+            // Legacy format: points inside stroke
+            points = s.points
+              .map((p) =>
+                p && typeof p === "object"
+                  ? {
+                    x: Number(p.x) || 0,
+                    y: Number(p.y) || 0,
+                    pressure: p.pressure,
+                    thickness: p.thickness,
+                    stabilization: p.stabilization,
+                  }
+                  : null
+              )
+              .filter(Boolean);
+          }
+
           const sanitized = {
             id:
               s.id || `r_${Date.now()}_${Math.random().toString(36).slice(2)}`,
@@ -1279,21 +1343,7 @@ export default function DrawingScreen({ route }) {
             y: Number(s.y) || 0,
             rotation: s.rotation || 0,
             layerId: s.layerId || "layer1",
-            points: Array.isArray(s.points)
-              ? s.points
-                .map((p) =>
-                  p && typeof p === "object"
-                    ? {
-                      x: Number(p.x) || 0,
-                      y: Number(p.y) || 0,
-                      pressure: p.pressure,
-                      thickness: p.thickness,
-                      stabilization: p.stabilization,
-                    }
-                    : null
-                )
-                .filter(Boolean)
-              : [],
+            points: points,
             text: s.text,
             fontSize: s.fontSize,
             padding: s.padding,
@@ -1403,7 +1453,7 @@ export default function DrawingScreen({ route }) {
         console.error("[Realtime] Handler error:", err);
       }
     },
-    [activePageId, user?.id]
+    [activePageId, user?.id, decompressPoints]
   ); // ✅ Added user?.id for filtering own messages
 
   // ✅ FIX: Use ref to prevent creating multiple intervals

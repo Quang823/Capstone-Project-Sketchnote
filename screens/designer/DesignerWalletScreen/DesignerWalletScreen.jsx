@@ -19,7 +19,6 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { LinearGradient } from "expo-linear-gradient";
 import { paymentService } from "../../../service/paymentService";
 import { bankAccountService } from "../../../service/bankAccountService";
-import { useToast } from "../../../hooks/use-toast";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 import styles from "./DesignerWalletScreen.styles";
@@ -27,7 +26,6 @@ const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
 export default function DesignerWalletScreen() {
   const navigation = useNavigation();
-  const { toast } = useToast();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const { setActiveNavItem } = useNavContext();
   const [activeNavItemLocal, setActiveNavItemLocal] = useState("wallet");
@@ -48,6 +46,14 @@ export default function DesignerWalletScreen() {
     accountName: "",
   });
 
+  // Alert modal state
+  const [alertModal, setAlertModal] = useState({
+    visible: false,
+    type: 'error', // 'error', 'success', 'warning'
+    title: '',
+    message: ''
+  });
+
   // Bank selection states
   const [banks, setBanks] = useState([]);
   const [savedBankAccounts, setSavedBankAccounts] = useState([]);
@@ -56,6 +62,16 @@ export default function DesignerWalletScreen() {
   const [selectedBank, setSelectedBank] = useState(null);
   const [selectedSavedAccount, setSelectedSavedAccount] = useState(null);
   const [bankSearchQuery, setBankSearchQuery] = useState("");
+
+  // Show alert modal helper
+  const showAlert = (type, title, message) => {
+    setAlertModal({ visible: true, type, title, message });
+  };
+
+  // Close alert modal
+  const closeAlert = () => {
+    setAlertModal({ visible: false, type: 'error', title: '', message: '' });
+  };
 
   // Format helpers
   const formatCurrency = (amount) => {
@@ -114,12 +130,7 @@ export default function DesignerWalletScreen() {
       }
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
-
-      toast({
-        title: "Error",
-        description: "Cannot fetch wallet data. Please try again.",
-        variant: "destructive",
-      });
+      showAlert('error', 'Error', 'Cannot fetch wallet data. Please try again.');
     }
   };
 
@@ -160,21 +171,13 @@ export default function DesignerWalletScreen() {
   // Handle withdraw request
   const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount);
-    if (!amount || amount < 100000) {
-      toast({
-        title: "Error",
-        description: "Minimum withdraw amount is 100,000 VND",
-        variant: "destructive",
-      });
+    if (!amount || amount < 10000) {
+      showAlert('error', 'Invalid Amount', 'Minimum withdraw amount is 10,000 đ');
       return;
     }
 
     if (amount > walletData.balance) {
-      toast({
-        title: "Error",
-        description: "Insufficient balance to withdraw this amount.",
-        variant: "destructive",
-      });
+      showAlert('error', 'Insufficient Balance', 'You do not have enough balance to withdraw this amount.');
       return;
     }
 
@@ -183,11 +186,7 @@ export default function DesignerWalletScreen() {
       !bankInfo.accountNumber ||
       !bankInfo.accountName
     ) {
-      toast({
-        title: "Error",
-        description: "Please fill in all bank information.",
-        variant: "destructive",
-      });
+      showAlert('error', 'Missing Information', 'Please fill in all bank information.');
       return;
     }
 
@@ -204,35 +203,21 @@ export default function DesignerWalletScreen() {
       setShowWithdrawModal(false);
       setWithdrawAmount("");
 
-      toast({
-        title: "Success",
-        description: `Withdrawal request of ${formatCurrency(
-          amount
-        )} has been submitted.`,
-        variant: "success",
-      });
+      showAlert('success', 'Success', `Withdrawal request of ${formatCurrency(amount)} has been submitted successfully.`);
 
       // Refresh wallet data
       fetchWallet();
     } catch (error) {
       console.error("Withdrawal error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Withdrawal failed. Please try again later.",
-        variant: "destructive",
-      });
+      showAlert('error', 'Withdrawal Failed', error.message || 'Withdrawal failed. Please try again later.');
     }
   };
 
   // Handle deposit request
   const handleDeposit = async () => {
     const amount = parseInt(depositAmount);
-    if (!amount || amount < 5000) {
-      toast({
-        title: "Error",
-        description: "Minimum deposit amount is 5,000 VND",
-        variant: "destructive",
-      });
+    if (!amount || amount < 10000) {
+      showAlert('error', 'Invalid Amount', 'Minimum deposit amount is 10,000 đ');
       return;
     }
 
@@ -243,11 +228,7 @@ export default function DesignerWalletScreen() {
       navigation.navigate("PaymentWebView", { paymentUrl: url.message });
     } catch (error) {
       console.error("Payment error:", error);
-      toast({
-        title: "Failed",
-        description: "Deposit failed. Please try again.",
-        variant: "destructive",
-      });
+      showAlert('error', 'Deposit Failed', 'Deposit failed. Please try again.');
     }
   };
 
@@ -1044,7 +1025,124 @@ export default function DesignerWalletScreen() {
           </View>
         </View>
       </Modal >
+
+      {/* Beautiful Alert Modal */}
+      <Modal
+        visible={alertModal.visible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={closeAlert}
+      >
+        <View style={modalStyles.alertOverlay}>
+          <View style={modalStyles.alertContainer}>
+            {/* Icon Section */}
+            <View style={[
+              modalStyles.alertIconContainer,
+              alertModal.type === 'error' && { backgroundColor: '#FEE2E2' },
+              alertModal.type === 'success' && { backgroundColor: '#D1FAE5' },
+              alertModal.type === 'warning' && { backgroundColor: '#FEF3C7' }
+            ]}>
+              <Icon
+                name={
+                  alertModal.type === 'error' ? 'error-outline' :
+                    alertModal.type === 'success' ? 'check-circle-outline' :
+                      'warning'
+                }
+                size={56}
+                color={
+                  alertModal.type === 'error' ? '#EF4444' :
+                    alertModal.type === 'success' ? '#10B981' :
+                      '#F59E0B'
+                }
+              />
+            </View>
+
+            {/* Title */}
+            <Text style={modalStyles.alertTitle}>{alertModal.title}</Text>
+
+            {/* Message */}
+            <Text style={modalStyles.alertMessage}>{alertModal.message}</Text>
+
+            {/* OK Button */}
+            <TouchableOpacity
+              style={[
+                modalStyles.alertButton,
+                alertModal.type === 'error' && { backgroundColor: '#EF4444' },
+                alertModal.type === 'success' && { backgroundColor: '#10B981' },
+                alertModal.type === 'warning' && { backgroundColor: '#F59E0B' }
+              ]}
+              onPress={closeAlert}
+              activeOpacity={0.8}
+            >
+              <Text style={modalStyles.alertButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View >
   );
 }
+
+// Alert Modal Styles
+const modalStyles = StyleSheet.create({
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  alertContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  alertIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  alertTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 28,
+  },
+  alertButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 48,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  alertButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+});
 

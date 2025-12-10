@@ -2536,16 +2536,17 @@ export default function GestureHandler(
                 const index = strokes.findIndex((s) => s.id === selectedId);
                 if (index !== -1) {
                   const sItem = strokes[index];
+                  const origin = liveTransformRef.current.origin;
                   const final = {
                     ...sItem,
-                    x: (sItem.x ?? 0) + (liveTransformRef.current.dx || 0),
-                    y: (sItem.y ?? 0) + (liveTransformRef.current.dy || 0),
+                    x: (origin?.x ?? sItem.x ?? 0) + (liveTransformRef.current.dx || 0),
+                    y: (origin?.y ?? sItem.y ?? 0) + (liveTransformRef.current.dy || 0),
                     width:
-                      (sItem.width ?? 0) + (liveTransformRef.current.dw || 0),
+                      (origin?.width ?? sItem.width ?? 0) + (liveTransformRef.current.dw || 0),
                     height:
-                      (sItem.height ?? 0) + (liveTransformRef.current.dh || 0),
+                      (origin?.height ?? sItem.height ?? 0) + (liveTransformRef.current.dh || 0),
                     rotation:
-                      (sItem.rotation ?? 0) +
+                      (origin?.rotation ?? sItem.rotation ?? 0) +
                       (liveTransformRef.current.drot || 0),
                   };
                   if (typeof onModifyStroke === "function")

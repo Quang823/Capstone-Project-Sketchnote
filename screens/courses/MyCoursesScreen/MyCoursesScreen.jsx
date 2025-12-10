@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  StyleSheet,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { myCoursesStyles } from "./MyCoursesScreen.styles";
@@ -18,6 +19,8 @@ import { feedbackService } from "../../../service/feedbackService";
 import { Modal, KeyboardAvoidingView, Platform, Pressable } from "react-native";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
+import { LinearGradient } from "expo-linear-gradient";
+
 export default function MyCoursesScreen() {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +49,7 @@ export default function MyCoursesScreen() {
       fetchMyCourses();
     }, [fetchMyCourses])
   );
+
   const createFeedback = async ({ courseId, rating, comment }) => {
     try {
       const payload = {
@@ -100,7 +104,6 @@ export default function MyCoursesScreen() {
     }
   };
 
-  // 🔹 Format giây → giờ:phút:giây
   const formatDuration = (totalSeconds) => {
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -125,87 +128,98 @@ export default function MyCoursesScreen() {
 
   const renderCourseItem = (item) => {
     const course = item.course;
-    const courseId = course.courseId || course.id;
+    const progressPercent = item.progressPercent || 0;
 
     return (
-      <TouchableOpacity
-        key={item.enrollmentId}
-        style={[myCoursesStyles.courseCard, { backgroundColor: "#F9FAFB" }]}
-        onPress={() => handleCoursePress(course)}
-      >
-        <Image
-          source={{
-            uri: course.imageUrl || "https://via.placeholder.com/150",
-          }}
-          style={myCoursesStyles.courseImage}
-        />
+      <View style={myCoursesStyles.courseCardWrapper}>
+        <TouchableOpacity
+          style={myCoursesStyles.courseCard}
+          onPress={() => handleCoursePress(course)}
+          activeOpacity={0.95}
+        >
+          {/* Image with gradient overlay */}
+          <View style={myCoursesStyles.imageContainer}>
+            <Image
+              source={{
+                uri: course.imageUrl || "https://via.placeholder.com/150",
+              }}
+              style={myCoursesStyles.courseImage}
+            />
+            <View style={myCoursesStyles.imageGradient}>
+              <View style={myCoursesStyles.categoryBadge}>
+                <Icon name="auto-awesome" size={12} color="#FFF" />
+                <Text style={myCoursesStyles.categoryText}>
+                  {course.category || "Other"}
+                </Text>
+              </View>
+            </View>
 
-        <View style={myCoursesStyles.courseInfo}>
-          <Text style={myCoursesStyles.courseTitle}>{course.title}</Text>
-          <Pressable
-            style={myCoursesStyles.feedbackButtonTopRight}
-            onPress={() => openFeedbackModal(course)}
-          >
-            <Icon name="rate-review" size={18} color="#2563EB" />
-          </Pressable>
-
-          <View style={myCoursesStyles.categoryPriceRow}>
-            <View
-              style={[
-                myCoursesStyles.categoryBadge,
-                { backgroundColor: "#E0E7FF" },
-              ]}
+            {/* Feedback button on image */}
+            <Pressable
+              style={myCoursesStyles.feedbackButtonFloat}
+              onPress={() => openFeedbackModal(course)}
             >
-              <Text
-                style={[myCoursesStyles.categoryText, { color: "#4F46E5" }]}
-              >
-                {course.category || "Other"}
-              </Text>
-            </View>
+              <Icon name="star" size={18} color="#FFB300" />
+            </Pressable>
           </View>
 
-          {/* 🔹 Subtitle */}
-          <Text style={myCoursesStyles.courseSubtitle}>{course.subtitle}</Text>
-          <Text style={myCoursesStyles.courseDescription} numberOfLines={2}>
-            {course.description}
-          </Text>
-
-          {/* Meta info */}
-          <View style={myCoursesStyles.courseMeta}>
-            <View style={myCoursesStyles.metaItem}>
-              <Icon name="schedule" size={16} color="#4F46E5" />
-              <Text style={myCoursesStyles.metaText}>
-                {formatDuration(course.totalDuration || 0)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={myCoursesStyles.progressContainer}>
-            <Text style={myCoursesStyles.progressText}>
-              Progress: {item.progressPercent || 0}%
+          {/* Course Info */}
+          <View style={myCoursesStyles.courseInfo}>
+            <Text style={myCoursesStyles.courseTitle} numberOfLines={2}>
+              {course.title}
             </Text>
-            <View style={myCoursesStyles.progressBar}>
-              <View
-                style={[
-                  myCoursesStyles.progressFill,
-                  {
-                    width: `${item.progressPercent || 0}%`,
-                    backgroundColor: "#10B981",
-                  },
-                ]}
-              />
+
+            {course.subtitle && (
+              <Text style={myCoursesStyles.courseSubtitle} numberOfLines={1}>
+                {course.subtitle}
+              </Text>
+            )}
+
+            {/* Meta Info */}
+            <View style={myCoursesStyles.metaContainer}>
+              <View style={myCoursesStyles.metaItem}>
+                <Icon name="access-time" size={14} color="#64748B" />
+                <Text style={myCoursesStyles.metaText}>
+                  {formatDuration(course.totalDuration || 0)}
+                </Text>
+              </View>
+              <View style={myCoursesStyles.metaDivider} />
+              <View style={myCoursesStyles.metaItem}>
+                <Icon name="play-circle-outline" size={14} color="#64748B" />
+                <Text style={myCoursesStyles.metaText}>
+                  {course.lessons?.length || 0}
+                </Text>
+              </View>
             </View>
+
+            {/* Progress */}
+            <View style={myCoursesStyles.progressSection}>
+              <View style={myCoursesStyles.progressBarContainer}>
+                <View
+                  style={[
+                    myCoursesStyles.progressBar,
+                    { width: `${progressPercent}%` },
+                  ]}
+                />
+              </View>
+              <Text style={myCoursesStyles.progressText}>
+                {progressPercent}% Complete
+              </Text>
+            </View>
+
+            {/* Action Button */}
+            <TouchableOpacity
+              style={myCoursesStyles.continueButton}
+              onPress={() => handleCoursePress(course)}
+            >
+              <Text style={myCoursesStyles.continueButtonText}>
+                {progressPercent === 0 ? "Start Course" : "Continue"}
+              </Text>
+              <Icon name="arrow-forward" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={myCoursesStyles.feedbackButtonTopRight}
-            onPress={() => openFeedbackModal(course)}
-          >
-            <Icon name="rate-review" size={18} color="#2563EB" />
-          </TouchableOpacity>
-
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -224,50 +238,75 @@ export default function MyCoursesScreen() {
 
   return (
     <View style={myCoursesStyles.container}>
+      {/* Premium Header */}
+
       <View style={myCoursesStyles.header}>
         <View style={myCoursesStyles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
-          <Text style={myCoursesStyles.headerTitle}>My Courses</Text>
+          <SidebarToggleButton iconSize={28} iconColor="#084F8C" />
+          <View>
+            <Text style={myCoursesStyles.headerTitle}>My Learning</Text>
+            <Text style={myCoursesStyles.headerSubtitle}>
+              {enrollments.length} {enrollments.length === 1 ? "Course" : "Courses"} in progress
+            </Text>
+          </View>
         </View>
       </View>
+
 
       <ScrollView
         style={myCoursesStyles.content}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: 0 }}
       >
+        {/* Hero Banner */}
+        <View style={myCoursesStyles.heroContainer}>
+          <Image
+            source={{ uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1765365414/ugtp99tsix53ay127xrs.jpg" }}
+            style={myCoursesStyles.heroImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.5)', 'transparent', 'rgba(0,0,0,0.7)']}
+            style={myCoursesStyles.heroOverlay}
+          />
+          <View style={myCoursesStyles.heroContent}>
+            <Text style={myCoursesStyles.heroTitle}>Keep Learning</Text>
+            <Text style={myCoursesStyles.heroSubtitle}>Continue your journey to mastery</Text>
+          </View>
+        </View>
+
         {enrollments.length === 0 ? (
           <View style={myCoursesStyles.emptyContainer}>
-            <LottieView
-              source={require("../../../assets/course.json")}
-              autoPlay
-              loop
-              style={{ width: 170, height: 170 }}
-            />
-            <Text style={myCoursesStyles.emptyTitle}>No Courses Yet</Text>
+            <View style={myCoursesStyles.emptyIconContainer}>
+              <LottieView
+                source={require("../../../assets/course.json")}
+                autoPlay
+                loop
+                style={{ width: 240, height: 240 }}
+              />
+            </View>
+            <Text style={myCoursesStyles.emptyTitle}>Begin Your Journey</Text>
             <Text style={myCoursesStyles.emptyDescription}>
-              You haven't enrolled in any courses yet. Start exploring and
-              enroll in your first course!
+              Unlock your potential with world-class courses designed for success
             </Text>
             <TouchableOpacity
               style={myCoursesStyles.exploreButton}
               onPress={() => navigation.navigate("CoursesScreen")}
             >
+              <Icon name="explore" size={22} color="#FFFFFF" />
               <Text style={myCoursesStyles.exploreButtonText}>
-                Explore Courses
+                Discover Courses
               </Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View>
-            <Text style={myCoursesStyles.sectionTitle}>
-              {/* {enrollments.length}{" "}
-              {enrollments.length === 1 ? "Course" : "Courses"} Enrolled */}
-            </Text>
+          <View style={myCoursesStyles.coursesGrid}>
             {enrollments.map(renderCourseItem)}
           </View>
         )}
       </ScrollView>
 
+      {/* Premium Feedback Modal */}
       <Modal
         visible={feedbackModalVisible}
         animationType="slide"
@@ -283,47 +322,66 @@ export default function MyCoursesScreen() {
             onPress={closeFeedbackModal}
           />
           <View style={myCoursesStyles.modalContent}>
+            {/* Modal Header */}
             <View style={myCoursesStyles.modalHeader}>
-              <View>
-                <Text style={myCoursesStyles.modalTitle}>Write a Review</Text>
-                <Text style={myCoursesStyles.modalSubtitle}>
-                  {selectedCourse?.title}
-                </Text>
+              <View style={myCoursesStyles.modalIconContainer}>
+                <View style={myCoursesStyles.modalIcon}>
+                  <Icon name="rate-review" size={24} color="#084F8C" />
+                </View>
               </View>
-              <Pressable onPress={closeFeedbackModal}>
-                <Icon name="close" size={24} color="#64748B" />
+              <Text style={myCoursesStyles.modalTitle}>Share Your Experience</Text>
+              <Text style={myCoursesStyles.modalSubtitle} numberOfLines={2}>
+                {selectedCourse?.title}
+              </Text>
+              <Pressable onPress={closeFeedbackModal} style={myCoursesStyles.closeButton}>
+                <Icon name="close" size={24} color="#94A3B8" />
               </Pressable>
             </View>
 
+            {/* Rating Section */}
             <View style={myCoursesStyles.section}>
-              <Text style={myCoursesStyles.sectionTitle}>Your Rating</Text>
+              <Text style={myCoursesStyles.sectionLabel}>Your Rating</Text>
               <View style={myCoursesStyles.starsContainer}>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <Pressable key={star} onPress={() => setRating(star)} style={myCoursesStyles.starButton}>
+                  <Pressable
+                    key={star}
+                    onPress={() => setRating(star)}
+                    style={myCoursesStyles.starButton}
+                  >
                     <Icon
                       name={star <= rating ? "star" : "star-border"}
                       size={40}
-                      color={star <= rating ? "#FFB300" : "#BDC3C7"}
+                      color={star <= rating ? "#FFB300" : "#E2E8F0"}
                     />
                   </Pressable>
                 ))}
               </View>
               {rating > 0 && (
-                <Text style={myCoursesStyles.ratingText}>
-                  {rating === 1 && "Poor"}
-                  {rating === 2 && "Fair"}
-                  {rating === 3 && "Good"}
-                  {rating === 4 && "Very Good"}
-                  {rating === 5 && "Excellent"}
-                </Text>
+                <View style={myCoursesStyles.ratingBadge}>
+                  <Text style={myCoursesStyles.ratingEmoji}>
+                    {rating === 1 && "😞"}
+                    {rating === 2 && "😐"}
+                    {rating === 3 && "🙂"}
+                    {rating === 4 && "😊"}
+                    {rating === 5 && "🤩"}
+                  </Text>
+                  <Text style={myCoursesStyles.ratingText}>
+                    {rating === 1 && "Poor"}
+                    {rating === 2 && "Fair"}
+                    {rating === 3 && "Good"}
+                    {rating === 4 && "Very Good"}
+                    {rating === 5 && "Excellent"}
+                  </Text>
+                </View>
               )}
             </View>
 
+            {/* Comment Section */}
             <View style={myCoursesStyles.section}>
-              <Text style={myCoursesStyles.sectionTitle}>Your Comment</Text>
+              <Text style={myCoursesStyles.sectionLabel}>Your Feedback</Text>
               <TextInput
                 style={myCoursesStyles.commentInput}
-                placeholder="Share your experience with this course..."
+                placeholder="Share what you loved or how we can improve..."
                 placeholderTextColor="#94A3B8"
                 multiline
                 numberOfLines={5}
@@ -331,9 +389,10 @@ export default function MyCoursesScreen() {
                 onChangeText={setComment}
                 textAlignVertical="top"
               />
-              <Text style={myCoursesStyles.charCount}>{comment.length} characters</Text>
+              <Text style={myCoursesStyles.charCount}>{comment.length}/500</Text>
             </View>
 
+            {/* Action Buttons */}
             <View style={myCoursesStyles.buttonRow}>
               <Pressable style={myCoursesStyles.cancelButton} onPress={closeFeedbackModal}>
                 <Text style={myCoursesStyles.cancelButtonText}>Cancel</Text>
@@ -341,7 +400,8 @@ export default function MyCoursesScreen() {
               <Pressable
                 style={[
                   myCoursesStyles.submitButton,
-                  (submittingFeedback || rating === 0 || !comment.trim()) && myCoursesStyles.submitButtonDisabled,
+                  (submittingFeedback || rating === 0 || !comment.trim()) &&
+                  myCoursesStyles.submitButtonDisabled,
                 ]}
                 onPress={submitFeedback}
                 disabled={submittingFeedback || rating === 0 || !comment.trim()}
@@ -350,8 +410,8 @@ export default function MyCoursesScreen() {
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
-                    <Icon name="send" size={18} color="#FFFFFF" />
                     <Text style={myCoursesStyles.submitButtonText}>Submit Review</Text>
+                    <Icon name="send" size={18} color="#FFFFFF" />
                   </>
                 )}
               </Pressable>
