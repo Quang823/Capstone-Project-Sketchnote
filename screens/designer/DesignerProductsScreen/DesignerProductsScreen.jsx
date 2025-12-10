@@ -540,27 +540,15 @@ export default function DesignerProductsScreen() {
                       </View>
 
                       <View style={{ flexDirection: "row", gap: 8 }}>
-                        {/* <Pressable
-                          style={{
-                            backgroundColor: "#EFF6FF",
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                            borderRadius: 6,
-                          }}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            handleEditProduct(product);
-                          }}
-                        >
-                          <Icon name="edit" size={16} color="#3B82F6" />
-                        </Pressable> */}
-
                         <Pressable
                           style={{
                             backgroundColor: "#E0F2FE",
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                            borderRadius: 6,
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            borderRadius: 8,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
                           }}
                           onPress={(e) => {
                             e.stopPropagation();
@@ -568,14 +556,20 @@ export default function DesignerProductsScreen() {
                           }}
                         >
                           <Icon name="post-add" size={16} color="#0284C7" />
+                          <Text style={{ fontSize: 11, color: "#0284C7", fontWeight: "600" }}>
+                            New Version
+                          </Text>
                         </Pressable>
 
                         <Pressable
                           style={{
                             backgroundColor: isArchived ? "#E0E7FF" : "#FEF3C7",
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                            borderRadius: 6,
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            borderRadius: 8,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 6,
                           }}
                           onPress={(e) => {
                             e.stopPropagation();
@@ -587,21 +581,9 @@ export default function DesignerProductsScreen() {
                             size={16}
                             color={isArchived ? "#4338CA" : "#B45309"}
                           />
-                        </Pressable>
-
-                        <Pressable
-                          style={{
-                            backgroundColor: "#FEE2E2",
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                            borderRadius: 6,
-                          }}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            handleDeleteProduct(product);
-                          }}
-                        >
-                          <Icon name="delete" size={16} color="#EF4444" />
+                          <Text style={{ fontSize: 11, color: isArchived ? "#4338CA" : "#B45309", fontWeight: "600" }}>
+                            {isArchived ? "Unarchive" : "Archive"}
+                          </Text>
                         </Pressable>
                       </View>
                     </View>
@@ -795,23 +777,87 @@ export default function DesignerProductsScreen() {
                 <View style={designerProductsStyles.detailBodyRow}>
                   <View style={designerProductsStyles.leftPane}>
                     <View style={designerProductsStyles.leftPaneCard}>
-                      {/* Get thumbnail from current published version */}
+                      {/* Image Gallery - Show all images from current version */}
                       {(() => {
                         const currentVersion = selectedProduct.versions?.find(
                           v => v.versionId === selectedProduct.currentPublishedVersionId
                         );
-                        const thumbnail = currentVersion?.images?.find(img => img.isThumbnail) || currentVersion?.images?.[0];
-                        if (thumbnail) {
+                        const allImages = currentVersion?.images || selectedProduct.images || [];
+
+                        if (allImages.length === 0) {
                           return (
-                            <Image
-                              source={{ uri: thumbnail.imageUrl || thumbnail.url }}
-                              style={designerProductsStyles.detailImage}
-                            />
+                            <View style={designerProductsStyles.heroPlaceholder}>
+                              <Icon name="image" size={48} color="#9CA3AF" />
+                              <Text style={{ color: "#9CA3AF", fontSize: 12, marginTop: 8 }}>No images</Text>
+                            </View>
                           );
                         }
+
                         return (
-                          <View style={designerProductsStyles.heroPlaceholder}>
-                            <Icon name="image" size={48} color="#9CA3AF" />
+                          <View>
+                            {/* Main Image */}
+                            <Image
+                              source={{ uri: allImages[0].imageUrl || allImages[0].url }}
+                              style={designerProductsStyles.detailImage}
+                            />
+
+                            {/* Thumbnail Gallery */}
+                            {allImages.length > 1 && (
+                              <View style={{ marginTop: 12 }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151" }}>
+                                    All Images
+                                  </Text>
+                                  <View style={{ backgroundColor: "#EFF6FF", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 }}>
+                                    <Text style={{ fontSize: 10, color: "#3B82F6", fontWeight: "600" }}>
+                                      {allImages.length} images
+                                    </Text>
+                                  </View>
+                                </View>
+                                <ScrollView
+                                  horizontal
+                                  showsHorizontalScrollIndicator={false}
+                                  style={{ marginHorizontal: -4 }}
+                                >
+                                  {allImages.map((img, idx) => (
+                                    <View
+                                      key={idx}
+                                      style={{
+                                        marginHorizontal: 4,
+                                        borderRadius: 8,
+                                        borderWidth: img.isThumbnail ? 2 : 1,
+                                        borderColor: img.isThumbnail ? "#3B82F6" : "#E5E7EB",
+                                        overflow: "hidden",
+                                      }}
+                                    >
+                                      <Image
+                                        source={{ uri: img.imageUrl || img.url }}
+                                        style={{
+                                          width: 80,
+                                          height: 80,
+                                          backgroundColor: "#F3F4F6",
+                                        }}
+                                      />
+                                      {img.isThumbnail && (
+                                        <View style={{
+                                          position: "absolute",
+                                          top: 4,
+                                          right: 4,
+                                          backgroundColor: "#3B82F6",
+                                          paddingHorizontal: 6,
+                                          paddingVertical: 2,
+                                          borderRadius: 4
+                                        }}>
+                                          <Text style={{ color: "#FFFFFF", fontSize: 8, fontWeight: "600" }}>
+                                            MAIN
+                                          </Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                  ))}
+                                </ScrollView>
+                              </View>
+                            )}
                           </View>
                         );
                       })()}
