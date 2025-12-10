@@ -34,8 +34,10 @@ export default function CoursesScreen() {
   const isDark = theme === "dark";
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [allCourses, setAllCourses] = useState([]);
-  const [filteredCourses, setFilteredCourses] = useState([]);
+  const [enrolledCourses, setEnrolledCourses] = useState([]);
+  const [notEnrolledCourses, setNotEnrolledCourses] = useState([]);
+  const [filteredEnrolledCourses, setFilteredEnrolledCourses] = useState([]);
+  const [filteredNotEnrolledCourses, setFilteredNotEnrolledCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   // Floating animation cho 2 circle
@@ -78,15 +80,40 @@ export default function CoursesScreen() {
   // Filter courses when search or category changes
   useEffect(() => {
     filterCourses();
-  }, [searchQuery, selectedCategory, allCourses]);
+  }, [searchQuery, selectedCategory, enrolledCourses, notEnrolledCourses]);
 
   const fetchCourses = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await courseService.getAllCourse();
+      
+      // Fetch enrolled courses
+      const enrolledData = await courseService.getAllCourseEnrollments();
+      const transformedEnrolled = enrolledData.map((course) => ({
+        id: course.courseId.toString(),
+        title: course.title,
+        subtitle: course.subtitle,
+        description: course.description,
+        instructor: "Instructor",
+        imageUrl:
+          course.imageUrl && course.imageUrl.trim() !== "​"
+            ? course.imageUrl
+            : null,
+        price: course.price,
+        rating: course.avgRating || 0,
+        ratingCount: course.ratingCount || 0,
+        students: course.studentCount || 0,
+        totalDuration: course.totalDuration || 0,
+        lessonsCount: course.lessons?.length || 0,
+        level: course.lessons?.length > 5 ? "Advanced" : "Beginner",
+        category: course.category || "all",
+        isNew: false,
+        isEnrolled: true,
+      }));
 
-      const transformedCourses = data.result.map((course) => ({
+      // Fetch not enrolled courses
+      const notEnrolledData = await courseService.getCourseNotEnrollmentsByUserId();
+      const transformedNotEnrolled = notEnrolledData.map((course) => ({
         id: course.courseId.toString(),
         title: course.title,
         subtitle: course.subtitle,
@@ -105,10 +132,13 @@ export default function CoursesScreen() {
         level: course.lessons?.length > 5 ? "Advanced" : "Beginner",
         category: course.category || "all",
         isNew: Math.random() > 0.7,
+        isEnrolled: false,
       }));
 
-      setAllCourses(transformedCourses);
-      setFilteredCourses(transformedCourses);
+      setEnrolledCourses(transformedEnrolled);
+      setNotEnrolledCourses(transformedNotEnrolled);
+      setFilteredEnrolledCourses(transformedEnrolled);
+      setFilteredNotEnrolledCourses(transformedNotEnrolled);
     } catch (err) {
       setError(err.message);
       console.error("Error fetching courses:", err);
@@ -118,24 +148,40 @@ export default function CoursesScreen() {
   };
 
   const filterCourses = () => {
-    let filtered = allCourses;
-
+    // Filter enrolled courses
+    let filteredEnrolled = enrolledCourses;
     if (selectedCategory !== "all") {
-      filtered = filtered.filter(
+      filteredEnrolled = filteredEnrolled.filter(
         (course) => course.category === selectedCategory
       );
     }
-
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
+      filteredEnrolled = filteredEnrolled.filter(
         (course) =>
           course.title.toLowerCase().includes(query) ||
           course.instructor.toLowerCase().includes(query)
       );
     }
 
-    setFilteredCourses(filtered);
+    // Filter not enrolled courses
+    let filteredNotEnrolled = notEnrolledCourses;
+    if (selectedCategory !== "all") {
+      filteredNotEnrolled = filteredNotEnrolled.filter(
+        (course) => course.category === selectedCategory
+      );
+    }
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filteredNotEnrolled = filteredNotEnrolled.filter(
+        (course) =>
+          course.title.toLowerCase().includes(query) ||
+          course.instructor.toLowerCase().includes(query)
+      );
+    }
+
+    setFilteredEnrolledCourses(filteredEnrolled);
+    setFilteredNotEnrolledCourses(filteredNotEnrolled);
   };
 
   const handleCategoryPress = (categoryId) => {
@@ -150,8 +196,8 @@ export default function CoursesScreen() {
     fetchCourses();
   };
 
-  // Get hot new releases (top 4 new courses)
-  const hotNewReleases = allCourses.filter(course => course.isNew).slice(0, 4);
+  // Get hot new releases (top 4 new courses from not enrolled)
+  const hotNewReleases = notEnrolledCourses.filter(course => course.isNew).slice(0, 4);
 
   // Render featured course card (for hot new releases)
   const renderFeaturedCourseItem = (item, index) => {
@@ -378,7 +424,7 @@ export default function CoursesScreen() {
             <View>
               <Text style={[coursesStyles.headerTitle, isDark && coursesStyles.headerTitleDark]}>Courses</Text>
               <Text style={[coursesStyles.headerSubtitle, isDark && coursesStyles.headerSubtitleDark]}>
-                {allCourses.length} courses available
+                {enrolledCourses.length + notEnrolledCourses.length} courses available
               </Text>
             </View>
           </View>
@@ -575,14 +621,42 @@ export default function CoursesScreen() {
           </View>
         )}
 
-        {/* All Courses */}
-        {filteredCourses.length > 0 ? (
+        {/* My Courses - Enrolled */}
+        {filteredEnrolledCourses.length > 0 && (
+          <View style={coursesStyles.sectionContainer}>
+            <View style={coursesStyles.sectionHeader}>
+              <View>
+                <Text style={coursesStyles.sectionTitle}>My Courses</Text>
+                <Text style={coursesStyles.sectionSubtitle}>
+                  {filteredEnrolledCourses.length} enrolled courses • Continue learning
+                </Text>
+              </View>
+              <Pressable 
+                style={coursesStyles.filterButton}
+                onPress={() => navigation.navigate("MyCourses")}
+              >
+                <Text style={{ color: '#2348bfff', fontSize: 14, fontWeight: '600', marginRight: 4 }}>View All</Text>
+                <Icon name="arrow-forward" size={18} color="#2348bfff" />
+              </Pressable>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
+            >
+              {filteredEnrolledCourses.map(renderCourseItem)}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* All Courses - Not Enrolled */}
+        {filteredNotEnrolledCourses.length > 0 ? (
           <View style={[coursesStyles.sectionContainer, isDark && coursesStyles.sectionContainerDark]}>
             <View style={coursesStyles.sectionHeader}>
               <View>
                 <Text style={[coursesStyles.sectionTitle, isDark && coursesStyles.sectionTitleDark]}>All Courses</Text>
                 <Text style={[coursesStyles.sectionSubtitle, isDark && coursesStyles.sectionSubtitleDark]}>
-                  {filteredCourses.length} courses • Updated daily
+                  {filteredNotEnrolledCourses.length} courses available • Updated daily
                 </Text>
               </View>
               <Pressable style={[coursesStyles.filterButton, isDark && coursesStyles.filterButtonDark]}>
@@ -594,19 +668,21 @@ export default function CoursesScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ paddingHorizontal: 20 }}
             >
-              {filteredCourses.map(renderCourseItem)}
+              {filteredNotEnrolledCourses.map(renderCourseItem)}
             </ScrollView>
           </View>
         ) : (
-          <View style={coursesStyles.emptyState}>
-            <LinearGradient colors={isDark ? ['#1E293B', '#0F172A'] : ['#F8FAFC', '#EFF6FF']} style={coursesStyles.emptyStateGradient}>
-              <Icon name="search-off" size={80} color={isDark ? "#475569" : "#CBD5E1"} />
-              <Text style={[coursesStyles.emptyStateText, isDark && coursesStyles.emptyStateTextDark]}>No courses found</Text>
-              <Text style={[coursesStyles.emptyStateSubtext, isDark && coursesStyles.emptyStateSubtextDark]}>
-                Try adjusting your search or filters
-              </Text>
-            </LinearGradient>
-          </View>
+          !loading && filteredEnrolledCourses.length === 0 && (
+            <View style={coursesStyles.emptyState}>
+              <LinearGradient colors={isDark ? ['#1E293B', '#0F172A'] : ['#F8FAFC', '#EFF6FF']} style={coursesStyles.emptyStateGradient}>
+                <Icon name="search-off" size={80} color={isDark ? "#475569" : "#CBD5E1"} />
+                <Text style={[coursesStyles.emptyStateText, isDark && coursesStyles.emptyStateTextDark]}>No courses found</Text>
+                <Text style={[coursesStyles.emptyStateSubtext, isDark && coursesStyles.emptyStateSubtextDark]}>
+                  Try adjusting your search or filters
+                </Text>
+              </LinearGradient>
+            </View>
+          )
         )}
 
         {error && (
