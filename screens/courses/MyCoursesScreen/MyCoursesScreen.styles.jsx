@@ -8,12 +8,18 @@ export const myCoursesStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F1F5F9",
   },
+  containerDark: {
+    backgroundColor: "#0F172A",
+  },
 
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F1F5F9",
+  },
+  centerContainerDark: {
+    backgroundColor: "#0F172A",
   },
 
   header: {
@@ -32,6 +38,10 @@ export const myCoursesStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  headerDark: {
+    backgroundColor: "#1E293B",
+    borderBottomColor: "#334155",
+  },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
@@ -44,11 +54,17 @@ export const myCoursesStyles = StyleSheet.create({
     color: "#084F8C",
     letterSpacing: -0.5,
   },
+  headerTitleDark: {
+    color: "#FFFFFF",
+  },
   headerSubtitle: {
     fontSize: 14,
     color: "#64748B",
     fontWeight: "500",
     letterSpacing: 0.3,
+  },
+  headerSubtitleDark: {
+    color: "#94A3B8",
   },
 
   // Hero Banner (Consistent with CoursesScreen)
@@ -125,6 +141,11 @@ export const myCoursesStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.8)",
   },
+  courseCardDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+    shadowColor: "#000",
+  },
 
   // Image with Gradient
   imageContainer: {
@@ -132,6 +153,9 @@ export const myCoursesStyles = StyleSheet.create({
     width: "100%",
     height: 140,
     backgroundColor: "#E2E8F0",
+  },
+  imageContainerDark: {
+    backgroundColor: "#334155",
   },
   courseImage: {
     width: "100%",
@@ -189,6 +213,9 @@ export const myCoursesStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+  feedbackButtonFloatDark: {
+    backgroundColor: "rgba(30, 41, 59, 0.95)",
+  },
 
   // Course Info
   courseInfo: {
@@ -203,11 +230,17 @@ export const myCoursesStyles = StyleSheet.create({
     marginBottom: 6,
     minHeight: 40,
   },
+  courseTitleDark: {
+    color: "#F1F5F9",
+  },
   courseSubtitle: {
     fontSize: 12,
     color: "#64748B",
     marginBottom: 10,
     lineHeight: 16,
+  },
+  courseSubtitleDark: {
+    color: "#94A3B8",
   },
 
   // Meta Info
@@ -220,6 +253,9 @@ export const myCoursesStyles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     borderRadius: 10,
   },
+  metaContainerDark: {
+    backgroundColor: "#0F172A",
+  },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -231,10 +267,16 @@ export const myCoursesStyles = StyleSheet.create({
     backgroundColor: "#CBD5E1",
     marginHorizontal: 8,
   },
+  metaDividerDark: {
+    backgroundColor: "#475569",
+  },
   metaText: {
     fontSize: 11,
     color: "#64748B",
     fontWeight: "600",
+  },
+  metaTextDark: {
+    color: "#94A3B8",
   },
 
   // Premium Progress
@@ -247,6 +289,9 @@ export const myCoursesStyles = StyleSheet.create({
     borderRadius: 10,
     overflow: "hidden",
     marginBottom: 6,
+  },
+  progressBarContainerDark: {
+    backgroundColor: "#334155",
   },
   progressBar: {
     height: "100%",
@@ -262,6 +307,9 @@ export const myCoursesStyles = StyleSheet.create({
     color: "#64748B",
     fontWeight: "600",
     textAlign: "right",
+  },
+  progressTextDark: {
+    color: "#94A3B8",
   },
 
   // Premium Continue Button
@@ -305,6 +353,10 @@ export const myCoursesStyles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
   },
+  emptyIconContainerDark: {
+    backgroundColor: "#1E293B",
+    shadowColor: "#000",
+  },
   emptyTitle: {
     fontSize: 28,
     fontWeight: "800",
@@ -312,6 +364,9 @@ export const myCoursesStyles = StyleSheet.create({
     marginTop: 16,
     letterSpacing: -0.5,
     textAlign: "center",
+  },
+  emptyTitleDark: {
+    color: "#FFFFFF",
   },
   emptyDescription: {
     fontSize: 16,
@@ -321,6 +376,9 @@ export const myCoursesStyles = StyleSheet.create({
     lineHeight: 24,
     maxWidth: 300,
     fontWeight: "500",
+  },
+  emptyDescriptionDark: {
+    color: "#94A3B8",
   },
   exploreButton: {
     marginTop: 32,
@@ -370,6 +428,9 @@ export const myCoursesStyles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 16,
   },
+  modalContentDark: {
+    backgroundColor: "#1E293B",
+  },
 
   // Modal Header
   modalHeader: {
@@ -379,6 +440,9 @@ export const myCoursesStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
     position: "relative",
+  },
+  modalHeaderDark: {
+    borderBottomColor: "#334155",
   },
   modalIconContainer: {
     marginBottom: 16,
@@ -396,6 +460,9 @@ export const myCoursesStyles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
+  modalIconDark: {
+    backgroundColor: "#0F172A",
+  },
   modalTitle: {
     fontSize: 24,
     fontWeight: "800",
@@ -404,6 +471,9 @@ export const myCoursesStyles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 8,
   },
+  modalTitleDark: {
+    color: "#FFFFFF",
+  },
   modalSubtitle: {
     fontSize: 14,
     color: "#64748B",
@@ -411,6 +481,9 @@ export const myCoursesStyles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 20,
     lineHeight: 20,
+  },
+  modalSubtitleDark: {
+    color: "#94A3B8",
   },
   closeButton: {
     position: "absolute",
@@ -422,6 +495,9 @@ export const myCoursesStyles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     alignItems: "center",
     justifyContent: "center",
+  },
+  closeButtonDark: {
+    backgroundColor: "#334155",
   },
 
   // Section
@@ -435,6 +511,9 @@ export const myCoursesStyles = StyleSheet.create({
     marginBottom: 16,
     letterSpacing: 0.2,
   },
+  sectionLabelDark: {
+    color: "#F1F5F9",
+  },
 
   // Premium Star Rating
   starsContainer: {
@@ -447,6 +526,10 @@ export const myCoursesStyles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+  },
+  starsContainerDark: {
+    backgroundColor: "#0F172A",
+    borderColor: "#334155",
   },
   starButton: {
     padding: 8,
@@ -469,6 +552,9 @@ export const myCoursesStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  ratingBadgeDark: {
+    backgroundColor: "#7c2d12",
+  },
   ratingEmoji: {
     fontSize: 24,
   },
@@ -477,6 +563,9 @@ export const myCoursesStyles = StyleSheet.create({
     fontWeight: "700",
     color: "#EA580C",
     letterSpacing: 0.3,
+  },
+  ratingTextDark: {
+    color: "#fdba74",
   },
 
   // Premium Comment Input
@@ -491,6 +580,11 @@ export const myCoursesStyles = StyleSheet.create({
     minHeight: 140,
     lineHeight: 22,
     fontWeight: "500",
+  },
+  commentInputDark: {
+    backgroundColor: "#0F172A",
+    borderColor: "#334155",
+    color: "#F1F5F9",
   },
   charCount: {
     fontSize: 12,
@@ -516,11 +610,18 @@ export const myCoursesStyles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#F8FAFC",
   },
+  cancelButtonDark: {
+    backgroundColor: "#0F172A",
+    borderColor: "#334155",
+  },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: "700",
     color: "#64748B",
     letterSpacing: 0.3,
+  },
+  cancelButtonTextDark: {
+    color: "#94A3B8",
   },
   submitButton: {
     flex: 1,
@@ -541,6 +642,9 @@ export const myCoursesStyles = StyleSheet.create({
     backgroundColor: "#CBD5E1",
     shadowOpacity: 0,
     elevation: 0,
+  },
+  submitButtonDisabledDark: {
+    backgroundColor: "#334155",
   },
   submitButtonText: {
     fontSize: 16,

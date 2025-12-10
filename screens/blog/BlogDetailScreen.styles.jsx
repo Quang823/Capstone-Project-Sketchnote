@@ -8,11 +8,17 @@ export const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#ffffffff",
     },
+    containerDark: {
+        backgroundColor: "#0F172A",
+    },
     loadingContainer: {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "#fafafaff",
+    },
+    loadingContainerDark: {
+        backgroundColor: "#0F172A",
     },
     emptyContainer: {
         flex: 1,
@@ -20,11 +26,17 @@ export const styles = StyleSheet.create({
         alignItems: "center",
         backgroundColor: "#fafafaff",
     },
+    emptyContainerDark: {
+        backgroundColor: "#0F172A",
+    },
     emptyText: {
         fontSize: 16,
         color: "#64748B",
         marginTop: 16,
         fontWeight: "600",
+    },
+    emptyTextDark: {
+        color: "#94A3B8",
     },
 
     // Hero Section
@@ -63,6 +75,9 @@ export const styles = StyleSheet.create({
         elevation: 4,
         zIndex: 10,
     },
+    backButtonDark: {
+        backgroundColor: "rgba(30, 41, 59, 0.95)",
+    },
     heroContent: {
         position: "absolute",
         bottom: 0,
@@ -83,6 +98,9 @@ export const styles = StyleSheet.create({
         borderRadius: 20,
         marginBottom: 16,
         gap: 6,
+    },
+    categoryBadgeDark: {
+        backgroundColor: "rgba(30, 41, 59, 0.95)",
     },
     categoryText: {
         fontSize: 12,
@@ -114,6 +132,9 @@ export const styles = StyleSheet.create({
         shadowRadius: 12,
         elevation: 3,
     },
+    authorCardDark: {
+        backgroundColor: "rgba(30, 41, 59, 0.95)",
+    },
     authorAvatar: {
         width: 56,
         height: 56,
@@ -131,6 +152,9 @@ export const styles = StyleSheet.create({
         color: "#1E293B",
         marginBottom: 6,
     },
+    authorNameDark: {
+        color: "#F8FAFC",
+    },
     metaRow: {
         flexDirection: "row",
         alignItems: "center",
@@ -140,6 +164,9 @@ export const styles = StyleSheet.create({
         fontSize: 13,
         color: "#64748B",
         fontWeight: "500",
+    },
+    metaTextDark: {
+        color: "#94A3B8",
     },
     metaDot: {
         width: 3,
@@ -166,6 +193,10 @@ export const styles = StyleSheet.create({
         borderLeftWidth: 4,
         borderLeftColor: "#F59E0B",
     },
+    summaryCardDark: {
+        backgroundColor: "#422006", // Dark amber/brown
+        borderLeftColor: "#F59E0B",
+    },
     summaryHeader: {
         flexDirection: "row",
         alignItems: "center",
@@ -180,16 +211,25 @@ export const styles = StyleSheet.create({
         alignItems: "center",
         marginRight: 12,
     },
+    summaryIconWrapperDark: {
+        backgroundColor: "#1E293B",
+    },
     summaryTitle: {
         fontSize: 16,
         fontWeight: "700",
         color: "#92400E",
+    },
+    summaryTitleDark: {
+        color: "#FCD34D",
     },
     summaryText: {
         fontSize: 15,
         color: "#78350F",
         lineHeight: 24,
         fontWeight: "500",
+    },
+    summaryTextDark: {
+        color: "#FEF3C7",
     },
 
     // Section Card - Updated for Full Width
@@ -207,6 +247,9 @@ export const styles = StyleSheet.create({
         elevation: 4,
         overflow: "hidden",
         position: "relative",
+    },
+    sectionCardDark: {
+        backgroundColor: "#1E293B",
     },
 
     sectionCardGradient: {
@@ -288,6 +331,9 @@ export const styles = StyleSheet.create({
         shadowRadius: 12,
         elevation: 4,
     },
+    endMarkerCardDark: {
+        shadowColor: "#000",
+    },
     endMarkerContent: {
         alignItems: "center",
     },
@@ -305,6 +351,10 @@ export const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 3,
     },
+    endMarkerIconCircleDark: {
+        backgroundColor: "#1E293B",
+        shadowColor: "#000",
+    },
     endMarkerTitle: {
         fontSize: 20,
         fontWeight: "800",
@@ -312,11 +362,17 @@ export const styles = StyleSheet.create({
         marginBottom: 8,
         textAlign: "center",
     },
+    endMarkerTitleDark: {
+        color: "#F8FAFC",
+    },
     endMarkerSubtext: {
         fontSize: 15,
         color: "#475569",
         textAlign: "center",
         fontWeight: "500",
+    },
+    endMarkerSubtextDark: {
+        color: "#94A3B8",
     },
 
     // Comments Section
@@ -324,6 +380,9 @@ export const styles = StyleSheet.create({
         backgroundColor: "#FFFFFF",
         paddingTop: 0,
         paddingBottom: 40,
+    },
+    commentsSectionDark: {
+        backgroundColor: "#0F172A",
     },
 
     // Discussion Header - New
@@ -352,6 +411,10 @@ export const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 3,
     },
+    discussionIconWrapperDark: {
+        backgroundColor: "#334155",
+        shadowColor: "#000",
+    },
     discussionTitleWrapper: {
         flex: 1,
     },
@@ -362,10 +425,16 @@ export const styles = StyleSheet.create({
         marginBottom: 4,
         letterSpacing: -0.5,
     },
+    discussionTitleDark: {
+        color: "#F8FAFC",
+    },
     discussionSubtitle: {
         fontSize: 14,
         color: "#64748B",
         fontFamily: "Poppins_600SemiBold",
+    },
+    discussionSubtitleDark: {
+        color: "#94A3B8",
     },
 
     // Comment Input Card
@@ -382,6 +451,10 @@ export const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowRadius: 12,
         elevation: 3,
+    },
+    commentInputCardDark: {
+        backgroundColor: "#1E293B",
+        borderColor: "#334155",
     },
 
     inputAvatar: {
@@ -411,6 +484,11 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#E2E8F0",
     },
+    commentInputDark: {
+        backgroundColor: "#0F172A",
+        color: "#F8FAFC",
+        borderColor: "#334155",
+    },
     submitButton: {
         backgroundColor: "#EFF6FF",
         width: 44,
@@ -425,6 +503,11 @@ export const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 3 },
         shadowRadius: 8,
         elevation: 5,
+    },
+    submitButtonDark: {
+        backgroundColor: "#334155",
+        borderColor: "#3B82F6",
+        shadowColor: "#000",
     },
 
 
@@ -441,6 +524,9 @@ export const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
         color: "#64748B",
+    },
+    emptyCommentsTextDark: {
+        color: "#94A3B8",
     },
     emptyCommentsSubtext: {
         fontSize: 14,
@@ -472,6 +558,10 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#E2E8F0",
     },
+    commentBubbleDark: {
+        backgroundColor: "#1E293B",
+        borderColor: "#334155",
+    },
     commentHeader: {
         flexDirection: "row",
         alignItems: "center",
@@ -484,6 +574,9 @@ export const styles = StyleSheet.create({
         fontWeight: "700",
         color: "#0F172A",
     },
+    commentAuthorDark: {
+        color: "#F8FAFC",
+    },
 
     commentTime: {
         fontSize: 12,
@@ -495,6 +588,9 @@ export const styles = StyleSheet.create({
         fontSize: 15,
         color: "#334155",
         lineHeight: 22,
+    },
+    commentTextDark: {
+        color: "#CBD5E1",
     },
 
     // Comment Actions
@@ -534,6 +630,11 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#3B82F6",
     },
+    editInputDark: {
+        backgroundColor: "#0F172A",
+        color: "#F8FAFC",
+        borderColor: "#3B82F6",
+    },
     editActions: {
         flexDirection: "row",
         justifyContent: "flex-end",
@@ -569,6 +670,9 @@ export const styles = StyleSheet.create({
         borderLeftWidth: 2,
         borderLeftColor: "#E2E8F0",
     },
+    repliesContainerDark: {
+        borderLeftColor: "#334155",
+    },
     replyItem: {
         flexDirection: "row",
         marginBottom: 16,
@@ -598,6 +702,11 @@ export const styles = StyleSheet.create({
         borderColor: "#E2E8F0",
         color: "#0F172A",
     },
+    replyInputDark: {
+        backgroundColor: "#0F172A",
+        borderColor: "#334155",
+        color: "#F8FAFC",
+    },
     replySubmitButton: {
         width: 36,
         height: 36,
@@ -605,6 +714,9 @@ export const styles = StyleSheet.create({
         backgroundColor: "#EFF6FF",
         justifyContent: "center",
         alignItems: "center",
+    },
+    replySubmitButtonDark: {
+        backgroundColor: "#334155",
     },
 
     // NEW SECTION STYLES - Full Width Design
@@ -668,6 +780,9 @@ export const styles = StyleSheet.create({
         lineHeight: isTablet ? 36 : 32,
         marginBottom: 16,
     },
+    sectionTitleNewDark: {
+        color: "#F8FAFC",
+    },
 
     sectionContentNew: {
         fontSize: 17,
@@ -675,5 +790,8 @@ export const styles = StyleSheet.create({
         lineHeight: 30,
         fontWeight: "500",
         textAlign: "left",
+    },
+    sectionContentNewDark: {
+        color: "#CBD5E1",
     },
 });

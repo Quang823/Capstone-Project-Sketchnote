@@ -8,6 +8,9 @@ export const blogStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
+  containerDark: {
+    backgroundColor: "#0F172A",
+  },
 
   header: {
     flexDirection: "row",
@@ -25,6 +28,10 @@ export const blogStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  headerDark: {
+    backgroundColor: "#1E293B",
+    borderBottomColor: "#334155",
+  },
 
   headerLeft: {
     flexDirection: "row",
@@ -39,11 +46,17 @@ export const blogStyles = StyleSheet.create({
     color: "#084F8C",
     letterSpacing: -0.5,
   },
+  headerTitleDark: {
+    color: "#F8FAFC",
+  },
 
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  centerContainerDark: {
+    backgroundColor: "#0F172A",
   },
 
   // Hero Section
@@ -88,6 +101,9 @@ export const blogStyles = StyleSheet.create({
     maxWidth: 800,
     alignSelf: "center",
   },
+  heroSearchContainerDark: {
+    backgroundColor: "#334155",
+  },
 
   heroSearchIcon: {
     marginRight: 12,
@@ -98,6 +114,9 @@ export const blogStyles = StyleSheet.create({
     fontSize: 16,
     color: "#1E293B",
     fontWeight: "500",
+  },
+  heroSearchInputDark: {
+    color: "#F8FAFC",
   },
 
   // Featured Section
@@ -113,6 +132,9 @@ export const blogStyles = StyleSheet.create({
     color: "#0F172A",
     marginBottom: 16,
     letterSpacing: 0.5,
+  },
+  sectionTitleDark: {
+    color: "#F8FAFC",
   },
 
   featuredCard: {
@@ -220,11 +242,18 @@ export const blogStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  horizontalCardInnerDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
 
   horizontalImage: {
     width: isTablet ? 280 : 140,
     height: isTablet ? 200 : 160,
     backgroundColor: "#F1F5F9",
+  },
+  horizontalImageDark: {
+    backgroundColor: "#334155",
   },
 
   horizontalContent: {
@@ -241,6 +270,9 @@ export const blogStyles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: 10,
   },
+  categoryBadgeDark: {
+    backgroundColor: "#1e3a8a",
+  },
 
   categoryText: {
     fontSize: 11,
@@ -248,6 +280,9 @@ export const blogStyles = StyleSheet.create({
     color: "#136bb8ff",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  categoryTextDark: {
+    color: "#60A5FA",
   },
 
   horizontalTitle: {
@@ -257,6 +292,9 @@ export const blogStyles = StyleSheet.create({
     marginBottom: 8,
     lineHeight: isTablet ? 28 : 24,
   },
+  horizontalTitleDark: {
+    color: "#F8FAFC",
+  },
 
   horizontalSummary: {
     fontSize: 14,
@@ -264,6 +302,9 @@ export const blogStyles = StyleSheet.create({
     lineHeight: 21,
     marginBottom: 12,
     flex: 1,
+  },
+  horizontalSummaryDark: {
+    color: "#CBD5E1",
   },
 
   horizontalFooter: {
@@ -287,6 +328,9 @@ export const blogStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  authorAvatarDark: {
+    backgroundColor: "#3B82F6",
+  },
 
   authorName: {
     fontSize: 13,
@@ -294,18 +338,28 @@ export const blogStyles = StyleSheet.create({
     color: "#475569",
     maxWidth: 100,
   },
+  authorNameDark: {
+    color: "#CBD5E1",
+  },
 
   metaDivider: {
     width: 4,
     height: 4,
     borderRadius: 2,
     backgroundColor: "#CBD5E1",
+    marginHorizontal: 4,
+  },
+  metaDividerDark: {
+    backgroundColor: "#475569",
   },
 
   metaText: {
     fontSize: 13,
     color: "#94A3B8",
     fontWeight: "500",
+  },
+  metaTextDark: {
+    color: "#94A3B8",
   },
 
   // Empty State
@@ -322,12 +376,18 @@ export const blogStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  emptyIconContainerDark: {
+    backgroundColor: "#1E293B",
+  },
 
   emptyText: {
     fontSize: 18,
     fontWeight: "700",
     color: "#475569",
     marginBottom: 6,
+  },
+  emptyTextDark: {
+    color: "#F8FAFC",
   },
 
   emptySubtext: {

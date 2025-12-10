@@ -7,6 +7,9 @@ export const myBlogStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
+  containerDark: {
+    backgroundColor: "#0F172A",
+  },
 
   // Header with Gradient
   headerGradient: {
@@ -34,6 +37,10 @@ export const myBlogStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  headerDark: {
+    backgroundColor: "#1E293B",
+    borderBottomColor: "#334155",
+  },
 
   headerLeft: {
     flexDirection: "row",
@@ -48,12 +55,18 @@ export const myBlogStyles = StyleSheet.create({
     color: "#084F8C",
     letterSpacing: -0.5,
   },
+  headerTitleDark: {
+    color: "#F8FAFC",
+  },
 
   headerSubtitle: {
     fontSize: 13,
     color: "rgba(255, 255, 255, 0.8)",
     fontWeight: "500",
     marginTop: 2,
+  },
+  headerSubtitleDark: {
+    color: "#94A3B8",
   },
   headerButton: {
     width: 48,
@@ -68,6 +81,9 @@ export const myBlogStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  headerButtonDark: {
+    backgroundColor: "#334155",
+  },
 
   // Loading
   loadingContainer: {
@@ -76,6 +92,9 @@ export const myBlogStyles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F8FAFC",
   },
+  loadingContainerDark: {
+    backgroundColor: "#0F172A",
+  },
 
   // Empty State
   emptyContainer: {
@@ -83,6 +102,9 @@ export const myBlogStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
+  },
+  emptyContainerDark: {
+    backgroundColor: "#0F172A",
   },
   emptyCard: {
     alignItems: "center",
@@ -97,6 +119,9 @@ export const myBlogStyles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 4,
   },
+  emptyCardDark: {
+    backgroundColor: "#1E293B",
+  },
   emptyTitle: {
     fontSize: 24,
     fontWeight: "800",
@@ -104,12 +129,18 @@ export const myBlogStyles = StyleSheet.create({
     marginTop: 16,
     textAlign: "center",
   },
+  emptyTitleDark: {
+    color: "#F8FAFC",
+  },
   emptySubtitle: {
     fontSize: 15,
     color: "#64748B",
     textAlign: "center",
     marginTop: 8,
     lineHeight: 22,
+  },
+  emptySubtitleDark: {
+    color: "#94A3B8",
   },
   createButton: {
     marginTop: 28,
@@ -142,6 +173,10 @@ export const myBlogStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
+  filterSectionDark: {
+    backgroundColor: "#1E293B",
+    borderBottomColor: "#334155",
+  },
   filterBar: {
     paddingHorizontal: 20,
     gap: 10,
@@ -157,6 +192,10 @@ export const myBlogStyles = StyleSheet.create({
     borderColor: "#E2E8F0",
     gap: 8,
   },
+  filterChipDark: {
+    backgroundColor: "#334155",
+    borderColor: "#475569",
+  },
   filterChipActive: {
     backgroundColor: "#084F8C",
     borderColor: "#084F8C",
@@ -167,6 +206,9 @@ export const myBlogStyles = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.3,
+  },
+  filterChipTextDark: {
+    color: "#CBD5E1",
   },
   filterChipTextActive: {
     color: "#FFFFFF",
@@ -179,6 +221,9 @@ export const myBlogStyles = StyleSheet.create({
     minWidth: 24,
     alignItems: "center",
   },
+  filterChipBadgeDark: {
+    backgroundColor: "#475569",
+  },
   filterChipBadgeActive: {
     backgroundColor: "rgba(255, 255, 255, 0.25)",
   },
@@ -186,6 +231,9 @@ export const myBlogStyles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     color: "#64748B",
+  },
+  filterChipBadgeTextDark: {
+    color: "#CBD5E1",
   },
   filterChipBadgeTextActive: {
     color: "#FFFFFF",
@@ -207,6 +255,9 @@ export const myBlogStyles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 4,
+  },
+  blogCardDark: {
+    backgroundColor: "#1E293B",
   },
 
   // Image Container
@@ -261,11 +312,17 @@ export const myBlogStyles = StyleSheet.create({
     lineHeight: 28,
     letterSpacing: -0.3,
   },
+  blogTitleDark: {
+    color: "#F8FAFC",
+  },
   blogDesc: {
     fontSize: 14,
     color: "#64748B",
     lineHeight: 22,
     marginBottom: 16,
+  },
+  blogDescDark: {
+    color: "#CBD5E1",
   },
 
   // Meta Info
@@ -278,6 +335,9 @@ export const myBlogStyles = StyleSheet.create({
     borderBottomColor: "#F1F5F9",
     marginBottom: 16,
   },
+  blogMetaDark: {
+    borderBottomColor: "#334155",
+  },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -287,6 +347,9 @@ export const myBlogStyles = StyleSheet.create({
     fontSize: 13,
     color: "#64748B",
     fontWeight: "600",
+  },
+  metaTextDark: {
+    color: "#94A3B8",
   },
 
   // Actions
@@ -307,9 +370,15 @@ export const myBlogStyles = StyleSheet.create({
     fontWeight: "700",
     color: "#084F8C",
   },
+  actionButtonTextDark: {
+    color: "#60A5FA",
+  },
   actionDivider: {
     width: 1,
     height: 24,
     backgroundColor: "#E2E8F0",
+  },
+  actionDividerDark: {
+    backgroundColor: "#334155",
   },
 });
