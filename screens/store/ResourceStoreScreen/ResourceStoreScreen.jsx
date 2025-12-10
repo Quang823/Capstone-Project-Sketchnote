@@ -23,6 +23,7 @@ import Toast from "react-native-toast-message";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
+import { useTheme } from "../../../context/ThemeContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DEFAULT_RESOURCE_IMAGE =
@@ -53,6 +54,8 @@ const AnimatedResourceCard = ({
     item.images?.[0]?.url ||
     FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]
   );
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   const handlePressIn = () => {
     Animated.parallel([
@@ -88,7 +91,7 @@ const AnimatedResourceCard = ({
             key={i}
             name={i < filled ? "star" : "star-border"}
             size={15}
-            color={i < filled ? "#FBBF24" : "#CBD5E1"}
+            color={i < filled ? "#FBBF24" : (isDark ? "#475569" : "#CBD5E1")}
           />
         ))}
       </View>
@@ -112,10 +115,10 @@ const AnimatedResourceCard = ({
           onPress={onPress}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
-          style={resourceStoreStyles.resourceCard}
+          style={[resourceStoreStyles.resourceCard, isDark && resourceStoreStyles.resourceCardDark]}
         >
           {/* Ảnh + fallback + xử lý lỗi */}
-          <View style={resourceStoreStyles.imageContainer}>
+          <View style={[resourceStoreStyles.imageContainer, isDark && resourceStoreStyles.imageContainerDark]}>
             <Image
               source={{ uri: imageUri }}
               style={resourceStoreStyles.resourceImage}
@@ -149,12 +152,12 @@ const AnimatedResourceCard = ({
 
           {/* Nội dung */}
           <View style={resourceStoreStyles.resourceInfo}>
-            <Text style={resourceStoreStyles.resourceName} numberOfLines={2}>
+            <Text style={[resourceStoreStyles.resourceName, isDark && resourceStoreStyles.resourceNameDark]} numberOfLines={2}>
               {item.name || "Premium Resource Pack"}
             </Text>
 
             <Text
-              style={resourceStoreStyles.resourceDescription}
+              style={[resourceStoreStyles.resourceDescription, isDark && resourceStoreStyles.resourceDescriptionDark]}
               numberOfLines={2}
             >
               {item.description ||
@@ -165,9 +168,9 @@ const AnimatedResourceCard = ({
             <View style={resourceStoreStyles.infoRow}>
               <View style={resourceStoreStyles.dateContainer}>
                 {item.releaseDate && (
-                  <View style={resourceStoreStyles.datePill}>
-                    <Icon name="event" size={12} color="#64748B" />
-                    <Text style={resourceStoreStyles.datePillText}>
+                  <View style={[resourceStoreStyles.datePill, isDark && resourceStoreStyles.datePillDark]}>
+                    <Icon name="event" size={12} color={isDark ? "#94A3B8" : "#64748B"} />
+                    <Text style={[resourceStoreStyles.datePillText, isDark && resourceStoreStyles.datePillTextDark]}>
                       {formatDate(item.releaseDate)}
                     </Text>
                   </View>
@@ -176,14 +179,14 @@ const AnimatedResourceCard = ({
                   <View
                     style={[
                       resourceStoreStyles.datePill,
-                      { backgroundColor: "#FEE2E2" },
+                      { backgroundColor: isDark ? "#450a0a" : "#FEE2E2" },
                     ]}
                   >
                     <Icon name="schedule" size={12} color="#EF4444" />
                     <Text
                       style={[
                         resourceStoreStyles.datePillText,
-                        { color: "#991B1B" },
+                        { color: isDark ? "#fca5a5" : "#991B1B" },
                       ]}
                     >
                       {formatDate(item.expiredTime)}
@@ -196,11 +199,11 @@ const AnimatedResourceCard = ({
             {/* Giá */}
             {!item?.isOwner && (
               <View style={resourceStoreStyles.priceContainer}>
-                <Text style={resourceStoreStyles.price}>
+                <Text style={[resourceStoreStyles.price, isDark && resourceStoreStyles.priceDark]}>
                   {item.price?.toLocaleString()} ₫
                 </Text>
                 {item.originalPrice && (
-                  <Text style={resourceStoreStyles.originalPrice}>
+                  <Text style={[resourceStoreStyles.originalPrice, isDark && resourceStoreStyles.originalPriceDark]}>
                     {item.originalPrice.toLocaleString()} ₫
                   </Text>
                 )}
@@ -221,14 +224,14 @@ const AnimatedResourceCard = ({
             ) : (
               <View style={resourceStoreStyles.actionButtons}>
                 <Pressable
-                  style={resourceStoreStyles.addToCartButton}
+                  style={[resourceStoreStyles.addToCartButton, isDark && resourceStoreStyles.addToCartButtonDark]}
                   onPress={(e) => {
                     e.stopPropagation();
                     onAddToCart();
                   }}
                 >
-                  <Icon name="add-shopping-cart" size={16} color="#059669" />
-                  <Text style={resourceStoreStyles.addToCartText}>
+                  <Icon name="add-shopping-cart" size={16} color={isDark ? "#6EE7B7" : "#059669"} />
+                  <Text style={[resourceStoreStyles.addToCartText, isDark && resourceStoreStyles.addToCartTextDark]}>
                     Add to cart
                   </Text>
                 </Pressable>
@@ -253,6 +256,8 @@ const AnimatedResourceCard = ({
 
 const PromoBanner = ({ searchQuery, setSearchQuery }) => {
   const images = FALLBACK_IMAGES;
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   const fadeCurrent = useRef(new Animated.Value(1)).current;
   const fadeNext = useRef(new Animated.Value(0)).current;
@@ -344,19 +349,19 @@ const PromoBanner = ({ searchQuery, setSearchQuery }) => {
         <Text style={resourceStoreStyles.promoTitle}>Find exciting goods.</Text>
 
         {/* Search Bar inside Banner */}
-        <View style={resourceStoreStyles.bannerSearchContainer}>
+        <View style={[resourceStoreStyles.bannerSearchContainer, isDark && resourceStoreStyles.bannerSearchContainerDark]}>
           <Icon
             name="search"
             size={24}
-            color="#64748B"
+            color={isDark ? "#94A3B8" : "#64748B"}
             style={{ marginLeft: 16 }}
           />
           <TextInput
-            style={resourceStoreStyles.bannerSearchInput}
+            style={[resourceStoreStyles.bannerSearchInput, isDark && resourceStoreStyles.bannerSearchInputDark]}
             placeholder="What are you looking for?"
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#94A3B8"
+            placeholderTextColor={isDark ? "#94A3B8" : "#94A3B8"}
           />
           <Pressable style={resourceStoreStyles.bannerSearchButton}>
             <Icon name="arrow-forward" size={20} color="#FFF" />
@@ -381,6 +386,8 @@ export default function ResourceStoreScreen() {
   const [userResources, setUserResources] = useState([]);
   const [filteredByType, setFilteredByType] = useState([]);
   const [isFilteringByType, setIsFilteringByType] = useState(false);
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   const fetchResourcesByType = async (type) => {
     try {
@@ -535,7 +542,7 @@ export default function ResourceStoreScreen() {
 
   if (loading) {
     return (
-      <View style={resourceStoreStyles.centerContainer}>
+      <View style={[resourceStoreStyles.centerContainer, isDark && resourceStoreStyles.centerContainerDark]}>
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -547,26 +554,26 @@ export default function ResourceStoreScreen() {
   }
 
   return (
-    <View style={resourceStoreStyles.container}>
-      <View style={resourceStoreStyles.header}>
+    <View style={[resourceStoreStyles.container, isDark && resourceStoreStyles.containerDark]}>
+      <View style={[resourceStoreStyles.header, isDark && resourceStoreStyles.headerDark]}>
         <View style={resourceStoreStyles.headerGradient} />
         <View style={resourceStoreStyles.headerContent}>
           <View style={resourceStoreStyles.headerLeft}>
-            <SidebarToggleButton iconSize={28} iconColor="#1E40AF" />
+            <SidebarToggleButton iconSize={28} iconColor={isDark ? "#FFFFFF" : "#1E40AF"} />
             <View>
-              <Text style={resourceStoreStyles.headerTitle}>
+              <Text style={[resourceStoreStyles.headerTitle, isDark && resourceStoreStyles.headerTitleDark]}>
                 Resource Store
               </Text>
-              <Text style={resourceStoreStyles.headerSubtitle}>
+              <Text style={[resourceStoreStyles.headerSubtitle, isDark && resourceStoreStyles.headerSubtitleDark]}>
                 Premium resources for creators
               </Text>
             </View>
           </View>
           <Pressable
-            style={resourceStoreStyles.cartButton}
+            style={[resourceStoreStyles.cartButton, isDark && resourceStoreStyles.cartButtonDark]}
             onPress={() => navigation.navigate("Cart")}
           >
-            <Icon name="shopping-cart" size={24} color="#084F8C" />
+            <Icon name="shopping-cart" size={24} color={isDark ? "#FFFFFF" : "#084F8C"} />
             {cart.length > 0 && (
               <View style={resourceStoreStyles.cartBadge}>
                 <Text style={resourceStoreStyles.cartBadgeText}>
@@ -594,6 +601,7 @@ export default function ResourceStoreScreen() {
               key={cat}
               style={[
                 resourceStoreStyles.categoryButton,
+                isDark && resourceStoreStyles.categoryButtonDark,
                 selectedCategory === cat &&
                 resourceStoreStyles.selectedCategoryButton,
               ]}
@@ -614,6 +622,7 @@ export default function ResourceStoreScreen() {
               <Text
                 style={[
                   resourceStoreStyles.categoryText,
+                  isDark && resourceStoreStyles.categoryTextDark,
                   selectedCategory === cat &&
                   resourceStoreStyles.selectedCategoryText,
                 ]}
@@ -626,7 +635,7 @@ export default function ResourceStoreScreen() {
 
         {ownedResources.length > 0 && (
           <View style={resourceStoreStyles.sectionContainer}>
-            <Text style={resourceStoreStyles.sectionTitle}>Your resources</Text>
+            <Text style={[resourceStoreStyles.sectionTitle, isDark && resourceStoreStyles.sectionTitleDark]}>Your resources</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -653,7 +662,7 @@ export default function ResourceStoreScreen() {
 
         {latestResources.length > 0 && (
           <View style={resourceStoreStyles.sectionContainer}>
-            <Text style={resourceStoreStyles.sectionTitle}>Newest</Text>
+            <Text style={[resourceStoreStyles.sectionTitle, isDark && resourceStoreStyles.sectionTitleDark]}>Newest</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -679,7 +688,7 @@ export default function ResourceStoreScreen() {
 
         {popularResources.length > 0 && (
           <View style={resourceStoreStyles.sectionContainer}>
-            <Text style={resourceStoreStyles.sectionTitle}>
+            <Text style={[resourceStoreStyles.sectionTitle, isDark && resourceStoreStyles.sectionTitleDark]}>
               Popular this week
             </Text>
             <ScrollView
@@ -708,7 +717,7 @@ export default function ResourceStoreScreen() {
         {isFilteringByType ? (
           filteredByType.length > 0 && (
             <View style={resourceStoreStyles.sectionContainer}>
-              <Text style={resourceStoreStyles.sectionTitle}>
+              <Text style={[resourceStoreStyles.sectionTitle, isDark && resourceStoreStyles.sectionTitleDark]}>
                 {selectedCategory} Resources
               </Text>
               <ScrollView
@@ -736,7 +745,7 @@ export default function ResourceStoreScreen() {
         ) : (
           allResources.length > 0 && (
             <View style={resourceStoreStyles.sectionContainer}>
-              <Text style={resourceStoreStyles.sectionTitle}>All resources</Text>
+              <Text style={[resourceStoreStyles.sectionTitle, isDark && resourceStoreStyles.sectionTitleDark]}>All resources</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}

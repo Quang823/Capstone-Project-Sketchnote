@@ -18,6 +18,7 @@ import {
 } from "@react-navigation/native";
 import { useNavigation } from "../../context/NavigationContext";
 import { AuthContext } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function GlobalSidebar() {
   const {
@@ -29,6 +30,8 @@ export default function GlobalSidebar() {
     overlayAnimation,
   } = useNavigation();
   const { user, logout } = useContext(AuthContext);
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const navigation = useReactNavigation();
@@ -231,7 +234,7 @@ export default function GlobalSidebar() {
           marginHorizontal: 12,
           marginVertical: 4,
           borderRadius: 12,
-          backgroundColor: activeNavItem === item.id ? "#F1F5F9" : "transparent",
+          backgroundColor: activeNavItem === item.id ? (isDark ? "#1e3a8a" : "#F1F5F9") : "transparent",
         },
         pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] },
       ]}
@@ -263,12 +266,12 @@ export default function GlobalSidebar() {
             width: 40,
             height: 40,
             borderRadius: 10,
-            backgroundColor: "#F8FAFC",
+            backgroundColor: isDark ? "#334155" : "#F8FAFC",
             justifyContent: "center",
             alignItems: "center",
           }}
         >
-          <Icon name={item.icon} size={22} color="#64748B" />
+          <Icon name={item.icon} size={22} color={isDark ? "#94A3B8" : "#64748B"} />
         </View>
       )}
       <Text
@@ -276,7 +279,7 @@ export default function GlobalSidebar() {
           marginLeft: 12,
           fontSize: 15,
           fontWeight: activeNavItem === item.id ? "800" : "600",
-          color: activeNavItem === item.id ? "#000000ff" : "#5f6266ff",
+          color: activeNavItem === item.id ? (isDark ? "#FFFFFF" : "#000000ff") : (isDark ? "#CBD5E1" : "#5f6266ff"),
         }}
       >
         {item.label}
@@ -308,7 +311,7 @@ export default function GlobalSidebar() {
         style={{
           fontSize: 12,
           fontWeight: "900",
-          color: "#475569",
+          color: isDark ? "#94A3B8" : "#475569",
           letterSpacing: 1.2,
         }}
       >
@@ -346,7 +349,7 @@ export default function GlobalSidebar() {
             top: 0,
             bottom: 0,
             width: 300,
-            backgroundColor: "#FFFFFF",
+            backgroundColor: isDark ? "#1E293B" : "#FFFFFF",
             zIndex: 999,
             shadowColor: "#000",
             shadowOffset: { width: 2, height: 0 },
@@ -359,8 +362,7 @@ export default function GlobalSidebar() {
       >
         {/* Header với Gradient Background */}
         <LinearGradient
-          colors={["#084F8C", "#0e6ec8ff", "#639dfaff"]}
-
+          colors={isDark ? ["#0F172A", "#1E293B", "#334155"] : ["#084F8C", "#0e6ec8ff", "#639dfaff"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{
@@ -454,11 +456,11 @@ export default function GlobalSidebar() {
                   width: 90,
                   height: 90,
                   borderRadius: 45,
-                  backgroundColor: "#FFFFFF",
+                  backgroundColor: isDark ? "#1E293B" : "#FFFFFF",
                   justifyContent: "center",
                   alignItems: "center",
                   borderWidth: 4,
-                  borderColor: "#FFFFFF",
+                  borderColor: isDark ? "#334155" : "#FFFFFF",
                 }}
               >
                 {user?.avatarUrl ? (
@@ -554,7 +556,7 @@ export default function GlobalSidebar() {
         </LinearGradient>
 
         <ScrollView
-          style={{ flex: 1, backgroundColor: "#FFFFFF" }}
+          style={{ flex: 1, backgroundColor: isDark ? "#1E293B" : "#FFFFFF" }}
           showsVerticalScrollIndicator={false}
         >
           {isDesigner ? (
@@ -604,8 +606,8 @@ export default function GlobalSidebar() {
           style={{
             padding: 16,
             borderTopWidth: 1,
-            borderTopColor: "#F1F5F9",
-            backgroundColor: "#FAFAFA",
+            borderTopColor: isDark ? "#334155" : "#F1F5F9",
+            backgroundColor: isDark ? "#0F172A" : "#FAFAFA",
           }}
         >
           <Pressable
@@ -617,21 +619,21 @@ export default function GlobalSidebar() {
                 paddingVertical: 12,
                 paddingHorizontal: 20,
                 borderRadius: 12,
-                backgroundColor: "#FEE2E2",
+                backgroundColor: isDark ? "#450a0a" : "#FEE2E2",
                 borderWidth: 1,
-                borderColor: "#FCA5A5",
+                borderColor: isDark ? "#7f1d1d" : "#FCA5A5",
               },
               pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] },
             ]}
             onPress={handleLogout}
           >
-            <Icon name="logout" size={20} color="#DC2626" />
+            <Icon name="logout" size={20} color={isDark ? "#fca5a5" : "#DC2626"} />
             <Text
               style={{
                 marginLeft: 8,
                 fontSize: 15,
                 fontWeight: "600",
-                color: "#DC2626",
+                color: isDark ? "#fca5a5" : "#DC2626",
               }}
             >
               Sign Out

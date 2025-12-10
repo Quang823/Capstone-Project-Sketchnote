@@ -3,6 +3,7 @@ import { View, Text, Modal, Pressable, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import LottieView from "lottie-react-native";
+import { useTheme } from "../../../context/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
@@ -14,6 +15,9 @@ export default function DeleteConfirmModal({
     message = "Are you sure you want to delete this blog post? This action cannot be undone.",
     blogTitle,
 }) {
+    const { theme } = useTheme();
+    const isDark = theme === "dark";
+
     return (
         <Modal
             animationType="fade"
@@ -22,11 +26,11 @@ export default function DeleteConfirmModal({
             onRequestClose={onClose}
         >
             <View style={styles.overlay}>
-                <View style={styles.modalContainer}>
+                <View style={[styles.modalContainer, isDark && styles.modalContainerDark]}>
                     {/* Icon/Animation */}
                     <View style={styles.iconContainer}>
                         <LinearGradient
-                            colors={['#FEE2E2', '#FECACA']}
+                            colors={isDark ? ['#450a0a', '#7f1d1d'] : ['#FEE2E2', '#FECACA']}
                             style={styles.iconCircle}
                         >
                             <Icon name="delete-forever" size={48} color="#DC2626" />
@@ -34,25 +38,25 @@ export default function DeleteConfirmModal({
                     </View>
 
                     {/* Title */}
-                    <Text style={styles.title}>{title}</Text>
+                    <Text style={[styles.title, isDark && styles.titleDark]}>{title}</Text>
 
                     {/* Blog Title Preview */}
                     {blogTitle && (
-                        <View style={styles.blogTitleContainer}>
-                            <Text style={styles.blogTitleLabel}>Deleting:</Text>
-                            <Text style={styles.blogTitleText} numberOfLines={2}>
+                        <View style={[styles.blogTitleContainer, isDark && styles.blogTitleContainerDark]}>
+                            <Text style={[styles.blogTitleLabel, isDark && styles.blogTitleLabelDark]}>Deleting:</Text>
+                            <Text style={[styles.blogTitleText, isDark && styles.blogTitleTextDark]} numberOfLines={2}>
                                 "{blogTitle}"
                             </Text>
                         </View>
                     )}
 
                     {/* Message */}
-                    <Text style={styles.message}>{message}</Text>
+                    <Text style={[styles.message, isDark && styles.messageDark]}>{message}</Text>
 
                     {/* Warning Box */}
-                    <View style={styles.warningBox}>
-                        <Icon name="warning" size={20} color="#F59E0B" />
-                        <Text style={styles.warningText}>
+                    <View style={[styles.warningBox, isDark && styles.warningBoxDark]}>
+                        <Icon name="warning" size={20} color={isDark ? "#fbbf24" : "#F59E0B"} />
+                        <Text style={[styles.warningText, isDark && styles.warningTextDark]}>
                             This action cannot be undone
                         </Text>
                     </View>
@@ -61,9 +65,9 @@ export default function DeleteConfirmModal({
                     <View style={styles.actions}>
                         <Pressable
                             onPress={onClose}
-                            style={styles.cancelButton}
+                            style={[styles.cancelButton, isDark && styles.cancelButtonDark]}
                         >
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                            <Text style={[styles.cancelButtonText, isDark && styles.cancelButtonTextDark]}>Cancel</Text>
                         </Pressable>
 
                         <Pressable
@@ -107,6 +111,9 @@ const styles = {
         shadowRadius: 24,
         elevation: 12,
     },
+    modalContainerDark: {
+        backgroundColor: '#1E293B',
+    },
     iconContainer: {
         alignItems: 'center',
         marginBottom: 20,
@@ -131,6 +138,9 @@ const styles = {
         marginBottom: 12,
         letterSpacing: -0.5,
     },
+    titleDark: {
+        color: '#F8FAFC',
+    },
     blogTitleContainer: {
         backgroundColor: '#F8FAFC',
         padding: 16,
@@ -138,6 +148,9 @@ const styles = {
         marginBottom: 16,
         borderLeftWidth: 3,
         borderLeftColor: '#EF4444',
+    },
+    blogTitleContainerDark: {
+        backgroundColor: '#0F172A',
     },
     blogTitleLabel: {
         fontSize: 12,
@@ -147,11 +160,17 @@ const styles = {
         marginBottom: 6,
         letterSpacing: 0.5,
     },
+    blogTitleLabelDark: {
+        color: '#94A3B8',
+    },
     blogTitleText: {
         fontSize: 16,
         fontWeight: '600',
         color: '#1E293B',
         lineHeight: 22,
+    },
+    blogTitleTextDark: {
+        color: '#F8FAFC',
     },
     message: {
         fontSize: 15,
@@ -159,6 +178,9 @@ const styles = {
         textAlign: 'center',
         lineHeight: 24,
         marginBottom: 20,
+    },
+    messageDark: {
+        color: '#CBD5E1',
     },
     warningBox: {
         flexDirection: 'row',
@@ -169,11 +191,17 @@ const styles = {
         marginBottom: 28,
         gap: 8,
     },
+    warningBoxDark: {
+        backgroundColor: '#451a03',
+    },
     warningText: {
         fontSize: 13,
         fontWeight: '600',
         color: '#92400E',
         flex: 1,
+    },
+    warningTextDark: {
+        color: '#fbbf24',
     },
     actions: {
         flexDirection: 'row',
@@ -189,10 +217,17 @@ const styles = {
         borderColor: '#E2E8F0',
         alignItems: 'center',
     },
+    cancelButtonDark: {
+        backgroundColor: '#334155',
+        borderColor: '#475569',
+    },
     cancelButtonText: {
         fontSize: 16,
         fontWeight: '700',
         color: '#64748B',
+    },
+    cancelButtonTextDark: {
+        color: '#CBD5E1',
     },
     deleteButton: {
         flex: 1,

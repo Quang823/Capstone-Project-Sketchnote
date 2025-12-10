@@ -7,6 +7,9 @@ export const coursesStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
+  containerDark: {
+    backgroundColor: "#0F172A",
+  },
   scrollContainer: {
     flex: 1,
   },
@@ -17,6 +20,9 @@ export const coursesStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F8FAFC",
+  },
+  loadingContainerDark: {
+    backgroundColor: "#0F172A",
   },
 
   // Header - Enhanced with gradient
@@ -31,6 +37,9 @@ export const coursesStyles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
+  },
+  headerDark: {
+    // Gradient handling will be done in component
   },
   headerContent: {
     flexDirection: "row",
@@ -49,10 +58,16 @@ export const coursesStyles = StyleSheet.create({
     color: "#084F8C",
     letterSpacing: -1,
   },
+  headerTitleDark: {
+    color: "#FFFFFF",
+  },
   headerSubtitle: {
     fontSize: 14,
     fontFamily: "Poppins-Medium",
     color: "#64748B",
+  },
+  headerSubtitleDark: {
+    color: "#94A3B8",
   },
   notificationButton: {
     width: 48,
@@ -62,6 +77,9 @@ export const coursesStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     position: "relative",
+  },
+  notificationButtonDark: {
+    backgroundColor: "#1E293B",
   },
   notificationBadge: {
     position: "absolute",
@@ -74,12 +92,18 @@ export const coursesStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#FFFFFF",
   },
+  notificationBadgeDark: {
+    borderColor: "#1E293B",
+  },
 
   // Search - Enhanced design
   searchWrapper: {
     paddingHorizontal: 20,
     paddingVertical: 24,
     backgroundColor: "#F8FAFC",
+  },
+  searchWrapperDark: {
+    backgroundColor: "#0F172A",
   },
   searchContainer: {
     flexDirection: "row",
@@ -91,6 +115,10 @@ export const coursesStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#E2E8F0",
   },
+  searchContainerDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
   searchIcon: {
     marginRight: 12,
   },
@@ -99,6 +127,9 @@ export const coursesStyles = StyleSheet.create({
     fontSize: 16,
     color: "#1E293B",
     fontWeight: "600",
+  },
+  searchInputDark: {
+    color: "#F1F5F9",
   },
   clearButton: {
     padding: 4,
@@ -350,6 +381,9 @@ export const coursesStyles = StyleSheet.create({
     paddingVertical: 20,
     backgroundColor: "#F8FAFC",
   },
+  categoryContainerDark: {
+    backgroundColor: "#0F172A",
+  },
   categoryButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -361,6 +395,10 @@ export const coursesStyles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#E2E8F0",
   },
+  categoryButtonDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
   selectedCategoryButton: {
     backgroundColor: "#1c3f8fff",
     borderColor: "#2348bfff",
@@ -370,6 +408,9 @@ export const coursesStyles = StyleSheet.create({
     color: "#64748B",
     fontWeight: "600",
   },
+  categoryTextDark: {
+    color: "#94A3B8",
+  },
   selectedCategoryText: {
     color: "#FFFFFF",
   },
@@ -378,6 +419,9 @@ export const coursesStyles = StyleSheet.create({
   sectionContainer: {
     marginBottom: 20,
     backgroundColor: "#F8FAFC",
+  },
+  sectionContainerDark: {
+    backgroundColor: "#0F172A",
   },
   sectionHeader: {
     flexDirection: "row",
@@ -392,11 +436,17 @@ export const coursesStyles = StyleSheet.create({
     color: "#084F8C",
     letterSpacing: -0.5,
   },
+  sectionTitleDark: {
+    color: "#FFFFFF",
+  },
   sectionSubtitle: {
     fontSize: 14,
     fontWeight: "600",
     color: "#64748B",
     marginTop: 4,
+  },
+  sectionSubtitleDark: {
+    color: "#94A3B8",
   },
   filterButton: {
     width: 44,
@@ -405,6 +455,9 @@ export const coursesStyles = StyleSheet.create({
     backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
+  },
+  filterButtonDark: {
+    backgroundColor: "#1E293B",
   },
 
   courseCard: {
@@ -422,6 +475,10 @@ export const coursesStyles = StyleSheet.create({
     elevation: 10,
     justifyContent: "space-between",
   },
+  courseCardDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
 
   courseInfo: {
     padding: 10,
@@ -433,6 +490,9 @@ export const coursesStyles = StyleSheet.create({
     width: "100%",
     height: 180,
     backgroundColor: "#F1F5F9",
+  },
+  imageContainerDark: {
+    backgroundColor: "#334155",
   },
   courseImage: {
     width: "100%",
@@ -503,6 +563,9 @@ export const coursesStyles = StyleSheet.create({
     color: "#1E293B",
     lineHeight: 24,
   },
+  courseTitleDark: {
+    color: "#F1F5F9",
+  },
   ratingBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -511,6 +574,9 @@ export const coursesStyles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+  },
+  ratingBadgeDark: {
+    backgroundColor: "#78350f",
   },
   ratingText: {
     fontSize: 13,
@@ -524,6 +590,9 @@ export const coursesStyles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: "500",
   },
+  courseSubtitleDark: {
+    color: "#94A3B8",
+  },
 
   // Meta Info - Enhanced
   metaRow: {
@@ -535,6 +604,9 @@ export const coursesStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
+  metaRowDark: {
+    borderBottomColor: "#334155",
+  },
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -544,6 +616,9 @@ export const coursesStyles = StyleSheet.create({
     fontSize: 13,
     color: "#64748B",
     fontWeight: "700",
+  },
+  metaTextDark: {
+    color: "#94A3B8",
   },
 
   // Price Row - Enhanced
@@ -562,10 +637,16 @@ export const coursesStyles = StyleSheet.create({
     fontWeight: "800",
     color: "#254477ff",
   },
+  priceDark: {
+    color: "#60A5FA",
+  },
   currency: {
     fontSize: 14,
     fontWeight: "700",
     color: "#254477ff",
+  },
+  currencyDark: {
+    color: "#60A5FA",
   },
   enrollButton: {
     width: 48,
@@ -596,11 +677,17 @@ export const coursesStyles = StyleSheet.create({
     color: "#475569",
     fontWeight: "700",
   },
+  emptyStateTextDark: {
+    color: "#94A3B8",
+  },
   emptyStateSubtext: {
     marginTop: 8,
     fontSize: 14,
     color: "#94A3B8",
     fontWeight: "600",
+  },
+  emptyStateSubtextDark: {
+    color: "#64748B",
   },
 
   // Error State
@@ -677,6 +764,9 @@ export const coursesStyles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: "#F8FAFC",
   },
+  searchCategoryRowDark: {
+    backgroundColor: "#0F172A",
+  },
   // === Ô SEARCH DÀI HƠN, ĐẸP HƠN ===
   searchCompactWrapper: {
     paddingHorizontal: 16,
@@ -697,11 +787,19 @@ export const coursesStyles = StyleSheet.create({
     elevation: 6,
     minWidth: 250,
   },
+  searchCompactContainerDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+    shadowColor: "#000",
+  },
   searchCompactInput: {
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
     color: "#1E293B",
     fontWeight: "600",
+  },
+  searchCompactInputDark: {
+    color: "#F1F5F9",
   },
 });

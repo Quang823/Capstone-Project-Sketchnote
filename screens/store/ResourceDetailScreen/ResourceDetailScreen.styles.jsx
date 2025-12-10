@@ -6,6 +6,9 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
+  containerDark: {
+    backgroundColor: "#0F172A",
+  },
   scrollContainer: {
     flex: 1,
   },
@@ -31,6 +34,10 @@ export const styles = StyleSheet.create({
     elevation: 2,
     flex: 1,
   },
+  leftColumnContainerDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
   rightColumn: {
     flex: 1,
     alignSelf: "stretch",
@@ -48,6 +55,10 @@ export const styles = StyleSheet.create({
     elevation: 2,
     flex: 1,
   },
+  rightColumnContainerDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
 
   // Loading & Empty States
   loadingContainer: {
@@ -56,11 +67,17 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F8FAFC",
   },
+  loadingContainerDark: {
+    backgroundColor: "#0F172A",
+  },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
     color: "#1E293B",
     fontWeight: "600",
+  },
+  loadingTextDark: {
+    color: "#F8FAFC",
   },
   emptyContainer: {
     flex: 1,
@@ -68,10 +85,16 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F8FAFC",
   },
+  emptyContainerDark: {
+    backgroundColor: "#0F172A",
+  },
   emptyText: {
     marginTop: 16,
     fontSize: 16,
     color: "#64748B",
+  },
+  emptyTextDark: {
+    color: "#94A3B8",
   },
 
   header: {
@@ -90,6 +113,10 @@ export const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  headerDark: {
+    backgroundColor: "#1E293B",
+    borderBottomColor: "#334155",
+  },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
@@ -101,6 +128,9 @@ export const styles = StyleSheet.create({
     fontFamily: "Pacifico-Regular",
     color: "#084F8C",
     letterSpacing: -0.5,
+  },
+  headerTitleDark: {
+    color: "#F8FAFC",
   },
 
   cartButton: {
@@ -115,6 +145,9 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 4,
+  },
+  cartButtonDark: {
+    backgroundColor: "#334155",
   },
 
   // Image Gallery
@@ -132,6 +165,10 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
+  },
+  mainImageContainerDark: {
+    backgroundColor: "#334155",
+    borderColor: "#334155",
   },
   mainImage: {
     width: "100%",
@@ -152,6 +189,10 @@ export const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     overflow: "hidden",
     backgroundColor: "#F8FAFC",
+  },
+  thumbnailWrapperDark: {
+    backgroundColor: "#334155",
+    borderColor: "#334155",
   },
   thumbnailActive: {
     borderColor: "#60A5FA",
@@ -212,6 +253,9 @@ export const styles = StyleSheet.create({
     lineHeight: 32,
     letterSpacing: -0.5,
   },
+  resourceNameDark: {
+    color: "#F8FAFC",
+  },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -226,10 +270,16 @@ export const styles = StyleSheet.create({
     color: "#1E293B",
     marginRight: 4,
   },
+  ratingTextDark: {
+    color: "#F8FAFC",
+  },
   reviewCount: {
     fontSize: 14,
     color: "#64748B",
     fontWeight: "500",
+  },
+  reviewCountDark: {
+    color: "#94A3B8",
   },
 
   // Author Section
@@ -242,6 +292,10 @@ export const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+  },
+  authorContainerDark: {
+    backgroundColor: "#334155",
+    borderColor: "#475569",
   },
   authorAvatar: {
     width: 44,
@@ -260,10 +314,16 @@ export const styles = StyleSheet.create({
     marginBottom: 2,
     fontWeight: "500",
   },
+  authorLabelDark: {
+    color: "#CBD5E1",
+  },
   authorName: {
     fontSize: 15,
     fontWeight: "700",
     color: "#1E293B",
+  },
+  authorNameDark: {
+    color: "#F8FAFC",
   },
   followButton: {
     width: 36,
@@ -282,6 +342,9 @@ export const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#1E293B",
     marginBottom: 16,
+  },
+  priceDark: {
+    color: "#F8FAFC",
   },
 
   // Options
@@ -369,11 +432,18 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  sectionDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
   sectionInner: {
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
+  },
+  sectionInnerDark: {
+    borderBottomColor: "#334155",
   },
   sectionInnerLast: {
     marginBottom: 0,
@@ -386,10 +456,16 @@ export const styles = StyleSheet.create({
     color: "#1E293B",
     marginBottom: 10,
   },
+  sectionTitleDark: {
+    color: "#F8FAFC",
+  },
   descriptionText: {
     fontSize: 14,
     color: "#475569",
     lineHeight: 22,
+  },
+  descriptionTextDark: {
+    color: "#CBD5E1",
   },
 
   // Info Grid
@@ -405,6 +481,10 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  infoItemDark: {
+    backgroundColor: "#334155",
+    borderColor: "#475569",
+  },
   infoTextContainer: {
     flex: 1,
     marginLeft: 10,
@@ -415,10 +495,16 @@ export const styles = StyleSheet.create({
     marginBottom: 2,
     fontWeight: "500",
   },
+  infoLabelDark: {
+    color: "#94A3B8",
+  },
   infoValue: {
     fontSize: 14,
     fontWeight: "700",
     color: "#1E293B",
+  },
+  infoValueDark: {
+    color: "#F8FAFC",
   },
 
   // Items List
@@ -431,6 +517,10 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+  },
+  itemRowDark: {
+    backgroundColor: "#334155",
+    borderColor: "#475569",
   },
   itemBadge: {
     width: 24,
@@ -452,6 +542,9 @@ export const styles = StyleSheet.create({
     color: "#475569",
     lineHeight: 20,
     fontWeight: "500",
+  },
+  itemTextDark: {
+    color: "#CBD5E1",
   },
 
   // Action Buttons
@@ -480,10 +573,17 @@ export const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#084F8C",
   },
+  addToCartButtonDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#3B82F6",
+  },
   addToCartButtonText: {
     fontSize: 15,
     fontWeight: "700",
     color: "#084F8C",
+  },
+  addToCartButtonTextDark: {
+    color: "#60A5FA",
   },
   buyNowButton: {
     backgroundColor: "#084F8C",
@@ -520,6 +620,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 24,
   },
+  reviewsSectionDark: {
+    backgroundColor: "#0F172A",
+  },
   reviewsContainer: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -530,6 +633,9 @@ export const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
+  reviewsContainerDark: {
+    backgroundColor: "#1E293B",
+  },
   reviewsHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -538,6 +644,9 @@ export const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 2,
     borderBottomColor: "#F1F5F9",
+  },
+  reviewsHeaderDark: {
+    borderBottomColor: "#334155",
   },
   reviewsHeaderLeft: {
     flexDirection: "row",
@@ -557,11 +666,17 @@ export const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  reviewsIconContainerDark: {
+    backgroundColor: "#334155",
+  },
   reviewsTitle: {
     fontSize: 22,
     fontWeight: "700",
     color: "#1E293B",
     letterSpacing: -0.5,
+  },
+  reviewsTitleDark: {
+    color: "#F8FAFC",
   },
   reviewsSubtitle: {
     fontSize: 14,
@@ -571,6 +686,10 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
+  },
+  reviewsSubtitleDark: {
+    backgroundColor: "#334155",
+    color: "#94A3B8",
   },
 
   // Rating Stats Card
@@ -583,6 +702,10 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  ratingStatsCardDark: {
+    backgroundColor: "#0F172A",
+    borderColor: "#334155",
+  },
   ratingOverview: {
     alignItems: "center",
     justifyContent: "center",
@@ -591,6 +714,9 @@ export const styles = StyleSheet.create({
     paddingRight: 24,
     borderRightWidth: 2,
     borderRightColor: "#E2E8F0",
+  },
+  ratingOverviewDark: {
+    borderRightColor: "#334155",
   },
   ratingNumberContainer: {
     alignItems: "center",
@@ -602,6 +728,9 @@ export const styles = StyleSheet.create({
     color: "#1E293B",
     lineHeight: 56,
   },
+  ratingNumberDark: {
+    color: "#F8FAFC",
+  },
   ratingMaxText: {
     marginTop: -4,
   },
@@ -609,6 +738,9 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     color: "#64748B",
     fontWeight: "600",
+  },
+  ratingOutOfDark: {
+    color: "#94A3B8",
   },
   starsContainerSmall: {
     flexDirection: "row",
@@ -639,6 +771,9 @@ export const styles = StyleSheet.create({
     borderRadius: 5,
     overflow: "hidden",
   },
+  barContainerDark: {
+    backgroundColor: "#334155",
+  },
   barFill: {
     height: 10,
     backgroundColor: "#FFC107",
@@ -651,12 +786,18 @@ export const styles = StyleSheet.create({
     width: 40,
     textAlign: "right",
   },
+  barPercentageDark: {
+    color: "#CBD5E1",
+  },
   starLabel: {
     fontSize: 13,
     color: "#64748B",
     width: 14,
     textAlign: "right",
     fontWeight: "700",
+  },
+  starLabelDark: {
+    color: "#94A3B8",
   },
 
   // Reviews List
@@ -672,6 +813,10 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F1F5F9",
   },
+  reviewsListTitleDark: {
+    color: "#F8FAFC",
+    borderBottomColor: "#334155",
+  },
   reviewItemCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
@@ -684,6 +829,10 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
+  },
+  reviewItemCardDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
   },
   reviewHeader: {
     flexDirection: "row",
@@ -707,6 +856,9 @@ export const styles = StyleSheet.create({
     color: "#1E293B",
     marginBottom: 6,
   },
+  reviewerNameDark: {
+    color: "#F8FAFC",
+  },
   reviewRatingRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -721,11 +873,17 @@ export const styles = StyleSheet.create({
     color: "#94A3B8",
     fontWeight: "500",
   },
+  reviewDateDark: {
+    color: "#94A3B8",
+  },
   reviewComment: {
     fontSize: 14,
     color: "#475569",
     lineHeight: 22,
     marginTop: 4,
+  },
+  reviewCommentDark: {
+    color: "#CBD5E1",
   },
 
   // No Reviews State
@@ -742,9 +900,15 @@ export const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
   },
+  noReviewsTextDark: {
+    color: "#F8FAFC",
+  },
   noReviewsSubtext: {
     fontSize: 14,
     color: "#94A3B8",
     textAlign: "center",
+  },
+  noReviewsSubtextDark: {
+    color: "#94A3B8",
   },
 });

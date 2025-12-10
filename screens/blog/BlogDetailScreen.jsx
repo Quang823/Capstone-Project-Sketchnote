@@ -23,12 +23,16 @@ import LottieView from "lottie-react-native";
 import loadingAnimation from "../../assets/loading.json";
 import { LinearGradient } from 'expo-linear-gradient';
 import { styles } from "./BlogDetailScreen.styles";
+import { useTheme } from "../../context/ThemeContext";
+
 const { width } = Dimensions.get("window");
 
 export default function BlogDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { blogId } = route.params;
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -334,7 +338,7 @@ export default function BlogDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, isDark && styles.loadingContainerDark]}>
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -347,15 +351,15 @@ export default function BlogDetailScreen() {
 
   if (!blog) {
     return (
-      <View style={styles.emptyContainer}>
-        <Icon name="article" size={64} color="#CBD5E1" />
-        <Text style={styles.emptyText}>Blog post not found</Text>
+      <View style={[styles.emptyContainer, isDark && styles.emptyContainerDark]}>
+        <Icon name="article" size={64} color={isDark ? "#94A3B8" : "#CBD5E1"} />
+        <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>Blog post not found</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && styles.containerDark]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero Section with Gradient Overlay */}
         <View style={styles.heroSection}>
@@ -373,14 +377,14 @@ export default function BlogDetailScreen() {
                 />
               </>
             )}
-            <Pressable style={styles.backButton} onPress={handleBackPress}>
-              <Icon name="arrow-back" size={30} color="#3B82F6" />
+            <Pressable style={[styles.backButton, isDark && styles.backButtonDark]} onPress={handleBackPress}>
+              <Icon name="arrow-back" size={30} color={isDark ? "#FFFFFF" : "#3B82F6"} />
             </Pressable>
           </View>
 
           {/* Content Overlay on Hero */}
           <View style={[styles.heroContent, { maxWidth: contentMaxWidth }]}>
-            <View style={styles.categoryBadge}>
+            <View style={[styles.categoryBadge, isDark && styles.categoryBadgeDark]}>
               <Icon name="auto-stories" size={14} color="#3B82F6" />
               <Text style={styles.categoryText}>Article</Text>
             </View>
@@ -390,7 +394,7 @@ export default function BlogDetailScreen() {
             </Text>
 
             {/* Author Card - Floating */}
-            <View style={styles.authorCard}>
+            <View style={[styles.authorCard, isDark && styles.authorCardDark]}>
               <Image
                 source={{
                   uri: authorProfile?.avatarUrl ||
@@ -399,13 +403,13 @@ export default function BlogDetailScreen() {
                 style={styles.authorAvatar}
               />
               <View style={styles.authorInfo}>
-                <Text style={styles.authorName}>{blog.author}</Text>
+                <Text style={[styles.authorName, isDark && styles.authorNameDark]}>{blog.author}</Text>
                 <View style={styles.metaRow}>
-                  <Icon name="schedule" size={14} color="#94A3B8" />
-                  <Text style={styles.metaText}>{formatDate(blog.createdAt)}</Text>
+                  <Icon name="schedule" size={14} color={isDark ? "#94A3B8" : "#94A3B8"} />
+                  <Text style={[styles.metaText, isDark && styles.metaTextDark]}>{formatDate(blog.createdAt)}</Text>
                   <View style={styles.metaDot} />
-                  <Icon name="visibility" size={14} color="#94A3B8" />
-                  <Text style={styles.metaText}>5 min read</Text>
+                  <Icon name="visibility" size={14} color={isDark ? "#94A3B8" : "#94A3B8"} />
+                  <Text style={[styles.metaText, isDark && styles.metaTextDark]}>5 min read</Text>
                 </View>
               </View>
             </View>
@@ -416,14 +420,14 @@ export default function BlogDetailScreen() {
         <View style={[styles.contentWrapper, { maxWidth: contentMaxWidth }]}>
           {/* Summary Card */}
           {blog.summary && (
-            <View style={styles.summaryCard}>
+            <View style={[styles.summaryCard, isDark && styles.summaryCardDark]}>
               <View style={styles.summaryHeader}>
-                <View style={styles.summaryIconWrapper}>
+                <View style={[styles.summaryIconWrapper, isDark && styles.summaryIconWrapperDark]}>
                   <Icon name="lightbulb" size={20} color="#F59E0B" />
                 </View>
-                <Text style={styles.summaryTitle}>Key Takeaways</Text>
+                <Text style={[styles.summaryTitle, isDark && styles.summaryTitleDark]}>Key Takeaways</Text>
               </View>
-              <Text style={styles.summaryText}>{blog.summary}</Text>
+              <Text style={[styles.summaryText, isDark && styles.summaryTextDark]}>{blog.summary}</Text>
             </View>
           )}
 
@@ -437,7 +441,7 @@ export default function BlogDetailScreen() {
               : ["#F5F3FF", "#FFFFFF"];
 
             return (
-              <View key={section.id || index} style={styles.sectionCard}>
+              <View key={section.id || index} style={[styles.sectionCard, isDark && styles.sectionCardDark]}>
                 {/* Section Number Badge - Floating */}
                 <View style={[styles.sectionNumberBadge, { backgroundColor: accentColor }]}>
                   <Text style={styles.sectionNumberBadgeText}>{String(index + 1).padStart(2, '0')}</Text>
@@ -465,12 +469,12 @@ export default function BlogDetailScreen() {
                   <View style={[styles.accentLine, { backgroundColor: accentColor }]} />
 
                   {/* Title */}
-                  <Text style={styles.sectionTitleNew}>
+                  <Text style={[styles.sectionTitleNew, isDark && styles.sectionTitleNewDark]}>
                     {section.sectionTitle}
                   </Text>
 
                   {/* Content Text */}
-                  <Text style={styles.sectionContentNew}>
+                  <Text style={[styles.sectionContentNew, isDark && styles.sectionContentNewDark]}>
                     {section.content}
                   </Text>
                 </View>
@@ -485,13 +489,13 @@ export default function BlogDetailScreen() {
               source={{
                 uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1764996327/qgdhn0jjt3npvq3rjqcb.png",
               }}
-              style={styles.endMarkerCard}
+              style={[styles.endMarkerCard, isDark && styles.endMarkerCardDark]}
               imageStyle={{ opacity: 0.22, borderRadius: 16 }}
             >
               <View style={styles.endMarkerContent}>
 
                 {/* Ảnh thay cho icon */}
-                <View style={styles.endMarkerIconCircle}>
+                <View style={[styles.endMarkerIconCircle, isDark && styles.endMarkerIconCircleDark]}>
                   <Image
                     source={{
                       uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1764996004/esaxlyo29fonqfi5g48c.png",
@@ -501,8 +505,8 @@ export default function BlogDetailScreen() {
                   />
                 </View>
 
-                <Text style={styles.endMarkerTitle}>You've reached the end</Text>
-                <Text style={styles.endMarkerSubtext}>
+                <Text style={[styles.endMarkerTitle, isDark && styles.endMarkerTitleDark]}>You've reached the end</Text>
+                <Text style={[styles.endMarkerSubtext, isDark && styles.endMarkerSubtextDark]}>
                   Thanks for reading! Share your thoughts below 👇
                 </Text>
 
@@ -512,14 +516,14 @@ export default function BlogDetailScreen() {
 
 
           {/* Comments Section - Enhanced */}
-          <View style={styles.commentsSection}>
+          <View style={[styles.commentsSection, isDark && styles.commentsSectionDark]}>
             {/* Discussion Header with Gradient */}
             <LinearGradient
-              colors={['#F8FAFC', '#FFFFFF']}
+              colors={isDark ? ['#1E293B', '#0F172A'] : ['#F8FAFC', '#FFFFFF']}
               style={styles.discussionHeader}
             >
               <View style={styles.discussionHeaderContent}>
-                <View style={styles.discussionIconWrapper}>
+                <View style={[styles.discussionIconWrapper, isDark && styles.discussionIconWrapperDark]}>
                   <LottieView
                     source={require("../../assets/discussion.json")}
                     autoPlay
@@ -528,8 +532,8 @@ export default function BlogDetailScreen() {
                   />
                 </View>
                 <View style={styles.discussionTitleWrapper}>
-                  <Text style={styles.discussionTitle}>Discussion</Text>
-                  <Text style={styles.discussionSubtitle}>
+                  <Text style={[styles.discussionTitle, isDark && styles.discussionTitleDark]}>Discussion</Text>
+                  <Text style={[styles.discussionSubtitle, isDark && styles.discussionSubtitleDark]}>
                     {comments.length} {comments.length === 1 ? 'comment' : 'comments'}
                   </Text>
                 </View>
@@ -537,7 +541,7 @@ export default function BlogDetailScreen() {
             </LinearGradient>
 
             {/* Comment Input */}
-            <View style={styles.commentInputCard}>
+            <View style={[styles.commentInputCard, isDark && styles.commentInputCardDark]}>
               <Image
                 source={{
                   uri: currentUser?.avatarUrl || "https://ui-avatars.com/api/?background=3B82F6&color=fff&name=You",
@@ -546,15 +550,15 @@ export default function BlogDetailScreen() {
               />
               <View style={styles.commentInputWrapper}>
                 <TextInput
-                  style={styles.commentInput}
+                  style={[styles.commentInput, isDark && styles.commentInputDark]}
                   placeholder="Share your thoughts..."
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={isDark ? "#94A3B8" : "#94A3B8"}
                   value={commentInput}
                   onChangeText={setCommentInput}
                   multiline
                 />
-                <Pressable style={styles.submitButton} onPress={handleSubmitComment}>
-                  <Icon name="send" size={18} color="#0062ffff" />
+                <Pressable style={[styles.submitButton, isDark && styles.submitButtonDark]} onPress={handleSubmitComment}>
+                  <Icon name="send" size={18} color={isDark ? "#FFFFFF" : "#0062ffff"} />
                 </Pressable>
               </View>
             </View>
@@ -572,7 +576,7 @@ export default function BlogDetailScreen() {
                   loop
                   style={{ width: 100, height: 100 }}
                 />
-                <Text style={styles.emptyCommentsText}>No comments yet</Text>
+                <Text style={[styles.emptyCommentsText, isDark && styles.emptyCommentsTextDark]}>No comments yet</Text>
                 <Text style={styles.emptyCommentsSubtext}>Be the first to share your thoughts</Text>
               </View>
             ) : (
@@ -586,16 +590,16 @@ export default function BlogDetailScreen() {
                     style={styles.commentAvatar}
                   />
                   <View style={styles.commentContent}>
-                    <View style={styles.commentBubble}>
+                    <View style={[styles.commentBubble, isDark && styles.commentBubbleDark]}>
                       <View style={styles.commentHeader}>
-                        <Text style={styles.commentAuthor}>{comment.authorDisplay || "User"}</Text>
+                        <Text style={[styles.commentAuthor, isDark && styles.commentAuthorDark]}>{comment.authorDisplay || "User"}</Text>
                         <Text style={styles.commentTime}>{formatDate(comment.createdAt)}</Text>
                       </View>
 
                       {editingTarget.type === "comment" && editingTarget.id === comment.id ? (
                         <View style={styles.editContainer}>
                           <TextInput
-                            style={styles.editInput}
+                            style={[styles.editInput, isDark && styles.editInputDark]}
                             value={editingText}
                             onChangeText={setEditingText}
                             multiline
@@ -611,7 +615,7 @@ export default function BlogDetailScreen() {
                           </View>
                         </View>
                       ) : (
-                        <Text style={styles.commentText}>{comment.content}</Text>
+                        <Text style={[styles.commentText, isDark && styles.commentTextDark]}>{comment.content}</Text>
                       )}
                     </View>
 
@@ -639,7 +643,7 @@ export default function BlogDetailScreen() {
 
                     {/* Replies */}
                     {expandedComments[comment.id] && (
-                      <View style={styles.repliesContainer}>
+                      <View style={[styles.repliesContainer, isDark && styles.repliesContainerDark]}>
                         {comment.replyCount > 0 && replyLoadingMap[comment.id] && (
                           <ActivityIndicator size="small" color="#084F8C" style={{ marginVertical: 12 }} />
                         )}
@@ -654,16 +658,16 @@ export default function BlogDetailScreen() {
                               style={styles.replyAvatar}
                             />
                             <View style={styles.commentContent}>
-                              <View style={styles.commentBubble}>
+                              <View style={[styles.commentBubble, isDark && styles.commentBubbleDark]}>
                                 <View style={styles.commentHeader}>
-                                  <Text style={styles.commentAuthor}>{reply.authorDisplay || "User"}</Text>
+                                  <Text style={[styles.commentAuthor, isDark && styles.commentAuthorDark]}>{reply.authorDisplay || "User"}</Text>
                                   <Text style={styles.commentTime}>{formatDate(reply.createdAt)}</Text>
                                 </View>
 
                                 {editingTarget.type === "reply" && editingTarget.id === reply.id ? (
                                   <View style={styles.editContainer}>
                                     <TextInput
-                                      style={styles.editInput}
+                                      style={[styles.editInput, isDark && styles.editInputDark]}
                                       value={editingText}
                                       onChangeText={setEditingText}
                                       multiline
@@ -679,7 +683,7 @@ export default function BlogDetailScreen() {
                                     </View>
                                   </View>
                                 ) : (
-                                  <Text style={styles.commentText}>{reply.content}</Text>
+                                  <Text style={[styles.commentText, isDark && styles.commentTextDark]}>{reply.content}</Text>
                                 )}
                               </View>
 
@@ -709,14 +713,14 @@ export default function BlogDetailScreen() {
                         {/* Reply Input */}
                         <View style={styles.replyInputContainer}>
                           <TextInput
-                            style={styles.replyInput}
+                            style={[styles.replyInput, isDark && styles.replyInputDark]}
                             placeholder="Write a reply..."
-                            placeholderTextColor="#94A3B8"
+                            placeholderTextColor={isDark ? "#94A3B8" : "#94A3B8"}
                             value={replyInputs[comment.id] || ""}
                             onChangeText={(value) => handleReplyChange(comment.id, value)}
                           />
-                          <Pressable onPress={() => handleSubmitReply(comment.id)} style={styles.replySubmitButton}>
-                            <Icon name="send" size={16} color="#084F8C" />
+                          <Pressable onPress={() => handleSubmitReply(comment.id)} style={[styles.replySubmitButton, isDark && styles.replySubmitButtonDark]}>
+                            <Icon name="send" size={16} color={isDark ? "#FFFFFF" : "#084F8C"} />
                           </Pressable>
                         </View>
                       </View>

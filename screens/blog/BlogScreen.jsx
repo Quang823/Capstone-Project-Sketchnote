@@ -20,6 +20,7 @@ import { blogService } from "../../service/blogService";
 import SidebarToggleButton from "../../components/navigation/SidebarToggleButton";
 import loadingAnimation from "../../assets/loading.json";
 import LottieView from "lottie-react-native";
+import { useTheme } from "../../context/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
@@ -34,6 +35,8 @@ export default function BlogScreen() {
   const [filteredBlogs, setFilteredBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const animatedGradient = useState(new Animated.Value(0))[0];
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   useEffect(() => {
     Animated.loop(
@@ -65,11 +68,11 @@ export default function BlogScreen() {
       setFilteredBlogs(data);
     } catch (error) {
       console.error("Error fetching blogs:", error);
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "Can't load blog list",
-      });
+      // Toast.show({
+      //   type: "error",
+      //   text1: "Error",
+      //   text2: "Can't load blog list",
+      // });
     } finally {
       setLoading(false);
     }
@@ -109,7 +112,7 @@ export default function BlogScreen() {
 
   if (loading) {
     return (
-      <View style={blogStyles.centerContainer}>
+      <View style={[blogStyles.centerContainer, isDark && blogStyles.centerContainerDark]}>
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -124,13 +127,13 @@ export default function BlogScreen() {
   }
 
   return (
-    <View style={blogStyles.container}>
+    <View style={[blogStyles.container, isDark && blogStyles.containerDark]}>
       {/* 🔹 Header */}
 
-      <View style={blogStyles.header}>
+      <View style={[blogStyles.header, isDark && blogStyles.headerDark]}>
         <View style={blogStyles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
-          <Text style={blogStyles.headerTitle}>Blog & Insights</Text>
+          <SidebarToggleButton iconSize={26} iconColor={isDark ? "#FFFFFF" : "#1E40AF"} />
+          <Text style={[blogStyles.headerTitle, isDark && blogStyles.headerTitleDark]}>Blog & Insights</Text>
         </View>
       </View>
 
@@ -168,18 +171,18 @@ export default function BlogScreen() {
             </Text>
 
             {/* Search in Hero */}
-            <View style={blogStyles.heroSearchContainer}>
-              <Icon name="search" size={22} color="#136bb8ff" style={blogStyles.heroSearchIcon} />
+            <View style={[blogStyles.heroSearchContainer, isDark && blogStyles.heroSearchContainerDark]}>
+              <Icon name="search" size={22} color={isDark ? "#94A3B8" : "#136bb8ff"} style={blogStyles.heroSearchIcon} />
               <TextInput
-                style={blogStyles.heroSearchInput}
+                style={[blogStyles.heroSearchInput, isDark && blogStyles.heroSearchInputDark]}
                 placeholder="Search for inspiration..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={isDark ? "#94A3B8" : "#94A3B8"}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
               {searchQuery ? (
                 <Pressable onPress={() => setSearchQuery("")}>
-                  <Icon name="close" size={22} color="#64748B" />
+                  <Icon name="close" size={22} color={isDark ? "#94A3B8" : "#64748B"} />
                 </Pressable>
               ) : null}
             </View>
@@ -190,7 +193,7 @@ export default function BlogScreen() {
         {/* Featured Section */}
         {filteredBlogs.length > 0 && !searchQuery && (
           <View style={blogStyles.featuredSection}>
-            <Text style={blogStyles.sectionTitle}>✨ Featured Story</Text>
+            <Text style={[blogStyles.sectionTitle, isDark && blogStyles.sectionTitleDark]}>✨ Featured Story</Text>
             <Pressable
               style={blogStyles.featuredCard}
               onPress={() => handleViewBlog(filteredBlogs[0].id)}
@@ -240,13 +243,13 @@ export default function BlogScreen() {
 
         {/* Recent Posts Section */}
         <View style={blogStyles.recentSection}>
-          <Text style={blogStyles.sectionTitle}>
+          <Text style={[blogStyles.sectionTitle, isDark && blogStyles.sectionTitleDark]}>
             📚 {searchQuery ? "Search Results" : "Recent Posts"}
           </Text>
 
           {filteredBlogs.length === 0 ? (
             <View style={blogStyles.emptyContainer}>
-              <View style={blogStyles.emptyIconContainer}>
+              <View style={[blogStyles.emptyIconContainer, isDark && blogStyles.emptyIconContainerDark]}>
                 <LottieView
                   source={require("../../assets/comment.json")}
                   autoPlay
@@ -254,7 +257,7 @@ export default function BlogScreen() {
                   style={{ width: 100, height: 100 }}
                 />
               </View>
-              <Text style={blogStyles.emptyText}>No articles found</Text>
+              <Text style={[blogStyles.emptyText, isDark && blogStyles.emptyTextDark]}>No articles found</Text>
               <Text style={blogStyles.emptySubtext}>Try a different search term</Text>
             </View>
           ) : (
@@ -265,30 +268,30 @@ export default function BlogScreen() {
                   style={blogStyles.horizontalCard}
                   onPress={() => handleViewBlog(item.id)}
                 >
-                  <View style={blogStyles.horizontalCardInner}>
+                  <View style={[blogStyles.horizontalCardInner, isDark && blogStyles.horizontalCardInnerDark]}>
                     {/* Image on Left */}
                     <Image
                       source={{
                         uri: item.imageUrl || "https://via.placeholder.com/300x200",
                       }}
-                      style={blogStyles.horizontalImage}
+                      style={[blogStyles.horizontalImage, isDark && blogStyles.horizontalImageDark]}
                       resizeMode="cover"
                     />
 
                     {/* Content on Right */}
                     <View style={blogStyles.horizontalContent}>
                       {/* Category Badge (if available) */}
-                      <View style={blogStyles.categoryBadge}>
-                        <Text style={blogStyles.categoryText}>Article</Text>
+                      <View style={[blogStyles.categoryBadge, isDark && blogStyles.categoryBadgeDark]}>
+                        <Text style={[blogStyles.categoryText, isDark && blogStyles.categoryTextDark]}>Article</Text>
                       </View>
 
                       {/* Title */}
-                      <Text style={blogStyles.horizontalTitle} numberOfLines={2}>
+                      <Text style={[blogStyles.horizontalTitle, isDark && blogStyles.horizontalTitleDark]} numberOfLines={2}>
                         {item.title || "Untitled"}
                       </Text>
 
                       {/* Summary/Excerpt */}
-                      <Text style={blogStyles.horizontalSummary} numberOfLines={3}>
+                      <Text style={[blogStyles.horizontalSummary, isDark && blogStyles.horizontalSummaryDark]} numberOfLines={3}>
                         {item.summary || "No description available"}
                       </Text>
 
@@ -296,22 +299,22 @@ export default function BlogScreen() {
                       <View style={blogStyles.horizontalFooter}>
                         {/* Author */}
                         <View style={blogStyles.authorInfo}>
-                          <View style={blogStyles.authorAvatar}>
+                          <View style={[blogStyles.authorAvatar, isDark && blogStyles.authorAvatarDark]}>
                             <Icon name="person" size={16} color="#FFFFFF" />
                           </View>
-                          <Text style={blogStyles.authorName} numberOfLines={1}>
+                          <Text style={[blogStyles.authorName, isDark && blogStyles.authorNameDark]} numberOfLines={1}>
                             {item.authorDisplay || "Anonymous"}
                           </Text>
                         </View>
 
                         {/* Divider */}
-                        <View style={blogStyles.metaDivider} />
+                        <View style={[blogStyles.metaDivider, isDark && blogStyles.metaDividerDark]} />
 
                         {/* Date */}
                         {item.createdAt && (
                           <>
-                            <Icon name="schedule" size={14} color="#94A3B8" />
-                            <Text style={blogStyles.metaText}>
+                            <Icon name="schedule" size={14} color={isDark ? "#94A3B8" : "#94A3B8"} />
+                            <Text style={[blogStyles.metaText, isDark && blogStyles.metaTextDark]}>
                               {new Date(item.createdAt).toLocaleDateString("en-US", {
                                 month: "short",
                                 day: "numeric",
@@ -321,9 +324,9 @@ export default function BlogScreen() {
                         )}
 
                         {/* Read Time (estimated) */}
-                        <View style={blogStyles.metaDivider} />
-                        <Icon name="timer" size={14} color="#94A3B8" />
-                        <Text style={blogStyles.metaText}>5 min read</Text>
+                        <View style={[blogStyles.metaDivider, isDark && blogStyles.metaDividerDark]} />
+                        <Icon name="timer" size={14} color={isDark ? "#94A3B8" : "#94A3B8"} />
+                        <Text style={[blogStyles.metaText, isDark && blogStyles.metaTextDark]}>5 min read</Text>
                       </View>
                     </View>
                   </View>

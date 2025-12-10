@@ -15,6 +15,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { BackgroundJsonParser } from "./utils/jsonUtils";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import ChatWidget from "./components/ChatWidget";
 import LottieView from "lottie-react-native";
 // Ngăn splash tự ẩn sớm
@@ -81,60 +82,62 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <ErrorBoundary fallbackText="The background parser has crashed. Please restart the app.">
-            <BackgroundJsonParser />
-          </ErrorBoundary>
-          <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-            <CartProvider>
-              <FontProvider fontsLoaded={fontsLoaded}>
-                <ToastProvider>
-                  <NavigationProvider>
-                    <NavigationContainer
-                      onStateChange={(state) => {
-                        const routeName = state?.routes[state.index]?.name;
-                        if (routeName) {
-                          setCurrentRoute(routeName);
-                        }
-                      }}
-                    >
-                      <AppNavigator />
-                      <GlobalSidebar />
-                      {shouldShowChat && (
-                        <>
-                          <TouchableOpacity
-                            onPress={() => setChatVisible(true)}
-                            activeOpacity={0.8}
-                            style={{
-                              position: "absolute",
-                              right: 20,
-                              bottom: 40,
-                              zIndex: 50,
-                            }}
-                          >
-                            <LottieView
-                              source={require("./assets/chatbox.json")}
-                              autoPlay
-                              loop
+        <ThemeProvider>
+          <AuthProvider>
+            <ErrorBoundary fallbackText="The background parser has crashed. Please restart the app.">
+              <BackgroundJsonParser />
+            </ErrorBoundary>
+            <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+              <CartProvider>
+                <FontProvider fontsLoaded={fontsLoaded}>
+                  <ToastProvider>
+                    <NavigationProvider>
+                      <NavigationContainer
+                        onStateChange={(state) => {
+                          const routeName = state?.routes[state.index]?.name;
+                          if (routeName) {
+                            setCurrentRoute(routeName);
+                          }
+                        }}
+                      >
+                        <AppNavigator />
+                        <GlobalSidebar />
+                        {shouldShowChat && (
+                          <>
+                            <TouchableOpacity
+                              onPress={() => setChatVisible(true)}
+                              activeOpacity={0.8}
                               style={{
-                                width: 80,
-                                height: 80,
+                                position: "absolute",
+                                right: 20,
+                                bottom: 40,
+                                zIndex: 50,
                               }}
+                            >
+                              <LottieView
+                                source={require("./assets/chatbox.json")}
+                                autoPlay
+                                loop
+                                style={{
+                                  width: 80,
+                                  height: 80,
+                                }}
+                              />
+                            </TouchableOpacity>
+                            <ChatWidget
+                              visible={chatVisible}
+                              onClose={() => setChatVisible(false)}
                             />
-                          </TouchableOpacity>
-                          <ChatWidget
-                            visible={chatVisible}
-                            onClose={() => setChatVisible(false)}
-                          />
-                        </>
-                      )}
-                    </NavigationContainer>
-                  </NavigationProvider>
-                </ToastProvider>
-              </FontProvider>
-            </CartProvider>
-          </View>
-        </AuthProvider>
+                          </>
+                        )}
+                      </NavigationContainer>
+                    </NavigationProvider>
+                  </ToastProvider>
+                </FontProvider>
+              </CartProvider>
+            </View>
+          </AuthProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

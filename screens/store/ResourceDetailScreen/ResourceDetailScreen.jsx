@@ -17,10 +17,14 @@ import { feedbackService } from "../../../service/feedbackService";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
+import { useTheme } from "../../../context/ThemeContext";
+
 export default function ResourceDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { addToCart, cart } = useCart();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
 
   const { resourceId } = route.params;
   const [resource, setResource] = useState(null);
@@ -194,7 +198,7 @@ export default function ResourceDetailScreen() {
     }
     while (stars.length < 5) {
       stars.push(
-        <Icon key={stars.length} name="star-border" size={16} color="#D1D5DB" />
+        <Icon key={stars.length} name="star-border" size={16} color={isDark ? "#475569" : "#D1D5DB"} />
       );
     }
     return stars;
@@ -203,11 +207,14 @@ export default function ResourceDetailScreen() {
   if (loading) {
     return (
       <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
+        style={[
+          {
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+          },
+          isDark && { backgroundColor: "#0F172A" }
+        ]}
       >
         <LottieView
           source={loadingAnimation}
@@ -221,26 +228,26 @@ export default function ResourceDetailScreen() {
 
   if (!resource) {
     return (
-      <View style={styles.emptyContainer}>
-        <Icon name="inbox" size={80} color="#D1D5DB" />
-        <Text style={styles.emptyText}>Not found resource.</Text>
+      <View style={[styles.emptyContainer, isDark && styles.emptyContainerDark]}>
+        <Icon name="inbox" size={80} color={isDark ? "#94A3B8" : "#D1D5DB"} />
+        <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>Not found resource.</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && styles.containerDark]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, isDark && styles.headerDark]}>
         <View style={styles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
-          <Text style={styles.headerTitle}>Resource Detail</Text>
+          <SidebarToggleButton iconSize={26} iconColor={isDark ? "#FFFFFF" : "#084F8C"} />
+          <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>Resource Detail</Text>
         </View>
         <Pressable
-          style={styles.cartButton}
+          style={[styles.cartButton, isDark && styles.cartButtonDark]}
           onPress={() => navigation.navigate("Cart")}
         >
-          <Icon name="shopping-cart" size={24} color="#084F8C" />
+          <Icon name="shopping-cart" size={24} color={isDark ? "#FFFFFF" : "#084F8C"} />
         </Pressable>
       </View>
 
@@ -252,10 +259,10 @@ export default function ResourceDetailScreen() {
         <View style={styles.mainContent}>
           {/* Left Side: Image Gallery */}
           <View style={styles.leftColumn}>
-            <View style={styles.leftColumnContainer}>
+            <View style={[styles.leftColumnContainer, isDark && styles.leftColumnContainerDark]}>
               <View style={styles.imageGalleryContainer}>
                 {/* Main Image */}
-                <View style={styles.mainImageContainer}>
+                <View style={[styles.mainImageContainer, isDark && styles.mainImageContainerDark]}>
                   <Image
                     source={{
                       uri:
@@ -281,6 +288,7 @@ export default function ResourceDetailScreen() {
                         onPress={() => setCurrentImageIndex(index)}
                         style={[
                           styles.thumbnailWrapper,
+                          isDark && styles.thumbnailWrapperDark,
                           currentImageIndex === index && styles.thumbnailActive,
                         ]}
                       >
@@ -301,7 +309,7 @@ export default function ResourceDetailScreen() {
 
               {/* Author Info */}
               <Pressable
-                style={styles.authorContainer}
+                style={[styles.authorContainer, isDark && styles.authorContainerDark]}
                 onPress={() => {
                   if (resource.designerId) {
                     navigation.navigate("DesignerProfile", {
@@ -325,8 +333,8 @@ export default function ResourceDetailScreen() {
                 />
 
                 <View style={styles.authorInfo}>
-                  <Text style={styles.authorLabel}>Designer</Text>
-                  <Text style={styles.authorName}>
+                  <Text style={[styles.authorLabel, isDark && styles.authorLabelDark]}>Designer</Text>
+                  <Text style={[styles.authorName, isDark && styles.authorNameDark]}>
                     {resource.designerInfo
                       ? `${resource.designerInfo.firstName || ""} ${resource.designerInfo.lastName || ""}`.trim()
                       : "Designer Studio"}
@@ -344,9 +352,9 @@ export default function ResourceDetailScreen() {
 
           {/* Right Side: Details */}
           <View style={styles.rightColumn}>
-            <View style={styles.rightColumnContainer}>
+            <View style={[styles.rightColumnContainer, isDark && styles.rightColumnContainerDark]}>
               <View style={styles.resourceHeaderRow}>
-                <Text style={styles.resourceName}>{resource.name?.toUpperCase()}</Text>
+                <Text style={[styles.resourceName, isDark && styles.resourceNameDark]}>{resource.name?.toUpperCase()}</Text>
                 {resource.type && (
                   <View style={[
                     styles.typeBadge,
@@ -356,7 +364,7 @@ export default function ResourceDetailScreen() {
                   </View>
                 )}
               </View>
-              <Text style={styles.price}>
+              <Text style={[styles.price, isDark && styles.priceDark]}>
                 {resource.price.toLocaleString()} đ
               </Text>
 
@@ -364,30 +372,30 @@ export default function ResourceDetailScreen() {
               <View style={styles.titleSection}>
                 <View style={styles.ratingRow}>
                   <View style={styles.starsContainer}>{renderStars(resource.averageRating || 0)}</View>
-                  <Text style={styles.ratingText}>{(resource.averageRating || 0).toFixed(1)}</Text>
-                  <Text style={styles.reviewCount}>({resource.feedbackCount || 0} feedbacks)</Text>
+                  <Text style={[styles.ratingText, isDark && styles.ratingTextDark]}>{(resource.averageRating || 0).toFixed(1)}</Text>
+                  <Text style={[styles.reviewCount, isDark && styles.reviewCountDark]}>({resource.feedbackCount || 0} feedbacks)</Text>
                 </View>
               </View>
 
               {/* Description */}
-              <View style={styles.sectionInner}>
-                <Text style={styles.sectionTitle}>Description</Text>
-                <Text style={styles.descriptionText}>
+              <View style={[styles.sectionInner, isDark && styles.sectionInnerDark]}>
+                <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>Description</Text>
+                <Text style={[styles.descriptionText, isDark && styles.descriptionTextDark]}>
                   {resource.description}
                 </Text>
               </View>
 
               {/* Product Info */}
-              <View style={[styles.sectionInner, styles.sectionInnerLast]}>
-                <Text style={styles.sectionTitle}>Product Info</Text>
+              <View style={[styles.sectionInner, styles.sectionInnerLast, isDark && styles.sectionInnerDark]}>
+                <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>Product Info</Text>
 
                 <View style={styles.infoGrid}>
                   {/* Expired Time */}
-                  <View style={styles.infoItem}>
+                  <View style={[styles.infoItem, isDark && styles.infoItemDark]}>
                     <Icon name="event-busy" size={18} color="#F59E0B" />
                     <View style={styles.infoTextContainer}>
-                      <Text style={styles.infoLabel}>Expired Time</Text>
-                      <Text style={styles.infoValue}>
+                      <Text style={[styles.infoLabel, isDark && styles.infoLabelDark]}>Expired Time</Text>
+                      <Text style={[styles.infoValue, isDark && styles.infoValueDark]}>
                         {new Date(resource.expiredTime).toLocaleDateString(
                           "vi-VN"
                         )}
@@ -396,11 +404,11 @@ export default function ResourceDetailScreen() {
                   </View>
 
                   {/* Release Date */}
-                  <View style={styles.infoItem}>
+                  <View style={[styles.infoItem, isDark && styles.infoItemDark]}>
                     <Icon name="event-available" size={18} color="#10B981" />
                     <View style={styles.infoTextContainer}>
-                      <Text style={styles.infoLabel}>Release Date</Text>
-                      <Text style={styles.infoValue}>
+                      <Text style={[styles.infoLabel, isDark && styles.infoLabelDark]}>Release Date</Text>
+                      <Text style={[styles.infoValue, isDark && styles.infoValueDark]}>
                         {new Date(resource.releaseDate).toLocaleDateString(
                           "vi-VN"
                         )}
@@ -409,11 +417,11 @@ export default function ResourceDetailScreen() {
                   </View>
 
                   {/* Download Count */}
-                  <View style={styles.infoItem}>
+                  <View style={[styles.infoItem, isDark && styles.infoItemDark]}>
                     <Icon name="file-download" size={18} color="#3B82F6" />
                     <View style={styles.infoTextContainer}>
-                      <Text style={styles.infoLabel}>Download Count</Text>
-                      <Text style={styles.infoValue}>
+                      <Text style={[styles.infoLabel, isDark && styles.infoLabelDark]}>Download Count</Text>
+                      <Text style={[styles.infoValue, isDark && styles.infoValueDark]}>
                         {resource.downloadCount ?? 120}
                       </Text>
                     </View>
@@ -439,7 +447,7 @@ export default function ResourceDetailScreen() {
                       style={[
                         styles.actionButton,
                         {
-                          backgroundColor: "#E5E7EB",
+                          backgroundColor: isDark ? "#334155" : "#E5E7EB",
                           flex: 1,
                           justifyContent: "center",
                           alignItems: "center",
@@ -447,7 +455,7 @@ export default function ResourceDetailScreen() {
                       ]}
                     >
                       <Text
-                        style={[styles.actionButtonText, { color: "#374151" }]}
+                        style={[styles.actionButtonText, { color: isDark ? "#CBD5E1" : "#374151" }]}
                       >
                         ✓ Purchased
                       </Text>
@@ -478,11 +486,11 @@ export default function ResourceDetailScreen() {
                 ) : (
                   <>
                     <Pressable
-                      style={[styles.actionButton, styles.addToCartButton]}
+                      style={[styles.actionButton, styles.addToCartButton, isDark && styles.addToCartButtonDark]}
                       onPress={handleAddToCart}
                     >
-                      <Icon name="shopping-cart" size={18} color="#1E40AF" />
-                      <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+                      <Icon name="shopping-cart" size={18} color={isDark ? "#60A5FA" : "#1E40AF"} />
+                      <Text style={[styles.addToCartButtonText, isDark && styles.addToCartButtonTextDark]}>Add to Cart</Text>
                     </Pressable>
 
                     <Pressable
@@ -502,30 +510,30 @@ export default function ResourceDetailScreen() {
         </View>
 
         {/* 🟣 Reviews & Ratings Section */}
-        <View style={styles.reviewsSection}>
-          <View style={styles.reviewsContainer}>
+        <View style={[styles.reviewsSection, isDark && styles.reviewsSectionDark]}>
+          <View style={[styles.reviewsContainer, isDark && styles.reviewsContainerDark]}>
             {/* Header with icon */}
-            <View style={styles.reviewsHeader}>
+            <View style={[styles.reviewsHeader, isDark && styles.reviewsHeaderDark]}>
               <View style={styles.reviewsHeaderLeft}>
-                <View style={styles.reviewsIconContainer}>
+                <View style={[styles.reviewsIconContainer, isDark && styles.reviewsIconContainerDark]}>
                   <Icon name="star" size={24} color="#FFC107" />
                 </View>
-                <Text style={styles.reviewsTitle}>Reviews & Ratings</Text>
+                <Text style={[styles.reviewsTitle, isDark && styles.reviewsTitleDark]}>Reviews & Ratings</Text>
               </View>
-              <Text style={styles.reviewsSubtitle}>
+              <Text style={[styles.reviewsSubtitle, isDark && styles.reviewsSubtitleDark]}>
                 {feedback?.totalFeedbacks || 0} reviews
               </Text>
             </View>
 
             {/* ⭐ Rating Overview with gradient background */}
-            <View style={styles.ratingStatsCard}>
-              <View style={styles.ratingOverview}>
+            <View style={[styles.ratingStatsCard, isDark && styles.ratingStatsCardDark]}>
+              <View style={[styles.ratingOverview, isDark && styles.ratingOverviewDark]}>
                 <View style={styles.ratingNumberContainer}>
-                  <Text style={styles.ratingNumber}>
+                  <Text style={[styles.ratingNumber, isDark && styles.ratingNumberDark]}>
                     {(feedback?.averageRating || 0).toFixed(1)}
                   </Text>
                   <View style={styles.ratingMaxText}>
-                    <Text style={styles.ratingOutOf}>out of 5</Text>
+                    <Text style={[styles.ratingOutOf, isDark && styles.ratingOutOfDark]}>out of 5</Text>
                   </View>
                 </View>
                 <View style={styles.starsContainerSmall}>
@@ -544,14 +552,14 @@ export default function ResourceDetailScreen() {
 
                   return (
                     <View key={star} style={styles.ratingBarRow}>
-                      <Text style={styles.starLabel}>{star}</Text>
+                      <Text style={[styles.starLabel, isDark && styles.starLabelDark]}>{star}</Text>
                       <Icon name="star" size={16} color="#FFC107" />
-                      <View style={styles.barContainer}>
+                      <View style={[styles.barContainer, isDark && styles.barContainerDark]}>
                         <View
                           style={[styles.barFill, { width: `${percentage}%` }]}
                         />
                       </View>
-                      <Text style={styles.barPercentage}>{percentage}%</Text>
+                      <Text style={[styles.barPercentage, isDark && styles.barPercentageDark]}>{percentage}%</Text>
                     </View>
                   );
                 })}
@@ -560,10 +568,10 @@ export default function ResourceDetailScreen() {
 
             {/* 🧠 Reviews List */}
             <View style={styles.reviewsList}>
-              <Text style={styles.reviewsListTitle}>Customer Reviews</Text>
+              <Text style={[styles.reviewsListTitle, isDark && styles.reviewsListTitleDark]}>Customer Reviews</Text>
               {feedback?.feedbacks?.length > 0 ? (
                 feedback.feedbacks.map((item, index) => (
-                  <View key={item.id} style={styles.reviewItemCard}>
+                  <View key={item.id} style={[styles.reviewItemCard, isDark && styles.reviewItemCardDark]}>
                     <View style={styles.reviewHeader}>
                       <Image
                         source={{
@@ -576,14 +584,14 @@ export default function ResourceDetailScreen() {
                         style={styles.reviewerAvatar}
                       />
                       <View style={styles.reviewerInfoContainer}>
-                        <Text style={styles.reviewerName}>
+                        <Text style={[styles.reviewerName, isDark && styles.reviewerNameDark]}>
                           {item.userFullName || "Anonymous"}
                         </Text>
                         <View style={styles.reviewRatingRow}>
                           <View style={styles.reviewRating}>
                             {renderStars(item.rating)}
                           </View>
-                          <Text style={styles.reviewDate}>
+                          <Text style={[styles.reviewDate, isDark && styles.reviewDateDark]}>
                             {new Date(item.createdAt).toLocaleDateString("en-US", {
                               month: "short",
                               day: "numeric",
@@ -594,16 +602,16 @@ export default function ResourceDetailScreen() {
                       </View>
                     </View>
 
-                    <Text style={styles.reviewComment}>{item.comment}</Text>
+                    <Text style={[styles.reviewComment, isDark && styles.reviewCommentDark]}>{item.comment}</Text>
                   </View>
                 ))
               ) : (
                 <View style={styles.noReviewsContainer}>
-                  <Icon name="rate-review" size={48} color="#CBD5E1" />
-                  <Text style={styles.noReviewsText}>
+                  <Icon name="rate-review" size={48} color={isDark ? "#475569" : "#CBD5E1"} />
+                  <Text style={[styles.noReviewsText, isDark && styles.noReviewsTextDark]}>
                     No reviews yet
                   </Text>
-                  <Text style={styles.noReviewsSubtext}>
+                  <Text style={[styles.noReviewsSubtext, isDark && styles.noReviewsSubtextDark]}>
                     Be the first to review this resource!
                   </Text>
                 </View>
