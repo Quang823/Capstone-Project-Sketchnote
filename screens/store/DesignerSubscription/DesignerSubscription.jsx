@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useContext } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Modal,
   Animated,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,12 +17,14 @@ import Toast from "react-native-toast-message";
 import { useNavigation } from "@react-navigation/native";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { subscriptionService } from "../../../service/subscriptionService";
+import { AuthContext } from "../../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 const isTablet = width >= 768;
 
 export default function SubscriptionPlansScreen() {
   const navigation = useNavigation();
+  const { logout } = useContext(AuthContext);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [buyingPlanId, setBuyingPlanId] = useState(null);
@@ -108,12 +111,21 @@ export default function SubscriptionPlansScreen() {
         autoRenew: true,
         confirmUpgrade: true,
       });
+
       Toast.show({
         type: "success",
-        text1: "Subscription activated",
-        text2: `${plan.planName}`,
+        text1: "Subscription Successful 🎉",
+        text2: "You have been upgraded to Designer. Please log in again.",
+        position: "top",
+        visibilityTime: 2500,
+        onHide: async () => {
+          await logout();
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "Login" }],
+          });
+        },
       });
-      await loadUserSubscriptions();
     } catch (e) {
       const msg = e.message || "";
       setErrorMessage({ title: "Purchase failed", message: msg });
