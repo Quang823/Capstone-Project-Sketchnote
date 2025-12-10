@@ -123,12 +123,12 @@ export default function MyCoursesScreen() {
     }
   };
 
-  const renderCourseItem = (item) => {
+  const renderCourseItem = (item, index) => {
     const course = item.course;
     const progressPercent = item.progressPercent || 0;
 
     return (
-      <View style={myCoursesStyles.courseCardWrapper}>
+      <View key={index} style={myCoursesStyles.courseCardWrapper}>
         <TouchableOpacity
           style={myCoursesStyles.courseCard}
           onPress={() => handleCoursePress(course)}
