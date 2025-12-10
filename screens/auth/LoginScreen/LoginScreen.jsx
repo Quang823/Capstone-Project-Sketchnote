@@ -59,7 +59,7 @@ export default function LoginScreen({ onBack }) {
   const { toast } = useToast();
   const navigation = useNavigation();
   const { width } = useWindowDimensions();
-  const { login } = useContext(AuthContext);
+  const { login, fetchUser } = useContext(AuthContext); // Thêm fetchUser
 
   // Configure Google Sign-In (only if available)
   useEffect(() => {
@@ -103,11 +103,14 @@ export default function LoginScreen({ onBack }) {
       if (!idToken) {
         throw new Error('Failed to get ID token from Google');
       }
-
+      console.log('idToken:', idToken);
       console.log('✅ Got Google ID token');
 
       // Call backend API với idToken
       const loginResult = await authService.loginGoogleMobile(idToken);
+
+      // Fetch user info để cập nhật AuthContext
+      await fetchUser();
 
       toast({ title: "Login successfully! 🎉", variant: "success" });
 
