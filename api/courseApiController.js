@@ -50,4 +50,8 @@ export const courseApiController = {
   getCourseEnrollmentsByCourseId: async (id) => {
     return await privateApi.get(`/api/learning/enrollments/course/${id}/me`);
   },
+
+  getCourseNotEnrollmentsByUserId: async () => {
+    return await privateApi.get(`/api/learning/courses/not-enrolled/me`);
+  },
 };

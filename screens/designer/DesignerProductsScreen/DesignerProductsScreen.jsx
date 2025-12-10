@@ -5,7 +5,6 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Alert,
   Dimensions,
   Modal,
   Image,
@@ -15,6 +14,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
+import Toast from "react-native-toast-message";
 import { designerProductsStyles } from "./DesignerProductsScreen.styles";
 import { resourceService } from "../../../service/resourceService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
@@ -38,6 +38,14 @@ export default function DesignerProductsScreen() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [loading, setLoading] = useState(false);
+  
+  // Modal states for confirmations
+  const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showDeleteVersionModal, setShowDeleteVersionModal] = useState(false);
+  const [selectedVersion, setSelectedVersion] = useState(null);
+  const [archiveAction, setArchiveAction] = useState(null); // 'archive' or 'unarchive'
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(0);
@@ -70,8 +78,13 @@ export default function DesignerProductsScreen() {
       setTotalElements(response.totalElements || 0);
       setCurrentPage(page);
     } catch (error) {
-      console.error("Error fetching products:", error);
-      Alert.alert("Error", "Unable to load the product list");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Unable to load the product list",
+        position: "top",
+        visibilityTime: 3000,
+      });
     } finally {
       setLoading(false);
     }
@@ -174,25 +187,36 @@ export default function DesignerProductsScreen() {
   };
 
   const handleDeleteProduct = (product) => {
-    Alert.alert(
-      "Delete product",
-      `Are you sure you want to delete "${product.name}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            setProducts(
-              products.filter(
-                (p) => p.resourceTemplateId !== product.resourceTemplateId
-              )
-            );
-            setShowDetailModal(false);
-          },
-        },
-      ]
-    );
+    setSelectedProduct(product);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteProduct = async () => {
+    try {
+      // Add API call here when available
+      setProducts(
+        products.filter(
+          (p) => p.resourceTemplateId !== selectedProduct.resourceTemplateId
+        )
+      );
+      setShowDeleteModal(false);
+      setShowDetailModal(false);
+      Toast.show({
+        type: "success",
+        text1: "Product Deleted",
+        text2: `"${selectedProduct.name}" has been deleted successfully`,
+        position: "top",
+        visibilityTime: 3000,
+      });
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to delete product",
+        position: "top",
+        visibilityTime: 3000,
+      });
+    }
   };
 
   const handleToggleArchive = (product) => {
@@ -201,86 +225,95 @@ export default function DesignerProductsScreen() {
       product.isArchived !== undefined
         ? Boolean(product.isArchived)
         : product.status === "ARCHIVED";
-    const actionVerb = isArchived ? "unarchive" : "archive";
+    setArchiveAction(isArchived ? 'unarchive' : 'archive');
+    setSelectedProduct(product);
+    setShowArchiveModal(true);
+  };
 
-    Alert.alert(
-      isArchived ? "Unarchive product?" : "Archive product?",
-      `Are you sure you want to ${actionVerb} "${product.name}"?`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: isArchived ? "Unarchive" : "Archive",
-          onPress: async () => {
-            try {
-              if (isArchived) {
-                await resourceService.unarchiveResourceTemplate(product.resourceTemplateId);
-                Alert.alert("Success", "Product is unarchive susscess.");
-              } else {
-                await resourceService.archiveResourceTemplate(product.resourceTemplateId);
-                Alert.alert("Success", "Product moved to archive.");
-              }
-              fetchProducts();
-            } catch (error) {
-              console.error(`Error trying to ${actionVerb} product:`, error);
-              Alert.alert(
-                "Error",
-                error.message || `Unable to ${actionVerb} this product.`
-              );
-            }
-          },
-        },
-      ]
-    );
+  const confirmArchiveAction = async () => {
+    try {
+      if (archiveAction === 'unarchive') {
+        await resourceService.unarchiveResourceTemplate(selectedProduct.resourceTemplateId);
+      } else {
+        await resourceService.archiveResourceTemplate(selectedProduct.resourceTemplateId);
+      }
+      setShowArchiveModal(false);
+      setShowDetailModal(false);
+      fetchProducts();
+      Toast.show({
+        type: "success",
+        text1: archiveAction === 'unarchive' ? "Product Unarchived" : "Product Archived",
+        text2: `"${selectedProduct.name}" has been ${archiveAction}d successfully`,
+        position: "top",
+        visibilityTime: 3000,
+      });
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || `Unable to ${archiveAction} this product.`,
+        position: "top",
+        visibilityTime: 3000,
+      });
+    }
   };
 
   const handlePublishVersion = (version) => {
-    Alert.alert(
-      "Publish Version",
-      `Are you sure you want to publish version ${version.versionNumber}?\n\nThis will make it the current published version.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Publish",
-          onPress: async () => {
-            try {
-              await resourceService.pubicResourceVersion(version.versionId);
-              Alert.alert("Success", `Version ${version.versionNumber} published!`);
-              fetchProducts();
-              setShowDetailModal(false);
-            } catch (error) {
-              Alert.alert("Error", error.message || "Failed to publish version");
-            }
-          },
-        },
-      ]
-    );
+    setSelectedVersion(version);
+    setShowPublishModal(true);
+  };
+
+  const confirmPublishVersion = async () => {
+    try {
+      await resourceService.pubicResourceVersion(selectedVersion.versionId);
+      setShowPublishModal(false);
+      fetchProducts();
+      setShowDetailModal(false);
+      Toast.show({
+        type: "success",
+        text1: "Version Published",
+        text2: `Version ${selectedVersion.versionNumber} has been published successfully`,
+        position: "top",
+        visibilityTime: 3000,
+      });
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to publish version",
+        position: "top",
+        visibilityTime: 3000,
+      });
+    }
   };
 
   const handleDeleteVersion = (version) => {
-    Alert.alert(
-      "Delete Version",
-      `Are you sure you want to delete version ${version.versionNumber}?\n\nThis action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await resourceService.deleteResourceVersion(version.versionId);
-              Alert.alert("Success", `Version ${version.versionNumber} deleted!`);
-              fetchProducts();
-              setShowDetailModal(false);
-            } catch (error) {
-              Alert.alert("Error", error.message || "Failed to delete version");
-            }
-          },
-        },
-      ]
-    );
+    setSelectedVersion(version);
+    setShowDeleteVersionModal(true);
+  };
+
+  const confirmDeleteVersion = async () => {
+    try {
+      await resourceService.deleteResourceVersion(selectedVersion.versionId);
+      setShowDeleteVersionModal(false);
+      fetchProducts();
+      setShowDetailModal(false);
+      Toast.show({
+        type: "success",
+        text1: "Version Deleted",
+        text2: `Version ${selectedVersion.versionNumber} has been deleted successfully`,
+        position: "top",
+        visibilityTime: 3000,
+      });
+    } catch (error) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Failed to delete version",
+        position: "top",
+        visibilityTime: 3000,
+      });
+    }
   };
 
   const handleUpdateVersion = (version) => {
@@ -1258,6 +1291,202 @@ export default function DesignerProductsScreen() {
             </ScrollView>
           </Pressable>
         </Pressable>
+      </Modal>
+
+      {/* Archive/Unarchive Confirmation Modal */}
+      <Modal
+        visible={showArchiveModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowArchiveModal(false)}
+      >
+        <View style={designerProductsStyles.modalOverlay}>
+          <View style={[designerProductsStyles.modalContent, { maxWidth: 420, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center' }]}>
+            <View style={[designerProductsStyles.modalIconContainer, { backgroundColor: archiveAction === 'unarchive' ? '#EFF6FF' : '#FEF3C7' }]}>
+              <Icon 
+                name={archiveAction === 'unarchive' ? "unarchive" : "archive"} 
+                size={36} 
+                color={archiveAction === 'unarchive' ? "#3B82F6" : "#F59E0B"} 
+              />
+            </View>
+            <Text style={[designerProductsStyles.modalTitle, { textAlign: 'center', marginBottom: 12 }]}>
+              {archiveAction === 'unarchive' ? 'Unarchive Product?' : 'Archive Product?'}
+            </Text>
+            <Text style={designerProductsStyles.modalMessage}>
+              Are you sure you want to {archiveAction}{'\n'}
+              <Text style={{ fontWeight: '700', color: '#1F2937' }}>"{selectedProduct?.name}"</Text>?
+            </Text>
+
+            <View style={designerProductsStyles.modalButtons}>
+              <Pressable
+                style={designerProductsStyles.cancelButton}
+                onPress={() => setShowArchiveModal(false)}
+              >
+                <Text style={designerProductsStyles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={designerProductsStyles.confirmButton}
+                onPress={confirmArchiveAction}
+              >
+                <LinearGradient
+                  colors={archiveAction === 'unarchive' ? ["#3B82F6", "#2563EB"] : ["#F59E0B", "#D97706"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={designerProductsStyles.confirmButtonGradient}
+                >
+                  <Text style={designerProductsStyles.confirmButtonText}>
+                    {archiveAction === 'unarchive' ? 'Unarchive' : 'Archive'}
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Publish Version Confirmation Modal */}
+      <Modal
+        visible={showPublishModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPublishModal(false)}
+      >
+        <View style={designerProductsStyles.modalOverlay}>
+          <View style={[designerProductsStyles.modalContent, { maxWidth: 420, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center' }]}>
+            <View style={[designerProductsStyles.modalIconContainer, { backgroundColor: '#D1FAE5' }]}>
+              <Icon name="publish" size={36} color="#10B981" />
+            </View>
+            <Text style={[designerProductsStyles.modalTitle, { textAlign: 'center', marginBottom: 12 }]}>Publish Version</Text>
+            <Text style={designerProductsStyles.modalMessage}>
+              Are you sure you want to publish version{'\n'}
+              <Text style={{ fontWeight: '700', color: '#1F2937' }}>v{selectedVersion?.versionNumber}</Text>?
+              {'\n\n'}
+              <Text style={{ fontSize: 13, color: '#9CA3AF' }}>This will make it the current published version.</Text>
+            </Text>
+
+            <View style={designerProductsStyles.modalButtons}>
+              <Pressable
+                style={designerProductsStyles.cancelButton}
+                onPress={() => setShowPublishModal(false)}
+              >
+                <Text style={designerProductsStyles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={designerProductsStyles.confirmButton}
+                onPress={confirmPublishVersion}
+              >
+                <LinearGradient
+                  colors={["#10B981", "#059669"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={designerProductsStyles.confirmButtonGradient}
+                >
+                  <Text style={designerProductsStyles.confirmButtonText}>
+                    Publish
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Version Confirmation Modal */}
+      <Modal
+        visible={showDeleteVersionModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteVersionModal(false)}
+      >
+        <View style={designerProductsStyles.modalOverlay}>
+          <View style={[designerProductsStyles.modalContent, { maxWidth: 420, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center' }]}>
+            <View style={[designerProductsStyles.modalIconContainer, { backgroundColor: '#FEE2E2' }]}>
+              <Icon name="delete" size={36} color="#EF4444" />
+            </View>
+            <Text style={[designerProductsStyles.modalTitle, { textAlign: 'center', marginBottom: 12 }]}>Delete Version</Text>
+            <Text style={designerProductsStyles.modalMessage}>
+              Are you sure you want to delete version{'\n'}
+              <Text style={{ fontWeight: '700', color: '#EF4444' }}>v{selectedVersion?.versionNumber}</Text>?
+              {'\n\n'}
+              <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '600' }}>⚠️ This action cannot be undone.</Text>
+            </Text>
+
+            <View style={designerProductsStyles.modalButtons}>
+              <Pressable
+                style={designerProductsStyles.cancelButton}
+                onPress={() => setShowDeleteVersionModal(false)}
+              >
+                <Text style={designerProductsStyles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={designerProductsStyles.confirmButton}
+                onPress={confirmDeleteVersion}
+              >
+                <LinearGradient
+                  colors={["#EF4444", "#DC2626"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={designerProductsStyles.confirmButtonGradient}
+                >
+                  <Text style={designerProductsStyles.confirmButtonText}>
+                    Delete
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Product Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <View style={designerProductsStyles.modalOverlay}>
+          <View style={[designerProductsStyles.modalContent, { maxWidth: 420, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center' }]}>
+            <View style={[designerProductsStyles.modalIconContainer, { backgroundColor: '#FEE2E2' }]}>
+              <Icon name="delete-forever" size={36} color="#EF4444" />
+            </View>
+            <Text style={[designerProductsStyles.modalTitle, { textAlign: 'center', marginBottom: 12 }]}>Delete Product</Text>
+            <Text style={designerProductsStyles.modalMessage}>
+              Are you sure you want to delete{'\n'}
+              <Text style={{ fontWeight: '700', color: '#EF4444' }}>"{selectedProduct?.name}"</Text>?
+              {'\n\n'}
+              <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '600' }}>⚠️ This action cannot be undone.</Text>
+            </Text>
+
+            <View style={designerProductsStyles.modalButtons}>
+              <Pressable
+                style={designerProductsStyles.cancelButton}
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text style={designerProductsStyles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+
+              <Pressable
+                style={designerProductsStyles.confirmButton}
+                onPress={confirmDeleteProduct}
+              >
+                <LinearGradient
+                  colors={["#EF4444", "#DC2626"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={designerProductsStyles.confirmButtonGradient}
+                >
+                  <Text style={designerProductsStyles.confirmButtonText}>
+                    Delete
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
