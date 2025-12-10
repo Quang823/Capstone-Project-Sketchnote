@@ -18,6 +18,7 @@ import SidebarToggleButton from "../../../components/navigation/SidebarToggleBut
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from "../../../context/ThemeContext";
 
 // Course Categories
 const courseCategories = [
@@ -29,6 +30,8 @@ const courseCategories = [
 
 export default function CoursesScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [enrolledCourses, setEnrolledCourses] = useState([]);
@@ -309,17 +312,17 @@ export default function CoursesScreen() {
       >
         <Pressable
           onPress={() => handleViewCourse(item.id)}
-          style={coursesStyles.courseCard}
+          style={[coursesStyles.courseCard, isDark && coursesStyles.courseCardDark]}
         >
           {/* Image */}
-          <View style={coursesStyles.imageContainer}>
+          <View style={[coursesStyles.imageContainer, isDark && coursesStyles.imageContainerDark]}>
             <Image
               source={{ uri: imageUrl }}
               style={coursesStyles.courseImage}
               resizeMode="cover"
             />
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.3)']}
+              colors={isDark ? ['transparent', 'rgba(0,0,0,0.6)'] : ['transparent', 'rgba(0,0,0,0.3)']}
               style={coursesStyles.imageGradient}
             />
 
@@ -340,37 +343,37 @@ export default function CoursesScreen() {
           {/* Info */}
           <View style={coursesStyles.courseInfo}>
             <View style={coursesStyles.courseTitleContainer}>
-              <Text style={coursesStyles.courseTitle} numberOfLines={2}>
+              <Text style={[coursesStyles.courseTitle, isDark && coursesStyles.courseTitleDark]} numberOfLines={2}>
                 {item.title}
               </Text>
-              <View style={coursesStyles.ratingBadge}>
+              <View style={[coursesStyles.ratingBadge, isDark && coursesStyles.ratingBadgeDark]}>
                 <Icon name="star" size={12} color="#FFB800" />
                 <Text style={coursesStyles.ratingText}>{item.rating}</Text>
               </View>
             </View>
 
-            <Text style={coursesStyles.courseSubtitle} numberOfLines={2}>
+            <Text style={[coursesStyles.courseSubtitle, isDark && coursesStyles.courseSubtitleDark]} numberOfLines={2}>
               {item.subtitle}
             </Text>
 
-            <View style={coursesStyles.metaRow}>
+            <View style={[coursesStyles.metaRow, isDark && coursesStyles.metaRowDark]}>
               <View style={coursesStyles.metaItem}>
-                <Icon name="play-circle-outline" size={16} color="#2348bfff" />
-                <Text style={coursesStyles.metaText}>
+                <Icon name="play-circle-outline" size={16} color={isDark ? "#60A5FA" : "#2348bfff"} />
+                <Text style={[coursesStyles.metaText, isDark && coursesStyles.metaTextDark]}>
                   {item.lessonsCount} lessons
                 </Text>
               </View>
 
               <View style={coursesStyles.metaItem}>
                 <Icon name="people-outline" size={16} color="#10B981" />
-                <Text style={coursesStyles.metaText}>
+                <Text style={[coursesStyles.metaText, isDark && coursesStyles.metaTextDark]}>
                   {item.students > 1000 ? `${(item.students / 1000).toFixed(1)}k` : item.students}
                 </Text>
               </View>
 
               <View style={coursesStyles.metaItem}>
                 <Icon name="star" size={16} color="#FFB800" />
-                <Text style={coursesStyles.metaText}>
+                <Text style={[coursesStyles.metaText, isDark && coursesStyles.metaTextDark]}>
                   {item.ratingCount} ratings
                 </Text>
               </View>
@@ -378,10 +381,10 @@ export default function CoursesScreen() {
 
             <View style={coursesStyles.priceRow}>
               <View style={coursesStyles.priceContainer}>
-                <Text style={coursesStyles.price}>
+                <Text style={[coursesStyles.price, isDark && coursesStyles.priceDark]}>
                   {item.price?.toLocaleString("vi-VN") || "0"}
                 </Text>
-                <Text style={coursesStyles.currency}>đ</Text>
+                <Text style={[coursesStyles.currency, isDark && coursesStyles.currencyDark]}>đ</Text>
               </View>
               <LinearGradient
                 colors={['#2348bfff', '#1e40afff']}
@@ -400,7 +403,7 @@ export default function CoursesScreen() {
 
   if (loading) {
     return (
-      <View style={coursesStyles.loadingContainer}>
+      <View style={[coursesStyles.loadingContainer, isDark && coursesStyles.loadingContainerDark]}>
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -412,22 +415,22 @@ export default function CoursesScreen() {
   }
 
   return (
-    <View style={coursesStyles.container}>
+    <View style={[coursesStyles.container, isDark && coursesStyles.containerDark]}>
       {/* Header cố định */}
-      <LinearGradient colors={['#FFFFFF', '#F8FAFC']} style={coursesStyles.header}>
+      <LinearGradient colors={isDark ? ['#1E293B', '#0F172A'] : ['#FFFFFF', '#F8FAFC']} style={[coursesStyles.header, isDark && coursesStyles.headerDark]}>
         <View style={coursesStyles.headerContent}>
           <View style={coursesStyles.headerLeft}>
-            <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+            <SidebarToggleButton iconSize={26} iconColor={isDark ? "#FFFFFF" : "#084F8C"} />
             <View>
-              <Text style={coursesStyles.headerTitle}>Courses</Text>
-              <Text style={coursesStyles.headerSubtitle}>
+              <Text style={[coursesStyles.headerTitle, isDark && coursesStyles.headerTitleDark]}>Courses</Text>
+              <Text style={[coursesStyles.headerSubtitle, isDark && coursesStyles.headerSubtitleDark]}>
                 {enrolledCourses.length + notEnrolledCourses.length} courses available
               </Text>
             </View>
           </View>
-          <Pressable style={coursesStyles.notificationButton}>
-            <Icon name="notifications-none" size={24} color="#084F8C" />
-            <View style={coursesStyles.notificationBadge} />
+          <Pressable style={[coursesStyles.notificationButton, isDark && coursesStyles.notificationButtonDark]}>
+            <Icon name="notifications-none" size={24} color={isDark ? "#FFFFFF" : "#084F8C"} />
+            <View style={[coursesStyles.notificationBadge, isDark && coursesStyles.notificationBadgeDark]} />
           </Pressable>
         </View>
       </LinearGradient>
@@ -456,7 +459,7 @@ export default function CoursesScreen() {
         </View>
 
         {/* 2. Search + Category nằm chung 1 hàng (mới) */}
-        <View style={coursesStyles.searchCategoryRow}>
+        <View style={[coursesStyles.searchCategoryRow, isDark && coursesStyles.searchCategoryRowDark]}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -473,6 +476,7 @@ export default function CoursesScreen() {
                 <Pressable
                   style={[
                     coursesStyles.categoryButton,
+                    isDark && coursesStyles.categoryButtonDark,
                     selectedCategory === category.id && coursesStyles.selectedCategoryButton,
                   ]}
                   onPress={() => handleCategoryPress(category.id)}
@@ -480,11 +484,12 @@ export default function CoursesScreen() {
                   <Icon
                     name={category.icon}
                     size={18}
-                    color={selectedCategory === category.id ? "#FFF" : "#64748B"}
+                    color={selectedCategory === category.id ? "#FFF" : (isDark ? "#94A3B8" : "#64748B")}
                   />
                   <Text
                     style={[
                       coursesStyles.categoryText,
+                      isDark && coursesStyles.categoryTextDark,
                       selectedCategory === category.id && coursesStyles.selectedCategoryText,
                     ]}
                   >
@@ -498,19 +503,19 @@ export default function CoursesScreen() {
           {/* Thanh tìm kiếm nhỏ gọn */}
           <View style={coursesStyles.searchCompactWrapper}>
             <Shadow distance={6} startColor="#00000010" finalColor="#00000000">
-              <View style={coursesStyles.searchCompactContainer}>
-                <Icon name="search" size={20} color="#084F8C" />
+              <View style={[coursesStyles.searchCompactContainer, isDark && coursesStyles.searchCompactContainerDark]}>
+                <Icon name="search" size={20} color={isDark ? "#94A3B8" : "#084F8C"} />
                 <TextInput
-                  style={coursesStyles.searchCompactInput}
+                  style={[coursesStyles.searchCompactInput, isDark && coursesStyles.searchCompactInputDark]}
                   placeholder="Search..."
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={isDark ? "#64748B" : "#94A3B8"}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                   autoCorrect={false}
                 />
                 {searchQuery.length > 0 && (
                   <Pressable onPress={() => setSearchQuery("")} hitSlop={10}>
-                    <Icon name="close" size={18} color="#94A3B8" />
+                    <Icon name="close" size={18} color={isDark ? "#94A3B8" : "#94A3B8"} />
                   </Pressable>
                 )}
               </View>
@@ -646,16 +651,16 @@ export default function CoursesScreen() {
 
         {/* All Courses - Not Enrolled */}
         {filteredNotEnrolledCourses.length > 0 ? (
-          <View style={coursesStyles.sectionContainer}>
+          <View style={[coursesStyles.sectionContainer, isDark && coursesStyles.sectionContainerDark]}>
             <View style={coursesStyles.sectionHeader}>
               <View>
-                <Text style={coursesStyles.sectionTitle}>All Courses</Text>
-                <Text style={coursesStyles.sectionSubtitle}>
+                <Text style={[coursesStyles.sectionTitle, isDark && coursesStyles.sectionTitleDark]}>All Courses</Text>
+                <Text style={[coursesStyles.sectionSubtitle, isDark && coursesStyles.sectionSubtitleDark]}>
                   {filteredNotEnrolledCourses.length} courses available • Updated daily
                 </Text>
               </View>
-              <Pressable style={coursesStyles.filterButton}>
-                <Icon name="tune" size={20} color="#2348bfff" />
+              <Pressable style={[coursesStyles.filterButton, isDark && coursesStyles.filterButtonDark]}>
+                <Icon name="tune" size={20} color={isDark ? "#60A5FA" : "#2348bfff"} />
               </Pressable>
             </View>
             <ScrollView
@@ -669,10 +674,10 @@ export default function CoursesScreen() {
         ) : (
           !loading && filteredEnrolledCourses.length === 0 && (
             <View style={coursesStyles.emptyState}>
-              <LinearGradient colors={['#F8FAFC', '#EFF6FF']} style={coursesStyles.emptyStateGradient}>
-                <Icon name="search-off" size={80} color="#CBD5E1" />
-                <Text style={coursesStyles.emptyStateText}>No courses found</Text>
-                <Text style={coursesStyles.emptyStateSubtext}>
+              <LinearGradient colors={isDark ? ['#1E293B', '#0F172A'] : ['#F8FAFC', '#EFF6FF']} style={coursesStyles.emptyStateGradient}>
+                <Icon name="search-off" size={80} color={isDark ? "#475569" : "#CBD5E1"} />
+                <Text style={[coursesStyles.emptyStateText, isDark && coursesStyles.emptyStateTextDark]}>No courses found</Text>
+                <Text style={[coursesStyles.emptyStateSubtext, isDark && coursesStyles.emptyStateSubtextDark]}>
                   Try adjusting your search or filters
                 </Text>
               </LinearGradient>

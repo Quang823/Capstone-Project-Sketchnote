@@ -18,12 +18,17 @@ import Toast from "react-native-toast-message";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import DeleteConfirmModal from "./DeleteConfirmModal";
+import { useTheme } from "../../../context/ThemeContext";
+
 export default function MyBlogScreen({ navigation }) {
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [blogToDelete, setBlogToDelete] = useState(null);
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   const fetchBlogs = async () => {
     try {
       setLoading(true);
@@ -88,26 +93,26 @@ export default function MyBlogScreen({ navigation }) {
     switch (status?.toUpperCase()) {
       case "PUBLISHED":
         return {
-          backgroundColor: "#DCFCE7",
-          color: "#16A34A",
+          backgroundColor: isDark ? "#064E3B" : "#DCFCE7",
+          color: isDark ? "#6EE7B7" : "#16A34A",
           icon: "check-circle"
         };
       case "DRAFT":
         return {
-          backgroundColor: "#FEF9C3",
-          color: "#CA8A04",
+          backgroundColor: isDark ? "#422006" : "#FEF9C3",
+          color: isDark ? "#FDE047" : "#CA8A04",
           icon: "edit"
         };
       case "ARCHIVED":
         return {
-          backgroundColor: "#FEE2E2",
-          color: "#DC2626",
+          backgroundColor: isDark ? "#450a0a" : "#FEE2E2",
+          color: isDark ? "#fca5a5" : "#DC2626",
           icon: "archive"
         };
       default:
         return {
-          backgroundColor: "#E5E7EB",
-          color: "#374151",
+          backgroundColor: isDark ? "#334155" : "#E5E7EB",
+          color: isDark ? "#94A3B8" : "#374151",
           icon: "help-outline"
         };
     }
@@ -119,12 +124,12 @@ export default function MyBlogScreen({ navigation }) {
   };
 
   return (
-    <View style={myBlogStyles.container}>
+    <View style={[myBlogStyles.container, isDark && myBlogStyles.containerDark]}>
       {/* Header with Gradient */}
-      <View style={myBlogStyles.header}>
+      <View style={[myBlogStyles.header, isDark && myBlogStyles.headerDark]}>
         <View style={myBlogStyles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
-          <Text style={myBlogStyles.headerTitle}>My Blogs</Text>
+          <SidebarToggleButton iconSize={26} iconColor={isDark ? "#FFFFFF" : "#1E40AF"} />
+          <Text style={[myBlogStyles.headerTitle, isDark && myBlogStyles.headerTitleDark]}>My Blogs</Text>
         </View>
         <Pressable
           onPress={() => navigation.navigate("CreateBlog")}
@@ -144,7 +149,7 @@ export default function MyBlogScreen({ navigation }) {
 
       {/* Content */}
       {loading ? (
-        <View style={myBlogStyles.loadingContainer}>
+        <View style={[myBlogStyles.loadingContainer, isDark && myBlogStyles.loadingContainerDark]}>
           <LottieView
             source={loadingAnimation}
             autoPlay
@@ -153,16 +158,16 @@ export default function MyBlogScreen({ navigation }) {
           />
         </View>
       ) : blogs.length === 0 ? (
-        <View style={myBlogStyles.emptyContainer}>
-          <View style={myBlogStyles.emptyCard}>
+        <View style={[myBlogStyles.emptyContainer, isDark && myBlogStyles.emptyContainerDark]}>
+          <View style={[myBlogStyles.emptyCard, isDark && myBlogStyles.emptyCardDark]}>
             <LottieView
               source={require("../../../assets/blog.json")}
               autoPlay
               loop
               style={{ width: 200, height: 200 }}
             />
-            <Text style={myBlogStyles.emptyTitle}>Start Your Journey</Text>
-            <Text style={myBlogStyles.emptySubtitle}>
+            <Text style={[myBlogStyles.emptyTitle, isDark && myBlogStyles.emptyTitleDark]}>Start Your Journey</Text>
+            <Text style={[myBlogStyles.emptySubtitle, isDark && myBlogStyles.emptySubtitleDark]}>
               Share your thoughts and stories with the world.{"\n"}
               Create your first blog post today!
             </Text>
@@ -185,7 +190,7 @@ export default function MyBlogScreen({ navigation }) {
       ) : (
         <>
           {/* Filter Chips */}
-          <View style={myBlogStyles.filterSection}>
+          <View style={[myBlogStyles.filterSection, isDark && myBlogStyles.filterSectionDark]}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -200,12 +205,14 @@ export default function MyBlogScreen({ navigation }) {
                     onPress={() => setStatusFilter(s)}
                     style={[
                       myBlogStyles.filterChip,
+                      isDark && myBlogStyles.filterChipDark,
                       active && myBlogStyles.filterChipActive,
                     ]}
                   >
                     <Text
                       style={[
                         myBlogStyles.filterChipText,
+                        isDark && myBlogStyles.filterChipTextDark,
                         active && myBlogStyles.filterChipTextActive,
                       ]}
                     >
@@ -213,10 +220,12 @@ export default function MyBlogScreen({ navigation }) {
                     </Text>
                     <View style={[
                       myBlogStyles.filterChipBadge,
+                      isDark && myBlogStyles.filterChipBadgeDark,
                       active && myBlogStyles.filterChipBadgeActive
                     ]}>
                       <Text style={[
                         myBlogStyles.filterChipBadgeText,
+                        isDark && myBlogStyles.filterChipBadgeTextDark,
                         active && myBlogStyles.filterChipBadgeTextActive
                       ]}>
                         {count}
@@ -240,6 +249,7 @@ export default function MyBlogScreen({ navigation }) {
                   key={item.id}
                   style={[
                     myBlogStyles.blogCard,
+                    isDark && myBlogStyles.blogCardDark,
                     { opacity: item.status === "ARCHIVED" ? 0.7 : 1 }
                   ]}
                   onPress={() => handleViewBlog(item.id)}
@@ -272,28 +282,29 @@ export default function MyBlogScreen({ navigation }) {
 
                   {/* Content Section */}
                   <View style={myBlogStyles.blogContent}>
-                    <Text style={myBlogStyles.blogTitle} numberOfLines={2}>
+                    <Text style={[myBlogStyles.blogTitle, isDark && myBlogStyles.blogTitleDark]} numberOfLines={2}>
                       {item.title}
                     </Text>
-                    <Text style={myBlogStyles.blogDesc} numberOfLines={3}>
+                    <Text style={[myBlogStyles.blogDesc, isDark && myBlogStyles.blogDescDark]} numberOfLines={3}>
                       {item.summary || "No summary available"}
                     </Text>
 
                     {/* Meta Info */}
-                    <View style={myBlogStyles.blogMeta}>
+                    <View style={[myBlogStyles.blogMeta, isDark && myBlogStyles.blogMetaDark]}>
                       <View style={myBlogStyles.metaItem}>
-                        <Icon name="schedule" size={14} color="#94A3B8" />
-                        <Text style={myBlogStyles.metaText}>
+                        <Icon name="schedule" size={14} color={isDark ? "#94A3B8" : "#94A3B8"} />
+                        <Text style={[myBlogStyles.metaText, isDark && myBlogStyles.metaTextDark]}>
                           {new Date(item.createdAt).toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
+                            year: "numeric",
                           })}
                         </Text>
                       </View>
                       {item.contents && item.contents.length > 0 && (
                         <View style={myBlogStyles.metaItem}>
-                          <Icon name="article" size={14} color="#94A3B8" />
-                          <Text style={myBlogStyles.metaText}>
+                          <Icon name="article" size={14} color={isDark ? "#94A3B8" : "#94A3B8"} />
+                          <Text style={[myBlogStyles.metaText, isDark && myBlogStyles.metaTextDark]}>
                             {item.contents.length} {item.contents.length > 1 ? "sections" : "section"}
                           </Text>
                         </View>
@@ -306,10 +317,10 @@ export default function MyBlogScreen({ navigation }) {
                         onPress={() => handleUpdateBlog(item)}
                         style={myBlogStyles.actionButton}
                       >
-                        <Icon name="edit" size={18} color="#084F8C" />
-                        <Text style={myBlogStyles.actionButtonText}>Edit</Text>
+                        <Icon name="edit" size={18} color={isDark ? "#60A5FA" : "#084F8C"} />
+                        <Text style={[myBlogStyles.actionButtonText, isDark && myBlogStyles.actionButtonTextDark]}>Edit</Text>
                       </Pressable>
-                      <View style={myBlogStyles.actionDivider} />
+                      <View style={[myBlogStyles.actionDivider, isDark && myBlogStyles.actionDividerDark]} />
                       <Pressable
                         onPress={() => handleDeleteBlog(item.id)}
                         style={myBlogStyles.actionButton}

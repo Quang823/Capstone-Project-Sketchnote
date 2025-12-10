@@ -20,6 +20,9 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
+  containerDark: {
+    backgroundColor: "#0F172A",
+  },
   main: {
     flex: 1,
   },
@@ -39,6 +42,9 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E0E7FF",
   },
+  headerDark: {
+    borderBottomColor: "#334155",
+  },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
@@ -50,6 +56,9 @@ export const styles = StyleSheet.create({
     fontFamily: "Pacifico-Regular",
     color: "#084F8C",
     letterSpacing: -0.5,
+  },
+  headerTitleDark: {
+    color: "#FFFFFF",
   },
   headerRight: {
     flexDirection: "row",
@@ -65,6 +74,10 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#a1c3efff",
+  },
+  iconButtonDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
   },
 
   premiumWrapper: {
@@ -169,6 +182,10 @@ export const styles = StyleSheet.create({
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 8 },
   },
+  popoverDark: {
+    backgroundColor: "#1E293B",
+    shadowColor: "#000",
+  },
   popoverArrow: {
     position: "absolute",
     top: -12,
@@ -181,6 +198,9 @@ export const styles = StyleSheet.create({
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     borderBottomColor: "#FFFFFF",
+  },
+  popoverArrowDark: {
+    borderBottomColor: "#1E293B",
   },
   popoverArrowBorder: {
     position: "absolute",
@@ -195,6 +215,9 @@ export const styles = StyleSheet.create({
     borderRightColor: "transparent",
     borderBottomColor: "#FFFFFF",
   },
+  popoverArrowBorderDark: {
+    borderBottomColor: "#1E293B",
+  },
   notiArrow: {
     position: "absolute",
     top: -12,
@@ -208,6 +231,9 @@ export const styles = StyleSheet.create({
     borderRightColor: "transparent",
     borderBottomColor: "#FFFFFF",
   },
+  notiArrowDark: {
+    borderBottomColor: "#1E293B",
+  },
   notiArrowBorder: {
     position: "absolute",
     top: -12,
@@ -220,6 +246,9 @@ export const styles = StyleSheet.create({
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     borderBottomColor: "#FFFFFF",
+  },
+  notiArrowBorderDark: {
+    borderBottomColor: "#1E293B",
   },
   popoverItem: {
     paddingHorizontal: 18,
@@ -235,6 +264,9 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "500",
     flex: 1,
+  },
+  popoverLabelDark: {
+    color: "#F1F5F9",
   },
   badge: {
     backgroundColor: "#3B82F6",
@@ -255,10 +287,16 @@ export const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
+  popoverTipDark: {
+    borderTopColor: "#334155",
+  },
   popoverTipText: {
     fontSize: 12,
     color: "#64748B",
     lineHeight: 16,
+  },
+  popoverTipTextDark: {
+    color: "#94A3B8",
   },
 
   // Grid & Cards
@@ -289,11 +327,19 @@ export const styles = StyleSheet.create({
     height: CARD_WIDTH * 0.55 + 90,
     width: CARD_WIDTH, // Fixed height: image height + info section
   },
+  cardDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+    shadowColor: "#000",
+  },
   imageContainer: {
     width: "100%",
     height: CARD_WIDTH * 0.55,
     backgroundColor: "#F1F5F9",
     position: "relative",
+  },
+  imageContainerDark: {
+    backgroundColor: "#334155",
   },
   projectImage: {
     width: "100%",
@@ -335,6 +381,9 @@ export const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
   },
+  threeDotButtonDark: {
+    backgroundColor: "rgba(30, 41, 59, 0.92)",
+  },
   menuOverlay: {
     position: "absolute",
     top: 0,
@@ -358,6 +407,10 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  menuDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -369,10 +422,16 @@ export const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#F1F5F9",
   },
+  menuItemDeleteDark: {
+    borderTopColor: "#334155",
+  },
   menuText: {
     fontSize: 14,
     color: "#1E293B",
     fontWeight: "500",
+  },
+  menuTextDark: {
+    color: "#F1F5F9",
   },
   cardInfo: {
     padding: 10,
@@ -384,11 +443,17 @@ export const styles = StyleSheet.create({
     marginBottom: 4,
     letterSpacing: -0.2,
   },
+  projectTitleDark: {
+    color: "#F1F5F9",
+  },
   projectDescription: {
     fontSize: 11,
     color: "#64748B",
     lineHeight: 14,
     marginBottom: 4,
+  },
+  projectDescriptionDark: {
+    color: "#94A3B8",
   },
   cardFooter: {
     flexDirection: "row",
@@ -405,6 +470,9 @@ export const styles = StyleSheet.create({
     color: "#3B82F6",
     fontWeight: "500",
   },
+  dateTextDark: {
+    color: "#60A5FA",
+  },
   arrowContainer: {
     width: 24,
     height: 24,
@@ -412,6 +480,9 @@ export const styles = StyleSheet.create({
     backgroundColor: "#EFF6FF",
     justifyContent: "center",
     alignItems: "center",
+  },
+  arrowContainerDark: {
+    backgroundColor: "#334155",
   },
 
   // States
@@ -424,6 +495,9 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: "#64748B",
     fontWeight: "500",
+  },
+  loadingTextDark: {
+    color: "#94A3B8",
   },
   errorIcon: {
     width: 80,
@@ -440,12 +514,18 @@ export const styles = StyleSheet.create({
     color: "#1E293B",
     marginBottom: 8,
   },
+  errorTitleDark: {
+    color: "#F1F5F9",
+  },
   errorText: {
     fontSize: 15,
     color: "#64748B",
     textAlign: "center",
     lineHeight: 22,
     marginBottom: 24,
+  },
+  errorTextDark: {
+    color: "#94A3B8",
   },
   retryButton: {
     backgroundColor: "#3B82F6",
@@ -472,17 +552,26 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
+  emptyIconDark: {
+    backgroundColor: "#1E293B",
+  },
   emptyTitle: {
     fontSize: 22,
     fontWeight: "700",
     color: "#1E293B",
     marginBottom: 8,
   },
+  emptyTitleDark: {
+    color: "#F1F5F9",
+  },
   emptyText: {
     fontSize: 15,
     color: "#64748B",
     textAlign: "center",
     marginBottom: 28,
+  },
+  emptyTextDark: {
+    color: "#94A3B8",
   },
   createFirstButton: {
     backgroundColor: "#3B82F6",
@@ -519,9 +608,17 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#DBEAFE",
   },
+  paginationButtonDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
   paginationButtonDisabled: {
     backgroundColor: "#F1F5F9",
     borderColor: "#E2E8F0",
+  },
+  paginationButtonDisabledDark: {
+    backgroundColor: "#334155",
+    borderColor: "#475569",
   },
   paginationNumbers: {
     flexDirection: "row",
@@ -537,6 +634,10 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  paginationNumberDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
   paginationNumberActive: {
     backgroundColor: "#3B82F6",
     borderColor: "#3B82F6",
@@ -545,6 +646,9 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#64748B",
+  },
+  paginationNumberTextDark: {
+    color: "#94A3B8",
   },
   paginationNumberTextActive: {
     color: "#FFFFFF",
@@ -571,6 +675,10 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  modalContentDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
   modalIconCircle: {
     width: 72,
     height: 72,
@@ -580,11 +688,17 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
+  modalIconCircleDark: {
+    backgroundColor: "#334155",
+  },
   modalTitle: {
     fontSize: 23,
     fontWeight: "800",
     color: "#0F172A",
     letterSpacing: -0.3,
+  },
+  modalTitleDark: {
+    color: "#F1F5F9",
   },
   modalMessage: {
     fontSize: 16,
@@ -593,6 +707,9 @@ export const styles = StyleSheet.create({
     lineHeight: 24,
     marginVertical: 16,
     paddingHorizontal: 8,
+  },
+  modalMessageDark: {
+    color: "#94A3B8",
   },
 
   // Input đẹp
@@ -607,6 +724,10 @@ export const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 16,
   },
+  inputWrapperDark: {
+    backgroundColor: "#334155",
+    borderColor: "#475569",
+  },
   inputIcon: {
     marginRight: 12,
   },
@@ -620,6 +741,9 @@ export const styles = StyleSheet.create({
     color: "#1E293B",
     paddingVertical: 16,
     fontWeight: "500",
+  },
+  modalInputDark: {
+    color: "#F1F5F9",
   },
 
   // Nút
@@ -638,6 +762,10 @@ export const styles = StyleSheet.create({
     minWidth: 120,
     borderWidth: 1.5,
     borderColor: "#CBD5E1",
+  },
+  modalButtonCancelDark: {
+    backgroundColor: "#334155",
+    borderColor: "#475569",
   },
   modalButton: {
     backgroundColor: "#3B82F6",
@@ -662,6 +790,9 @@ export const styles = StyleSheet.create({
     color: "#475569",
     fontWeight: "600",
     fontSize: 15.5,
+  },
+  modalButtonTextCancelDark: {
+    color: "#94A3B8",
   },
   modalButtonText: {
     color: "#FFFFFF",

@@ -27,6 +27,10 @@ export const drawerStyles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
+  drawerDark: {
+    backgroundColor: "#1E293B",
+    shadowColor: "#000",
+  },
 
   // Header Section
   drawerHeader: {
@@ -39,6 +43,10 @@ export const drawerStyles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
+  },
+  drawerHeaderDark: {
+    backgroundColor: "#1E293B",
+    borderBottomColor: "#334155",
   },
 
   logoContainer: {
@@ -53,6 +61,9 @@ export const drawerStyles = StyleSheet.create({
     color: "#084F8C",
     letterSpacing: -0.5,
   },
+  drawerTitleDark: {
+    color: "#F8FAFC",
+  },
 
   closeButton: {
     width: 36,
@@ -62,8 +73,10 @@ export const drawerStyles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  closeButtonDark: {
+    backgroundColor: "#334155",
+  },
 
-  // User Info Section
   // User Info Section
   userInfo: {
     alignItems: "center",
@@ -72,6 +85,10 @@ export const drawerStyles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
+  },
+  userInfoDark: {
+    backgroundColor: "#0F172A",
+    borderBottomColor: "#334155",
   },
 
   avatar: {
@@ -83,6 +100,9 @@ export const drawerStyles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
     overflow: "hidden", // quan trọng để bo tròn ảnh
+  },
+  avatarDark: {
+    backgroundColor: "#1e3a8a",
   },
 
   avatarImage: {
@@ -97,11 +117,17 @@ export const drawerStyles = StyleSheet.create({
     color: "#052440ff",
     marginBottom: 4,
   },
+  userNameDark: {
+    color: "#F8FAFC",
+  },
 
   userEmail: {
     fontSize: 13,
     color: "#64748B",
     fontWeight: "400",
+  },
+  userEmailDark: {
+    color: "#94A3B8",
   },
 
   // Role Badge
@@ -135,6 +161,9 @@ export const drawerStyles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
   },
+  sectionTitleDark: {
+    color: "#64748B", // Slightly darker/muted for dark mode or keep same
+  },
 
   drawerItem: {
     flexDirection: "row",
@@ -150,6 +179,9 @@ export const drawerStyles = StyleSheet.create({
   drawerItemActive: {
     backgroundColor: "#EFF6FF",
   },
+  drawerItemActiveDark: {
+    backgroundColor: "#1e3a8a", // Darker blue for active item background
+  },
 
   iconContainer: {
     width: 36,
@@ -158,6 +190,9 @@ export const drawerStyles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
     justifyContent: "center",
     alignItems: "center",
+  },
+  iconContainerDark: {
+    backgroundColor: "#334155",
   },
 
   iconContainerActive: {
@@ -170,10 +205,16 @@ export const drawerStyles = StyleSheet.create({
     color: "#475569",
     flex: 1,
   },
+  drawerTextDark: {
+    color: "#CBD5E1",
+  },
 
   drawerTextActive: {
     color: "#1E293B",
     fontWeight: "600",
+  },
+  drawerTextActiveDark: {
+    color: "#FFFFFF",
   },
 
   divider: {
@@ -181,6 +222,9 @@ export const drawerStyles = StyleSheet.create({
     backgroundColor: "#E2E8F0",
     marginVertical: 8,
     marginHorizontal: 20,
+  },
+  dividerDark: {
+    backgroundColor: "#334155",
   },
 
   // Footer Section
@@ -190,6 +234,10 @@ export const drawerStyles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#E2E8F0",
     backgroundColor: "#F8FAFC",
+  },
+  drawerFooterDark: {
+    backgroundColor: "#0F172A",
+    borderTopColor: "#334155",
   },
 
   logoutButton: {
@@ -203,11 +251,17 @@ export const drawerStyles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
+  logoutButtonDark: {
+    backgroundColor: "#450a0a", // Dark red background
+  },
 
   logoutText: {
     fontSize: 15,
     fontWeight: "600",
     color: "#DC2626",
+  },
+  logoutTextDark: {
+    color: "#fca5a5", // Light red text
   },
 
   versionText: {

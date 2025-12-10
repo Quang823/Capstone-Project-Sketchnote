@@ -20,11 +20,14 @@ import { Modal, KeyboardAvoidingView, Platform, Pressable } from "react-native";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTheme } from "../../../context/ThemeContext";
 
 export default function MyCoursesScreen() {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigation = useReactNavigation();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [rating, setRating] = useState(0);
@@ -126,19 +129,19 @@ export default function MyCoursesScreen() {
     }
   };
 
-  const renderCourseItem = (item) => {
+  const renderCourseItem = (item, index) => {
     const course = item.course;
     const progressPercent = item.progressPercent || 0;
 
     return (
-      <View style={myCoursesStyles.courseCardWrapper}>
+      <View key={index} style={myCoursesStyles.courseCardWrapper}>
         <TouchableOpacity
-          style={myCoursesStyles.courseCard}
+          style={[myCoursesStyles.courseCard, isDark && myCoursesStyles.courseCardDark]}
           onPress={() => handleCoursePress(course)}
           activeOpacity={0.95}
         >
           {/* Image with gradient overlay */}
-          <View style={myCoursesStyles.imageContainer}>
+          <View style={[myCoursesStyles.imageContainer, isDark && myCoursesStyles.imageContainerDark]}>
             <Image
               source={{
                 uri: course.imageUrl || "https://via.placeholder.com/150",
@@ -156,7 +159,7 @@ export default function MyCoursesScreen() {
 
             {/* Feedback button on image */}
             <Pressable
-              style={myCoursesStyles.feedbackButtonFloat}
+              style={[myCoursesStyles.feedbackButtonFloat, isDark && myCoursesStyles.feedbackButtonFloatDark]}
               onPress={() => openFeedbackModal(course)}
             >
               <Icon name="star" size={18} color="#FFB300" />
@@ -165,28 +168,28 @@ export default function MyCoursesScreen() {
 
           {/* Course Info */}
           <View style={myCoursesStyles.courseInfo}>
-            <Text style={myCoursesStyles.courseTitle} numberOfLines={2}>
+            <Text style={[myCoursesStyles.courseTitle, isDark && myCoursesStyles.courseTitleDark]} numberOfLines={2}>
               {course.title}
             </Text>
 
             {course.subtitle && (
-              <Text style={myCoursesStyles.courseSubtitle} numberOfLines={1}>
+              <Text style={[myCoursesStyles.courseSubtitle, isDark && myCoursesStyles.courseSubtitleDark]} numberOfLines={1}>
                 {course.subtitle}
               </Text>
             )}
 
             {/* Meta Info */}
-            <View style={myCoursesStyles.metaContainer}>
+            <View style={[myCoursesStyles.metaContainer, isDark && myCoursesStyles.metaContainerDark]}>
               <View style={myCoursesStyles.metaItem}>
-                <Icon name="access-time" size={14} color="#64748B" />
-                <Text style={myCoursesStyles.metaText}>
+                <Icon name="access-time" size={14} color={isDark ? "#94A3B8" : "#64748B"} />
+                <Text style={[myCoursesStyles.metaText, isDark && myCoursesStyles.metaTextDark]}>
                   {formatDuration(course.totalDuration || 0)}
                 </Text>
               </View>
-              <View style={myCoursesStyles.metaDivider} />
+              <View style={[myCoursesStyles.metaDivider, isDark && myCoursesStyles.metaDividerDark]} />
               <View style={myCoursesStyles.metaItem}>
-                <Icon name="play-circle-outline" size={14} color="#64748B" />
-                <Text style={myCoursesStyles.metaText}>
+                <Icon name="play-circle-outline" size={14} color={isDark ? "#94A3B8" : "#64748B"} />
+                <Text style={[myCoursesStyles.metaText, isDark && myCoursesStyles.metaTextDark]}>
                   {course.lessons?.length || 0}
                 </Text>
               </View>
@@ -194,7 +197,7 @@ export default function MyCoursesScreen() {
 
             {/* Progress */}
             <View style={myCoursesStyles.progressSection}>
-              <View style={myCoursesStyles.progressBarContainer}>
+              <View style={[myCoursesStyles.progressBarContainer, isDark && myCoursesStyles.progressBarContainerDark]}>
                 <View
                   style={[
                     myCoursesStyles.progressBar,
@@ -202,7 +205,7 @@ export default function MyCoursesScreen() {
                   ]}
                 />
               </View>
-              <Text style={myCoursesStyles.progressText}>
+              <Text style={[myCoursesStyles.progressText, isDark && myCoursesStyles.progressTextDark]}>
                 {progressPercent}% Complete
               </Text>
             </View>
@@ -225,7 +228,7 @@ export default function MyCoursesScreen() {
 
   if (loading) {
     return (
-      <View style={myCoursesStyles.centerContainer}>
+      <View style={[myCoursesStyles.centerContainer, isDark && myCoursesStyles.centerContainerDark]}>
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -237,15 +240,15 @@ export default function MyCoursesScreen() {
   }
 
   return (
-    <View style={myCoursesStyles.container}>
+    <View style={[myCoursesStyles.container, isDark && myCoursesStyles.containerDark]}>
       {/* Premium Header */}
 
-      <View style={myCoursesStyles.header}>
+      <View style={[myCoursesStyles.header, isDark && myCoursesStyles.headerDark]}>
         <View style={myCoursesStyles.headerLeft}>
-          <SidebarToggleButton iconSize={28} iconColor="#084F8C" />
+          <SidebarToggleButton iconSize={28} iconColor={isDark ? "#FFFFFF" : "#084F8C"} />
           <View>
-            <Text style={myCoursesStyles.headerTitle}>My Learning</Text>
-            <Text style={myCoursesStyles.headerSubtitle}>
+            <Text style={[myCoursesStyles.headerTitle, isDark && myCoursesStyles.headerTitleDark]}>My Learning</Text>
+            <Text style={[myCoursesStyles.headerSubtitle, isDark && myCoursesStyles.headerSubtitleDark]}>
               {enrollments.length} {enrollments.length === 1 ? "Course" : "Courses"} in progress
             </Text>
           </View>
@@ -277,7 +280,7 @@ export default function MyCoursesScreen() {
 
         {enrollments.length === 0 ? (
           <View style={myCoursesStyles.emptyContainer}>
-            <View style={myCoursesStyles.emptyIconContainer}>
+            <View style={[myCoursesStyles.emptyIconContainer, isDark && myCoursesStyles.emptyIconContainerDark]}>
               <LottieView
                 source={require("../../../assets/course.json")}
                 autoPlay
@@ -285,8 +288,8 @@ export default function MyCoursesScreen() {
                 style={{ width: 240, height: 240 }}
               />
             </View>
-            <Text style={myCoursesStyles.emptyTitle}>Begin Your Journey</Text>
-            <Text style={myCoursesStyles.emptyDescription}>
+            <Text style={[myCoursesStyles.emptyTitle, isDark && myCoursesStyles.emptyTitleDark]}>Begin Your Journey</Text>
+            <Text style={[myCoursesStyles.emptyDescription, isDark && myCoursesStyles.emptyDescriptionDark]}>
               Unlock your potential with world-class courses designed for success
             </Text>
             <TouchableOpacity
@@ -321,27 +324,27 @@ export default function MyCoursesScreen() {
             style={myCoursesStyles.modalBackdrop}
             onPress={closeFeedbackModal}
           />
-          <View style={myCoursesStyles.modalContent}>
+          <View style={[myCoursesStyles.modalContent, isDark && myCoursesStyles.modalContentDark]}>
             {/* Modal Header */}
-            <View style={myCoursesStyles.modalHeader}>
+            <View style={[myCoursesStyles.modalHeader, isDark && myCoursesStyles.modalHeaderDark]}>
               <View style={myCoursesStyles.modalIconContainer}>
-                <View style={myCoursesStyles.modalIcon}>
-                  <Icon name="rate-review" size={24} color="#084F8C" />
+                <View style={[myCoursesStyles.modalIcon, isDark && myCoursesStyles.modalIconDark]}>
+                  <Icon name="rate-review" size={24} color={isDark ? "#60A5FA" : "#084F8C"} />
                 </View>
               </View>
-              <Text style={myCoursesStyles.modalTitle}>Share Your Experience</Text>
-              <Text style={myCoursesStyles.modalSubtitle} numberOfLines={2}>
+              <Text style={[myCoursesStyles.modalTitle, isDark && myCoursesStyles.modalTitleDark]}>Share Your Experience</Text>
+              <Text style={[myCoursesStyles.modalSubtitle, isDark && myCoursesStyles.modalSubtitleDark]} numberOfLines={2}>
                 {selectedCourse?.title}
               </Text>
-              <Pressable onPress={closeFeedbackModal} style={myCoursesStyles.closeButton}>
-                <Icon name="close" size={24} color="#94A3B8" />
+              <Pressable onPress={closeFeedbackModal} style={[myCoursesStyles.closeButton, isDark && myCoursesStyles.closeButtonDark]}>
+                <Icon name="close" size={24} color={isDark ? "#94A3B8" : "#94A3B8"} />
               </Pressable>
             </View>
 
             {/* Rating Section */}
             <View style={myCoursesStyles.section}>
-              <Text style={myCoursesStyles.sectionLabel}>Your Rating</Text>
-              <View style={myCoursesStyles.starsContainer}>
+              <Text style={[myCoursesStyles.sectionLabel, isDark && myCoursesStyles.sectionLabelDark]}>Your Rating</Text>
+              <View style={[myCoursesStyles.starsContainer, isDark && myCoursesStyles.starsContainerDark]}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Pressable
                     key={star}
@@ -351,13 +354,13 @@ export default function MyCoursesScreen() {
                     <Icon
                       name={star <= rating ? "star" : "star-border"}
                       size={40}
-                      color={star <= rating ? "#FFB300" : "#E2E8F0"}
+                      color={star <= rating ? "#FFB300" : (isDark ? "#334155" : "#E2E8F0")}
                     />
                   </Pressable>
                 ))}
               </View>
               {rating > 0 && (
-                <View style={myCoursesStyles.ratingBadge}>
+                <View style={[myCoursesStyles.ratingBadge, isDark && myCoursesStyles.ratingBadgeDark]}>
                   <Text style={myCoursesStyles.ratingEmoji}>
                     {rating === 1 && "😞"}
                     {rating === 2 && "😐"}
@@ -365,7 +368,7 @@ export default function MyCoursesScreen() {
                     {rating === 4 && "😊"}
                     {rating === 5 && "🤩"}
                   </Text>
-                  <Text style={myCoursesStyles.ratingText}>
+                  <Text style={[myCoursesStyles.ratingText, isDark && myCoursesStyles.ratingTextDark]}>
                     {rating === 1 && "Poor"}
                     {rating === 2 && "Fair"}
                     {rating === 3 && "Good"}
@@ -378,11 +381,11 @@ export default function MyCoursesScreen() {
 
             {/* Comment Section */}
             <View style={myCoursesStyles.section}>
-              <Text style={myCoursesStyles.sectionLabel}>Your Feedback</Text>
+              <Text style={[myCoursesStyles.sectionLabel, isDark && myCoursesStyles.sectionLabelDark]}>Your Feedback</Text>
               <TextInput
-                style={myCoursesStyles.commentInput}
+                style={[myCoursesStyles.commentInput, isDark && myCoursesStyles.commentInputDark]}
                 placeholder="Share what you loved or how we can improve..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={isDark ? "#64748B" : "#94A3B8"}
                 multiline
                 numberOfLines={5}
                 value={comment}
@@ -394,14 +397,14 @@ export default function MyCoursesScreen() {
 
             {/* Action Buttons */}
             <View style={myCoursesStyles.buttonRow}>
-              <Pressable style={myCoursesStyles.cancelButton} onPress={closeFeedbackModal}>
-                <Text style={myCoursesStyles.cancelButtonText}>Cancel</Text>
+              <Pressable style={[myCoursesStyles.cancelButton, isDark && myCoursesStyles.cancelButtonDark]} onPress={closeFeedbackModal}>
+                <Text style={[myCoursesStyles.cancelButtonText, isDark && myCoursesStyles.cancelButtonTextDark]}>Cancel</Text>
               </Pressable>
               <Pressable
                 style={[
                   myCoursesStyles.submitButton,
                   (submittingFeedback || rating === 0 || !comment.trim()) &&
-                  myCoursesStyles.submitButtonDisabled,
+                  (isDark ? myCoursesStyles.submitButtonDisabledDark : myCoursesStyles.submitButtonDisabled),
                 ]}
                 onPress={submitFeedback}
                 disabled={submittingFeedback || rating === 0 || !comment.trim()}

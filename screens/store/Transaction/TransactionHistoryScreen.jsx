@@ -7,6 +7,7 @@ import {
   FlatList,
   Modal,
   ScrollView,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -35,10 +36,16 @@ export default function TransactionHistoryScreen() {
   const fetchHistory = async () => {
     try {
       setLoading(true);
-      const historyData = await import("../../../service/creditService").then(m => m.creditService.getCreditTransactionHistory());
+      const historyData = await import("../../../service/creditService").then(
+        (m) => m.creditService.getCreditTransactionHistory()
+      );
       if (Array.isArray(historyData)) {
         setTransactions(historyData);
-      } else if (historyData && historyData.content && Array.isArray(historyData.content)) {
+      } else if (
+        historyData &&
+        historyData.content &&
+        Array.isArray(historyData.content)
+      ) {
         setTransactions(historyData.content);
       }
     } catch (error) {
@@ -49,7 +56,7 @@ export default function TransactionHistoryScreen() {
   };
 
   const translateX = useRef(new Animated.Value(0)).current;
-
+  const screenWidth = Dimensions.get("window").width;
   const handleTabPress = (tab, index) => {
     setActiveTab(tab);
     Animated.spring(translateX, {
@@ -66,17 +73,18 @@ export default function TransactionHistoryScreen() {
           transaction.status === "SUCCESS"
             ? "#16A34A"
             : transaction.status === "PENDING"
-              ? "#F59E0B"
-              : "#DC2626",
+            ? "#F59E0B"
+            : "#DC2626",
         sign: "+",
         label:
           transaction.status === "SUCCESS"
             ? "Deposit Success"
             : transaction.status === "PENDING"
-              ? "Pending Deposit"
-              : "Deposit Failed",
-        description: `Deposit to wallet${transaction.orderCode ? ` • #${transaction.orderCode}` : ""
-          }`,
+            ? "Pending Deposit"
+            : "Deposit Failed",
+        description: `Deposit to wallet${
+          transaction.orderCode ? ` • #${transaction.orderCode}` : ""
+        }`,
         category: "deposit",
       },
       COURSE_FEE: {
@@ -429,4 +437,3 @@ export default function TransactionHistoryScreen() {
     </SafeAreaView>
   );
 }
-

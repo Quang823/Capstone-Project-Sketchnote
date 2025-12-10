@@ -43,6 +43,7 @@ import CreditTransactionHistoryScreen from "../screens/credit/CreditTransactionH
 import WithdrawalHistoryScreen from "../screens/designer/WithdrawalHistoryScreen/WithdrawalHistoryScreen";
 import SketchNotePolicy from "../screens/policy/SketchNotePolicy";
 import DesignerProfileScreen from "../screens/store/DesignerProfileScreen/DesignerProfileScreen";
+import SettingScreen from "../screens/settings/SettingScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -129,6 +130,7 @@ export default function AppNavigator() {
       <Stack.Screen name="DesignerWallet" component={DesignerWalletScreen} />
       <Stack.Screen name="WithdrawalHistory" component={WithdrawalHistoryScreen} />
       <Stack.Screen name="Policy" component={SketchNotePolicy} />
+      <Stack.Screen name="Settings" component={SettingScreen} />
     </Stack.Navigator>
   );
 }

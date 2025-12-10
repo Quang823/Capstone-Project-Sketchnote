@@ -4,11 +4,16 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export const resourceStoreStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FAFAFA" },
+  containerDark: { backgroundColor: "#0F172A" },
+
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#FAFAFA",
+  },
+  centerContainerDark: {
+    backgroundColor: "#0F172A",
   },
 
   // Header
@@ -23,6 +28,9 @@ export const resourceStoreStyles = StyleSheet.create({
     elevation: 15,
     position: "relative",
     overflow: "hidden",
+  },
+  headerDark: {
+    backgroundColor: "#1E293B",
   },
   headerGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -47,10 +55,16 @@ export const resourceStoreStyles = StyleSheet.create({
     color: "#084F8C",
     letterSpacing: -0.5,
   },
+  headerTitleDark: {
+    color: "#F8FAFC",
+  },
   headerSubtitle: {
     fontSize: 13,
     color: "rgba(146, 146, 146, 1)",
     fontWeight: "500",
+  },
+  headerSubtitleDark: {
+    color: "#94A3B8",
   },
   cartButton: {
     width: 40,
@@ -64,6 +78,9 @@ export const resourceStoreStyles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 4,
+  },
+  cartButtonDark: {
+    backgroundColor: "#334155",
   },
   cartBadge: {
     position: "absolute",
@@ -147,12 +164,18 @@ export const resourceStoreStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  bannerSearchContainerDark: {
+    backgroundColor: "#334155",
+  },
   bannerSearchInput: {
     flex: 1,
     marginLeft: 12,
     fontSize: 16,
     color: "#1E293B",
     height: 44,
+  },
+  bannerSearchInputDark: {
+    color: "#F8FAFC",
   },
   bannerSearchButton: {
     width: 44,
@@ -184,6 +207,10 @@ export const resourceStoreStyles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
+  categoryButtonDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
 
   selectedCategoryButton: {
     backgroundColor: "#0A66C2",
@@ -207,6 +234,9 @@ export const resourceStoreStyles = StyleSheet.create({
     color: "#475569",
     letterSpacing: 0.3,
   },
+  categoryTextDark: {
+    color: "#CBD5E1",
+  },
 
   selectedCategoryText: {
     color: "#FFFFFF",
@@ -221,6 +251,9 @@ export const resourceStoreStyles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
+  sectionTitleDark: {
+    color: "#F8FAFC",
+  },
 
   // Card
   resourceCard: {
@@ -231,12 +264,19 @@ export const resourceStoreStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
+  resourceCardDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
   imageContainer: {
     height: 220,
     borderRadius: 24,
     overflow: "hidden",
     position: "relative",
     backgroundColor: "#F1F5F9",
+  },
+  imageContainerDark: {
+    backgroundColor: "#334155",
   },
   resourceImage: {
     width: "100%",
@@ -321,11 +361,17 @@ export const resourceStoreStyles = StyleSheet.create({
     color: "#1E293B",
     lineHeight: 26,
   },
+  resourceNameDark: {
+    color: "#F8FAFC",
+  },
   resourceDescription: {
     fontSize: 14,
     color: "#64748B",
     marginTop: 8,
     lineHeight: 20,
+  },
+  resourceDescriptionDark: {
+    color: "#CBD5E1",
   },
 
   priceContainer: {
@@ -339,11 +385,17 @@ export const resourceStoreStyles = StyleSheet.create({
     fontWeight: "900",
     color: "#1E293B",
   },
+  priceDark: {
+    color: "#F8FAFC",
+  },
   originalPrice: {
     fontSize: 13,
     color: "#94A3B8",
     textDecorationLine: "line-through",
     fontWeight: "600",
+  },
+  originalPriceDark: {
+    color: "#64748B",
   },
   actionButtons: {
     flexDirection: "row",
@@ -362,10 +414,17 @@ export const resourceStoreStyles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "#A7F3D0",
   },
+  addToCartButtonDark: {
+    backgroundColor: "#064E3B",
+    borderColor: "#059669",
+  },
   addToCartText: {
     fontSize: 13,
     fontWeight: "800",
     color: "#059669",
+  },
+  addToCartTextDark: {
+    color: "#6EE7B7",
   },
   buyNowText: {
     fontSize: 13,
@@ -415,11 +474,17 @@ export const resourceStoreStyles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
   },
+  datePillDark: {
+    backgroundColor: "#334155",
+  },
 
   datePillText: {
     fontSize: 11,
     fontWeight: "700",
     color: "#475569",
+  },
+  datePillTextDark: {
+    color: "#CBD5E1",
   },
 
   buyNowButton: {

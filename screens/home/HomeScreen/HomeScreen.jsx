@@ -36,6 +36,7 @@ import * as offlineStorage from "../../../utils/offlineStorage";
 import TypeFloatText from "./TypeFloatText";
 import { useToast } from "../../../hooks/use-toast";
 import { AuthContext } from "../../../context/AuthContext";
+import { useTheme } from "../../../context/ThemeContext";
 
 import { notiService } from "../../../service/notiService";
 
@@ -57,6 +58,8 @@ const formatDate = (dateString) => {
 
 // Create Popover
 const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const anim = useSharedValue(0);
   useEffect(() => {
     anim.value = withTiming(visible ? 1 : 0, { duration: 200 });
@@ -84,9 +87,9 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
 
   return (
     <Animated.View style={[styles.popoverContainer, animatedStyle]}>
-      <View style={styles.popover}>
-        <View style={styles.popoverArrowBorder} />
-        <View style={styles.popoverArrow} />
+      <View style={[styles.popover, isDark && styles.popoverDark]}>
+        <View style={[styles.popoverArrowBorder, isDark && styles.popoverArrowBorderDark]} />
+        <View style={[styles.popoverArrow, isDark && styles.popoverArrowDark]} />
         {options.map((opt, idx) => (
           <TouchableOpacity
             key={opt.id}
@@ -107,8 +110,8 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
             }}
           >
             <View style={styles.popoverRow}>
-              <Icon name={opt.icon} size={22} color="#2563EB" />
-              <Text style={styles.popoverLabel}>{opt.label}</Text>
+              <Icon name={opt.icon} size={22} color={isDark ? "#60A5FA" : "#2563EB"} />
+              <Text style={[styles.popoverLabel, isDark && styles.popoverLabelDark]}>{opt.label}</Text>
               {opt.badge && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{opt.badge}</Text>
@@ -117,8 +120,8 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
             </View>
           </TouchableOpacity>
         ))}
-        <View style={styles.popoverTip}>
-          <Text style={styles.popoverTipText}>
+        <View style={[styles.popoverTip, isDark && styles.popoverTipDark]}>
+          <Text style={[styles.popoverTipText, isDark && styles.popoverTipTextDark]}>
             Double tap "+ New" to create Quick note
           </Text>
         </View>
@@ -130,6 +133,8 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
 // 3-dot Menu
 const ProjectMenu = React.memo(
   ({ visible, onClose, onEdit, onDelete, position }) => {
+    const { theme } = useTheme();
+    const isDark = theme === "dark";
     const anim = useSharedValue(0);
     useEffect(() => {
       anim.value = withTiming(visible ? 1 : 0, { duration: 180 });
@@ -148,13 +153,13 @@ const ProjectMenu = React.memo(
         activeOpacity={1}
         onPress={onClose}
       >
-        <Animated.View style={[styles.menu, animatedStyle, position]}>
+        <Animated.View style={[styles.menu, isDark && styles.menuDark, animatedStyle, position]}>
           <TouchableOpacity style={styles.menuItem} onPress={onEdit}>
-            <Icon name="edit" size={18} color="#2563EB" />
-            <Text style={styles.menuText}>Edit Project</Text>
+            <Icon name="edit" size={18} color={isDark ? "#60A5FA" : "#2563EB"} />
+            <Text style={[styles.menuText, isDark && styles.menuTextDark]}>Edit Project</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.menuItem, styles.menuItemDelete]}
+            style={[styles.menuItem, styles.menuItemDelete, isDark && styles.menuItemDeleteDark]}
             onPress={onDelete}
           >
             <Icon name="delete-outline" size={18} color="#EF4444" />
@@ -200,6 +205,8 @@ export default function HomeScreen({ navigation }) {
 
   const { toast } = useToast();
   const { user } = useContext(AuthContext);
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const fade = useSharedValue(0);
   useEffect(() => {
     fade.value = withTiming(1, { duration: 500 });
@@ -287,8 +294,8 @@ export default function HomeScreen({ navigation }) {
         })
       }
     >
-      <View style={styles.card}>
-        <View style={styles.imageContainer}>
+      <View style={[styles.card, isDark && styles.cardDark]}>
+        <View style={[styles.imageContainer, isDark && styles.imageContainerDark]}>
           <LazyImage
             source={
               item.imageUrl
@@ -308,16 +315,16 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
         <View style={styles.cardInfo}>
-          <Text style={styles.projectTitle} numberOfLines={1}>
+          <Text style={[styles.projectTitle, isDark && styles.projectTitleDark]} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={styles.projectDescription} numberOfLines={1}>
+          <Text style={[styles.projectDescription, isDark && styles.projectDescriptionDark]} numberOfLines={1}>
             {item.description || "Local Draft"}
           </Text>
           <View style={styles.cardFooter}>
             <View style={styles.dateContainer}>
-              <Icon name="schedule" size={14} color="#60A5FA" />
-              <Text style={styles.dateText}>{formatDate(item.updatedAt)}</Text>
+              <Icon name="schedule" size={14} color={isDark ? "#60A5FA" : "#60A5FA"} />
+              <Text style={[styles.dateText, isDark && styles.dateTextDark]}>{formatDate(item.updatedAt)}</Text>
             </View>
           </View>
         </View>
@@ -830,8 +837,8 @@ export default function HomeScreen({ navigation }) {
         style={styles.cardWrapper}
         onPress={() => handleProjectClick(item)}
       >
-        <View style={styles.card}>
-          <View style={styles.imageContainer}>
+        <View style={[styles.card, isDark && styles.cardDark]}>
+          <View style={[styles.imageContainer, isDark && styles.imageContainerDark]}>
             {item.imageUrl ? (
               <LazyImage
                 source={{ uri: item.imageUrl }}
@@ -847,23 +854,23 @@ export default function HomeScreen({ navigation }) {
               style={styles.imageGradient}
             />
             <TouchableOpacity
-              style={styles.threeDotButton}
+              style={[styles.threeDotButton, isDark && styles.threeDotButtonDark]}
               onPress={(e) => openMenu(item, e)}
             >
-              <Icon name="more-vert" size={24} color="#64748B" />
+              <Icon name="more-vert" size={24} color={isDark ? "#94A3B8" : "#64748B"} />
             </TouchableOpacity>
           </View>
           <View style={styles.cardInfo}>
-            <Text style={styles.projectTitle} numberOfLines={1}>
+            <Text style={[styles.projectTitle, isDark && styles.projectTitleDark]} numberOfLines={1}>
               {item.name || "Untitled"}
             </Text>
-            <Text style={styles.projectDescription} numberOfLines={2}>
+            <Text style={[styles.projectDescription, isDark && styles.projectDescriptionDark]} numberOfLines={2}>
               {item.description || ""}
             </Text>
             <View style={styles.cardFooter}>
               <View style={styles.dateContainer}>
-                <Icon name="schedule" size={14} color="#60A5FA" />
-                <Text style={styles.dateText}>
+                <Icon name="schedule" size={14} color={isDark ? "#60A5FA" : "#60A5FA"} />
+                <Text style={[styles.dateText, isDark && styles.dateTextDark]}>
                   {formatDate(item.createdAt)}
                 </Text>
               </View>
@@ -877,15 +884,15 @@ export default function HomeScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && styles.containerDark]}>
       {/* NỀN CHÍNH */}
       <View style={styles.main}>
         <Animated.View style={[styles.content, fadeStyle]}>
           {/* HEADER */}
-          <View style={styles.header}>
+          <View style={[styles.header, isDark && styles.headerDark]}>
             <View style={styles.headerLeft}>
-              <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
-              <Text style={styles.headerTitle}>Projects</Text>
+              <SidebarToggleButton iconSize={26} iconColor={isDark ? "#FFFFFF" : "#1E40AF"} />
+              <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>Projects</Text>
               <LottieView
                 source={require("../../../assets/cat.json")}
                 autoPlay
@@ -958,7 +965,7 @@ export default function HomeScreen({ navigation }) {
                 </TouchableOpacity>
               </View>
               <TouchableOpacity
-                style={styles.iconButton}
+                style={[styles.iconButton, isDark && styles.iconButtonDark]}
                 onPress={toggleNotiDropdown}
               >
                 <View style={{ position: "relative" }}>
@@ -993,14 +1000,14 @@ export default function HomeScreen({ navigation }) {
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.iconButton}
+                style={[styles.iconButton, isDark && styles.iconButtonDark]}
                 onPress={() => navigation.navigate("DesignerWallet")}
               >
                 <Icon name="account-balance-wallet" size={22} color="#1E40AF" />
               </TouchableOpacity>
               {/* Credit Button */}
               <TouchableOpacity
-                style={styles.iconButton}
+                style={[styles.iconButton, isDark && styles.iconButtonDark]}
                 onPress={() => navigation.navigate("CreditScreen")}
               >
                 <View style={{ position: "relative" }}>
@@ -1035,7 +1042,7 @@ export default function HomeScreen({ navigation }) {
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.iconButton}
+                style={[styles.iconButton, isDark && styles.iconButtonDark]}
                 onPress={() => navigation.navigate("Cart")}
               >
                 <Icon name="shopping-cart" size={22} color="#1E40AF" />
@@ -1140,8 +1147,8 @@ export default function HomeScreen({ navigation }) {
           ) : error ? (
             <View style={styles.centerContainer}>
               <Icon name="error-outline" size={48} color="#EF4444" />
-              <Text style={styles.errorTitle}>Oops!</Text>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={[styles.errorTitle, isDark && styles.errorTitleDark]}>Oops!</Text>
+              <Text style={[styles.errorText, isDark && styles.errorTextDark]}>{error}</Text>
               <TouchableOpacity
                 style={styles.retryButton}
                 onPress={fetchProjects}
@@ -1156,9 +1163,11 @@ export default function HomeScreen({ navigation }) {
                 <>
                   {localProjects.length === 0 ? (
                     <View style={styles.centerContainer}>
-                      <Icon name="smartphone" size={64} color="#FDE68A" />
-                      <Text style={styles.emptyTitle}>No Local Projects</Text>
-                      <Text style={styles.emptyText}>
+                      <View style={[styles.emptyIcon, isDark && styles.emptyIconDark]}>
+                        <Icon name="smartphone" size={64} color={isDark ? "#FDE68A" : "#FDE68A"} />
+                      </View>
+                      <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>No Local Projects</Text>
+                      <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
                         Projects created offline will appear here.
                       </Text>
                     </View>
@@ -1204,9 +1213,11 @@ export default function HomeScreen({ navigation }) {
                 <>
                   {projects.length === 0 ? (
                     <View style={styles.centerContainer}>
-                      <Icon name="cloud-off" size={64} color="#BFDBFE" />
-                      <Text style={styles.emptyTitle}>No Cloud Projects</Text>
-                      <Text style={styles.emptyText}>
+                      <View style={[styles.emptyIcon, isDark && styles.emptyIconDark]}>
+                        <Icon name="cloud-off" size={64} color={isDark ? "#BFDBFE" : "#BFDBFE"} />
+                      </View>
+                      <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>No Cloud Projects</Text>
+                      <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
                         Create a new project to get started!
                       </Text>
                       <TouchableOpacity
@@ -1254,9 +1265,11 @@ export default function HomeScreen({ navigation }) {
                 <>
                   {sharedProjects.length === 0 ? (
                     <View style={styles.centerContainer}>
-                      <Icon name="folder-shared" size={64} color="#A7F3D0" />
-                      <Text style={styles.emptyTitle}>No Shared Projects</Text>
-                      <Text style={styles.emptyText}>
+                      <View style={[styles.emptyIcon, isDark && styles.emptyIconDark]}>
+                        <Icon name="folder-shared" size={64} color={isDark ? "#A7F3D0" : "#A7F3D0"} />
+                      </View>
+                      <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>No Shared Projects</Text>
+                      <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
                         Projects shared with you will appear here.
                       </Text>
                     </View>
@@ -1291,16 +1304,16 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text
-              style={{
+              style={[{
                 fontSize: 18,
                 fontWeight: "700",
                 color: "#111827",
                 marginBottom: 12,
-              }}
+              }, isDark && { color: "#F1F5F9" }]}
             >
               Create Quick Note
             </Text>
-            <Text style={{ fontSize: 14, color: "#374151", marginBottom: 16 }}>
+            <Text style={[{ fontSize: 14, color: "#374151", marginBottom: 16 }, isDark && { color: "#94A3B8" }]}>
               Choose orientation for the first page
             </Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
@@ -1316,9 +1329,9 @@ export default function HomeScreen({ navigation }) {
                 }}
                 onPress={() => createQuickNote("portrait")}
               >
-                <Icon name="smartphone" size={22} color="#1E40AF" />
+                <Icon name="smartphone" size={22} color={isDark ? "#60A5FA" : "#1E40AF"} />
                 <Text
-                  style={{ marginTop: 6, color: "#1E293B", fontWeight: "600" }}
+                  style={{ marginTop: 6, color: isDark ? "#F1F5F9" : "#1E293B", fontWeight: "600" }}
                 >
                   Portrait
                 </Text>
@@ -1335,9 +1348,9 @@ export default function HomeScreen({ navigation }) {
                 }}
                 onPress={() => createQuickNote("landscape")}
               >
-                <Icon name="stay-current-landscape" size={22} color="#1E40AF" />
+                <Icon name="stay-current-landscape" size={22} color={isDark ? "#60A5FA" : "#1E40AF"} />
                 <Text
-                  style={{ marginTop: 6, color: "#1E293B", fontWeight: "600" }}
+                  style={{ marginTop: 6, color: isDark ? "#F1F5F9" : "#1E293B", fontWeight: "600" }}
                 >
                   Landscape
                 </Text>
@@ -1350,12 +1363,12 @@ export default function HomeScreen({ navigation }) {
                   paddingVertical: 10,
                   borderRadius: 10,
                   alignItems: "center",
-                  backgroundColor: "#E5E7EB",
+                  backgroundColor: isDark ? "#334155" : "#E5E7EB",
                 }}
                 onPress={() => setQuickNoteModalVisible(false)}
               >
                 <Text
-                  style={{ color: "#111827", fontSize: 14, fontWeight: "600" }}
+                  style={{ color: isDark ? "#94A3B8" : "#111827", fontSize: 14, fontWeight: "600" }}
                 >
                   Cancel
                 </Text>
@@ -1535,13 +1548,13 @@ export default function HomeScreen({ navigation }) {
 
       <Modal visible={editModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
             {/* Icon bút chì + tiêu đề */}
             <View style={{ alignItems: "center", marginBottom: 20 }}>
-              <View style={styles.modalIconCircle}>
+              <View style={[styles.modalIconCircle, isDark && styles.modalIconCircleDark]}>
                 <Icon name="edit" size={28} color="#3B82F6" />
               </View>
-              <Text style={styles.modalTitle}>Edit Project</Text>
+              <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>Edit Project</Text>
             </View>
 
             {/* Image Picker */}
@@ -1576,7 +1589,7 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             {/* Input tên */}
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}>
               <Icon
                 name="title"
                 size={18}
@@ -1584,16 +1597,16 @@ export default function HomeScreen({ navigation }) {
                 style={styles.inputIcon}
               />
               <TextInput
-                style={styles.modalInput}
+                style={[styles.modalInput, isDark && styles.modalInputDark]}
                 value={editName}
                 onChangeText={setEditName}
                 placeholder="Project Name"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={isDark ? "#64748B" : "#94A3B8"}
               />
             </View>
 
             {/* Input mô tả */}
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}>
               <Icon
                 name="description"
                 size={18}
@@ -1608,13 +1621,13 @@ export default function HomeScreen({ navigation }) {
                 value={editDesc}
                 onChangeText={setEditDesc}
                 placeholder="Project Description (optional)"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={isDark ? "#64748B" : "#94A3B8"}
                 multiline
               />
             </View>
 
             {/* Read-only Paper Size */}
-            <View style={styles.inputWrapper}>
+            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}>
               <Icon
                 name="aspect-ratio"
                 size={18}
@@ -1622,7 +1635,7 @@ export default function HomeScreen({ navigation }) {
                 style={styles.inputIcon}
               />
               <TextInput
-                style={[styles.modalInput, { backgroundColor: '#F1F5F9', color: '#64748B' }]}
+                style={[styles.modalInput, { backgroundColor: isDark ? '#334155' : '#F1F5F9', color: isDark ? '#94A3B8' : '#64748B' }]}
                 value={editPaperSize}
                 editable={false}
                 placeholder="Paper Size"
@@ -1635,10 +1648,10 @@ export default function HomeScreen({ navigation }) {
             {/* Nút */}
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.modalButtonCancel}
+                style={[styles.modalButtonCancel, isDark && styles.modalButtonCancelDark]}
                 onPress={() => setEditModalVisible(false)}
               >
-                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+                <Text style={[styles.modalButtonTextCancel, isDark && styles.modalButtonTextCancelDark]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalButton} onPress={saveEdit}>
                 <Text style={styles.modalButtonText}>Save Changes</Text>
@@ -1650,7 +1663,7 @@ export default function HomeScreen({ navigation }) {
 
       <Modal visible={deleteModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
             {/* Icon cảnh báo đỏ cam */}
             <View
               style={[
@@ -1661,8 +1674,8 @@ export default function HomeScreen({ navigation }) {
               <Icon name="warning" size={36} color="#EF4444" />
             </View>
 
-            <Text style={styles.modalTitle}>Delete Project Permanently?</Text>
-            <Text style={styles.modalMessage}>
+            <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>Delete Project Permanently?</Text>
+            <Text style={[styles.modalMessage, isDark && styles.modalMessageDark]}>
               Project{" "}
               <Text style={{ fontWeight: "700", color: "#DC2626" }}>
                 "{selectedProject?.name}"
@@ -1673,10 +1686,10 @@ export default function HomeScreen({ navigation }) {
             {/* Nút */}
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.modalButtonCancel}
+                style={[styles.modalButtonCancel, isDark && styles.modalButtonCancelDark]}
                 onPress={() => setDeleteModalVisible(false)}
               >
-                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+                <Text style={[styles.modalButtonTextCancel, isDark && styles.modalButtonTextCancelDark]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonDelete]}
