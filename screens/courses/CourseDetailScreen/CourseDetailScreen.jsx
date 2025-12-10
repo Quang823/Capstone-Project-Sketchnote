@@ -7,6 +7,7 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Dimensions,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -26,16 +27,17 @@ import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
+const { width } = Dimensions.get("window");
 
 const formatDuration = (seconds) => {
-  if (!seconds) return "0 phút";
+  if (!seconds) return "0 minutes";
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
 
   if (hours > 0) {
-    return `${hours} giờ ${minutes > 0 ? minutes + " phút" : ""}`;
+    return `${hours} hours ${minutes > 0 ? minutes + " minutes" : ""}`;
   }
-  return `${minutes} phút`;
+  return `${minutes} minutes`;
 };
 
 const formatDate = (dateString) => {
@@ -202,9 +204,9 @@ export default function CourseDetailScreen() {
           instructor: "Instructor",
           imageUrl: data.imageUrl?.trim() || null,
           price: data.price,
-          rating: 4.5,
-          students: data.studentCount,
-          level: data.lessons?.length > 5 ? "Nâng cao" : "Cơ bản",
+          rating: data.avgRating || 0,
+          students: data.studentCount || 0,
+          level: data.lessons?.length > 5 ? "Advanced" : "Basic",
           category: data.category,
           duration: formatDuration(data.totalDuration),
           totalLessons: data.lessons?.length || 0,
@@ -261,13 +263,7 @@ export default function CourseDetailScreen() {
 
   if (loading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
+      <View style={courseDetailStyles.loadingContainer}>
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -300,288 +296,338 @@ export default function CourseDetailScreen() {
 
   return (
     <View style={courseDetailStyles.container}>
-      <View style={courseDetailStyles.header}>
-        <Pressable
-          style={courseDetailStyles.backButton}
-          onPress={handleBackPress}
-        >
-          <Icon name="arrow-back" size={24} color="#1F2937" />
-        </Pressable>
-        <Text style={courseDetailStyles.headerTitle}>Course Details</Text>
-        <View style={courseDetailStyles.headerRight} />
-      </View>
+      <ScrollView style={courseDetailStyles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* HERO SECTION */}
+        <View style={courseDetailStyles.heroContainer}>
+          <Image
+            source={{ uri: imageUrl }}
+            style={courseDetailStyles.heroImage}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.8)']}
+            style={courseDetailStyles.heroOverlay}
+          />
 
-      <ScrollView style={courseDetailStyles.scrollView}>
+          <View style={courseDetailStyles.heroHeader}>
+            <Pressable
+              style={courseDetailStyles.backButton}
+              onPress={handleBackPress}
+            >
+              <Icon name="arrow-back" size={24} color="white" />
+            </Pressable>
+          </View>
+
+          <View style={courseDetailStyles.heroContent}>
+            <View style={courseDetailStyles.heroBadges}>
+              <View style={courseDetailStyles.levelBadge}>
+                <Text style={courseDetailStyles.levelBadgeText}>{course.level}</Text>
+              </View>
+              <View style={courseDetailStyles.categoryBadge}>
+                <Text style={courseDetailStyles.categoryBadgeText}>{course.category || "Design"}</Text>
+              </View>
+            </View>
+
+            <Text style={courseDetailStyles.heroTitle}>{course.title}</Text>
+            <Text style={courseDetailStyles.heroSubtitle}>{course.subtitle}</Text>
+
+            <View style={courseDetailStyles.heroMeta}>
+              <View style={courseDetailStyles.heroMetaItem}>
+                <Icon name="star" size={20} color="#F59E0B" />
+                <Text style={courseDetailStyles.heroMetaText}>{course.rating} Rating</Text>
+              </View>
+              <View style={courseDetailStyles.heroDivider} />
+              <View style={courseDetailStyles.heroMetaItem}>
+                <Icon name="people" size={20} color="#FFF" />
+                <Text style={courseDetailStyles.heroMetaText}>{course.students} Students</Text>
+              </View>
+              <View style={courseDetailStyles.heroDivider} />
+              <View style={courseDetailStyles.heroMetaItem}>
+                <Icon name="schedule" size={20} color="#FFF" />
+                <Text style={courseDetailStyles.heroMetaText}>{course.duration}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
         <ReanimatedView
           style={[courseDetailStyles.twoColumnContainer, animatedStyle]}
         >
           {/* LEFT COLUMN - Info & Content */}
           <View style={courseDetailStyles.leftColumn}>
-            <View style={courseDetailStyles.mainCard}>
-              <Image
-                source={{ uri: imageUrl }}
-                style={courseDetailStyles.courseImage}
-              />
+            <Shadow distance={8} startColor="#00000008" finalColor="#00000000" style={{ width: '100%' }}>
+              <View style={courseDetailStyles.mainCard}>
+                <View style={courseDetailStyles.courseInfo}>
+                  <Text style={courseDetailStyles.sectionHeaderTitle}>About this course</Text>
 
-              <View style={courseDetailStyles.courseInfo}>
-                <Text style={courseDetailStyles.courseTitle}>
-                  {course.title}
-                </Text>
-                <Text style={courseDetailStyles.subtitle}>
-                  {course.subtitle || course.description}
-                </Text>
-
-                <View style={courseDetailStyles.metaRow}>
-                  <View style={courseDetailStyles.metaItem}>
-                    <Icon name="person-outline" size={16} color="#6B7280" />
-                    <Text style={courseDetailStyles.metaText}>
-                      {course.instructor}
-                    </Text>
-                  </View>
-                  <View style={courseDetailStyles.metaItem}>
-                    <Icon name="star" size={16} color="#F59E0B" />
-                    <Text style={courseDetailStyles.metaText}>
-                      {course.rating}
-                    </Text>
-                  </View>
-                  <View style={courseDetailStyles.metaItem}>
-                    <Icon name="people-outline" size={16} color="#6B7280" />
-                    <Text style={courseDetailStyles.metaText}>
-                      {course.students}
-                    </Text>
-                  </View>
-                  <View style={courseDetailStyles.metaItem}>
-                    <Text style={courseDetailStyles.levelBadge}>
-                      {course.level}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={courseDetailStyles.descriptionText}>
-                  <Text style={courseDetailStyles.descriptionContent}>
-                    {course.description}
-                  </Text>
-                </View>
-
-                <View style={courseDetailStyles.includesSection}>
-                  <Text style={courseDetailStyles.includesTitle}>
-                    What you'll learn:
-                  </Text>
-                  {course.includes.map((item, index) => (
-                    <View key={index} style={courseDetailStyles.includeItem}>
-                      <Icon name="check" size={18} color="#10B981" />
-                      <Text style={courseDetailStyles.includeText}>{item}</Text>
+                  <View style={courseDetailStyles.instructorRow}>
+                    <View style={courseDetailStyles.instructorAvatar}>
+                      <Text style={courseDetailStyles.instructorInitial}>I</Text>
                     </View>
-                  ))}
+                    <View>
+                      <Text style={courseDetailStyles.instructorName}>{course.instructor}</Text>
+                      <Text style={courseDetailStyles.instructorRole}>Course Instructor</Text>
+                    </View>
+                  </View>
+
+                  <View style={courseDetailStyles.descriptionText}>
+                    <Text style={courseDetailStyles.descriptionContent}>
+                      {course.description}
+                    </Text>
+                  </View>
+
+                  <View style={courseDetailStyles.includesSection}>
+                    <Text style={courseDetailStyles.includesTitle}>
+                      What you'll learn
+                    </Text>
+                    <View style={courseDetailStyles.includesGrid}>
+                      {course.includes.map((item, index) => (
+                        <View key={index} style={courseDetailStyles.includeItem}>
+                          <Icon name="check-circle" size={20} color="#10B981" />
+                          <Text style={courseDetailStyles.includeText}>{item}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
                 </View>
               </View>
-            </View>
+            </Shadow>
+
+            {/* DEDICATED FEEDBACK SECTION */}
+            {feedbackData && (
+              <View style={{ marginTop: 32 }}>
+                <Shadow distance={8} startColor="#00000008" finalColor="#00000000" style={{ width: '100%' }}>
+                  <View style={courseDetailStyles.feedbackCard}>
+                    <Text style={courseDetailStyles.sectionHeaderTitle}>Student Feedback</Text>
+
+                    <View style={courseDetailStyles.feedbackContent}>
+                      {/* LEFT: Rating Summary */}
+                      <View style={courseDetailStyles.ratingSummaryColumn}>
+                        <View style={courseDetailStyles.ratingOverview}>
+                          <Text style={courseDetailStyles.averageRating}>
+                            {feedbackData.averageRating?.toFixed(1) || "0.0"}
+                          </Text>
+                          <View style={courseDetailStyles.starsWrapper}>
+                            {renderStars(Math.round(feedbackData.averageRating || 0))}
+                          </View>
+                          <Text style={courseDetailStyles.totalReviews}>
+                            {feedbackData.totalFeedbacks} Course Rating
+                          </Text>
+                        </View>
+
+                        <View style={courseDetailStyles.ratingDistribution}>
+                          {[5, 4, 3, 2, 1].map((star) => (
+                            <View key={star} style={courseDetailStyles.ratingRow}>
+                              <View style={courseDetailStyles.ratingStars}>
+                                {renderStars(star)}
+                              </View>
+                              {renderRatingBar(
+                                feedbackData.ratingDistribution?.[star] || 0,
+                                feedbackData.totalFeedbacks
+                              )}
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+
+                      {/* RIGHT: Reviews List */}
+                      <View style={courseDetailStyles.reviewsListColumn}>
+                        <View style={courseDetailStyles.reviewsList}>
+                          {feedbackData.feedbacks && feedbackData.feedbacks.length > 0 ? (
+                            feedbackData.feedbacks.map((feedback) => (
+                              <View key={feedback.id} style={courseDetailStyles.reviewItem}>
+                                <View style={courseDetailStyles.reviewHeader}>
+                                  <View style={courseDetailStyles.reviewerInfo}>
+                                    {feedback.userAvatarUrl ? (
+                                      <Image
+                                        source={{ uri: feedback.userAvatarUrl }}
+                                        style={courseDetailStyles.reviewerAvatar}
+                                      />
+                                    ) : (
+                                      <View style={courseDetailStyles.reviewerAvatarPlaceholder}>
+                                        <Text style={courseDetailStyles.reviewerInitial}>
+                                          {feedback.userFullName?.charAt(0) || "U"}
+                                        </Text>
+                                      </View>
+                                    )}
+                                    <View style={courseDetailStyles.reviewerDetails}>
+                                      <Text style={courseDetailStyles.reviewerName}>
+                                        {feedback.userFullName || "Anonymous"}
+                                      </Text>
+                                      <View style={courseDetailStyles.reviewMeta}>
+                                        {renderStars(feedback.rating)}
+                                        <Text style={courseDetailStyles.reviewDate}>
+                                          {formatDate(feedback.createdAt)}
+                                        </Text>
+                                      </View>
+                                    </View>
+                                  </View>
+                                </View>
+                                {feedback.comment && (
+                                  <Text style={courseDetailStyles.reviewComment}>
+                                    {feedback.comment}
+                                  </Text>
+                                )}
+                              </View>
+                            ))
+                          ) : (
+                            <Text style={courseDetailStyles.noReviews}>
+                              No feedbacks yet.
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </Shadow>
+              </View>
+            )}
           </View>
 
           {/* RIGHT COLUMN - Price & Curriculum */}
           <View style={courseDetailStyles.rightColumn}>
-            <View style={courseDetailStyles.stickyCard}>
-              <View style={courseDetailStyles.priceSection}>
-                <Text style={courseDetailStyles.priceText}>
-                  {course.price?.toLocaleString("vi-VN") || "0"} đ
-                </Text>
+            <Shadow distance={8} startColor="#00000008" finalColor="#00000000" style={{ width: '100%' }}>
+              <View style={courseDetailStyles.stickyCard}>
+                {/* Decorative top glow */}
+                <View style={courseDetailStyles.cardGlowTop} />
 
-                {course.isEnrolled ? (
-                  <Pressable
-                    style={courseDetailStyles.primaryButton}
-                    onPress={handleStartLearning}
-                  >
-                    <LinearGradient
-                      colors={["#10B981", "#059669"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={courseDetailStyles.buttonGradient}
-                    >
-                      <Icon name="play-arrow" size={22} color="white" />
-                      <Text style={courseDetailStyles.buttonText}>
-                        Start Learning
+                <View style={courseDetailStyles.priceSection}>
+                  {/* Badge "Best Value" nếu giá tốt */}
+                  {course.originalPrice && course.price < course.originalPrice && (
+                    <View style={courseDetailStyles.bestValueBadge}>
+                      <Icon name="local-offer" size={14} color="#DC2626" />
+                      <Text style={courseDetailStyles.bestValueText}>Best Value Today!</Text>
+                    </View>
+                  )}
+
+                  {/* Price */}
+                  <Text style={courseDetailStyles.priceLabel}>Course Price</Text>
+
+                  <View style={courseDetailStyles.priceRow}>
+                    {course.originalPrice && course.price < course.originalPrice ? (
+                      <>
+                        <Text style={courseDetailStyles.originalPrice}>
+                          {course.originalPrice.toLocaleString("vi-VN")}đ
+                        </Text>
+                        <Text style={courseDetailStyles.discountPrice}>
+                          {course.price.toLocaleString("vi-VN")}đ
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={courseDetailStyles.discountPrice}>
+                        {course.price?.toLocaleString("vi-VN") || "0"}đ
                       </Text>
-                    </LinearGradient>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    style={courseDetailStyles.primaryButton}
-                    onPress={handleOpenPurchaseModal}
-                  >
-                    <LinearGradient
-                      colors={["#3B82F6", "#2563EB"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={courseDetailStyles.buttonGradient}
-                    >
-                      <Icon name="shopping-cart" size={20} color="white" />
-                      <Text style={courseDetailStyles.buttonText}>Buy Now</Text>
-                    </LinearGradient>
-                  </Pressable>
-                )}
-              </View>
-
-              <View style={courseDetailStyles.curriculumSection}>
-                <View style={courseDetailStyles.curriculumHeader}>
-                  <Icon name="format-list-bulleted" size={24} color="#3B82F6" />
-                  <Text style={courseDetailStyles.curriculumTitle}>
-                    Course Curriculum
-                  </Text>
-                </View>
-                <Text style={courseDetailStyles.curriculumMeta}>
-                  {course.totalLessons} lessons • {course.duration}
-                </Text>
-
-                {course.lessons.map((lesson, index) => (
-                  <View
-                    key={lesson.lessonId}
-                    style={courseDetailStyles.lessonItem}
-                  >
-                    <Pressable
-                      style={courseDetailStyles.lessonHeader}
-                      onPress={() => toggleLesson(lesson.lessonId)}
-                    >
-                      <View style={courseDetailStyles.lessonHeaderLeft}>
-                        <Text style={courseDetailStyles.lessonIndex}>
-                          {index + 1}
-                        </Text>
-                        <View style={courseDetailStyles.lessonInfo}>
-                          <Text style={courseDetailStyles.lessonTitle}>
-                            {lesson.title}
-                          </Text>
-                          <Text style={courseDetailStyles.lessonDuration}>
-                            {formatDuration(lesson.duration)}
-                          </Text>
-                        </View>
-                      </View>
-                      <Icon
-                        name={
-                          expandedModules[lesson.lessonId]
-                            ? "expand-less"
-                            : "expand-more"
-                        }
-                        size={24}
-                        color="#9CA3AF"
-                      />
-                    </Pressable>
-
-                    {expandedModules[lesson.lessonId] && lesson.content && (
-                      <View style={courseDetailStyles.lessonContent}>
-                        <Text style={courseDetailStyles.lessonContentText}>
-                          {lesson.content}
-                        </Text>
-                      </View>
                     )}
                   </View>
-                ))}
-              </View>
-            </View>
-          </View>
-        </ReanimatedView>
 
-        {/* DEDICATED FEEDBACK SECTION */}
-        {feedbackData && (
-          <View style={courseDetailStyles.feedbackContainer}>
-            {/* <View style={courseDetailStyles.feedbackHeader}>
-              <Icon name="rate-review" size={28} color="#3B82F6" />
-              <View>
-                <Text style={courseDetailStyles.feedbackTitle}>Student Feedback</Text>
-                <Text style={courseDetailStyles.feedbackSubTitle}>
-                  Đánh giá và nhận xét từ học viên đã tham gia khóa học
-                </Text>
-              </View>
-            </View> */}
+                  {/* Discount percentage nếu có */}
+                  {course.originalPrice && course.price < course.originalPrice && (
+                    <View style={courseDetailStyles.discountBadge}>
+                      <Text style={courseDetailStyles.discountText}>
+                        -{Math.round(((course.originalPrice - course.price) / course.originalPrice) * 100)}%
+                      </Text>
+                    </View>
+                  )}
 
-            <View style={courseDetailStyles.feedbackContent}>
-              {/* LEFT: Rating Summary */}
-              <View style={courseDetailStyles.ratingSummaryColumn}>
-                <View style={courseDetailStyles.ratingOverview}>
-                  <Text style={courseDetailStyles.averageRating}>
-                    {feedbackData.averageRating?.toFixed(1) || "0.0"}
-                  </Text>
-                  {renderStars(Math.round(feedbackData.averageRating || 0))}
-                  <Text style={courseDetailStyles.totalReviews}>
-                    {feedbackData.totalFeedbacks} feedbacks
-                  </Text>
+                  {/* Main CTA Button */}
+                  {course.isEnrolled ? (
+                    <Pressable style={courseDetailStyles.primaryButton} onPress={handleStartLearning}>
+                      <LinearGradient
+                        colors={["#10B981", "#059669"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={courseDetailStyles.buttonGradient}
+                      >
+                        <Icon name="play-arrow" size={24} color="white" />
+                        <Text style={courseDetailStyles.buttonText}>Start Learning Now</Text>
+                      </LinearGradient>
+                    </Pressable>
+                  ) : (
+                    <Pressable style={courseDetailStyles.primaryButton} onPress={handleOpenPurchaseModal}>
+                      <LinearGradient
+                        colors={["#3B82F6", "#1D4ED8"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={courseDetailStyles.buttonGradient}
+                      >
+                        <Icon name="shopping-cart" size={22} color="white" />
+                        <Text style={courseDetailStyles.buttonText}>Buy Now Only {course.price?.toLocaleString("vi-VN")}đ</Text>
+                      </LinearGradient>
+                    </Pressable>
+                  )}
+
+                  {/* Trust elements */}
+                  <View style={courseDetailStyles.trustRow}>
+                    <View style={courseDetailStyles.trustItem}>
+                      <Icon name="verified" size={18} color="#10B981" />
+                      <Text style={courseDetailStyles.trustText}>Certificate of Completion</Text>
+                    </View>
+                    <View style={courseDetailStyles.trustItem}>
+                      <Icon name="access-time" size={18} color="#F59E0B" />
+                      <Text style={courseDetailStyles.trustText}>Learn for Life</Text>
+                    </View>
+                  </View>
                 </View>
 
-                <View style={courseDetailStyles.ratingDistribution}>
-                  {[5, 4, 3, 2, 1].map((star) => (
-                    <View key={star} style={courseDetailStyles.ratingRow}>
-                      <View style={courseDetailStyles.ratingStars}>
-                        {renderStars(star)}
-                      </View>
-                      {renderRatingBar(
-                        feedbackData.ratingDistribution?.[star] || 0,
-                        feedbackData.totalFeedbacks
+                <View style={courseDetailStyles.curriculumSection}>
+                  <View style={courseDetailStyles.curriculumHeader}>
+                    <Text style={courseDetailStyles.curriculumTitle}>
+                      Curriculum
+                    </Text>
+                    <Text style={courseDetailStyles.curriculumMeta}>
+                      {course.totalLessons} lessons • {course.duration}
+                    </Text>
+                  </View>
+
+                  {course.lessons.map((lesson, index) => (
+                    <View
+                      key={lesson.lessonId}
+                      style={courseDetailStyles.lessonItem}
+                    >
+                      <Pressable
+                        style={courseDetailStyles.lessonHeader}
+                        onPress={() => toggleLesson(lesson.lessonId)}
+                      >
+                        <View style={courseDetailStyles.lessonHeaderLeft}>
+                          <View style={courseDetailStyles.lessonIndexBadge}>
+                            <Text style={courseDetailStyles.lessonIndex}>
+                              {index + 1}
+                            </Text>
+                          </View>
+                          <View style={courseDetailStyles.lessonInfo}>
+                            <Text style={courseDetailStyles.lessonTitle} numberOfLines={1}>
+                              {lesson.title}
+                            </Text>
+                            <Text style={courseDetailStyles.lessonDuration}>
+                              {formatDuration(lesson.duration)}
+                            </Text>
+                          </View>
+                        </View>
+                        <Icon
+                          name={
+                            expandedModules[lesson.lessonId]
+                              ? "keyboard-arrow-up"
+                              : "keyboard-arrow-down"
+                          }
+                          size={24}
+                          color="#9CA3AF"
+                        />
+                      </Pressable>
+
+                      {expandedModules[lesson.lessonId] && lesson.content && (
+                        <View style={courseDetailStyles.lessonContent}>
+                          <Text style={courseDetailStyles.lessonContentText}>
+                            {lesson.content}
+                          </Text>
+                        </View>
                       )}
                     </View>
                   ))}
                 </View>
               </View>
-
-              {/* RIGHT: Reviews List */}
-              <View style={courseDetailStyles.reviewsListColumn}>
-                <Text style={courseDetailStyles.reviewsListTitle}>Feedback List</Text>
-                <View style={courseDetailStyles.reviewsList}>
-                  {feedbackData.feedbacks && feedbackData.feedbacks.length > 0 ? (
-                    feedbackData.feedbacks.map((feedback) => (
-                      <View key={feedback.id} style={courseDetailStyles.reviewItem}>
-                        <View style={courseDetailStyles.reviewHeader}>
-                          <View style={courseDetailStyles.reviewerInfo}>
-                            {feedback.userAvatarUrl ? (
-                              <Image
-                                source={{ uri: feedback.userAvatarUrl }}
-                                style={courseDetailStyles.reviewerAvatar}
-                              />
-                            ) : (
-                              <View style={courseDetailStyles.reviewerAvatarPlaceholder}>
-                                <Text style={courseDetailStyles.reviewerInitial}>
-                                  {feedback.userFullName?.charAt(0) || "U"}
-                                </Text>
-                              </View>
-                            )}
-                            <View style={courseDetailStyles.reviewerDetails}>
-                              <Text style={courseDetailStyles.reviewerName}>
-                                {feedback.userFullName || "Anonymous"}
-                              </Text>
-                              <View style={courseDetailStyles.reviewMeta}>
-                                {renderStars(feedback.rating)}
-                                <Text style={courseDetailStyles.reviewDate}>
-                                  {formatDate(feedback.createdAt)}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-                          {feedback.isEdited && (
-                            <Text style={courseDetailStyles.editedBadge}>Edited</Text>
-                          )}
-                        </View>
-                        {feedback.comment && (
-                          <Text style={courseDetailStyles.reviewComment}>
-                            {feedback.comment}
-                          </Text>
-                        )}
-                        {feedback.progressWhenSubmitted === 100 && (
-                          <View style={courseDetailStyles.completedBadge}>
-                            <Icon name="check-circle" size={14} color="#10B981" />
-                            <Text style={courseDetailStyles.completedText}>
-                              Completed
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    ))
-                  ) : (
-                    <Text style={courseDetailStyles.noReviews}>
-                      No feedbacks yet.
-                    </Text>
-                  )}
-                </View>
-              </View>
-            </View>
+            </Shadow>
           </View>
-        )}
+        </ReanimatedView>
       </ScrollView>
 
       {/* Modal Confirm - Purchase */}
@@ -593,11 +639,13 @@ export default function CourseDetailScreen() {
       >
         <View style={courseDetailStyles.modalOverlay}>
           <View style={courseDetailStyles.modalContent}>
-            <Icon name="shopping-cart" size={48} color="#3B82F6" />
+            <View style={courseDetailStyles.modalIconContainer}>
+              <Icon name="shopping-cart" size={32} color="#2348bfff" />
+            </View>
             <Text style={courseDetailStyles.modalTitle}>Confirm Purchase</Text>
             <Text style={courseDetailStyles.modalMessage}>
               Do you want to purchase "{course.title}" for{" "}
-              {course.price?.toLocaleString("vi-VN") || "0"} đ?
+              <Text style={{ fontWeight: '700', color: '#1F2937' }}>{course.price?.toLocaleString("vi-VN") || "0"} đ</Text>?
             </Text>
 
             <View style={courseDetailStyles.modalButtons}>
@@ -613,7 +661,7 @@ export default function CourseDetailScreen() {
                 onPress={handleBuyCourse}
               >
                 <LinearGradient
-                  colors={["#3B82F6", "#2563EB"]}
+                  colors={["#2348bfff", "#1e40afff"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={courseDetailStyles.confirmButtonGradient}
@@ -637,7 +685,9 @@ export default function CourseDetailScreen() {
       >
         <View style={courseDetailStyles.modalOverlay}>
           <View style={courseDetailStyles.modalContent}>
-            <Icon name="account-balance-wallet" size={48} color="#EF4444" />
+            <View style={[courseDetailStyles.modalIconContainer, { backgroundColor: '#FEF2F2' }]}>
+              <Icon name="account-balance-wallet" size={32} color="#EF4444" />
+            </View>
             <Text style={courseDetailStyles.modalTitle}>
               Insufficient Balance
             </Text>
@@ -659,7 +709,7 @@ export default function CourseDetailScreen() {
                 onPress={handleConfirmGoToWallet}
               >
                 <LinearGradient
-                  colors={["#3B82F6", "#2563EB"]}
+                  colors={["#2348bfff", "#1e40afff"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={courseDetailStyles.confirmButtonGradient}

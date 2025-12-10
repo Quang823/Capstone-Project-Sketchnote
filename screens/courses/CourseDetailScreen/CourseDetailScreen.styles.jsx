@@ -1,159 +1,229 @@
-import { StyleSheet, Dimensions } from "react-native";
+import { StyleSheet, Dimensions, Platform } from "react-native";
 
 const { width, height } = Dimensions.get("window");
 
 export const courseDetailStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: 16,
-    backgroundColor: "white",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
-  },
-  headerRight: {
-    width: 40,
+    backgroundColor: "#F8FAFC",
   },
   scrollView: {
     flex: 1,
   },
 
+  // HERO SECTION
+  heroContainer: {
+    height: 400,
+    width: "100%",
+    position: "relative",
+    justifyContent: "flex-end",
+  },
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: "100%",
+    height: "100%",
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroHeader: {
+    position: "absolute",
+    top: 40,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    zIndex: 10,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    backdropFilter: "blur(10px)",
+  },
+  heroContent: {
+    paddingHorizontal: 32,
+    paddingBottom: 48,
+    maxWidth: 1300,
+    width: "100%",
+    alignSelf: "center",
+  },
+  heroBadges: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 16,
+  },
+  levelBadge: {
+    backgroundColor: "rgba(37, 99, 235, 0.9)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  levelBadgeText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  categoryBadge: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  categoryBadgeText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  heroTitle: {
+    fontSize: 42,
+    fontWeight: "800",
+    color: "white",
+    marginBottom: 12,
+    fontFamily: "Pacifico-Regular",
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+    lineHeight: 52,
+  },
+  heroSubtitle: {
+    fontSize: 18,
+    color: "rgba(255, 255, 255, 0.9)",
+    marginBottom: 24,
+    maxWidth: 800,
+    lineHeight: 28,
+    fontFamily: "Poppins-Medium",
+  },
+  heroMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  heroMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  heroMetaText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  heroDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  },
+
   // LAYOUT 2 CỘT
   twoColumnContainer: {
     flexDirection: "row",
-    padding: 24,
-    gap: 24,
+    padding: 32,
+    gap: 32,
     maxWidth: 1300,
     alignSelf: "center",
     width: "100%",
     justifyContent: "space-between",
+    marginTop: -40, // Overlap hero section
   },
 
   // CỘT TRÁI
   leftColumn: {
-    flex: 1.4,
+    flex: 1.5,
   },
 
   mainCard: {
     backgroundColor: "white",
-    borderRadius: 12,
+    borderRadius: 24,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    padding: 32,
   },
-
-  courseImage: {
-    width: "100%",
-    height: 320,
-    resizeMode: "cover",
+  sectionHeaderTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginBottom: 24,
+    fontFamily: "Poppins-Medium",
+  },
+  instructorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginBottom: 24,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  instructorAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  instructorInitial: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#3B82F6",
+  },
+  instructorName: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  instructorRole: {
+    fontSize: 14,
+    color: "#6B7280",
   },
 
   courseInfo: {
-    padding: 32,
-  },
-
-  courseTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 8,
-    lineHeight: 36,
-  },
-
-  subtitle: {
-    fontSize: 15,
-    color: "#6B7280",
-    marginBottom: 20,
-    lineHeight: 22,
-  },
-
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 16,
-    marginBottom: 24,
-  },
-
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  metaText: {
-    fontSize: 14,
-    color: "#4B5563",
-    fontWeight: "500",
-  },
-
-  levelBadge: {
-    fontSize: 13,
-    color: "#3B82F6",
-    fontWeight: "600",
-    backgroundColor: "#EFF6FF",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: "#E5E7EB",
-    marginVertical: 20,
+    // padding handled by mainCard
   },
 
   descriptionText: {
-    marginVertical: 20,
+    marginBottom: 32,
   },
 
   descriptionContent: {
-    fontSize: 15,
-    lineHeight: 24,
-    color: "#374151",
+    fontSize: 16,
+    lineHeight: 28,
+    color: "#4B5563",
   },
 
   includesSection: {
-    backgroundColor: "#F9FAFB",
-    padding: 20,
-    borderRadius: 8,
+    backgroundColor: "#F8FAFC",
+    padding: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
 
   includesTitle: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
     color: "#111827",
-    marginBottom: 12,
+    marginBottom: 16,
   },
-
+  includesGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 16,
+  },
   includeItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginBottom: 10,
+    width: "48%", // 2 columns
   },
 
   includeText: {
@@ -168,31 +238,103 @@ export const courseDetailStyles = StyleSheet.create({
   },
 
   stickyCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    overflow: "hidden",
+    marginHorizontal: 20,
+    marginVertical: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.18,
+    shadowRadius: 32,
+    elevation: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+
+  cardGlowTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: "#3B82F6",
   },
 
   priceSection: {
-    padding: 24,
-    paddingBottom: 20,
+    padding: 28,
+    paddingTop: 20,
   },
 
-  priceText: {
-    fontSize: 36,
+  bestValueBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 12,
+    gap: 6,
+  },
+  bestValueText: {
+    fontSize: 13,
     fontWeight: "700",
+    color: "#DC2626",
+  },
+
+  priceLabel: {
+    fontSize: 15,
+    color: "#6B7280",
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 12,
+    marginBottom: 8,
+  },
+
+  originalPrice: {
+    fontSize: 22,
+    color: "#9CA3AF",
+    textDecorationLine: "line-through",
+    textDecorationColor: "#9CA3AF",
+  },
+
+  discountPrice: {
+    fontSize: 42,
+    fontWeight: "900",
     color: "#111827",
+    letterSpacing: -1,
+  },
+
+  discountBadge: {
+    backgroundColor: "#DC2626",
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     marginBottom: 20,
+  },
+  discountText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "800",
   },
 
   primaryButton: {
-    height: 52,
-    borderRadius: 8,
+    height: 62,
+    borderRadius: 20,
     overflow: "hidden",
+    marginBottom: 20,
+    shadowColor: "#2563EB",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
   },
 
   buttonGradient: {
@@ -200,56 +342,73 @@ export const courseDetailStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
   },
 
   buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "800",
     color: "white",
+    letterSpacing: 0.5,
+  },
+
+  trustRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+
+  trustItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  trustText: {
+    fontSize: 13,
+    color: "#374151",
+    fontWeight: "600",
   },
 
   curriculumSection: {
     padding: 24,
-    paddingTop: 20,
-    backgroundColor: "#F8FAFC",
-    borderTop: 3,
-    borderTopColor: "#3B82F6",
-    borderTopWidth: 3,
+    backgroundColor: "white",
   },
 
   curriculumHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 8,
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
 
   curriculumTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "700",
     color: "#111827",
   },
 
   curriculumMeta: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#6B7280",
-    marginBottom: 20,
+    fontWeight: "500",
   },
 
   lessonItem: {
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
-    backgroundColor: "white",
-    marginHorizontal: -24,
-    paddingHorizontal: 24,
+    borderBottomColor: "#F3F4F6",
+    marginBottom: 8,
   },
 
   lessonHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
 
   lessonHeaderLeft: {
@@ -259,11 +418,18 @@ export const courseDetailStyles = StyleSheet.create({
     gap: 12,
   },
 
+  lessonIndexBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   lessonIndex: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
-    color: "#9CA3AF",
-    width: 24,
+    color: "#6B7280",
   },
 
   lessonInfo: {
@@ -272,19 +438,18 @@ export const courseDetailStyles = StyleSheet.create({
 
   lessonTitle: {
     fontSize: 15,
-    fontWeight: "500",
-    color: "#111827",
-    marginBottom: 4,
-    lineHeight: 20,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 2,
   },
 
   lessonDuration: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#9CA3AF",
   },
 
   lessonContent: {
-    paddingLeft: 36,
+    paddingLeft: 40,
     paddingRight: 16,
     paddingBottom: 16,
   },
@@ -295,192 +460,52 @@ export const courseDetailStyles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // LOADING & ERROR
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F9FAFB",
+  // FEEDBACK SECTION
+  feedbackCard: {
+    backgroundColor: "white",
+    borderRadius: 24,
+    padding: 32,
   },
-
-  loadingText: {
-    marginTop: 12,
-    fontSize: 15,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F9FAFB",
-    paddingHorizontal: 32,
-  },
-
-  errorText: {
-    fontSize: 15,
-    color: "#DC2626",
-    marginTop: 16,
-    textAlign: "center",
-  },
-
-  retryButton: {
-    marginTop: 20,
-    backgroundColor: "#3B82F6",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-
-  retryButtonText: {
-    color: "white",
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  modalMessage: {
-    fontSize: 15,
-    color: '#6B7280',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-    backgroundColor: 'white',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#6B7280',
-  },
-  confirmButton: {
-    flex: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  confirmButtonGradient: {
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: 'white',
-  },
-  // DEDICATED FEEDBACK SECTION
-  feedbackContainer: {
-    maxWidth: 1300,
-    alignSelf: "center",
-    width: "100%",
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    marginTop: 20,
-  },
-
-  feedbackHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-    gap: 12,
-  },
-
-  feedbackTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1F2937",
-  },
-
-  feedbackSubTitle: {
-    marginTop: 4,
-    fontSize: 14,
-    color: "#6B7280",
-  },
-
   feedbackContent: {
     flexDirection: "row",
-    gap: 32,
-    backgroundColor: "white",
-    borderRadius: 16,
-    padding: 32,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    gap: 40,
   },
 
   // Left Side: Rating Summary
   ratingSummaryColumn: {
     flex: 1,
     borderRightWidth: 1,
-    borderRightColor: "#E5E7EB",
-    paddingRight: 32,
+    borderRightColor: "#F3F4F6",
+    paddingRight: 40,
   },
 
   ratingOverview: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 24,
+    marginBottom: 32,
   },
 
   averageRating: {
-    fontSize: 64,
-    fontWeight: "700",
+    fontSize: 72,
+    fontWeight: "800",
     color: "#1F2937",
+    lineHeight: 72,
     marginBottom: 8,
-    lineHeight: 64,
+  },
+  starsWrapper: {
+    marginBottom: 8,
+    transform: [{ scale: 1.2 }],
   },
 
   starsContainer: {
     flexDirection: "row",
     gap: 4,
-    marginBottom: 8,
   },
 
   totalReviews: {
-    fontSize: 15,
+    fontSize: 14,
     color: "#6B7280",
-    marginTop: 4,
+    fontWeight: "500",
   },
 
   ratingDistribution: {
@@ -497,7 +522,7 @@ export const courseDetailStyles = StyleSheet.create({
   ratingStars: {
     flexDirection: "row",
     gap: 2,
-    minWidth: 90,
+    minWidth: 80,
   },
 
   ratingBarContainer: {
@@ -534,34 +559,26 @@ export const courseDetailStyles = StyleSheet.create({
     flex: 2,
   },
 
-  reviewsListTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 20,
-  },
-
   reviewsList: {
-    gap: 20,
+    gap: 24,
   },
 
   reviewItem: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 12,
-    padding: 20,
-    gap: 12,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 24,
+    gap: 16,
   },
 
   reviewHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 8,
   },
 
   reviewerInfo: {
     flexDirection: "row",
-    gap: 12,
+    gap: 16,
     flex: 1,
   },
 
@@ -576,15 +593,15 @@ export const courseDetailStyles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#BFDBFE",
     alignItems: "center",
     justifyContent: "center",
   },
 
   reviewerInitial: {
     fontSize: 20,
-    fontWeight: "600",
-    color: "#FFFFFF",
+    fontWeight: "700",
+    color: "#1D4ED8",
   },
 
   reviewerDetails: {
@@ -594,7 +611,7 @@ export const courseDetailStyles = StyleSheet.create({
 
   reviewerName: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1F2937",
   },
 
@@ -606,43 +623,141 @@ export const courseDetailStyles = StyleSheet.create({
 
   reviewDate: {
     fontSize: 13,
-    color: "#6B7280",
-  },
-
-  editedBadge: {
-    fontSize: 12,
-    color: "#6B7280",
-    fontStyle: "italic",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 4,
+    color: "#9CA3AF",
   },
 
   reviewComment: {
     fontSize: 15,
     lineHeight: 24,
-    color: "#374151",
+    color: "#4B5563",
   },
-
-  completedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 4,
-  },
-
-  completedText: {
-    fontSize: 13,
-    color: "#10B981",
-    fontWeight: "500",
-  },
-
   noReviews: {
     textAlign: "center",
     fontSize: 15,
     color: "#9CA3AF",
     paddingVertical: 40,
     fontStyle: "italic",
+  },
+
+  // LOADING & ERROR
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+  },
+
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    paddingHorizontal: 32,
+  },
+
+  errorText: {
+    fontSize: 16,
+    color: "#DC2626",
+    marginTop: 16,
+    textAlign: "center",
+    fontWeight: "500",
+  },
+
+  retryButton: {
+    marginTop: 24,
+    backgroundColor: "#2563EB",
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+    shadowColor: "#2563EB",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+
+  retryButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  // MODALS
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    backdropFilter: 'blur(4px)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 420,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 12,
+    fontFamily: "Poppins-Medium",
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 16,
+    width: '100%',
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    backgroundColor: 'white',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  confirmButton: {
+    flex: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  confirmButtonGradient: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: 'white',
   },
 });

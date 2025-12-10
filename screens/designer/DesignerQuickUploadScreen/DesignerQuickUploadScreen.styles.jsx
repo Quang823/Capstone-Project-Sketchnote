@@ -92,6 +92,17 @@ export const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
+  rowSection: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginTop: 16,
+    gap: 12,
+  },
+  halfSection: {
+    flex: 1,
+    marginHorizontal: 0,
+    marginTop: 0,
+  },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -273,13 +284,11 @@ export const styles = StyleSheet.create({
   sourceButtonTextActive: {
     color: "#FFFFFF",
   },
-
-  // Source Content
   sourceContent: {
     marginTop: 0,
   },
   projectListScroll: {
-    maxHeight: 120,
+    maxHeight: 300,
     borderWidth: 1,
     borderColor: "#E2E8F0",
     borderRadius: 12,

@@ -379,80 +379,82 @@ export default function DesignerQuickUploadScreen() {
           </View>
         </View>
 
-        {/* Images */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Icon name="image" size={20} color="#084F8C" />
-            <Text style={styles.sectionTitle}>Images</Text>
-          </View>
-
-          {/* Banner Images - Full Width */}
-          <View style={styles.sectionHeader}>
-            <Icon name="image" size={18} color="#084F8C" />
-            <Text style={styles.sectionTitle}>Banner Images</Text>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{images.length}</Text>
+        <View style={styles.rowSection}>
+          {/* Images */}
+          <View style={[styles.section, styles.halfSection]}>
+            <View style={styles.sectionHeader}>
+              <Icon name="image" size={20} color="#084F8C" />
+              <Text style={styles.sectionTitle}>Images</Text>
             </View>
-          </View>
-          <MultipleImageUploader
-            onImageUploaded={handleImageUploaded}
-            maxImages={10}
-          />
-        </View>
 
-        {/* Item Source */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Icon name="inventory" size={20} color="#084F8C" />
-            <Text style={styles.sectionTitle}>Item Source</Text>
+            {/* Banner Images - Full Width */}
+            <View style={styles.sectionHeader}>
+              <Icon name="image" size={18} color="#084F8C" />
+              <Text style={styles.sectionTitle}>Banner Images</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{images.length}</Text>
+              </View>
+            </View>
+            <MultipleImageUploader
+              onImageUploaded={handleImageUploaded}
+              maxImages={10}
+            />
           </View>
 
-          <View style={[styles.halfInput, styles.sourceToggle]}>
-            <Pressable
-              onPress={() => setItemSource("upload")}
-              style={[
-                styles.sourceButton,
-                itemSource === "upload" && styles.sourceButtonActive,
-                itemSource === "upload" && styles.sourceButtonSelected,
-              ]}
-            >
-              <Icon
-                name="upload-file"
-                size={18}
-                color={itemSource === "upload" ? "#FFFFFF" : "#64748B"}
-              />
-              <Text
+          {/* Item Source */}
+          <View style={[styles.section, styles.halfSection]}>
+            <View style={styles.sectionHeader}>
+              <Icon name="inventory" size={20} color="#084F8C" />
+              <Text style={styles.sectionTitle}>Item Source</Text>
+            </View>
+
+            <View style={[styles.halfInput, styles.sourceToggle]}>
+              <Pressable
+                onPress={() => setItemSource("upload")}
                 style={[
-                  styles.sourceButtonText,
-                  itemSource === "upload" && styles.sourceButtonTextActive,
+                  styles.sourceButton,
+                  itemSource === "upload" && styles.sourceButtonActive,
+                  itemSource === "upload" && styles.sourceButtonSelected,
                 ]}
               >
-                Upload
-              </Text>
-            </Pressable>
+                <Icon
+                  name="upload-file"
+                  size={18}
+                  color={itemSource === "upload" ? "#FFFFFF" : "#64748B"}
+                />
+                <Text
+                  style={[
+                    styles.sourceButtonText,
+                    itemSource === "upload" && styles.sourceButtonTextActive,
+                  ]}
+                >
+                  Upload
+                </Text>
+              </Pressable>
 
-            <Pressable
-              onPress={() => setItemSource("project")}
-              style={[
-                styles.sourceButton,
-                itemSource === "project" && styles.sourceButtonActive,
-                itemSource === "project" && styles.sourceButtonSelected,
-              ]}
-            >
-              <Icon
-                name="folder"
-                size={18}
-                color={itemSource === "project" ? "#FFFFFF" : "#64748B"}
-              />
-              <Text
+              <Pressable
+                onPress={() => setItemSource("project")}
                 style={[
-                  styles.sourceButtonText,
-                  itemSource === "project" && styles.sourceButtonTextActive,
+                  styles.sourceButton,
+                  itemSource === "project" && styles.sourceButtonActive,
+                  itemSource === "project" && styles.sourceButtonSelected,
                 ]}
               >
-                Project
-              </Text>
-            </Pressable>
+                <Icon
+                  name="folder"
+                  size={18}
+                  color={itemSource === "project" ? "#FFFFFF" : "#64748B"}
+                />
+                <Text
+                  style={[
+                    styles.sourceButtonText,
+                    itemSource === "project" && styles.sourceButtonTextActive,
+                  ]}
+                >
+                  Project
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
 
