@@ -17,6 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import { resourceStoreStyles } from "./ResourceStoreScreen.styles";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { resourceService } from "../../../service/resourceService";
+import { orderService } from "../../../service/orderService";
 import { useCart } from "../../../context/CartContext";
 import Toast from "react-native-toast-message";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
@@ -49,8 +50,8 @@ const AnimatedResourceCard = ({
   const translateY = new Animated.Value(0);
   const [imageUri, setImageUri] = useState(
     item.images?.[0]?.imageUrl ||
-      item.images?.[0]?.url ||
-      FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]
+    item.images?.[0]?.url ||
+    FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]
   );
 
   const handlePressIn = () => {
@@ -378,6 +379,28 @@ export default function ResourceStoreScreen() {
   const [loading, setLoading] = useState(true);
   const { cart, addToCart } = useCart();
   const [userResources, setUserResources] = useState([]);
+  const [filteredByType, setFilteredByType] = useState([]);
+  const [isFilteringByType, setIsFilteringByType] = useState(false);
+
+  const fetchResourcesByType = async (type) => {
+    try {
+      setLoading(true);
+      setIsFilteringByType(true);
+      const response = await orderService.getTemplatesByType(type, 0, 20);
+      const data = response?.content || response || [];
+      setFilteredByType(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching resources by type:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to load resources by type",
+      });
+      setFilteredByType([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchAllData = async () => {
     try {
@@ -572,9 +595,17 @@ export default function ResourceStoreScreen() {
               style={[
                 resourceStoreStyles.categoryButton,
                 selectedCategory === cat &&
-                  resourceStoreStyles.selectedCategoryButton,
+                resourceStoreStyles.selectedCategoryButton,
               ]}
-              onPress={() => setSelectedCategory(cat)}
+              onPress={() => {
+                setSelectedCategory(cat);
+                if (cat === "All") {
+                  setIsFilteringByType(false);
+                  setFilteredByType([]);
+                } else {
+                  fetchResourcesByType(cat.toUpperCase());
+                }
+              }}
             >
               {selectedCategory === cat && (
                 <View style={resourceStoreStyles.categoryGlow} />
@@ -584,7 +615,7 @@ export default function ResourceStoreScreen() {
                 style={[
                   resourceStoreStyles.categoryText,
                   selectedCategory === cat &&
-                    resourceStoreStyles.selectedCategoryText,
+                  resourceStoreStyles.selectedCategoryText,
                 ]}
               >
                 {cat}
@@ -612,8 +643,8 @@ export default function ResourceStoreScreen() {
                       owned: true,
                     })
                   }
-                  onAddToCart={() => {}}
-                  onBuyNow={() => {}}
+                  onAddToCart={() => { }}
+                  onBuyNow={() => { }}
                 />
               ))}
             </ScrollView>
@@ -674,30 +705,60 @@ export default function ResourceStoreScreen() {
           </View>
         )}
 
-        {allResources.length > 0 && (
-          <View style={resourceStoreStyles.sectionContainer}>
-            <Text style={resourceStoreStyles.sectionTitle}>All resources</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20 }}
-            >
-              {getFiltered(allResources).map((item, i) => (
-                <AnimatedResourceCard
-                  key={i}
-                  item={item}
-                  index={i}
-                  onPress={() =>
-                    navigation.navigate("ResourceDetail", {
-                      resourceId: item.resourceTemplateId,
-                    })
-                  }
-                  onAddToCart={() => handleAddToCart(item)}
-                  onBuyNow={() => handleAddToCart(item, true)}
-                />
-              ))}
-            </ScrollView>
-          </View>
+        {isFilteringByType ? (
+          filteredByType.length > 0 && (
+            <View style={resourceStoreStyles.sectionContainer}>
+              <Text style={resourceStoreStyles.sectionTitle}>
+                {selectedCategory} Resources
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20 }}
+              >
+                {filteredByType.map((item, i) => (
+                  <AnimatedResourceCard
+                    key={i}
+                    item={item}
+                    index={i}
+                    onPress={() =>
+                      navigation.navigate("ResourceDetail", {
+                        resourceId: item.resourceTemplateId,
+                      })
+                    }
+                    onAddToCart={() => handleAddToCart(item)}
+                    onBuyNow={() => handleAddToCart(item, true)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )
+        ) : (
+          allResources.length > 0 && (
+            <View style={resourceStoreStyles.sectionContainer}>
+              <Text style={resourceStoreStyles.sectionTitle}>All resources</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20 }}
+              >
+                {getFiltered(allResources).map((item, i) => (
+                  <AnimatedResourceCard
+                    key={i}
+                    item={item}
+                    index={i}
+                    onPress={() =>
+                      navigation.navigate("ResourceDetail", {
+                        resourceId: item.resourceTemplateId,
+                      })
+                    }
+                    onAddToCart={() => handleAddToCart(item)}
+                    onBuyNow={() => handleAddToCart(item, true)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )
         )}
 
         <View style={{ height: 80 }} />

@@ -390,7 +390,7 @@ export const styles = StyleSheet.create({
         borderRadius: 20,
         marginRight: 12,
         borderWidth: 2,
-        borderColor: "#FFFFFF",
+        borderColor: "#8db5ffff",
     },
     commentInputWrapper: {
         flex: 1,

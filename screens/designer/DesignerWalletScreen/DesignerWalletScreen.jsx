@@ -18,6 +18,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import { paymentService } from "../../../service/paymentService";
+import { bankAccountService } from "../../../service/bankAccountService";
 import { useToast } from "../../../hooks/use-toast";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
@@ -46,6 +47,15 @@ export default function DesignerWalletScreen() {
     accountNumber: "",
     accountName: "",
   });
+
+  // Bank selection states
+  const [banks, setBanks] = useState([]);
+  const [savedBankAccounts, setSavedBankAccounts] = useState([]);
+  const [showBankSelector, setShowBankSelector] = useState(false);
+  const [showSavedAccounts, setShowSavedAccounts] = useState(false);
+  const [selectedBank, setSelectedBank] = useState(null);
+  const [selectedSavedAccount, setSelectedSavedAccount] = useState(null);
+  const [bankSearchQuery, setBankSearchQuery] = useState("");
 
   // Format helpers
   const formatCurrency = (amount) => {
@@ -111,6 +121,40 @@ export default function DesignerWalletScreen() {
         variant: "destructive",
       });
     }
+  };
+
+  // Handle bank selection from VietQR list
+  const handleSelectBank = (bank) => {
+    setSelectedBank(bank);
+    setBankInfo(prev => ({
+      ...prev,
+      bankName: bank.shortName  // Use shortName as branch
+    }));
+    setShowBankSelector(false);
+    setBankSearchQuery("");
+  };
+
+  // Handle selection from saved bank accounts
+  const handleSelectSavedAccount = (account) => {
+    setSelectedSavedAccount(account);
+    setBankInfo({
+      bankName: account.branch,
+      accountNumber: account.accountNumber,
+      accountName: account.accountHolderName
+    });
+    setShowSavedAccounts(false);
+  };
+
+  // Reset bank info when modal closes
+  const handleCloseWithdrawModal = () => {
+    setShowWithdrawModal(false);
+    setWithdrawAmount("");
+    setBankInfo({ bankName: "", accountNumber: "", accountName: "" });
+    setSelectedBank(null);
+    setSelectedSavedAccount(null);
+    setShowBankSelector(false);
+    setShowSavedAccounts(false);
+    setBankSearchQuery("");
   };
 
   // Handle withdraw request
@@ -217,6 +261,32 @@ export default function DesignerWalletScreen() {
     setActiveNavItem("wallet");
     setActiveNavItemLocal("wallet");
   }, [setActiveNavItem]);
+
+  // Fetch banks from VietQR
+  useEffect(() => {
+    const fetchBanks = async () => {
+      try {
+        const banksData = await bankAccountService.getBanks();
+        setBanks(banksData);
+      } catch (err) {
+        console.error("Failed to fetch banks:", err);
+      }
+    };
+    fetchBanks();
+  }, []);
+
+  // Fetch saved bank accounts
+  useEffect(() => {
+    const fetchSavedAccounts = async () => {
+      try {
+        const accounts = await bankAccountService.getBankAccounts();
+        setSavedBankAccounts(accounts);
+      } catch (err) {
+        console.error("Failed to fetch saved bank accounts:", err);
+      }
+    };
+    fetchSavedAccounts();
+  }, []);
 
   // Recent transactions (last 5)
   const recentTransactions = walletData.transactions.slice(0, 5);
@@ -567,13 +637,13 @@ export default function DesignerWalletScreen() {
         visible={showWithdrawModal}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setShowWithdrawModal(false)}
+        onRequestClose={handleCloseWithdrawModal}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Withdrawal</Text>
-              <Pressable onPress={() => setShowWithdrawModal(false)}>
+              <Pressable onPress={handleCloseWithdrawModal}>
                 <Icon name="close" size={26} color="#0F172A" />
               </Pressable>
             </View>
@@ -615,6 +685,180 @@ export default function DesignerWalletScreen() {
                 Bank Information
               </Text>
 
+              {/* BANK SELECTION OPTIONS */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    backgroundColor: showBankSelector ? '#3B82F6' : '#F1F5F9',
+                    borderRadius: 8,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => {
+                    setShowBankSelector(!showBankSelector);
+                    setShowSavedAccounts(false);
+                  }}
+                >
+                  <Text style={{
+                    color: showBankSelector ? '#FFFFFF' : '#64748B',
+                    fontWeight: '600',
+                    fontSize: 13
+                  }}>
+                    Select Bank
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    backgroundColor: showSavedAccounts ? '#3B82F6' : '#F1F5F9',
+                    borderRadius: 8,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => {
+                    setShowSavedAccounts(!showSavedAccounts);
+                    setShowBankSelector(false);
+                  }}
+                >
+                  <Text style={{
+                    color: showSavedAccounts ? '#FFFFFF' : '#64748B',
+                    fontWeight: '600',
+                    fontSize: 13
+                  }}>
+                    Saved Accounts ({savedBankAccounts.length})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* BANK SELECTOR */}
+              {showBankSelector && (
+                <View style={{
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 12,
+                  padding: 12,
+                  marginBottom: 16,
+                  maxHeight: 300
+                }}>
+                  <TextInput
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderWidth: 1,
+                      borderColor: '#E2E8F0',
+                      marginBottom: 8
+                    }}
+                    placeholder="Search bank..."
+                    value={bankSearchQuery}
+                    onChangeText={setBankSearchQuery}
+                  />
+                  <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+                    {banks
+                      .filter(bank =>
+                        bank.name.toLowerCase().includes(bankSearchQuery.toLowerCase()) ||
+                        bank.shortName.toLowerCase().includes(bankSearchQuery.toLowerCase())
+                      )
+                      .map(bank => (
+                        <TouchableOpacity
+                          key={bank.id}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            padding: 10,
+                            backgroundColor: selectedBank?.id === bank.id ? '#DBEAFE' : '#FFFFFF',
+                            borderRadius: 8,
+                            marginBottom: 6,
+                            borderWidth: 1,
+                            borderColor: selectedBank?.id === bank.id ? '#3B82F6' : '#E2E8F0'
+                          }}
+                          onPress={() => handleSelectBank(bank)}
+                        >
+                          <Image
+                            source={{ uri: bank.logo }}
+                            style={{ width: 40, height: 40, marginRight: 12, borderRadius: 6 }}
+                          />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontWeight: '600', fontSize: 14, color: '#0F172A' }}>
+                              {bank.shortName}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={1}>
+                              {bank.name}
+                            </Text>
+                          </View>
+                          {selectedBank?.id === bank.id && (
+                            <Icon name="check-circle" size={20} color="#3B82F6" />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* SAVED ACCOUNTS SELECTOR */}
+              {showSavedAccounts && (
+                <View style={{
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: 12,
+                  padding: 12,
+                  marginBottom: 16,
+                  maxHeight: 300
+                }}>
+                  {savedBankAccounts.length > 0 ? (
+                    <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+                      {savedBankAccounts.map((account, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            padding: 12,
+                            backgroundColor: selectedSavedAccount === account ? '#DBEAFE' : '#FFFFFF',
+                            borderRadius: 8,
+                            marginBottom: 8,
+                            borderWidth: 1,
+                            borderColor: selectedSavedAccount === account ? '#3B82F6' : '#E2E8F0'
+                          }}
+                          onPress={() => handleSelectSavedAccount(account)}
+                        >
+                          {account.logoUrl && (
+                            <Image
+                              source={{ uri: account.logoUrl }}
+                              style={{ width: 40, height: 40, marginRight: 12, borderRadius: 6 }}
+                            />
+                          )}
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontWeight: '600', fontSize: 14, color: '#0F172A' }}>
+                              {account.branch} - {account.bankName}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                              {account.accountNumber}
+                            </Text>
+                            <Text style={{ fontSize: 12, color: '#64748B' }}>
+                              {account.accountHolderName}
+                            </Text>
+                          </View>
+                          {selectedSavedAccount === account && (
+                            <Icon name="check-circle" size={20} color="#3B82F6" />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <Text style={{ textAlign: 'center', color: '#94A3B8', padding: 20 }}>
+                      No saved accounts yet
+                    </Text>
+                  )}
+                </View>
+              )}
+
+
+
+
               {/* 2-COLUMN BANK INPUTS */}
               <View style={styles.bankGrid}>
                 <View style={styles.bankGridItem}>
@@ -655,20 +899,14 @@ export default function DesignerWalletScreen() {
                 />
               </View>
 
-              {/* NOTE BOX */}
-              <View style={styles.noteContainerNew}>
-                <Icon name="info" size={18} color="#0F172A" />
-                <Text style={styles.noteTextNew}>
-                  Payouts take 1–3 business days. Fee: 1.1% (min 5,000 VND).
-                </Text>
-              </View>
+
             </ScrollView>
 
             {/* FOOTER BUTTONS */}
             <View style={styles.modalFooterNew}>
               <Pressable
                 style={[styles.buttonNew, styles.cancelButtonNew]}
-                onPress={() => setShowWithdrawModal(false)}
+                onPress={handleCloseWithdrawModal}
               >
                 <Text style={[styles.buttonTextNew, { color: "#64748B" }]}>
                   Cancel
@@ -691,15 +929,16 @@ export default function DesignerWalletScreen() {
               </Pressable>
             </View>
           </View>
-        </View>
-      </Modal>
+        </View >
+      </Modal >
 
       {/* Deposit Modal */}
-      <Modal
+      < Modal
         visible={showDepositModal}
         animationType="slide"
         transparent
-        onRequestClose={() => setShowDepositModal(false)}
+        onRequestClose={() => setShowDepositModal(false)
+        }
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent]}>
@@ -804,8 +1043,8 @@ export default function DesignerWalletScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
-    </View>
+      </Modal >
+    </View >
   );
 }
 

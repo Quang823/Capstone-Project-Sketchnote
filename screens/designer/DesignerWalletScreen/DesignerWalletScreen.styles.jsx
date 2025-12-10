@@ -416,8 +416,8 @@ export default StyleSheet.create({
     },
 
     modalBody: {
-        padding: 24,
-        flexGrow: 1, // cho ScrollView chiếm đủ không gian
+        padding: 15,
+        paddingBottom: 0, // No bottom padding since footer is separate
     },
 
     /* INPUT LABEL */
@@ -523,9 +523,14 @@ export default StyleSheet.create({
     /* FOOTER */
     modalFooterNew: {
         flexDirection: "row",
-        justifyContent: "center", // canh giữa
+        justifyContent: "center",
         paddingHorizontal: 20,
-        gap: 60, // khoảng cách giữa 2 nút
+        paddingVertical: 16,
+        paddingBottom: 24,
+        gap: 60,
+        borderTopWidth: 1,
+        borderTopColor: "#E6E9F5",
+        backgroundColor: "#FFFFFF",
     },
 
     buttonNew: {

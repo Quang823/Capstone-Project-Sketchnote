@@ -8,7 +8,7 @@ import CourseDetailScreen from "../screens/courses/CourseDetailScreen/CourseDeta
 import CoursesScreen from "../screens/courses/CoursesScreen/CoursesScreen";
 import LessonScreen from "../screens/courses/LessonScreen/LessonScreen";
 import MyCoursesScreen from "../screens/courses/MyCoursesScreen/MyCoursesScreen";
-
+import BankAccountsScreen from "../screens/BankAccountsScreen/BankAccountsScreen";
 import BlogScreen from "../screens/blog/BlogScreen";
 import BlogDetailScreen from "../screens/blog/BlogDetailScreen";
 import ResourceStoreScreen from "../screens/store/ResourceStoreScreen/ResourceStoreScreen";
@@ -42,6 +42,7 @@ import CreditScreen from "../screens/credit/CreditScreen";
 import CreditTransactionHistoryScreen from "../screens/credit/CreditTransactionHistoryScreen";
 import WithdrawalHistoryScreen from "../screens/designer/WithdrawalHistoryScreen/WithdrawalHistoryScreen";
 import SketchNotePolicy from "../screens/policy/SketchNotePolicy";
+import DesignerProfileScreen from "../screens/store/DesignerProfileScreen/DesignerProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -69,6 +70,7 @@ export default function AppNavigator() {
       <Stack.Screen name="BlogDetail" component={BlogDetailScreen} />
       <Stack.Screen name="ResourceStore" component={ResourceStoreScreen} />
       <Stack.Screen name="ResourceDetail" component={ResourceDetailScreen} />
+      <Stack.Screen name="DesignerProfile" component={DesignerProfileScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="CreditScreen" component={CreditScreen} />
@@ -76,6 +78,7 @@ export default function AppNavigator() {
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+      <Stack.Screen name="BankAccounts" component={BankAccountsScreen} />
       <Stack.Screen
         name="DesignerSubscription"
         component={DesignerSubscription}
