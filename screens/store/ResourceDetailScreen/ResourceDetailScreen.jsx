@@ -300,7 +300,21 @@ export default function ResourceDetailScreen() {
               </View>
 
               {/* Author Info */}
-              <View style={styles.authorContainer}>
+              <Pressable
+                style={styles.authorContainer}
+                onPress={() => {
+                  if (resource.designerId) {
+                    navigation.navigate("DesignerProfile", {
+                      designerId: resource.designerId,
+                    });
+                  } else {
+                    Toast.show({
+                      type: "info",
+                      text1: "Designer information unavailable",
+                    });
+                  }
+                }}
+              >
                 <Image
                   source={{
                     uri:
@@ -309,19 +323,22 @@ export default function ResourceDetailScreen() {
                   }}
                   style={styles.authorAvatar}
                 />
+
                 <View style={styles.authorInfo}>
                   <Text style={styles.authorLabel}>Designer</Text>
                   <Text style={styles.authorName}>
                     {resource.designerInfo
-                      ? `${resource.designerInfo.firstName || ""} ${resource.designerInfo.lastName || ""
-                        }`.trim()
+                      ? `${resource.designerInfo.firstName || ""} ${resource.designerInfo.lastName || ""}`.trim()
                       : "Designer Studio"}
                   </Text>
                 </View>
-                <Pressable style={styles.followButton}>
+
+                {/* Icon chỉ hiển thị, không bắt onPress */}
+                <View style={styles.followButton}>
                   <Icon name="person-add" size={16} color="#FFFFFF" />
-                </Pressable>
-              </View>
+                </View>
+              </Pressable>
+
             </View>
           </View>
 

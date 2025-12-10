@@ -61,4 +61,28 @@ export const orderService = {
       throw new Error(message);
     }
   },
+  getTemplatesByType: async (type, page = 0, size = 10) => {
+    try {
+      const res = await orderController.getTemplatesByType(type, page, size);
+      return res.data.result;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Get templates by type failed.";
+      throw new Error(message);
+    }
+  },
+  getTemplatesByDesigner: async (designerId, page = 0, size = 10) => {
+    try {
+      const res = await orderController.getTemplatesByDesigner(designerId, page, size);
+      return res.data.result;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Get templates by designer failed.";
+      throw new Error(message);
+    }
+  },
 };
