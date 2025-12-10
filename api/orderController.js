@@ -19,4 +19,16 @@ export const orderController = {
   createOrderRetry: async (orderId) => {
     return await privateApi.post(`api/orders/${orderId}/payment/retry`);
   },
+
+  getTemplatesByType: async (type, page = 0, size = 10) => {
+    return await privateApi.get(`api/orders/template/type/${type}`, {
+      params: { page, size },
+    });
+  },
+
+  getTemplatesByDesigner: async (designerId, page = 0, size = 10) => {
+    return await privateApi.get(`api/orders/template/designer/${designerId}`, {
+      params: { page, size },
+    });
+  },
 };

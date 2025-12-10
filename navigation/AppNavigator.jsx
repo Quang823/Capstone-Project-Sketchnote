@@ -42,6 +42,7 @@ import CreditScreen from "../screens/credit/CreditScreen";
 import CreditTransactionHistoryScreen from "../screens/credit/CreditTransactionHistoryScreen";
 import WithdrawalHistoryScreen from "../screens/designer/WithdrawalHistoryScreen/WithdrawalHistoryScreen";
 import SketchNotePolicy from "../screens/policy/SketchNotePolicy";
+import DesignerProfileScreen from "../screens/store/DesignerProfileScreen/DesignerProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -69,6 +70,7 @@ export default function AppNavigator() {
       <Stack.Screen name="BlogDetail" component={BlogDetailScreen} />
       <Stack.Screen name="ResourceStore" component={ResourceStoreScreen} />
       <Stack.Screen name="ResourceDetail" component={ResourceDetailScreen} />
+      <Stack.Screen name="DesignerProfile" component={DesignerProfileScreen} />
       <Stack.Screen name="Cart" component={CartScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="CreditScreen" component={CreditScreen} />
