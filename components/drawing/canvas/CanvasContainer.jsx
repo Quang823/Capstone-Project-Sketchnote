@@ -367,7 +367,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       // ✅ CRITICAL FIX: Sync to both internal AND parent state
       setInternalLayers(updater);
       if (typeof setLayers === 'function') {
-        setLayers(updater);
+        // ✅ FIX: Defer parent update to avoid "update while rendering" error
+        requestAnimationFrame(() => {
+          setLayers(updater);
+        });
       }
     },
     [activeLayerId, setLayers]
@@ -388,7 +391,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     // ✅ CRITICAL FIX: Sync to both internal AND parent state
     setInternalLayers(updater);
     if (typeof setLayers === 'function') {
-      setLayers(updater);
+      // ✅ FIX: Defer parent update to avoid "update while rendering" error
+      requestAnimationFrame(() => {
+        setLayers(updater);
+      });
     }
   };
 

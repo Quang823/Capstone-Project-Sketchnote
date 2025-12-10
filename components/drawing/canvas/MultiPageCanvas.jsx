@@ -109,7 +109,7 @@ const FONT_MAP = {
   },
 };
 
-const FONT_SIZES = [12, 18, 24];
+const FONT_SIZES = [18];
 
 function usePreloadedFonts() {
   const loaded = {};

@@ -303,31 +303,49 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   }
 
   // Aggregate many dots into just 1-2 Paths for performance
-  function makeDotPaths(dots = [], strokeColor = "#000") {
+  function makeDotPaths(dots = [], strokeColor = "#000", strokeId = "temp") {
     if (!dots?.length) return null;
+
+    // Cache key for airbrush dots
+    const cacheKeyLow = `airbrush:${strokeId}:low:${dots.length}`;
+    const cacheKeyHigh = `airbrush:${strokeId}:high:${dots.length}`;
+
+    let pLow = pathCacheRef.current.get(cacheKeyLow);
+    let pHigh = pathCacheRef.current.get(cacheKeyHigh);
+
     const low = dots.filter((d) => d.a < 0.2);
     const high = dots.filter((d) => d.a >= 0.2);
+
+    // Create paths if not cached
+    if (!pLow && low.length > 0) {
+      pLow = Skia.Path.Make();
+      for (const d of low) pLow.addCircle(d.x, d.y, d.r);
+      pathCacheRef.current.set(cacheKeyLow, pLow);
+    }
+
+    if (!pHigh && high.length > 0) {
+      pHigh = Skia.Path.Make();
+      for (const d of high) pHigh.addCircle(d.x, d.y, d.r);
+      pathCacheRef.current.set(cacheKeyHigh, pHigh);
+    }
+
     const nodes = [];
-    if (low.length) {
-      const p = Skia.Path.Make();
-      for (const d of low) p.addCircle(d.x, d.y, d.r);
+    if (pLow) {
       nodes.push(
         <Path
           key={`air-dots-low`}
-          path={p}
+          path={pLow}
           color={makeRGBA(strokeColor, 0.14)}
           style="fill"
           blendMode="srcOver"
         />
       );
     }
-    if (high.length) {
-      const p = Skia.Path.Make();
-      for (const d of high) p.addCircle(d.x, d.y, d.r);
+    if (pHigh) {
       nodes.push(
         <Path
           key={`air-dots-high`}
-          path={p}
+          path={pHigh}
           color={makeRGBA(strokeColor, 0.28)}
           style="fill"
           blendMode="srcOver"
@@ -700,7 +718,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       if (!path) {
         path = makePathFromPoints(s.points);
         // ✅ FIX: Limit cache size to prevent memory leak
-        const MAX_PATH_CACHE_SIZE = 500;
+        const MAX_PATH_CACHE_SIZE = 250;
         if (pathCacheRef.current.size >= MAX_PATH_CACHE_SIZE) {
           // Remove oldest entries (first 100)
           const keysToDelete = Array.from(pathCacheRef.current.keys()).slice(0, 100);
@@ -845,7 +863,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           airbrushSpread,
           Math.max(3, effWidth * 0.8)
         );
-        const dotGroup = makeDotPaths(dots, strokeColor);
+        const dotGroup = makeDotPaths(dots, strokeColor, s.id);
         return (
           <Group key={`${s.id}-airbrush-group`}>
             {outer}
