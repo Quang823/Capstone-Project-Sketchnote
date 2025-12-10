@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { myCoursesStyles } from "./MyCoursesScreen.styles";
 import { courseService } from "../../../service/courseService";
-import { useNavigation as useReactNavigation } from "@react-navigation/native";
+import { useNavigation as useReactNavigation, useFocusEffect } from "@react-navigation/native";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { feedbackService } from "../../../service/feedbackService";
 import { Modal, KeyboardAvoidingView, Platform, Pressable } from "react-native";
@@ -31,11 +31,7 @@ export default function MyCoursesScreen() {
   const [comment, setComment] = useState("");
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
-  useEffect(() => {
-    fetchMyCourses();
-  }, []);
-
-  const fetchMyCourses = async () => {
+  const fetchMyCourses = useCallback(async () => {
     try {
       setLoading(true);
       const data = await courseService.getAllCourseEnrollments2();
@@ -45,7 +41,14 @@ export default function MyCoursesScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchMyCourses();
+    }, [fetchMyCourses])
+  );
 
   const createFeedback = async ({ courseId, rating, comment }) => {
     try {
