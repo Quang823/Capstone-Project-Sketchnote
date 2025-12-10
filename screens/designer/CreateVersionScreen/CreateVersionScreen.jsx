@@ -20,7 +20,8 @@ import { useEffect, useState } from "react";
 export default function CreateVersionScreen() {
     const navigation = useNavigation();
     const route = useRoute();
-    const { resourceTemplateId, productName, currentType } = route.params || {};
+    const { resourceTemplateId, productName, currentType, versionId, versionData } = route.params || {};
+    const isUpdateMode = !!versionId;
 
     // State
     const [name, setName] = useState("");
@@ -59,6 +60,23 @@ export default function CreateVersionScreen() {
             }
         })();
         getProjectByUserId();
+
+        if (isUpdateMode && versionData) {
+            setName(versionData.name || "");
+            setDescription(versionData.description || "");
+            setType(versionData.type || currentType || "TEMPLATES");
+            setPrice(String((versionData.price || 0) / 1000));
+            setExpiredTime(versionData.expiredTime || "");
+            setReleaseDate(versionData.releaseDate || getTodayDateOnly());
+
+            if (versionData.images && versionData.images.length > 0) {
+                setImages(versionData.images.map(img => img.imageUrl));
+            }
+
+            if (versionData.items && versionData.items.length > 0) {
+                setLocalItems(versionData.items.map(item => item.itemUrl));
+            }
+        }
     }, []);
 
     const handleImageUploaded = (url) => {
@@ -126,10 +144,10 @@ export default function CreateVersionScreen() {
                 isThumbnail: index === 0,
             }));
 
-            let versionData;
+            let versionPayload;
 
             if (itemSource === "upload") {
-                versionData = {
+                versionPayload = {
                     sourceType: formattedType,
                     name,
                     description,
@@ -147,7 +165,7 @@ export default function CreateVersionScreen() {
                 const selectedProject = projects.find(
                     (p) => p.projectId === selectedProjectId
                 );
-                versionData = {
+                versionPayload = {
                     sourceType: formattedType,
                     projectId: selectedProjectId,
                     name,
@@ -165,24 +183,39 @@ export default function CreateVersionScreen() {
                 };
             }
 
-            await resourceService.createResourceVersion(
-                resourceTemplateId,
-                versionData
-            );
+            if (isUpdateMode) {
+                await resourceService.updateResourceVersion(
+                    versionId,
+                    versionPayload
+                );
 
-            Toast.show({
-                type: "success",
-                text1: "Version Created 🎉",
-                text2: "New version has been created successfully.",
-            });
+                await resourceService.republishResourceVersionWhenStaffNotConfirm(versionId);
+
+                Toast.show({
+                    type: "success",
+                    text1: "Version Updated 🎉",
+                    text2: "Version has been updated and republished successfully.",
+                });
+            } else {
+                await resourceService.createResourceVersion(
+                    resourceTemplateId,
+                    versionPayload
+                );
+
+                Toast.show({
+                    type: "success",
+                    text1: "Version Created 🎉",
+                    text2: "New version has been created successfully.",
+                });
+            }
 
             setTimeout(() => navigation.goBack(), 1500);
         } catch (err) {
-            console.error("Create version error:", err);
+            console.error(isUpdateMode ? "Update version error:" : "Create version error:", err);
             Toast.show({
                 type: "error",
-                text1: "Create Failed",
-                text2: err.message || "Something went wrong while creating version.",
+                text1: isUpdateMode ? "Update Failed" : "Create Failed",
+                text2: err.message || "Something went wrong while " + (isUpdateMode ? "updating" : "creating") + " version.",
             });
         } finally {
             setIsUploading(false);
@@ -197,7 +230,7 @@ export default function CreateVersionScreen() {
                     <Icon name="arrow-back" size={24} color="#084F8C" />
                 </Pressable>
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                    <Text style={styles.headerTitle}>Create New Version</Text>
+                    <Text style={styles.headerTitle}>{isUpdateMode ? 'Update Version' : 'Create New Version'}</Text>
                     <Text style={{ fontSize: 12, color: "#6B7280" }}>
                         for "{productName}"
                     </Text>
@@ -213,7 +246,7 @@ export default function CreateVersionScreen() {
                             isUploading && styles.submitTextDisabled,
                         ]}
                     >
-                        {isUploading ? "..." : "Create Version"}
+                        {isUploading ? "..." : (isUpdateMode ? "Update Version" : "Create Version")}
                     </Text>
                 </Pressable>
             </View>
@@ -372,41 +405,19 @@ export default function CreateVersionScreen() {
                         <Icon name="image" size={20} color="#084F8C" />
                         <Text style={styles.sectionTitle}>Images</Text>
                     </View>
-                    <View style={styles.row}>
-                        <View style={styles.halfInput}>
-                            <View style={styles.sectionHeader}>
-                                <Icon name="image" size={18} color="#084F8C" />
-                                <Text style={styles.sectionTitle}>Banner Images</Text>
-                                <View style={styles.badge}>
-                                    <Text style={styles.badgeText}>{images.length}</Text>
-                                </View>
-                            </View>
-                            <MultipleImageUploader
-                                onImageUploaded={handleImageUploaded}
-                                maxImages={10}
-                            />
-                        </View>
-                        <View style={styles.verticalDivider} />
-                        <View style={styles.halfInput}>
-                            {itemSource === "upload" && (
-                                <>
-                                    <View style={styles.sectionHeader}>
-                                        <Icon name="collections" size={18} color="#084F8C" />
-                                        <Text style={styles.sectionTitle}>Item Images</Text>
-                                        <View style={styles.badge}>
-                                            <Text style={styles.badgeText}>{localItems.length}</Text>
-                                        </View>
-                                    </View>
-                                    <MultipleImageUploader
-                                        onImageUploaded={(url) =>
-                                            setLocalItems((prev) => [...prev, url])
-                                        }
-                                        maxImages={10}
-                                    />
-                                </>
-                            )}
+
+                    {/* Banner Images - Full Width */}
+                    <View style={styles.sectionHeader}>
+                        <Icon name="image" size={18} color="#084F8C" />
+                        <Text style={styles.sectionTitle}>Banner Images</Text>
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{images.length}</Text>
                         </View>
                     </View>
+                    <MultipleImageUploader
+                        onImageUploaded={handleImageUploaded}
+                        maxImages={10}
+                    />
                 </View>
 
                 {/* Item Source */}
@@ -416,115 +427,130 @@ export default function CreateVersionScreen() {
                         <Text style={styles.sectionTitle}>Item Source</Text>
                     </View>
 
-                    <View style={styles.row}>
-                        <View style={[styles.halfInput, styles.sourceToggle]}>
-                            <Pressable
-                                onPress={() => setItemSource("upload")}
+                    <View style={[styles.halfInput, styles.sourceToggle]}>
+                        <Pressable
+                            onPress={() => setItemSource("upload")}
+                            style={[
+                                styles.sourceButton,
+                                itemSource === "upload" && styles.sourceButtonActive,
+                                itemSource === "upload" && styles.sourceButtonSelected,
+                            ]}
+                        >
+                            <Icon
+                                name="upload-file"
+                                size={18}
+                                color={itemSource === "upload" ? "#FFFFFF" : "#64748B"}
+                            />
+                            <Text
                                 style={[
-                                    styles.sourceButton,
-                                    itemSource === "upload" && styles.sourceButtonActive,
-                                    itemSource === "upload" && styles.sourceButtonSelected,
+                                    styles.sourceButtonText,
+                                    itemSource === "upload" && styles.sourceButtonTextActive,
                                 ]}
                             >
-                                <Icon
-                                    name="upload-file"
-                                    size={18}
-                                    color={itemSource === "upload" ? "#FFFFFF" : "#64748B"}
-                                />
-                                <Text
-                                    style={[
-                                        styles.sourceButtonText,
-                                        itemSource === "upload" && styles.sourceButtonTextActive,
-                                    ]}
-                                >
-                                    Upload
-                                </Text>
-                            </Pressable>
+                                Upload
+                            </Text>
+                        </Pressable>
 
-                            <Pressable
-                                onPress={() => setItemSource("project")}
+                        <Pressable
+                            onPress={() => setItemSource("project")}
+                            style={[
+                                styles.sourceButton,
+                                itemSource === "project" && styles.sourceButtonActive,
+                                itemSource === "project" && styles.sourceButtonSelected,
+                            ]}
+                        >
+                            <Icon
+                                name="folder"
+                                size={18}
+                                color={itemSource === "project" ? "#FFFFFF" : "#64748B"}
+                            />
+                            <Text
                                 style={[
-                                    styles.sourceButton,
-                                    itemSource === "project" && styles.sourceButtonActive,
-                                    itemSource === "project" && styles.sourceButtonSelected,
+                                    styles.sourceButtonText,
+                                    itemSource === "project" && styles.sourceButtonTextActive,
                                 ]}
                             >
-                                <Icon
-                                    name="folder"
-                                    size={18}
-                                    color={itemSource === "project" ? "#FFFFFF" : "#64748B"}
-                                />
-                                <Text
-                                    style={[
-                                        styles.sourceButtonText,
-                                        itemSource === "project" && styles.sourceButtonTextActive,
-                                    ]}
-                                >
-                                    Project
-                                </Text>
-                            </Pressable>
-                        </View>
-
-                        <View style={styles.verticalDivider} />
-
-                        <View style={styles.halfInput}>
-                            {itemSource === "project" && (
-                                <View style={styles.sourceContent}>
-                                    <Text style={styles.itemTitle}>
-                                        Available Projects ({projects?.length || 0})
-                                    </Text>
-
-                                    {projects?.length === 0 ? (
-                                        <View style={styles.emptyState}>
-                                            <Icon name="folder-open" size={48} color="#CBD5E1" />
-                                            <Text style={styles.emptyText}>
-                                                No projects available
-                                            </Text>
-                                        </View>
-                                    ) : (
-                                        <ScrollView
-                                            style={styles.projectListScroll}
-                                            nestedScrollEnabled
-                                            showsVerticalScrollIndicator
-                                        >
-                                            {projects?.map((proj) => (
-                                                <Pressable
-                                                    key={proj.projectId}
-                                                    onPress={() => setSelectedProjectId(proj.projectId)}
-                                                    style={[
-                                                        styles.projectCard,
-                                                        selectedProjectId === proj.projectId &&
-                                                        styles.projectCardActive,
-                                                    ]}
-                                                >
-                                                    <Image
-                                                        source={{ uri: proj.imageUrl }}
-                                                        style={styles.projectImage}
-                                                    />
-                                                    <View style={styles.projectInfo}>
-                                                        <Text style={styles.projectName} numberOfLines={1}>
-                                                            {proj.name}
-                                                        </Text>
-                                                        <Text style={styles.projectDesc} numberOfLines={2}>
-                                                            {proj.description}
-                                                        </Text>
-                                                    </View>
-                                                    {selectedProjectId === proj.projectId && (
-                                                        <Icon
-                                                            name="check-circle"
-                                                            size={24}
-                                                            color="#084F8C"
-                                                        />
-                                                    )}
-                                                </Pressable>
-                                            ))}
-                                        </ScrollView>
-                                    )}
-                                </View>
-                            )}
-                        </View>
+                                Project
+                            </Text>
+                        </Pressable>
                     </View>
                 </View>
+
+                {/* Available Projects - Only show if project mode */}
+                {itemSource === "project" && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Icon name="folder" size={20} color="#084F8C" />
+                            <Text style={styles.sectionTitle}>Available Projects ({projects?.length || 0})</Text>
+                        </View>
+
+                        {projects?.length === 0 ? (
+                            <View style={styles.emptyState}>
+                                <Icon name="folder-open" size={48} color="#CBD5E1" />
+                                <Text style={styles.emptyText}>
+                                    No projects available
+                                </Text>
+                            </View>
+                        ) : (
+                            <ScrollView
+                                style={styles.projectListScroll}
+                                nestedScrollEnabled
+                                showsVerticalScrollIndicator
+                            >
+                                {projects?.map((proj) => (
+                                    <Pressable
+                                        key={proj.projectId}
+                                        onPress={() => setSelectedProjectId(proj.projectId)}
+                                        style={[
+                                            styles.projectCard,
+                                            selectedProjectId === proj.projectId &&
+                                            styles.projectCardActive,
+                                        ]}
+                                    >
+                                        <Image
+                                            source={{ uri: proj.imageUrl }}
+                                            style={styles.projectImage}
+                                        />
+                                        <View style={styles.projectInfo}>
+                                            <Text style={styles.projectName} numberOfLines={1}>
+                                                {proj.name}
+                                            </Text>
+                                            <Text style={styles.projectDesc} numberOfLines={2}>
+                                                {proj.description}
+                                            </Text>
+                                        </View>
+                                        {selectedProjectId === proj.projectId && (
+                                            <Icon
+                                                name="check-circle"
+                                                size={24}
+                                                color="#084F8C"
+                                            />
+                                        )}
+                                    </Pressable>
+                                ))}
+                            </ScrollView>
+                        )}
+                    </View>
+                )}
+
+                {/* Item Images - Only show if upload mode */}
+                {itemSource === "upload" && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <Icon name="collections" size={20} color="#084F8C" />
+                            <Text style={styles.sectionTitle}>Item Images</Text>
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{localItems.length}</Text>
+                            </View>
+                        </View>
+                        <MultipleImageUploader
+                            onImageUploaded={(url) =>
+                                setLocalItems((prev) => [...prev, url])
+                            }
+                            maxImages={10}
+                        />
+                    </View>
+                )}
 
                 <View style={{ height: 40 }} />
             </ScrollView>

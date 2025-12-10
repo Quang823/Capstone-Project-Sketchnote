@@ -385,41 +385,19 @@ export default function DesignerQuickUploadScreen() {
             <Icon name="image" size={20} color="#084F8C" />
             <Text style={styles.sectionTitle}>Images</Text>
           </View>
-          <View style={styles.row}>
-            <View style={styles.halfInput}>
-              <View style={styles.sectionHeader}>
-                <Icon name="image" size={18} color="#084F8C" />
-                <Text style={styles.sectionTitle}>Banner Images</Text>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{images.length}</Text>
-                </View>
-              </View>
-              <MultipleImageUploader
-                onImageUploaded={handleImageUploaded}
-                maxImages={10}
-              />
-            </View>
-            <View style={styles.verticalDivider} />
-            <View style={styles.halfInput}>
-              {itemSource === "upload" && (
-                <>
-                  <View style={styles.sectionHeader}>
-                    <Icon name="collections" size={18} color="#084F8C" />
-                    <Text style={styles.sectionTitle}>Item Images</Text>
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{localItems.length}</Text>
-                    </View>
-                  </View>
-                  <MultipleImageUploader
-                    onImageUploaded={(url) =>
-                      setLocalItems((prev) => [...prev, url])
-                    }
-                    maxImages={10}
-                  />
-                </>
-              )}
+
+          {/* Banner Images - Full Width */}
+          <View style={styles.sectionHeader}>
+            <Icon name="image" size={18} color="#084F8C" />
+            <Text style={styles.sectionTitle}>Banner Images</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{images.length}</Text>
             </View>
           </View>
+          <MultipleImageUploader
+            onImageUploaded={handleImageUploaded}
+            maxImages={10}
+          />
         </View>
 
         {/* Item Source */}
@@ -429,115 +407,130 @@ export default function DesignerQuickUploadScreen() {
             <Text style={styles.sectionTitle}>Item Source</Text>
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.halfInput, styles.sourceToggle]}>
-              <Pressable
-                onPress={() => setItemSource("upload")}
+          <View style={[styles.halfInput, styles.sourceToggle]}>
+            <Pressable
+              onPress={() => setItemSource("upload")}
+              style={[
+                styles.sourceButton,
+                itemSource === "upload" && styles.sourceButtonActive,
+                itemSource === "upload" && styles.sourceButtonSelected,
+              ]}
+            >
+              <Icon
+                name="upload-file"
+                size={18}
+                color={itemSource === "upload" ? "#FFFFFF" : "#64748B"}
+              />
+              <Text
                 style={[
-                  styles.sourceButton,
-                  itemSource === "upload" && styles.sourceButtonActive,
-                  itemSource === "upload" && styles.sourceButtonSelected,
+                  styles.sourceButtonText,
+                  itemSource === "upload" && styles.sourceButtonTextActive,
                 ]}
               >
-                <Icon
-                  name="upload-file"
-                  size={18}
-                  color={itemSource === "upload" ? "#FFFFFF" : "#64748B"}
-                />
-                <Text
-                  style={[
-                    styles.sourceButtonText,
-                    itemSource === "upload" && styles.sourceButtonTextActive,
-                  ]}
-                >
-                  Upload
-                </Text>
-              </Pressable>
+                Upload
+              </Text>
+            </Pressable>
 
-              <Pressable
-                onPress={() => setItemSource("project")}
+            <Pressable
+              onPress={() => setItemSource("project")}
+              style={[
+                styles.sourceButton,
+                itemSource === "project" && styles.sourceButtonActive,
+                itemSource === "project" && styles.sourceButtonSelected,
+              ]}
+            >
+              <Icon
+                name="folder"
+                size={18}
+                color={itemSource === "project" ? "#FFFFFF" : "#64748B"}
+              />
+              <Text
                 style={[
-                  styles.sourceButton,
-                  itemSource === "project" && styles.sourceButtonActive,
-                  itemSource === "project" && styles.sourceButtonSelected,
+                  styles.sourceButtonText,
+                  itemSource === "project" && styles.sourceButtonTextActive,
                 ]}
               >
-                <Icon
-                  name="folder"
-                  size={18}
-                  color={itemSource === "project" ? "#FFFFFF" : "#64748B"}
-                />
-                <Text
-                  style={[
-                    styles.sourceButtonText,
-                    itemSource === "project" && styles.sourceButtonTextActive,
-                  ]}
-                >
-                  Project
-                </Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.verticalDivider} />
-
-            <View style={styles.halfInput}>
-              {itemSource === "project" && (
-                <View style={styles.sourceContent}>
-                  <Text style={styles.itemTitle}>
-                    Available Projects ({projects?.length || 0})
-                  </Text>
-
-                  {projects?.length === 0 ? (
-                    <View style={styles.emptyState}>
-                      <Icon name="folder-open" size={48} color="#CBD5E1" />
-                      <Text style={styles.emptyText}>
-                        No projects available
-                      </Text>
-                    </View>
-                  ) : (
-                    <ScrollView
-                      style={styles.projectListScroll}
-                      nestedScrollEnabled
-                      showsVerticalScrollIndicator
-                    >
-                      {projects?.map((proj) => (
-                        <Pressable
-                          key={proj.projectId}
-                          onPress={() => setSelectedProjectId(proj.projectId)}
-                          style={[
-                            styles.projectCard,
-                            selectedProjectId === proj.projectId &&
-                            styles.projectCardActive,
-                          ]}
-                        >
-                          <Image
-                            source={{ uri: proj.imageUrl }}
-                            style={styles.projectImage}
-                          />
-                          <View style={styles.projectInfo}>
-                            <Text style={styles.projectName} numberOfLines={1}>
-                              {proj.name}
-                            </Text>
-                            <Text style={styles.projectDesc} numberOfLines={2}>
-                              {proj.description}
-                            </Text>
-                          </View>
-                          {selectedProjectId === proj.projectId && (
-                            <Icon
-                              name="check-circle"
-                              size={24}
-                              color="#084F8C"
-                            />
-                          )}
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  )}
-                </View>
-              )}
-            </View>
+                Project
+              </Text>
+            </Pressable>
           </View>
         </View>
+
+        {/* Available Projects - Only show if project mode */}
+        {itemSource === "project" && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Icon name="folder" size={20} color="#084F8C" />
+              <Text style={styles.sectionTitle}>Available Projects ({projects?.length || 0})</Text>
+            </View>
+
+            {projects?.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Icon name="folder-open" size={48} color="#CBD5E1" />
+                <Text style={styles.emptyText}>
+                  No projects available
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.projectListScroll}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator
+              >
+                {projects?.map((proj) => (
+                  <Pressable
+                    key={proj.projectId}
+                    onPress={() => setSelectedProjectId(proj.projectId)}
+                    style={[
+                      styles.projectCard,
+                      selectedProjectId === proj.projectId &&
+                      styles.projectCardActive,
+                    ]}
+                  >
+                    <Image
+                      source={{ uri: proj.imageUrl }}
+                      style={styles.projectImage}
+                    />
+                    <View style={styles.projectInfo}>
+                      <Text style={styles.projectName} numberOfLines={1}>
+                        {proj.name}
+                      </Text>
+                      <Text style={styles.projectDesc} numberOfLines={2}>
+                        {proj.description}
+                      </Text>
+                    </View>
+                    {selectedProjectId === proj.projectId && (
+                      <Icon
+                        name="check-circle"
+                        size={24}
+                        color="#084F8C"
+                      />
+                    )}
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        )}
+
+        {/* Item Images - Only show if upload mode */}
+        {itemSource === "upload" && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Icon name="collections" size={20} color="#084F8C" />
+              <Text style={styles.sectionTitle}>Item Images</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{localItems.length}</Text>
+              </View>
+            </View>
+            <MultipleImageUploader
+              onImageUploaded={(url) =>
+                setLocalItems((prev) => [...prev, url])
+              }
+              maxImages={10}
+            />
+          </View>
+        )}
 
         {/* Removed bottom upload button: now on header */}
 

@@ -93,4 +93,10 @@ export const resourceController = {
       `/api/orders/designer/products/versions/${versionId}/publish`
     );
   },
+  updateResourceVersion: async (versionId, data) => {
+    return await privateApi.put(
+      `/api/orders/designer/products/versions/${versionId}`,
+      data
+    );
+  },
 };
