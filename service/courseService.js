@@ -121,4 +121,14 @@ export const courseService = {
       throw new Error(message);
     }
   },
+  getCourseNotEnrollmentsByUserId : async () =>{
+    try {
+      const res = await courseApiController.getCourseNotEnrollmentsByUserId();
+      return res.data.result;
+    } catch (error) {
+      const message =
+        error.response?.data?.message || error.message || "Get course not enrollments by user id failed.";
+      throw new Error(message);
+    }
+  },
 }

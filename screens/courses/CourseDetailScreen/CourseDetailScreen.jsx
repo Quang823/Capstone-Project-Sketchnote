@@ -100,48 +100,86 @@ export default function CourseDetailScreen() {
   };
 
   const handleBuyCourse = async () => {
+    console.log("=== START handleBuyCourse ===");
+    console.log("Course ID:", course.id);
+    console.log("Course Price:", course.price);
+    
     setShowPurchaseModal(false);
+    setLoading(true);
+    
     try {
+      // Step 1: Charge from wallet (deduct money)
+      console.log("Step 1: Calling buyCourse API to deduct money...");
       const res = await courseService.buyCourse(course.price);
+      console.log("buyCourse Response:", JSON.stringify(res, null, 2));
 
       if (res.code === 402) {
+        console.log("Insufficient balance (402), showing confirm modal");
         setShowConfirmModal(true);
+        setLoading(false);
         return;
       }
 
       if (res.code && res.code !== 200) {
+        console.log("Buy failed with code:", res.code, "message:", res.message);
         Toast.show({
           type: "error",
           text1: "Buy Failed",
           text2: res.message || "An error occurred",
         });
+        setLoading(false);
         return;
       }
 
       if (res.result?.status === "SUCCESS") {
-        const enrollRes = await courseService.enrollCourse(course.id);
+        console.log("Payment SUCCESS! Now enrolling in course...");
+        
+        // Step 2: Enroll in course (only after successful payment)
+        try {
+          console.log("Step 2: Calling enrollCourse API...");
+          const enrollRes = await courseService.enrollCourse(course.id);
+          console.log("enrollCourse Response:", JSON.stringify(enrollRes, null, 2));
+        } catch (enrollError) {
+          console.error("Enrollment failed after payment:", enrollError);
+          // If enrollment fails after payment, show specific error
+          Toast.show({
+            type: "error",
+            text1: "Enrollment Failed",
+            text2: "Payment successful but enrollment failed. Please contact support.",
+          });
+          setLoading(false);
+          return;
+        }
 
+        console.log("Both payment and enrollment successful!");
         Toast.show({
           type: "success",
           text1: "Buy Success",
           text2: "Course purchased successfully!",
         });
 
+        console.log("Fetching updated course details...");
         await fetchCourseDetail(courseId);
+        setLoading(false);
+        console.log("=== END handleBuyCourse - Starting learning ===");
         handleStartLearning();
       } else {
+        console.log("Payment result status is not SUCCESS:", res.result?.status);
         Toast.show({
           type: "error",
           text1: "Buy Failed",
           text2: "Unknown error occurred",
         });
+        setLoading(false);
       }
     } catch (error) {
+      console.error("Error in handleBuyCourse:", error);
       Toast.show({
         type: "error",
         text1: "Buy Failed",
         text2: error.message || "Something went wrong",
       });
+      setLoading(false);
     }
   };
 
