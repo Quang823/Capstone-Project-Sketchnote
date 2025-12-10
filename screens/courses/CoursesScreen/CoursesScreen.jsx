@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   Pressable,
   Image,
   TextInput,
-  ActivityIndicator,
+  Animated,
+  Easing,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -16,12 +17,14 @@ import { courseService } from "../../../service/courseService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
+import { LinearGradient } from 'expo-linear-gradient';
+
 // Course Categories
 const courseCategories = [
-  { id: "all", name: "All" },
-  { id: "Icons", name: "Icons" },
-  { id: "Illustrations", name: "Illustrations" },
-  { id: "Typography", name: "Typography" },
+  { id: "all", name: "All", icon: "apps" },
+  { id: "Icons", name: "Icons", icon: "emoji-emotions" },
+  { id: "Illustrations", name: "Illustrations", icon: "palette" },
+  { id: "Typography", name: "Typography", icon: "text-fields" },
 ];
 
 export default function CoursesScreen() {
@@ -32,7 +35,38 @@ export default function CoursesScreen() {
   const [filteredCourses, setFilteredCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Floating animation cho 2 circle
+  const floatAnim1 = useRef(new Animated.Value(0)).current;
+  const floatAnim2 = useRef(new Animated.Value(0)).current;
 
+  // Floating animation cho 2 circle - ĐÃ SỬA HOÀN HẢO
+  useEffect(() => {
+    const animateFloat = (animValue, delay = 0) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(animValue, {
+            toValue: 1,
+            duration: 5000,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.ease),
+          }),
+          Animated.timing(animValue, {
+            toValue: 0,
+            duration: 5000,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.ease),
+          }),
+        ])
+      ).start();
+    };
+
+    // Circle 1: chậm, nhẹ nhàng
+    animateFloat(floatAnim1, 0);
+
+    // Circle 2: ngược pha, chậm hơn 2s
+    animateFloat(floatAnim2, 2000);
+  }, []);
   // Fetch courses from API
   useEffect(() => {
     fetchCourses();
@@ -60,12 +94,14 @@ export default function CoursesScreen() {
             ? course.imageUrl
             : null,
         price: course.price,
-        rating: 4.5,
-        students: course.studentCount,
-        totalDuration: course.totalDuration,
+        rating: course.avgRating || 0,
+        ratingCount: course.ratingCount || 0,
+        students: course.studentCount || 0,
+        totalDuration: course.totalDuration || 0,
         lessonsCount: course.lessons?.length || 0,
         level: course.lessons?.length > 5 ? "Advanced" : "Beginner",
         category: course.category || "all",
+        isNew: Math.random() > 0.7,
       }));
 
       setAllCourses(transformedCourses);
@@ -111,6 +147,107 @@ export default function CoursesScreen() {
     fetchCourses();
   };
 
+  // Get hot new releases (top 4 new courses)
+  const hotNewReleases = allCourses.filter(course => course.isNew).slice(0, 4);
+
+  // Render featured course card (for hot new releases)
+  const renderFeaturedCourseItem = (item, index) => {
+    const gradients = [
+      ['#667eea', '#555abcff'], // Purple-Pink
+      ['#f093fb', '#f5576c'], // Pink-Red
+      ['#4facfe', '#00f2fe'], // Blue-Cyan
+      ['#43e97b', '#38f9d7'], // Green-Mint
+    ];
+
+    const imageUrl =
+      item.imageUrl || "https://via.placeholder.com/320x180?text=No+Image";
+
+    return (
+      <Shadow
+        distance={16}
+        startColor="#00000030"
+        finalColor="#00000000"
+        key={item.id}
+        style={{ marginRight: 20, borderRadius: 24 }}
+      >
+        <Pressable
+          onPress={() => handleViewCourse(item.id)}
+          style={coursesStyles.featuredCard}
+        >
+          <LinearGradient
+            colors={gradients[index % gradients.length]}
+            style={coursesStyles.featuredGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            {/* Background Pattern */}
+            <View style={coursesStyles.patternOverlay}>
+              <View style={coursesStyles.patternCircle1} />
+              <View style={coursesStyles.patternCircle2} />
+            </View>
+
+            {/* Image with overlay */}
+            <View style={coursesStyles.featuredImageContainer}>
+              <Image
+                source={{ uri: imageUrl }}
+                style={coursesStyles.featuredImage}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
+                style={coursesStyles.featuredOverlay}
+              />
+            </View>
+
+            {/* Content */}
+            <View style={coursesStyles.featuredContent}>
+              <View style={coursesStyles.featuredTop}>
+                <View style={coursesStyles.featuredBadge}>
+                  <Icon name="local-fire-department" size={16} color="#FFD700" />
+                  <Text style={coursesStyles.featuredBadgeText}>HOT</Text>
+                </View>
+                <View style={coursesStyles.featuredNewBadge}>
+                  <Text style={coursesStyles.featuredNewBadgeText}>NEW</Text>
+                </View>
+              </View>
+
+              <View style={coursesStyles.featuredBottom}>
+                <Text style={coursesStyles.featuredTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+
+                <Text style={coursesStyles.featuredSubtitle} numberOfLines={1}>
+                  {item.subtitle || "Professional course"}
+                </Text>
+
+                <View style={coursesStyles.featuredMeta}>
+                  <View style={coursesStyles.featuredMetaItem}>
+                    <View style={coursesStyles.ratingContainer}>
+                      <Icon name="star" size={18} color="#FFD700" />
+                      <Text style={coursesStyles.featuredMetaText}>{item.rating}</Text>
+                    </View>
+                  </View>
+                  <View style={coursesStyles.divider} />
+                  <View style={coursesStyles.featuredMetaItem}>
+                    <Icon name="people" size={18} color="#FFF" />
+                    <Text style={coursesStyles.featuredMetaText}>
+                      {item.students > 1000 ? `${(item.students / 1000).toFixed(1)}k` : item.students}
+                    </Text>
+                  </View>
+                  <View style={coursesStyles.divider} />
+                  <View style={coursesStyles.featuredMetaItem}>
+                    <Icon name="play-circle-outline" size={18} color="#FFF" />
+                    <Text style={coursesStyles.featuredMetaText}>{item.lessonsCount}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </LinearGradient>
+        </Pressable>
+      </Shadow>
+    );
+  };
+
   // Render course card
   const renderCourseItem = (item) => {
     const imageUrl =
@@ -118,11 +255,11 @@ export default function CoursesScreen() {
 
     return (
       <Shadow
-        distance={8}
-        startColor="#00000015"
-        finalColor="#00000005"
+        distance={12}
+        startColor="#00000020"
+        finalColor="#00000000"
         key={item.id}
-        style={{ marginRight: 16, borderRadius: 16 }}
+        style={{ marginRight: 20, borderRadius: 20 }}
       >
         <Pressable
           onPress={() => handleViewCourse(item.id)}
@@ -135,17 +272,36 @@ export default function CoursesScreen() {
               style={coursesStyles.courseImage}
               resizeMode="cover"
             />
-            {/* Level Badge */}
-            <View style={coursesStyles.levelBadge}>
-              <Text style={coursesStyles.levelBadgeText}>{item.level}</Text>
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.3)']}
+              style={coursesStyles.imageGradient}
+            />
+
+            {/* Badges */}
+            <View style={coursesStyles.badgesContainer}>
+              {item.isNew && (
+                <View style={coursesStyles.newBadge}>
+                  <Icon name="fiber-new" size={16} color="#FFF" />
+                  <Text style={coursesStyles.newBadgeText}>NEW</Text>
+                </View>
+              )}
+              <View style={coursesStyles.levelBadge}>
+                <Text style={coursesStyles.levelBadgeText}>{item.level}</Text>
+              </View>
             </View>
           </View>
 
           {/* Info */}
           <View style={coursesStyles.courseInfo}>
-            <Text style={coursesStyles.courseTitle} numberOfLines={2}>
-              {item.title}
-            </Text>
+            <View style={coursesStyles.courseTitleContainer}>
+              <Text style={coursesStyles.courseTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <View style={coursesStyles.ratingBadge}>
+                <Icon name="star" size={12} color="#FFB800" />
+                <Text style={coursesStyles.ratingText}>{item.rating}</Text>
+              </View>
+            </View>
 
             <Text style={coursesStyles.courseSubtitle} numberOfLines={2}>
               {item.subtitle}
@@ -153,26 +309,43 @@ export default function CoursesScreen() {
 
             <View style={coursesStyles.metaRow}>
               <View style={coursesStyles.metaItem}>
-                <Icon name="star" size={14} color="#FFA726" />
-                <Text style={coursesStyles.metaText}>{item.rating}</Text>
-              </View>
-
-              <View style={coursesStyles.metaItem}>
-                <Icon name="play-circle-outline" size={14} color="#4F46E5" />
+                <Icon name="play-circle-outline" size={16} color="#2348bfff" />
                 <Text style={coursesStyles.metaText}>
                   {item.lessonsCount} lessons
                 </Text>
               </View>
 
               <View style={coursesStyles.metaItem}>
-                <Icon name="people" size={14} color="#10B981" />
-                <Text style={coursesStyles.metaText}>{item.students}</Text>
+                <Icon name="people-outline" size={16} color="#10B981" />
+                <Text style={coursesStyles.metaText}>
+                  {item.students > 1000 ? `${(item.students / 1000).toFixed(1)}k` : item.students}
+                </Text>
+              </View>
+
+              <View style={coursesStyles.metaItem}>
+                <Icon name="star" size={16} color="#FFB800" />
+                <Text style={coursesStyles.metaText}>
+                  {item.ratingCount} ratings
+                </Text>
               </View>
             </View>
 
-            <Text style={coursesStyles.price}>
-              {item.price?.toLocaleString("vi-VN") || "0"} VND
-            </Text>
+            <View style={coursesStyles.priceRow}>
+              <View style={coursesStyles.priceContainer}>
+                <Text style={coursesStyles.price}>
+                  {item.price?.toLocaleString("vi-VN") || "0"}
+                </Text>
+                <Text style={coursesStyles.currency}>đ</Text>
+              </View>
+              <LinearGradient
+                colors={['#2348bfff', '#1e40afff']}
+                style={coursesStyles.enrollButton}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Icon name="arrow-forward" size={18} color="#FFF" />
+              </LinearGradient>
+            </View>
           </View>
         </Pressable>
       </Shadow>
@@ -181,13 +354,7 @@ export default function CoursesScreen() {
 
   if (loading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
+      <View style={coursesStyles.loadingContainer}>
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -200,83 +367,240 @@ export default function CoursesScreen() {
 
   return (
     <View style={coursesStyles.container}>
-      {/* Header */}
-      <View style={coursesStyles.header}>
-        <View style={coursesStyles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
-          <Text style={coursesStyles.headerTitle}>Courses</Text>
+      {/* Header cố định */}
+      <LinearGradient colors={['#FFFFFF', '#F8FAFC']} style={coursesStyles.header}>
+        <View style={coursesStyles.headerContent}>
+          <View style={coursesStyles.headerLeft}>
+            <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+            <View>
+              <Text style={coursesStyles.headerTitle}>Courses</Text>
+              <Text style={coursesStyles.headerSubtitle}>
+                {allCourses.length} courses available
+              </Text>
+            </View>
+          </View>
+          <Pressable style={coursesStyles.notificationButton}>
+            <Icon name="notifications-none" size={24} color="#084F8C" />
+            <View style={coursesStyles.notificationBadge} />
+          </Pressable>
         </View>
-      </View>
+      </LinearGradient>
 
+      {/* TOÀN BỘ NỘI DUNG BÂY GIỜ ĐỀU TRONG SCROLLVIEW → CUỘN MƯỢT */}
       <ScrollView
         style={coursesStyles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[]} // không dùng sticky nữa
       >
-        {/* Search */}
-        <View style={coursesStyles.searchContainer}>
-          <Icon
-            name="search"
-            size={20}
-            color="#9CA3AF"
-            style={coursesStyles.searchIcon}
+        {/* 1. Hero Banner - Bây giờ cuộn được */}
+        <View style={coursesStyles.heroContainer}>
+          <Image
+            source={{ uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1765185266/m5hl24cfn305uwxbg5ox.avif" }}
+            style={coursesStyles.heroImage}
+            resizeMode="cover"
           />
-          <TextInput
-            style={coursesStyles.searchInput}
-            placeholder="Search courses..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#9CA3AF"
+          <LinearGradient
+            colors={['rgba(0,0,0,0.5)', 'transparent', 'rgba(0,0,0,0.7)']}
+            style={coursesStyles.heroOverlay}
           />
+          <View style={coursesStyles.heroContent}>
+            <Text style={coursesStyles.heroTitle}>Study design{'\n'}professionally</Text>
+            <Text style={coursesStyles.heroSubtitle}>Discover courses for{'\n'}creative professionals</Text>
+          </View>
         </View>
 
-        {/* Category Filter */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={coursesStyles.categoryContainer}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
-        >
-          {courseCategories.map((category) => (
-            <Pressable
-              key={category.id}
-              style={[
-                coursesStyles.categoryButton,
-                selectedCategory === category.id &&
-                coursesStyles.selectedCategoryButton,
-              ]}
-              onPress={() => handleCategoryPress(category.id)}
-            >
-              <Text
-                style={[
-                  coursesStyles.categoryText,
-                  selectedCategory === category.id &&
-                  coursesStyles.selectedCategoryText,
-                ]}
+        {/* 2. Search + Category nằm chung 1 hàng (mới) */}
+        <View style={coursesStyles.searchCategoryRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingLeft: 20, paddingRight: 8 }}
+          >
+            {courseCategories.map((category) => (
+              <Shadow
+                key={category.id}
+                distance={selectedCategory === category.id ? 10 : 4}
+                startColor={selectedCategory === category.id ? "#084F8C30" : "#00000008"}
+                finalColor="#00000000"
+                style={{ borderRadius: 16, marginRight: 10 }}
               >
-                {category.name}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+                <Pressable
+                  style={[
+                    coursesStyles.categoryButton,
+                    selectedCategory === category.id && coursesStyles.selectedCategoryButton,
+                  ]}
+                  onPress={() => handleCategoryPress(category.id)}
+                >
+                  <Icon
+                    name={category.icon}
+                    size={18}
+                    color={selectedCategory === category.id ? "#FFF" : "#64748B"}
+                  />
+                  <Text
+                    style={[
+                      coursesStyles.categoryText,
+                      selectedCategory === category.id && coursesStyles.selectedCategoryText,
+                    ]}
+                  >
+                    {category.name}
+                  </Text>
+                </Pressable>
+              </Shadow>
+            ))}
+          </ScrollView>
 
-        {/* Courses List */}
+          {/* Thanh tìm kiếm nhỏ gọn */}
+          <View style={coursesStyles.searchCompactWrapper}>
+            <Shadow distance={6} startColor="#00000010" finalColor="#00000000">
+              <View style={coursesStyles.searchCompactContainer}>
+                <Icon name="search" size={20} color="#084F8C" />
+                <TextInput
+                  style={coursesStyles.searchCompactInput}
+                  placeholder="Search..."
+                  placeholderTextColor="#94A3B8"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoCorrect={false}
+                />
+                {searchQuery.length > 0 && (
+                  <Pressable onPress={() => setSearchQuery("")} hitSlop={10}>
+                    <Icon name="close" size={18} color="#94A3B8" />
+                  </Pressable>
+                )}
+              </View>
+            </Shadow>
+          </View>
+        </View>
+
+        {/* Khoảng trống nhẹ giữa header con và nội dung */}
+        <View style={{ height: 16 }} />
+
+        {/* Hot New Releases */}
+        {hotNewReleases.length > 0 && (
+          <View style={coursesStyles.hotReleasesWrapper}>
+            <LinearGradient
+              colors={['#0F172A', '#1E40AF']
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={coursesStyles.hotReleasesGradient}
+            >
+              {/* Floating Circle 1 */}
+              <Animated.View
+                style={[
+                  coursesStyles.decorCircle1,
+                  {
+                    transform: [
+                      {
+                        translateY: floatAnim1.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, -30], // Trôi lên 30px rồi xuống
+                        }),
+                      },
+                      {
+                        translateX: floatAnim1.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 15], // Nhẹ nhàng trôi ngang
+                        }),
+                      },
+                    ],
+                    opacity: floatAnim1.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [0.15, 0.25, 0.15],
+                    }),
+                  },
+                ]}
+              />
+
+              {/* Floating Circle 2 - ngược pha */}
+              <Animated.View
+                style={[
+                  coursesStyles.decorCircle2,
+                  {
+                    transform: [
+                      {
+                        translateY: floatAnim2.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, 25], // Trôi lên xuống khác nhịp
+                        }),
+                      },
+                      {
+                        translateX: floatAnim2.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, -20],
+                        }),
+                      },
+                    ],
+                    opacity: floatAnim2.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange: [0.1, 0.2, 0.1],
+                    }),
+                  },
+                ]}
+              />
+
+              <View style={coursesStyles.hotReleasesSection}>
+                <View style={coursesStyles.hotReleasesHeader}>
+                  <View style={coursesStyles.hotReleasesHeaderLeft}>
+                    <View style={coursesStyles.fireIconContainer}>
+                      <Icon name="local-fire-department" size={32} color="#FFD700" />
+                    </View>
+                    <View>
+                      <Text style={coursesStyles.hotReleasesTitle}>Hot new releases</Text>
+                      <Text style={coursesStyles.hotReleasesSubtitle}>
+                        Trending courses this week
+                      </Text>
+                    </View>
+                  </View>
+                  <Pressable style={coursesStyles.exploreButton}>
+                    <Text style={coursesStyles.exploreButtonText}>View all</Text>
+                    <Icon name="arrow-forward" size={18} color="#FFF" />
+                  </Pressable>
+                </View>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12 }}
+                >
+                  {hotNewReleases.map(renderFeaturedCourseItem)}
+                </ScrollView>
+              </View>
+            </LinearGradient>
+          </View>
+        )}
+
+        {/* All Courses */}
         {filteredCourses.length > 0 ? (
           <View style={coursesStyles.sectionContainer}>
             <View style={coursesStyles.sectionHeader}>
-              <Text style={coursesStyles.sectionTitle}>All Courses</Text>
+              <View>
+                <Text style={coursesStyles.sectionTitle}>All Courses</Text>
+                <Text style={coursesStyles.sectionSubtitle}>
+                  {filteredCourses.length} courses • Updated daily
+                </Text>
+              </View>
+              <Pressable style={coursesStyles.filterButton}>
+                <Icon name="tune" size={20} color="#2348bfff" />
+              </Pressable>
             </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 16 }}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
             >
               {filteredCourses.map(renderCourseItem)}
             </ScrollView>
           </View>
         ) : (
           <View style={coursesStyles.emptyState}>
-            <Icon name="inbox" size={80} color="#D1D5DB" />
-            <Text style={coursesStyles.emptyStateText}>No courses found</Text>
+            <LinearGradient colors={['#F8FAFC', '#EFF6FF']} style={coursesStyles.emptyStateGradient}>
+              <Icon name="search-off" size={80} color="#CBD5E1" />
+              <Text style={coursesStyles.emptyStateText}>No courses found</Text>
+              <Text style={coursesStyles.emptyStateSubtext}>
+                Try adjusting your search or filters
+              </Text>
+            </LinearGradient>
           </View>
         )}
 
@@ -289,6 +613,8 @@ export default function CoursesScreen() {
             </Pressable>
           </View>
         )}
+
+        <View style={{ height: 60 }} />
       </ScrollView>
     </View>
   );

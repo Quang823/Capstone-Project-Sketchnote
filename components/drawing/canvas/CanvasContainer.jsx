@@ -561,24 +561,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
       try {
         if (projectId && userId) {
-          const layerSummaries = Array.isArray(internalLayers)
-            ? internalLayers.map((l) => ({
-              id: l?.id,
-              name: l?.name || (typeof l?.id === "string" ? l.id : "Layer"),
-              visible: l?.visible !== false,
-              locked: !!l?.locked,
-            }))
-            : [{ id: "layer1", name: "Layer 1", visible: true, locked: false }];
-
-          const pageChunk = {
+          // Send minimal page info for collaboration (no strokes - they're in stroke param)
+          const pageInfo = {
             id: pageId,
-            createdAt: new Date().toISOString(),
             type: isCover ? "cover" : "paper",
             backgroundColor: backgroundColor,
             template: pageTemplate,
-            imageUrl: backgroundImageUrl,
-            strokes: [stroke],
-            layers: layerSummaries,
           };
 
           projectService.realtime.sendStroke(
@@ -586,7 +574,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             userId,
             pageId,
             stroke,
-            pageChunk,
+            pageInfo,
           );
         }
       } catch { }

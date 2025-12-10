@@ -686,6 +686,59 @@ export const projectService = {
       sendAction(projectId, userId, "DRAW", { tool, points: pts });
     };
 
+    /**
+     * Compress points using delta encoding to reduce payload size
+     * Instead of sending full coordinates, send deltas from first point
+     * @param {Array} points - Array of point objects with x, y
+     * @returns {Object} Compressed points data
+     */
+    const compressPoints = (points) => {
+      if (!Array.isArray(points) || points.length === 0) {
+        return { compressed: true, data: [] };
+      }
+
+      // For very short strokes (< 10 points), don't compress
+      if (points.length < 10) {
+        return {
+          compressed: false,
+          data: points.map(p => [
+            Math.round((p?.x || 0) * 100) / 100,
+            Math.round((p?.y || 0) * 100) / 100
+          ])
+        };
+      }
+
+      // Delta encoding: store first point as base, then deltas
+      const firstPoint = points[0];
+      const baseX = Math.round((firstPoint?.x || 0) * 100) / 100;
+      const baseY = Math.round((firstPoint?.y || 0) * 100) / 100;
+
+      // Store deltas as integers (multiply by 100 for 2 decimal precision)
+      const deltas = [];
+      let prevX = baseX;
+      let prevY = baseY;
+
+      for (let i = 1; i < points.length; i++) {
+        const currX = Math.round((points[i]?.x || 0) * 100) / 100;
+        const currY = Math.round((points[i]?.y || 0) * 100) / 100;
+        // Store delta * 100 as integer for smaller JSON
+        deltas.push(Math.round((currX - prevX) * 100));
+        deltas.push(Math.round((currY - prevY) * 100));
+        prevX = currX;
+        prevY = currY;
+      }
+
+      return {
+        compressed: true,
+        base: [baseX, baseY],
+        deltas: deltas // Flat array of [dx1, dy1, dx2, dy2, ...]
+      };
+    };
+
+    /**
+     * Send stroke data via WebSocket with optimized payload
+     * Removed duplicate data to reduce message size significantly
+     */
     const sendStroke = (
       projectId,
       userId,
@@ -693,57 +746,55 @@ export const projectService = {
       stroke = {},
       pagePayload
     ) => {
-      const normalizedPoints = Array.isArray(stroke.points)
-        ? stroke.points.map((p) => ({
-          x: Number(p?.x) || 0,
-          y: Number(p?.y) || 0,
-          pressure: p?.pressure,
-          thickness: p?.thickness,
-          stabilization: p?.stabilization,
-        }))
-        : [];
-      const fullStroke = {
+      // Only extract essential stroke properties (no duplicate)
+      const hasPoints = Array.isArray(stroke.points) && stroke.points.length > 0;
+
+      // Compress points for tools that have them
+      const compressedPoints = hasPoints ? compressPoints(stroke.points) : null;
+
+      // Build minimal stroke object - only include non-null values
+      const minimalStroke = {
         id: stroke.id,
         tool: stroke.tool || "pen",
-        x: stroke.x,
-        y: stroke.y,
-        width: stroke.width,
-        height: stroke.height,
-        rotation: stroke.rotation,
-        opacity: stroke.opacity,
-        color: stroke.color,
-        layerId: stroke.layerId,
-        text: stroke.text,
-        fontSize: stroke.fontSize,
-        padding: stroke.padding,
-        uri: stroke.uri,
-        rows: stroke.rows,
-        cols: stroke.cols,
-        points: normalizedPoints,
       };
+
+      // Only add properties if they have meaningful values
+      if (stroke.x != null) minimalStroke.x = stroke.x;
+      if (stroke.y != null) minimalStroke.y = stroke.y;
+      if (stroke.width != null) minimalStroke.width = stroke.width;
+      if (stroke.height != null) minimalStroke.height = stroke.height;
+      if (stroke.rotation != null && stroke.rotation !== 0) minimalStroke.rotation = stroke.rotation;
+      if (stroke.opacity != null && stroke.opacity !== 1) minimalStroke.opacity = stroke.opacity;
+      if (stroke.color) minimalStroke.color = stroke.color;
+      if (stroke.layerId) minimalStroke.layerId = stroke.layerId;
+      if (stroke.text) minimalStroke.text = stroke.text;
+      if (stroke.fontSize) minimalStroke.fontSize = stroke.fontSize;
+      if (stroke.padding) minimalStroke.padding = stroke.padding;
+      if (stroke.uri) minimalStroke.uri = stroke.uri;
+      if (stroke.rows) minimalStroke.rows = stroke.rows;
+      if (stroke.cols) minimalStroke.cols = stroke.cols;
+
+      // Build optimized payload - NO DUPLICATES
       const payload = {
         pageId,
-        tool: fullStroke.tool,
-        stroke: fullStroke,
-        points: normalizedPoints.map((p) => [p.x, p.y]),
-        pointsDetailed: normalizedPoints,
-        color: fullStroke.color,
-        width: fullStroke.width,
-        opacity: fullStroke.opacity,
-        layerId: fullStroke.layerId,
-        rotation: fullStroke.rotation,
-        strokeJson: JSON.stringify(fullStroke),
-        page:
-          pagePayload && typeof pagePayload === "object"
-            ? pagePayload
-            : undefined,
-        pageJson:
-          typeof pagePayload === "string"
-            ? pagePayload
-            : pagePayload && typeof pagePayload === "object"
-              ? JSON.stringify(pagePayload)
-              : undefined,
+        stroke: minimalStroke,
       };
+
+      // Add compressed points separately (not inside stroke to avoid duplication)
+      if (compressedPoints) {
+        payload.points = compressedPoints;
+      }
+
+      // Only include minimal page info if needed (NOT full page with strokes)
+      if (pagePayload && typeof pagePayload === "object") {
+        payload.pageInfo = {
+          id: pagePayload.id,
+          type: pagePayload.type,
+          backgroundColor: pagePayload.backgroundColor,
+          template: pagePayload.template,
+        };
+      }
+
       sendAction(projectId, userId, "DRAW", payload);
     };
 
