@@ -108,6 +108,12 @@ export default function DesignerProductsScreen() {
     ? products
     : products.filter(product => product.status === filter);
 
+  const isSelectedProductArchived = selectedProduct
+    ? selectedProduct.isArchived !== undefined
+      ? Boolean(selectedProduct.isArchived)
+      : selectedProduct.status === "ARCHIVED"
+    : false;
+
   const getStatusColor = (status) => {
     switch (status) {
       case "PENDING_REVIEW":
@@ -157,9 +163,14 @@ export default function DesignerProductsScreen() {
     setShowDetailModal(true);
   };
 
-  const handleEditProduct = (product) => {
+  const handleCreateVersionNavigation = (product) => {
+    if (!product) return;
     setShowDetailModal(false);
-    Alert.alert("Edit", `Edit: ${product.name}`);
+    navigation.navigate("CreateVersionScreen", {
+      resourceTemplateId: product.resourceTemplateId,
+      productName: product.name,
+      currentType: product.type,
+    });
   };
 
   const handleDeleteProduct = (product) => {
@@ -184,36 +195,40 @@ export default function DesignerProductsScreen() {
     );
   };
 
-  const handleToggleActive = (product) => {
-    const action = product.isArchived ? "unarchive" : "archive";
-    const actionText = product.isArchived ? "bán lại" : "ngừng bán";
+  const handleToggleArchive = (product) => {
+    if (!product) return;
+    const isArchived =
+      product.isArchived !== undefined
+        ? Boolean(product.isArchived)
+        : product.status === "ARCHIVED";
+    const actionVerb = isArchived ? "unarchive" : "archive";
 
     Alert.alert(
-      `${product.isArchived ? "Bán lại" : "Ngừng bán"} sản phẩm?`,
-      `Bạn có chắc chắn muốn ${actionText} sản phẩm "${product.name}"?`,
+      isArchived ? "Unarchive product?" : "Archive product?",
+      `Are you sure you want to ${actionVerb} "${product.name}"?`,
       [
         {
-          text: "Hủy",
+          text: "Cancel",
           style: "cancel",
         },
         {
-          text: "Xác nhận",
+          text: isArchived ? "Unarchive" : "Archive",
           onPress: async () => {
             try {
-              if (product.isArchived) {
-                // Unarchive - bán lại
+              if (isArchived) {
                 await resourceService.unarchiveResourceTemplate(product.resourceTemplateId);
-                Alert.alert("Thành công", "Sản phẩm đã được bán lại!");
+                Alert.alert("Success", "Product is unarchive susscess.");
               } else {
-                // Archive - ngừng bán
                 await resourceService.archiveResourceTemplate(product.resourceTemplateId);
-                Alert.alert("Thành công", "Sản phẩm đã ngừng bán!");
+                Alert.alert("Success", "Product moved to archive.");
               }
-              // Refresh products list
               fetchProducts();
             } catch (error) {
-              console.error(`Error ${action} product:`, error);
-              Alert.alert("Lỗi", error.message || `Không thể ${actionText} sản phẩm`);
+              console.error(`Error trying to ${actionVerb} product:`, error);
+              Alert.alert(
+                "Error",
+                error.message || `Unable to ${actionVerb} this product.`
+              );
             }
           },
         },
@@ -266,6 +281,18 @@ export default function DesignerProductsScreen() {
         },
       ]
     );
+  };
+
+  const handleUpdateVersion = (version) => {
+    if (!version) return;
+    setShowDetailModal(false);
+    navigation.navigate("CreateVersionScreen", {
+      resourceTemplateId: selectedProduct.resourceTemplateId,
+      productName: selectedProduct.name,
+      currentType: selectedProduct.type,
+      versionId: version.versionId,
+      versionData: version,
+    });
   };
 
   return (
@@ -360,194 +387,229 @@ export default function DesignerProductsScreen() {
             </Text>
           </View>
         ) : (
-          filteredProducts.map((product) => (
-            <Pressable
-              key={product.resourceTemplateId}
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderRadius: 12,
-                marginHorizontal: 16,
-                marginBottom: 16,
-                padding: 16,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 3,
-                borderLeftWidth: 4,
-                borderLeftColor: getStatusColor(product.status),
-              }}
-              onPress={() => handleProductPress(product)}
-            >
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                {/* Thumbnail */}
-                {product.images && product.images.length > 0 ? (
-                  <Image
-                    source={{
-                      uri: product.images[0].url || product.images[0].imageUrl,
-                    }}
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 8,
-                      backgroundColor: "#F3F4F6",
-                    }}
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 8,
-                      backgroundColor: "#F3F4F6",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Icon name="image" size={32} color="#9CA3AF" />
-                  </View>
-                )}
-
-                {/* Content */}
-                <View style={{ flex: 1 }}>
-                  {/* Header Row */}
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                    <Text
-                      style={{
-                        fontSize: 16,
-                        fontWeight: "700",
-                        color: "#1F2937",
-                        flex: 1,
-                        marginRight: 8,
+          filteredProducts.map((product) => {
+            const isArchived =
+              product.isArchived !== undefined
+                ? Boolean(product.isArchived)
+                : product.status === "ARCHIVED";
+            return (
+              <Pressable
+                key={product.resourceTemplateId}
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: 12,
+                  marginHorizontal: 16,
+                  marginBottom: 16,
+                  padding: 16,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 8,
+                  elevation: 3,
+                  borderLeftWidth: 4,
+                  borderLeftColor: getStatusColor(product.status),
+                }}
+                onPress={() => handleProductPress(product)}
+              >
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  {/* Thumbnail */}
+                  {product.images && product.images.length > 0 ? (
+                    <Image
+                      source={{
+                        uri: product.images[0].url || product.images[0].imageUrl,
                       }}
-                      numberOfLines={1}
-                    >
-                      {product.name}
-                    </Text>
+                      style={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: 8,
+                        backgroundColor: "#F3F4F6",
+                      }}
+                    />
+                  ) : (
                     <View
                       style={{
-                        backgroundColor: getStatusColor(product.status),
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 6,
+                        width: 80,
+                        height: 80,
+                        borderRadius: 8,
+                        backgroundColor: "#F3F4F6",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      <Text style={{ color: "#FFF", fontSize: 10, fontWeight: "600" }}>
-                        {getStatusText(product.status)}
-                      </Text>
+                      <Icon name="image" size={32} color="#9CA3AF" />
                     </View>
-                  </View>
+                  )}
 
-                  {/* Description */}
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      color: "#6B7280",
-                      marginBottom: 8,
-                      lineHeight: 18,
-                    }}
-                    numberOfLines={2}
-                  >
-                    {product.description}
-                  </Text>
-
-                  {/* Metrics Grid */}
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                      <Icon name="attach-money" size={14} color="#10B981" />
-                      <Text style={{ fontSize: 12, color: "#374151", fontWeight: "600" }}>
-                        {formatCurrency(product.price)}
+                  {/* Content */}
+                  <View style={{ flex: 1 }}>
+                    {/* Header Row */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        marginBottom: 6,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          fontWeight: "700",
+                          color: "#1F2937",
+                          flex: 1,
+                          marginRight: 8,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {product.name}
                       </Text>
-                    </View>
-
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                      <Icon name="shopping-cart" size={14} color="#3B82F6" />
-                      <Text style={{ fontSize: 12, color: "#374151" }}>
-                        {product.totalPurchases ?? 0} sales
-                      </Text>
-                    </View>
-
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                      <Icon name="trending-up" size={14} color="#F59E0B" />
-                      <Text style={{ fontSize: 12, color: "#374151" }}>
-                        {formatCurrency(product.totalRevenue ?? 0)}
-                      </Text>
-                    </View>
-
-                    {product.averageRating && (
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <Icon name="star" size={14} color="#FBBF24" />
-                        <Text style={{ fontSize: 12, color: "#374151" }}>
-                          {product.averageRating.toFixed(1)}
+                      <View
+                        style={{
+                          backgroundColor: getStatusColor(product.status),
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text style={{ color: "#FFF", fontSize: 10, fontWeight: "600" }}>
+                          {getStatusText(product.status)}
                         </Text>
                       </View>
-                    )}
-                  </View>
-
-                  {/* Bottom Row */}
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                      <Icon name="category" size={12} color="#9CA3AF" />
-                      <Text style={{ fontSize: 11, color: "#9CA3AF" }}>
-                        {product.type}
-                      </Text>
                     </View>
 
-                    <View style={{ flexDirection: "row", gap: 8 }}>
-                      <Pressable
-                        style={{
-                          backgroundColor: "#EFF6FF",
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                          borderRadius: 6,
-                        }}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleEditProduct(product);
-                        }}
-                      >
-                        <Icon name="edit" size={16} color="#3B82F6" />
-                      </Pressable>
+                    {/* Description */}
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        color: "#6B7280",
+                        marginBottom: 8,
+                        lineHeight: 18,
+                      }}
+                      numberOfLines={2}
+                    >
+                      {product.description}
+                    </Text>
 
-                      <Pressable
-                        style={{
-                          backgroundColor: product.isActive ? "#D1FAE5" : "#F3F4F6",
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                          borderRadius: 6,
-                        }}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleToggleActive(product);
-                        }}
-                      >
-                        <Icon
-                          name={product.isActive ? "toggle-on" : "toggle-off"}
-                          size={16}
-                          color={product.isActive ? "#10B981" : "#6B7280"}
-                        />
-                      </Pressable>
+                    {/* Metrics Grid */}
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Icon name="attach-money" size={14} color="#10B981" />
+                        <Text style={{ fontSize: 12, color: "#374151", fontWeight: "600" }}>
+                          {formatCurrency(product.price)}
+                        </Text>
+                      </View>
 
-                      <Pressable
-                        style={{
-                          backgroundColor: "#FEE2E2",
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                          borderRadius: 6,
-                        }}
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          handleDeleteProduct(product);
-                        }}
-                      >
-                        <Icon name="delete" size={16} color="#EF4444" />
-                      </Pressable>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Icon name="shopping-cart" size={14} color="#3B82F6" />
+                        <Text style={{ fontSize: 12, color: "#374151" }}>
+                          {product.totalPurchases ?? 0} sales
+                        </Text>
+                      </View>
+
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Icon name="trending-up" size={14} color="#F59E0B" />
+                        <Text style={{ fontSize: 12, color: "#374151" }}>
+                          {formatCurrency(product.totalRevenue ?? 0)}
+                        </Text>
+                      </View>
+
+                      {product.averageRating && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                          <Icon name="star" size={14} color="#FBBF24" />
+                          <Text style={{ fontSize: 12, color: "#374151" }}>
+                            {product.averageRating.toFixed(1)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Bottom Row */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginTop: 8,
+                      }}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <Icon name="category" size={12} color="#9CA3AF" />
+                        <Text style={{ fontSize: 11, color: "#9CA3AF" }}>
+                          {product.type}
+                        </Text>
+                      </View>
+
+                      <View style={{ flexDirection: "row", gap: 8 }}>
+                        {/* <Pressable
+                          style={{
+                            backgroundColor: "#EFF6FF",
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                          }}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleEditProduct(product);
+                          }}
+                        >
+                          <Icon name="edit" size={16} color="#3B82F6" />
+                        </Pressable> */}
+
+                        <Pressable
+                          style={{
+                            backgroundColor: "#E0F2FE",
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                          }}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleCreateVersionNavigation(product);
+                          }}
+                        >
+                          <Icon name="post-add" size={16} color="#0284C7" />
+                        </Pressable>
+
+                        <Pressable
+                          style={{
+                            backgroundColor: isArchived ? "#E0E7FF" : "#FEF3C7",
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                          }}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleToggleArchive(product);
+                          }}
+                        >
+                          <Icon
+                            name={isArchived ? "unarchive" : "archive"}
+                            size={16}
+                            color={isArchived ? "#4338CA" : "#B45309"}
+                          />
+                        </Pressable>
+
+                        <Pressable
+                          style={{
+                            backgroundColor: "#FEE2E2",
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                          }}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleDeleteProduct(product);
+                          }}
+                        >
+                          <Icon name="delete" size={16} color="#EF4444" />
+                        </Pressable>
+                      </View>
                     </View>
                   </View>
                 </View>
-              </View>
-            </Pressable>
-          ))
+              </Pressable>
+            );
+          })
         )}
 
         {!loading && filteredProducts.length === 0 && (
@@ -1053,34 +1115,65 @@ export default function DesignerProductsScreen() {
 
                               {/* Action Buttons */}
                               <View style={{ flexDirection: "row", gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#E5E7EB" }}>
-                                <Pressable
-                                  style={{
-                                    flex: 1,
-                                    backgroundColor: version.status === "PENDING_REVIEW" ? "#9CA3AF" : "#10B981",
-                                    paddingVertical: 8,
-                                    paddingHorizontal: 12,
-                                    borderRadius: 8,
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: 6,
-                                    opacity: version.status === "PENDING_REVIEW" ? 0.6 : 1,
-                                  }}
-                                  onPress={() => version.status !== "PENDING_REVIEW" && handlePublishVersion(version)}
-                                  disabled={version.status === "PENDING_REVIEW"}
-                                >
-                                  <Icon name="publish" size={16} color="#FFFFFF" />
-                                  <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>
-                                    {version.status === "PENDING_REVIEW" ? "Pending" : "Publish"}
-                                  </Text>
-                                </Pressable>
-                                <Pressable
-                                  style={{ flex: 1, backgroundColor: "#EF4444", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
-                                  onPress={() => handleDeleteVersion(version)}
-                                >
-                                  <Icon name="delete" size={16} color="#FFFFFF" />
-                                  <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>Delete</Text>
-                                </Pressable>
+                                {version.status === "PENDING_REVIEW" ? (
+                                  <>
+                                    <Pressable
+                                      style={{
+                                        flex: 1,
+                                        backgroundColor: "#3B82F6",
+                                        paddingVertical: 8,
+                                        paddingHorizontal: 12,
+                                        borderRadius: 8,
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: 6,
+                                      }}
+                                      onPress={() => handleUpdateVersion(version)}
+                                    >
+                                      <Icon name="edit" size={16} color="#FFFFFF" />
+                                      <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>
+                                        Update
+                                      </Text>
+                                    </Pressable>
+                                    <Pressable
+                                      style={{ flex: 1, backgroundColor: "#EF4444", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
+                                      onPress={() => handleDeleteVersion(version)}
+                                    >
+                                      <Icon name="delete" size={16} color="#FFFFFF" />
+                                      <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>Delete</Text>
+                                    </Pressable>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Pressable
+                                      style={{
+                                        flex: 1,
+                                        backgroundColor: "#10B981",
+                                        paddingVertical: 8,
+                                        paddingHorizontal: 12,
+                                        borderRadius: 8,
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: 6,
+                                      }}
+                                      onPress={() => handlePublishVersion(version)}
+                                    >
+                                      <Icon name="publish" size={16} color="#FFFFFF" />
+                                      <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>
+                                        Publish
+                                      </Text>
+                                    </Pressable>
+                                    <Pressable
+                                      style={{ flex: 1, backgroundColor: "#EF4444", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
+                                      onPress={() => handleDeleteVersion(version)}
+                                    >
+                                      <Icon name="delete" size={16} color="#FFFFFF" />
+                                      <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>Delete</Text>
+                                    </Pressable>
+                                  </>
+                                )}
                               </View>
                             </View>
                           ))}
@@ -1112,78 +1205,6 @@ export default function DesignerProductsScreen() {
                           </View>
                         </View>
                       )}
-                    </View>
-
-                    <View style={designerProductsStyles.detailActions}>
-                      <Pressable
-                        style={[
-                          designerProductsStyles.detailButton,
-                          { backgroundColor: "#6366F1" },
-                        ]}
-                        onPress={() => {
-                          setShowDetailModal(false);
-                          navigation.navigate("CreateVersionScreen", {
-                            resourceTemplateId: selectedProduct.resourceTemplateId,
-                            productName: selectedProduct.name,
-                            currentType: selectedProduct.type,
-                          });
-                        }}
-                      >
-                        <Icon name="add-circle" size={20} color="#FFFFFF" />
-                        <Text style={designerProductsStyles.detailButtonText}>
-                          Create Version
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        style={[
-                          designerProductsStyles.detailButton,
-                          designerProductsStyles.detailButtonEdit,
-                        ]}
-                        onPress={() => handleEditProduct(selectedProduct)}
-                      >
-                        <Icon name="edit" size={20} color="#FFFFFF" />
-                        <Text style={designerProductsStyles.detailButtonText}>
-                          Edit
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        style={[
-                          designerProductsStyles.detailButton,
-                          designerProductsStyles.detailButtonToggle,
-                        ]}
-                        onPress={() => {
-                          handleToggleActive(selectedProduct);
-                          setShowDetailModal(false);
-                        }}
-                      >
-                        <Icon
-                          name={
-                            selectedProduct.isActive
-                              ? "toggle-off"
-                              : "toggle-on"
-                          }
-                          size={20}
-                          color="#FFFFFF"
-                        />
-                        <Text style={designerProductsStyles.detailButtonText}>
-                          {selectedProduct.isActive ? "Deactivate" : "Activate"}
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        style={[
-                          designerProductsStyles.detailButton,
-                          designerProductsStyles.detailButtonDelete,
-                        ]}
-                        onPress={() => handleDeleteProduct(selectedProduct)}
-                      >
-                        <Icon name="delete" size={20} color="#FFFFFF" />
-                        <Text style={designerProductsStyles.detailButtonText}>
-                          Delete
-                        </Text>
-                      </Pressable>
                     </View>
                   </View>
                 </View>

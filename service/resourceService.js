@@ -184,5 +184,14 @@ export const resourceService = {
           throw new Error(message);
         }
     },
-
+    updateResourceVersion: async (versionId, data) => {
+        try {
+            const response = await resourceController.updateResourceVersion(versionId, data);
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Update resource version failed.";
+          throw new Error(message);
+        }
+    },
 }
