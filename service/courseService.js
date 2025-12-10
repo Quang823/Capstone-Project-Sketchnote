@@ -54,7 +54,7 @@ export const courseService = {
   enrollCourse : async (id) =>{
     try {
       const res = await courseApiController.enrollCourse(id);
-      return res.data;
+      return res.data.result;
     } catch (error) {
       const message =
         error.response?.data?.message || error.message || "Enroll course failed.";
@@ -64,7 +64,7 @@ export const courseService = {
   getAllCourseEnrollments : async () =>{
     try {
       const res = await courseApiController.getAllCourseEnrollments();
-      return res.data;
+      return res.data.result;
     } catch (error) {
       const message =
         error.response?.data?.message || error.message || "Get all course enrollments failed.";
@@ -74,7 +74,7 @@ export const courseService = {
   getAllCourseNotEnrollments : async () =>{
     try {
       const res = await courseApiController.getAllCourseNotEnrollments();
-      return res.data;
+      return res.data.result;
     } catch (error) {
       const message =
         error.response?.data?.message || error.message || "Get all course not enrollments failed.";
@@ -84,7 +84,7 @@ export const courseService = {
   saveLessonProgress : async (courseId, lessonId, progressData) =>{
     try {
       const res = await courseApiController.saveLessonProgress(courseId, lessonId, progressData);
-      return res.data;
+      return res.data.result;
     } catch (error) {
       const message =
         error.response?.data?.message || error.message || "Save lesson progress failed.";
@@ -104,10 +104,20 @@ export const courseService = {
   getCourseByIdEnrolled : async (id) =>{
     try {
       const res = await courseApiController.getCourseByIdEnrolled(id);
-      return res.data;
+      return res.data.result;
     } catch (error) {
       const message =
         error.response?.data?.message || error.message || "Get course by id enrolled failed.";
+      throw new Error(message);
+    }
+  },
+  getCourseEnrollmentsByCourseId : async (id) =>{
+    try {
+      const res = await courseApiController.getCourseEnrollmentsByCourseId(id);
+      return res.data.result;
+    } catch (error) {
+      const message =
+        error.response?.data?.message || error.message || "Get course enrollments by course id failed.";
       throw new Error(message);
     }
   },

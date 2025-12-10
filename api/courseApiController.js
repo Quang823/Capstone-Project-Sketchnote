@@ -47,4 +47,7 @@ export const courseApiController = {
   getCourseByIdEnrolled: async (id) => {
     return await privateApi.get(`/api/learning/enrollments/course/${id}/me`);
   },
+  getCourseEnrollmentsByCourseId: async (id) => {
+    return await privateApi.get(`/api/learning/enrollments/course/${id}/me`);
+  },
 };
