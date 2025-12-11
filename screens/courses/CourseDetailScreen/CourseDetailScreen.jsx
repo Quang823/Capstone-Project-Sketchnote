@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -61,6 +61,9 @@ export default function CourseDetailScreen() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [feedbackData, setFeedbackData] = useState(null);
 
+  // Biến này dùng để chặn double-click/double-tap
+  const isProcessing = useRef(false);
+
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
 
@@ -100,86 +103,58 @@ export default function CourseDetailScreen() {
   };
 
   const handleBuyCourse = async () => {
-    console.log("=== START handleBuyCourse ===");
-    console.log("Course ID:", course.id);
-    console.log("Course Price:", course.price);
-    
+    // 1. CHẶN DOUBLE CLICK
+    if (isProcessing.current) {
+      console.log("Already processing, blocking duplicate call");
+      return;
+    }
+    isProcessing.current = true;
+
+    // 2. UI FEEDBACK NGAY LẬP TỨC
     setShowPurchaseModal(false);
     setLoading(true);
-    
+
     try {
-      // Step 1: Charge from wallet (deduct money)
-      console.log("Step 1: Calling buyCourse API to deduct money...");
-      const res = await courseService.buyCourse(course.price);
-      console.log("buyCourse Response:", JSON.stringify(res, null, 2));
+      console.log("=== START TRANSACTION ===");
+      console.log("Course ID:", course.id);
+      console.log("Course Price:", course.price);
 
-      if (res.code === 402) {
-        console.log("Insufficient balance (402), showing confirm modal");
-        setShowConfirmModal(true);
-        setLoading(false);
-        return;
-      }
+      // Gọi enrollCourse - backend sẽ tự lo việc charge và enroll
+      console.log("Calling enrollCourse API (backend handles payment + enrollment)...");
+      const enrollRes = await courseService.enrollCourse(course.id);
+      console.log("enrollCourse Response:", JSON.stringify(enrollRes, null, 2));
 
-      if (res.code && res.code !== 200) {
-        console.log("Buy failed with code:", res.code, "message:", res.message);
-        Toast.show({
-          type: "error",
-          text1: "Buy Failed",
-          text2: res.message || "An error occurred",
-        });
-        setLoading(false);
-        return;
-      }
+      // Enrollment thành công
+      console.log("Enrollment successful!");
+      Toast.show({
+        type: "success",
+        text1: "Buy Success",
+        text2: "Course purchased successfully!",
+      });
 
-      if (res.result?.status === "SUCCESS") {
-        console.log("Payment SUCCESS! Now enrolling in course...");
-        
-        // Step 2: Enroll in course (only after successful payment)
-        try {
-          console.log("Step 2: Calling enrollCourse API...");
-          const enrollRes = await courseService.enrollCourse(course.id);
-          console.log("enrollCourse Response:", JSON.stringify(enrollRes, null, 2));
-        } catch (enrollError) {
-          console.error("Enrollment failed after payment:", enrollError);
-          // If enrollment fails after payment, show specific error
-          Toast.show({
-            type: "error",
-            text1: "Enrollment Failed",
-            text2: "Payment successful but enrollment failed. Please contact support.",
-          });
-          setLoading(false);
-          return;
-        }
-
-        console.log("Both payment and enrollment successful!");
-        Toast.show({
-          type: "success",
-          text1: "Buy Success",
-          text2: "Course purchased successfully!",
-        });
-
-        console.log("Fetching updated course details...");
-        await fetchCourseDetail(courseId);
-        setLoading(false);
-        console.log("=== END handleBuyCourse - Starting learning ===");
-        handleStartLearning();
-      } else {
-        console.log("Payment result status is not SUCCESS:", res.result?.status);
-        Toast.show({
-          type: "error",
-          text1: "Buy Failed",
-          text2: "Unknown error occurred",
-        });
-        setLoading(false);
-      }
+      console.log("Fetching updated course details...");
+      await fetchCourseDetail(courseId);
+      console.log("=== END TRANSACTION - Starting learning ===");
+      handleStartLearning();
     } catch (error) {
       console.error("Error in handleBuyCourse:", error);
-      Toast.show({
-        type: "error",
-        text1: "Buy Failed",
-        text2: error.message || "Something went wrong",
-      });
+
+      // Xử lý lỗi không đủ tiền
+      if (error.message && error.message.includes("Insufficient balance")) {
+        console.log("Insufficient balance, showing confirm modal");
+        setShowConfirmModal(true);
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Buy Failed",
+          text2: error.message || "Something went wrong",
+        });
+      }
+    } finally {
+      // 3. LUÔN LUÔN RESET TRẠNG THÁI Ở ĐÂY
       setLoading(false);
+      isProcessing.current = false;
+      console.log("Transaction lock released");
     }
   };
 
@@ -690,13 +665,18 @@ export default function CourseDetailScreen() {
               <Pressable
                 style={courseDetailStyles.cancelButton}
                 onPress={handleCancelPurchase}
+                disabled={loading}
               >
                 <Text style={courseDetailStyles.cancelButtonText}>Cancel</Text>
               </Pressable>
 
               <Pressable
-                style={courseDetailStyles.confirmButton}
+                style={[
+                  courseDetailStyles.confirmButton,
+                  loading && { opacity: 0.6 }
+                ]}
                 onPress={handleBuyCourse}
+                disabled={loading}
               >
                 <LinearGradient
                   colors={["#2348bfff", "#1e40afff"]}
@@ -704,9 +684,13 @@ export default function CourseDetailScreen() {
                   end={{ x: 1, y: 0 }}
                   style={courseDetailStyles.confirmButtonGradient}
                 >
-                  <Text style={courseDetailStyles.confirmButtonText}>
-                    Confirm
-                  </Text>
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={courseDetailStyles.confirmButtonText}>
+                      Confirm
+                    </Text>
+                  )}
                 </LinearGradient>
               </Pressable>
             </View>
