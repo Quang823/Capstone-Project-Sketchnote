@@ -174,6 +174,7 @@ export default function OrderHistoryScreen() {
         text1: "Feedback Submitted",
         text2: "Thank you for sharing your experience!",
       });
+      closeFeedbackModal();
 
     } catch (error) {
       console.error("Error creating feedback:", error.message);

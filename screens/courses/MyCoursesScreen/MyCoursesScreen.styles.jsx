@@ -1,7 +1,7 @@
 import { StyleSheet, Dimensions } from "react-native";
 
 const { width } = Dimensions.get("window");
-const cardWidth = (width - 32) / 3; // 3 columns
+const cardWidth = (width - 32) / 4; // 4 columns
 
 export const myCoursesStyles = StyleSheet.create({
   container: {
@@ -151,7 +151,7 @@ export const myCoursesStyles = StyleSheet.create({
   imageContainer: {
     position: "relative",
     width: "100%",
-    height: 140,
+    height: 120,
     backgroundColor: "#E2E8F0",
   },
   imageContainerDark: {
@@ -172,16 +172,18 @@ export const myCoursesStyles = StyleSheet.create({
     padding: 12,
   },
 
-  // Category Badge on Image
+  // Category Badge on Top-Left
   categoryBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
     backgroundColor: "rgba(8, 79, 140, 0.95)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 3,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -190,7 +192,7 @@ export const myCoursesStyles = StyleSheet.create({
   },
   categoryText: {
     color: "#FFFFFF",
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.5,
     textTransform: "uppercase",
@@ -199,19 +201,19 @@ export const myCoursesStyles = StyleSheet.create({
   // Floating Feedback Button
   feedbackButtonFloat: {
     position: "absolute",
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    top: 8,
+    right: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   feedbackButtonFloatDark: {
     backgroundColor: "rgba(30, 41, 59, 0.95)",
@@ -219,25 +221,25 @@ export const myCoursesStyles = StyleSheet.create({
 
   // Course Info
   courseInfo: {
-    padding: 14,
+    padding: 12,
   },
   courseTitle: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
     color: "#0F172A",
-    lineHeight: 20,
+    lineHeight: 18,
     letterSpacing: -0.2,
-    marginBottom: 6,
-    minHeight: 40,
+    marginBottom: 5,
+    minHeight: 36,
   },
   courseTitleDark: {
     color: "#F1F5F9",
   },
   courseSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#64748B",
-    marginBottom: 10,
-    lineHeight: 16,
+    marginBottom: 8,
+    lineHeight: 14,
   },
   courseSubtitleDark: {
     color: "#94A3B8",
@@ -247,11 +249,11 @@ export const myCoursesStyles = StyleSheet.create({
   metaContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    marginBottom: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     backgroundColor: "#F8FAFC",
-    borderRadius: 10,
+    borderRadius: 8,
   },
   metaContainerDark: {
     backgroundColor: "#0F172A",
@@ -271,7 +273,7 @@ export const myCoursesStyles = StyleSheet.create({
     backgroundColor: "#475569",
   },
   metaText: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#64748B",
     fontWeight: "600",
   },
@@ -281,14 +283,14 @@ export const myCoursesStyles = StyleSheet.create({
 
   // Premium Progress
   progressSection: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   progressBarContainer: {
-    height: 6,
+    height: 5,
     backgroundColor: "#E2E8F0",
-    borderRadius: 10,
+    borderRadius: 8,
     overflow: "hidden",
-    marginBottom: 6,
+    marginBottom: 5,
   },
   progressBarContainerDark: {
     backgroundColor: "#334155",
@@ -303,7 +305,7 @@ export const myCoursesStyles = StyleSheet.create({
     shadowRadius: 4,
   },
   progressText: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#64748B",
     fontWeight: "600",
     textAlign: "right",
@@ -317,21 +319,21 @@ export const myCoursesStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 5,
     backgroundColor: "#084F8C",
-    paddingVertical: 11,
-    borderRadius: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
     shadowColor: "#084F8C",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   continueButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "700",
     color: "#FFFFFF",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
 
   // Premium Empty State
@@ -402,10 +404,12 @@ export const myCoursesStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Premium Modal
+  // Compact Modal
   modalOverlay: {
     flex: 1,
-    justifyContent: "flex-end",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(15, 23, 42, 0.75)",
   },
   modalBackdrop: {
     position: "absolute",
@@ -413,86 +417,82 @@ export const myCoursesStyles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(15, 23, 42, 0.7)",
   },
   modalContent: {
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 28,
-    paddingBottom: 36,
-    maxHeight: "90%",
+    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 24,
+    width: "85%",
+    maxWidth: 420,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 25,
+    elevation: 15,
   },
   modalContentDark: {
     backgroundColor: "#1E293B",
   },
 
-  // Modal Header
+  // Compact Modal Header
   modalHeader: {
     alignItems: "center",
-    marginBottom: 32,
-    paddingBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
+    marginBottom: 20,
     position: "relative",
   },
   modalHeaderDark: {
-    borderBottomColor: "#334155",
+    borderBottomColor: "transparent",
   },
   modalIconContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   modalIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#EFF6FF",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#084F8C",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowRadius: 10,
     elevation: 4,
   },
   modalIconDark: {
     backgroundColor: "#0F172A",
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: "800",
+    fontSize: 20,
+    fontWeight: "700",
     color: "#0F172A",
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   modalTitleDark: {
     color: "#FFFFFF",
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#64748B",
     fontWeight: "500",
     textAlign: "center",
-    paddingHorizontal: 20,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   modalSubtitleDark: {
     color: "#94A3B8",
   },
   closeButton: {
     position: "absolute",
-    top: 0,
-    right: 0,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#F8FAFC",
+    top: -8,
+    right: -8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -500,30 +500,30 @@ export const myCoursesStyles = StyleSheet.create({
     backgroundColor: "#334155",
   },
 
-  // Section
+  // Compact Section
   section: {
-    marginBottom: 28,
+    marginBottom: 20,
   },
   sectionLabel: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
     color: "#0F172A",
-    marginBottom: 16,
+    marginBottom: 10,
     letterSpacing: 0.2,
   },
   sectionLabelDark: {
     color: "#F1F5F9",
   },
 
-  // Premium Star Rating
+  // Compact Star Rating
   starsContainer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 20,
+    gap: 8,
+    paddingVertical: 12,
     backgroundColor: "#F8FAFC",
-    borderRadius: 20,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
@@ -532,53 +532,47 @@ export const myCoursesStyles = StyleSheet.create({
     borderColor: "#334155",
   },
   starButton: {
-    padding: 8,
-    borderRadius: 12,
+    padding: 4,
   },
   ratingBadge: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    marginTop: 16,
+    marginTop: 10,
     backgroundColor: "#FFF7ED",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     alignSelf: "center",
-    shadowColor: "#EA580C",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
   },
   ratingBadgeDark: {
     backgroundColor: "#7c2d12",
   },
   ratingEmoji: {
-    fontSize: 24,
+    fontSize: 18,
   },
   ratingText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "700",
     color: "#EA580C",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   ratingTextDark: {
     color: "#fdba74",
   },
 
-  // Premium Comment Input
+  // Compact Comment Input
   commentInput: {
     backgroundColor: "#F8FAFC",
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "#E2E8F0",
-    borderRadius: 20,
-    padding: 18,
-    fontSize: 15,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 13,
     color: "#0F172A",
-    minHeight: 140,
-    lineHeight: 22,
+    minHeight: 80,
+    lineHeight: 18,
     fontWeight: "500",
   },
   commentInputDark: {
@@ -587,38 +581,38 @@ export const myCoursesStyles = StyleSheet.create({
     color: "#F1F5F9",
   },
   charCount: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#94A3B8",
     textAlign: "right",
-    marginTop: 8,
+    marginTop: 4,
     fontWeight: "600",
   },
 
-  // Premium Action Buttons
+  // Compact Action Buttons
   buttonRow: {
     flexDirection: "row",
     gap: 12,
-    marginTop: 12,
+    marginTop: 4,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 18,
-    borderRadius: 16,
-    borderWidth: 2,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: "#E2E8F0",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
   },
   cancelButtonDark: {
     backgroundColor: "#0F172A",
     borderColor: "#334155",
   },
   cancelButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
     color: "#64748B",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   cancelButtonTextDark: {
     color: "#94A3B8",
@@ -626,17 +620,17 @@ export const myCoursesStyles = StyleSheet.create({
   submitButton: {
     flex: 1,
     flexDirection: "row",
-    paddingVertical: 18,
-    borderRadius: 16,
+    paddingVertical: 13,
+    borderRadius: 12,
     backgroundColor: "#084F8C",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 6,
     shadowColor: "#084F8C",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   submitButtonDisabled: {
     backgroundColor: "#CBD5E1",
@@ -647,9 +641,9 @@ export const myCoursesStyles = StyleSheet.create({
     backgroundColor: "#334155",
   },
   submitButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
     color: "#FFFFFF",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
 });

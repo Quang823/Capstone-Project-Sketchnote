@@ -14,7 +14,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { lessonStyles } from "./LessonScreen.styles";
 import { courseService } from "../../../service/courseService";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import YoutubePlayer from "react-native-youtube-iframe";
+import { Video, ResizeMode } from "expo-av";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import Toast from "react-native-toast-message";
@@ -58,8 +58,10 @@ export default function LessonScreen() {
   const [videoDuration, setVideoDuration] = useState(0);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false); // For phone modal
+  const [videoStatus, setVideoStatus] = useState({}); // Video playback status
   const videoRef = useRef(null);
   const progressIntervalRef = useRef(null);
+  const lastSavedPositionRef = useRef(0); // Track last saved position to avoid duplicate saves
 
   // Fetch course enrollment data with lessons
   const fetchCourseData = useCallback(async () => {
@@ -223,6 +225,80 @@ export default function LessonScreen() {
     }
   }, [currentLesson, saving, currentLessonIndex, lessons, courseId, fetchCourseData]);
 
+  // Handle video playback status update from expo-av
+  const onPlaybackStatusUpdate = useCallback(async (status) => {
+    setVideoStatus(status);
+    
+    if (!status.isLoaded) return;
+    
+    // Update progress states
+    if (status.durationMillis) {
+      setVideoDuration(Math.floor(status.durationMillis / 1000));
+    }
+    if (status.positionMillis) {
+      setVideoProgress(Math.floor(status.positionMillis / 1000));
+    }
+    setIsVideoPlaying(status.isPlaying);
+
+    // Auto-save progress periodically (every 10 seconds of video watched)
+    const currentPosition = Math.floor(status.positionMillis / 1000);
+    if (
+      currentLesson &&
+      currentLesson.lessonProgressStatus !== "COMPLETED" &&
+      currentPosition > 0 &&
+      currentPosition - lastSavedPositionRef.current >= 10
+    ) {
+      lastSavedPositionRef.current = currentPosition;
+      try {
+        const progressData = {
+          lastPosition: currentPosition,
+          timeSpent: currentPosition,
+          completed: false,
+        };
+        await courseService.saveLessonProgress(
+          courseId,
+          currentLesson.lessonId,
+          progressData
+        );
+      } catch (err) {
+        console.error("Error auto-saving progress:", err);
+      }
+    }
+
+    // Handle video ended
+    if (status.didJustFinish && !status.isLooping) {
+      onVideoStateChange("ended");
+    }
+  }, [currentLesson, courseId, onVideoStateChange]);
+
+  // Reset video states when lesson changes
+  useEffect(() => {
+    setVideoProgress(0);
+    setVideoDuration(0);
+    setVideoStatus({});
+    lastSavedPositionRef.current = 0;
+    
+    // Seek to last position if lesson has progress
+    if (currentLesson?.lastPosition > 0 && videoRef.current) {
+      setTimeout(async () => {
+        try {
+          await videoRef.current.setPositionAsync(currentLesson.lastPosition * 1000);
+        } catch (err) {
+          console.error("Error seeking to last position:", err);
+        }
+      }, 500);
+    }
+  }, [currentLessonIndex, currentLesson?.lessonId]);
+
+  // Check if video URL is a Cloudinary/direct video URL (not YouTube)
+  const isDirectVideoUrl = (url) => {
+    if (!url) return false;
+    return url.includes("cloudinary.com") || 
+           url.endsWith(".mp4") || 
+           url.endsWith(".webm") ||
+           url.endsWith(".mov");
+  };
+
   // Save lesson progress and mark as complete (manual button)
   const handleCompleteLesson = async () => {
     if (!currentLesson || saving) return;
@@ -328,19 +404,8 @@ export default function LessonScreen() {
       .padStart(2, "0")}`;
   };
 
-  // Get YouTube video ID from URL
-  const getYouTubeVideoId = (url) => {
-    if (!url) return null;
-    const regex =
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const match = url.match(regex);
-    return match ? match[1] : null;
-  };
-
-  // Get current video ID
-  const currentVideoId = currentLesson?.videoUrl 
-    ? getYouTubeVideoId(currentLesson.videoUrl) 
-    : null;
+  // Check if current lesson has a valid video URL
+  const hasVideoUrl = currentLesson?.videoUrl && currentLesson.videoUrl.length > 0;
 
   // Get lesson status icon and color
   const getLessonStatusIcon = (lesson, index) => {
@@ -425,24 +490,7 @@ export default function LessonScreen() {
       </View>
 
       {/* Course Progress Overview */}
-      <View style={lessonStyles.overviewItem}>
-        <Text style={lessonStyles.overviewText}>
-          Progress: {progressPercent.toFixed(1)}%
-        </Text>
-        <View style={[lessonStyles.progressBar, { marginTop: 8 }]}>
-          <View
-            style={[
-              lessonStyles.progressFill,
-              { width: `${progressPercent}%` },
-            ]}
-          />
-        </View>
-        <Text
-          style={[lessonStyles.overviewText, { marginTop: 6, fontSize: 12 }]}
-        >
-          {completedLessonsCount} / {lessons.length} lessons completed
-        </Text>
-      </View>
+      {/*   */}
 
       {/* Lessons List */}
       <ScrollView style={lessonStyles.sidebarScroll}>
@@ -658,31 +706,49 @@ export default function LessonScreen() {
           )}
 
           {/* Video Player */}
-          {currentVideoId ? (
+          {hasVideoUrl ? (
             <View
               style={[
                 lessonStyles.playerWrap,
                 { width: playerWidth, height: playerHeight },
               ]}
             >
-              <YoutubePlayer
+              <Video
                 ref={videoRef}
-                height={playerHeight}
-                width={playerWidth}
-                play={false}
-                videoId={currentVideoId}
-                onChangeState={onVideoStateChange}
-                webViewStyle={{ backgroundColor: "#000000" }}
-                webViewProps={{ 
-                  allowsFullscreenVideo: true,
-                  allowsInlineMediaPlayback: true,
-                }}
-                initialPlayerParams={{
-                  preventFullScreen: false,
-                  modestbranding: true,
-                  rel: false,
-                }}
+                source={{ uri: currentLesson.videoUrl }}
+                style={{ width: playerWidth, height: playerHeight, borderRadius: 12 }}
+                useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
+                isLooping={false}
+                onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+                shouldPlay={false}
+                positionMillis={currentLesson?.lastPosition ? currentLesson.lastPosition * 1000 : 0}
               />
+              {/* Video Progress Info */}
+              {videoStatus.isLoaded && (
+                <View style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 8,
+                  paddingTop: 8,
+                }}>
+                  <Text style={{ fontSize: 12, color: '#64748B' }}>
+                    {formatDuration(videoProgress)} / {formatDuration(videoDuration || currentLesson?.duration)}
+                  </Text>
+                  {isVideoPlaying && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: '#22C55E',
+                        marginRight: 4,
+                      }} />
+                      <Text style={{ fontSize: 12, color: '#22C55E' }}>Playing</Text>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
           ) : (
             <View
