@@ -1,429 +1,586 @@
 import { StyleSheet } from 'react-native';
 
-export const lessonStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-  },
+// Light theme colors
+const lightColors = {
+  background: '#FFFFFF',
+  sidebarBg: '#FFFFFF',
+  sidebarBorder: '#E5E7EB',
+  sidebarHeaderBg: '#FFFFFF',
+  sidebarHeaderText: '#1E293B',
+  backButtonBg: '#F1F5F9',
+  backButtonIcon: '#111827',
+  overviewBg: '#F8FAFC',
+  overviewText: '#64748B',
+  sidebarItemBg: '#FFFFFF',
+  sidebarItemActiveBg: '#0EA5E9',
+  sidebarItemText: '#334155',
+  sidebarItemTextActive: '#FFFFFF',
+  sidebarItemLockedBg: '#FAFAFA',
+  sidebarItemTextLocked: '#94A3B8',
+  sidebarItemExpandedBg: '#F8FAFC',
+  sidebarItemContent: '#64748B',
+  sidebarMetaText: '#64748B',
+  progressCircleInnerBg: '#DCFCE7',
+  progressCircleInnerBorder: '#22C55E',
+  progressCircleIcon: '#22C55E',
+  playButtonBg: '#0EA5E9',
+  playButtonText: '#FFFFFF',
+  playButtonLockedBg: '#E2E8F0',
+  playButtonTextLocked: '#94A3B8',
+  mainContentBg: '#FFFFFF',
+  headerBg: '#FFFFFF',
+  headerBorder: '#E5E7EB',
+  headerTitle: '#1E293B',
+  iconButtonBg: '#F1F5F9',
+  iconButtonText: '#334155',
+  progressContainerBg: '#F8FAFC',
+  progressContainerBorder: '#E5E7EB',
+  progressBarBg: '#E2E8F0',
+  progressFill: '#0EA5E9',
+  progressText: '#0EA5E9',
+  lessonMainTitle: '#1E293B',
+  playerWrapBg: '#0F172A',
+  noVideoPlaceholderBg: '#1E293B',
+  noVideoText: '#94A3B8',
+  tabsBorder: '#E5E7EB',
+  tabText: '#64748B',
+  tabTextActive: '#0EA5E9',
+  tabActiveBorder: '#0EA5E9',
+  contentText: '#475569',
+  navButtonBg: '#FFFFFF', // Previous button bg
+  navButtonBorder: '#0EA5E9',
+  navButtonText: '#0EA5E9',
+  navButtonTextDisabled: '#94A3B8',
+  completeButtonBg: '#0EA5E9',
+  completeButtonText: '#FFFFFF',
+  completedBannerBg: '#ECFDF5',
+  completedBannerBorder: '#A7F3D0',
+  completedBannerIconBg: '#22C55E',
+  completedBannerTitle: '#166534',
+  completedBannerText: '#15803D',
+  loadingBg: '#FFFFFF',
+  loadingText: '#475569',
+  errorBg: '#FFFFFF',
+  errorText: '#DC2626',
+  retryButtonBg: '#0EA5E9',
+  retryButtonText: '#FFFFFF',
+  menuIcon: '#1E293B',
+  checkIcon: '#22C55E',
+  lockIcon: '#9CA3AF',
+  playIcon: '#2563EB',
+  inProgressIcon: '#F59E0B',
+};
 
-  // Left Sidebar - Coursera Style
-  sidebar: {
-    backgroundColor: '#FFFFFF',
-    borderRightWidth: 1,
-    borderRightColor: '#E5E7EB',
-  },
-  sidebarHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 24,
-    gap: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  backButton: {
-    padding: 10,
-    borderRadius: 50,
-    backgroundColor: '#F1F5F9',
-  },
-  sidebarHeaderText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1E293B',
-  },
-  sidebarScroll: {
-    flex: 1,
-  },
-  overviewItem: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: '#F8FAFC',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  overviewText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  sidebarItem: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: '#FFFFFF',
-  },
-  sidebarItemActive: {
-    backgroundColor: '#0EA5E9',
-  },
-  sidebarItemText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#334155',
-    lineHeight: 21,
-  },
-  sidebarItemTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  sidebarItemLocked: {
-    backgroundColor: '#FAFAFA',
-  },
-  sidebarItemTextLocked: {
-    color: '#94A3B8',
-  },
-  sidebarItemContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  sidebarItemExpanded: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingTop: 0,
-    backgroundColor: '#F8FAFC',
-  },
-  sidebarItemContent: {
-    fontSize: 13,
-    lineHeight: 21,
-    color: '#64748B',
-    marginBottom: 16,
-  },
-  sidebarItemMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  sidebarMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sidebarMetaText: {
-    fontSize: 13,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  
-  // Progress Circle - Coursera Style
-  progressCircleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  progressCircleInner: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#DCFCE7',
-    borderWidth: 2.5,
-    borderColor: '#22C55E',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressCirclePercent: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#16A34A',
-  },
-  
-  // Play Button - Coursera Style
-  sidebarPlayButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    backgroundColor: '#0EA5E9',
-    borderRadius: 8,
-  },
-  sidebarPlayText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  sidebarPlayButtonLocked: {
-    backgroundColor: '#E2E8F0',
-  },
-  sidebarPlayTextLocked: {
-    color: '#94A3B8',
-  },
+// Dark theme colors
+const darkColors = {
+  background: '#0F172A',
+  sidebarBg: '#1E293B',
+  sidebarBorder: '#334155',
+  sidebarHeaderBg: '#1E293B',
+  sidebarHeaderText: '#F1F5F9',
+  backButtonBg: '#334155',
+  backButtonIcon: '#F1F5F9',
+  overviewBg: '#0F172A',
+  overviewText: '#94A3B8',
+  sidebarItemBg: '#1E293B',
+  sidebarItemActiveBg: '#0EA5E9',
+  sidebarItemText: '#CBD5E1',
+  sidebarItemTextActive: '#FFFFFF',
+  sidebarItemLockedBg: '#1E293B', // Same as bg for cleaner look
+  sidebarItemTextLocked: '#475569',
+  sidebarItemExpandedBg: '#0F172A',
+  sidebarItemContent: '#94A3B8',
+  sidebarMetaText: '#94A3B8',
+  progressCircleInnerBg: '#064E3B',
+  progressCircleInnerBorder: '#22C55E',
+  progressCircleIcon: '#22C55E',
+  playButtonBg: '#0EA5E9',
+  playButtonText: '#FFFFFF',
+  playButtonLockedBg: '#334155',
+  playButtonTextLocked: '#64748B',
+  mainContentBg: '#0F172A',
+  headerBg: '#1E293B',
+  headerBorder: '#334155',
+  headerTitle: '#F1F5F9',
+  iconButtonBg: '#334155',
+  iconButtonText: '#CBD5E1',
+  progressContainerBg: '#1E293B',
+  progressContainerBorder: '#334155',
+  progressBarBg: '#334155',
+  progressFill: '#0EA5E9',
+  progressText: '#38BDF8',
+  lessonMainTitle: '#F1F5F9',
+  playerWrapBg: '#020617',
+  noVideoPlaceholderBg: '#020617',
+  noVideoText: '#64748B',
+  tabsBorder: '#334155',
+  tabText: '#94A3B8',
+  tabTextActive: '#38BDF8',
+  tabActiveBorder: '#38BDF8',
+  contentText: '#CBD5E1',
+  navButtonBg: '#1E293B', // Previous button bg
+  navButtonBorder: '#38BDF8',
+  navButtonText: '#38BDF8',
+  navButtonTextDisabled: '#475569',
+  completeButtonBg: '#0EA5E9',
+  completeButtonText: '#FFFFFF',
+  completedBannerBg: '#064E3B',
+  completedBannerBorder: '#065F46',
+  completedBannerIconBg: '#22C55E',
+  completedBannerTitle: '#4ADE80',
+  completedBannerText: '#86EFAC',
+  loadingBg: '#0F172A',
+  loadingText: '#94A3B8',
+  errorBg: '#0F172A',
+  errorText: '#EF4444',
+  retryButtonBg: '#0EA5E9',
+  retryButtonText: '#FFFFFF',
+  menuIcon: '#F1F5F9',
+  checkIcon: '#22C55E',
+  lockIcon: '#475569',
+  playIcon: '#60A5FA',
+  inProgressIcon: '#FBBF24',
+};
 
-  // Main Content - Coursera Style
-  mainContent: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 28,
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E293B',
-    flex: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  iconButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    padding: 10,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-  },
-  iconButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#334155',
-  },
+export const getStyles = (theme = 'light') => {
+  const colors = theme === 'dark' ? darkColors : lightColors;
 
-  // Progress Bar - Coursera Style
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 28,
-    paddingVertical: 16,
-    gap: 16,
-    backgroundColor: '#F8FAFC',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  progressBar: {
-    flex: 1,
-    height: 6,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#0EA5E9',
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0EA5E9',
-    minWidth: 48,
-  },
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      flexDirection: 'row',
+      backgroundColor: colors.background,
+    },
 
-  // Content Scroll
-  contentScroll: {
-    flex: 1,
-    paddingHorizontal: 28,
-  },
-  lessonMainTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginTop: 24,
-    marginBottom: 20,
-    lineHeight: 32,
-  },
+    // Left Sidebar
+    sidebar: {
+      backgroundColor: colors.sidebarBg,
+      borderRightWidth: 1,
+      borderRightColor: colors.sidebarBorder,
+    },
+    sidebarHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 20,
+      paddingTop: 40,
+      gap: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.sidebarBorder,
+      backgroundColor: colors.sidebarHeaderBg,
+    },
+    backButton: {
+      padding: 10,
+      borderRadius: 50,
+      backgroundColor: colors.backButtonBg,
+    },
+    sidebarHeaderText: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.sidebarHeaderText,
+    },
+    sidebarScroll: {
+      flex: 1,
+    },
+    overviewItem: {
+      paddingVertical: 16,
+      paddingHorizontal: 20,
+      backgroundColor: colors.overviewBg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.sidebarBorder,
+    },
+    overviewText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.overviewText,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    sidebarItem: {
+      paddingVertical: 16,
+      paddingHorizontal: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      backgroundColor: colors.sidebarItemBg,
+    },
+    sidebarItemActive: {
+      backgroundColor: colors.sidebarItemActiveBg,
+    },
+    sidebarItemText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.sidebarItemText,
+      lineHeight: 21,
+    },
+    sidebarItemTextActive: {
+      color: colors.sidebarItemTextActive,
+      fontWeight: '600',
+    },
+    sidebarItemLocked: {
+      backgroundColor: colors.sidebarItemLockedBg,
+    },
+    sidebarItemTextLocked: {
+      color: colors.sidebarItemTextLocked,
+    },
+    sidebarItemContainer: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.sidebarBorder,
+    },
+    sidebarItemExpanded: {
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      paddingTop: 0,
+      backgroundColor: colors.sidebarItemExpandedBg,
+    },
+    sidebarItemContent: {
+      fontSize: 13,
+      lineHeight: 21,
+      color: colors.sidebarItemContent,
+      marginBottom: 16,
+    },
+    sidebarItemMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+    },
+    sidebarMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    sidebarMetaText: {
+      fontSize: 13,
+      color: colors.sidebarMetaText,
+      fontWeight: '500',
+    },
 
-  // Video Player - Coursera Style
-  playerWrap: {
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  noVideoPlaceholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1E293B',
-  },
-  noVideoText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#94A3B8',
-  },
+    // Progress Circle
+    progressCircleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    progressCircleInner: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.progressCircleInnerBg,
+      borderWidth: 2.5,
+      borderColor: colors.progressCircleInnerBorder,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    progressCirclePercent: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.progressCircleIcon,
+    },
 
-  // Tabs - Coursera Style
-  tabs: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    marginBottom: 24,
-  },
-  tab: {
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    marginRight: 4,
-  },
-  tabActive: {
-    borderBottomWidth: 3,
-    borderBottomColor: '#0EA5E9',
-    marginBottom: -1,
-  },
-  tabText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  tabTextActive: {
-    color: '#0EA5E9',
-    fontWeight: '600',
-  },
+    // Play Button
+    sidebarPlayButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      paddingVertical: 14,
+      paddingHorizontal: 24,
+      backgroundColor: colors.playButtonBg,
+      borderRadius: 8,
+    },
+    sidebarPlayText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.playButtonText,
+    },
+    sidebarPlayButtonLocked: {
+      backgroundColor: colors.playButtonLockedBg,
+    },
+    sidebarPlayTextLocked: {
+      color: colors.playButtonTextLocked,
+    },
 
-  // Tab Content
-  tabContent: {
-    marginBottom: 32,
-    paddingBottom: 16,
-  },
-  contentText: {
-    fontSize: 15,
-    lineHeight: 26,
-    color: '#475569',
-  },
+    // Main Content
+    mainContent: {
+      flex: 1,
+      backgroundColor: colors.mainContentBg,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 28,
+      paddingTop: 40,
+      paddingVertical: 18,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.headerBorder,
+      backgroundColor: colors.headerBg,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: colors.headerTitle,
+      flex: 1,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+    },
+    iconButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      padding: 10,
+      backgroundColor: colors.iconButtonBg,
+      borderRadius: 8,
+    },
+    iconButtonText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.iconButtonText,
+    },
 
-  // Navigation Buttons - Coursera Style
-  navigationButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingBottom: 40,
-    gap: 16,
-  },
-  navButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    gap: 8,
-  },
-  previousButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#0EA5E9',
-    minWidth: 140,
-  },
-  navButtonDisabled: {
-    opacity: 0.4,
-  },
-  navButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  previousButtonText: {
-    color: '#0EA5E9',
-  },
-  navButtonTextDisabled: {
-    color: '#94A3B8',
-  },
-  completeButton: {
-    backgroundColor: '#0EA5E9',
-    flex: 1,
-    maxWidth: 220,
-  },
-  completeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
+    // Progress Bar
+    progressContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 28,
+      paddingVertical: 16,
+      gap: 16,
+      backgroundColor: colors.progressContainerBg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.progressContainerBorder,
+    },
+    progressBar: {
+      flex: 1,
+      height: 6,
+      backgroundColor: colors.progressBarBg,
+      borderRadius: 3,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      backgroundColor: colors.progressFill,
+      borderRadius: 3,
+    },
+    progressText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.progressText,
+      minWidth: 48,
+    },
 
-  // Course Completed Banner
-  completedBanner: {
-    backgroundColor: '#ECFDF5',
-    borderRadius: 12,
-    padding: 28,
-    marginBottom: 28,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  completedBannerIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#22C55E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  completedBannerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#166534',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  completedBannerText: {
-    fontSize: 15,
-    color: '#15803D',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+    // Content Scroll
+    contentScroll: {
+      flex: 1,
+      paddingHorizontal: 28,
+    },
+    lessonMainTitle: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: colors.lessonMainTitle,
+      marginTop: 24,
+      marginBottom: 20,
+      lineHeight: 32,
+    },
 
-  // Loading & Error - Coursera Style
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#475569',
-    fontWeight: '500',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 32,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#DC2626',
-    marginTop: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  warningText: {
-    fontSize: 14,
-    color: '#F59E0B',
-  },
-  retryButton: {
-    marginTop: 24,
-    backgroundColor: '#0EA5E9',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-});
+    // Video Player
+    playerWrap: {
+      backgroundColor: colors.playerWrapBg,
+      borderRadius: 12,
+      overflow: 'hidden',
+      marginBottom: 28,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 6,
+    },
+    noVideoPlaceholder: {
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.noVideoPlaceholderBg,
+    },
+    noVideoText: {
+      marginTop: 12,
+      fontSize: 14,
+      color: colors.noVideoText,
+    },
+
+    // Tabs
+    tabs: {
+      flexDirection: 'row',
+      borderBottomWidth: 1,
+      borderBottomColor: colors.tabsBorder,
+      marginBottom: 24,
+    },
+    tab: {
+      paddingVertical: 14,
+      paddingHorizontal: 24,
+      marginRight: 4,
+    },
+    tabActive: {
+      borderBottomWidth: 3,
+      borderBottomColor: colors.tabActiveBorder,
+      marginBottom: -1,
+    },
+    tabText: {
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.tabText,
+    },
+    tabTextActive: {
+      color: colors.tabTextActive,
+      fontWeight: '600',
+    },
+
+    // Tab Content
+    tabContent: {
+      marginBottom: 32,
+      paddingBottom: 16,
+    },
+    contentText: {
+      fontSize: 15,
+      lineHeight: 26,
+      color: colors.contentText,
+    },
+
+    // Navigation Buttons
+    navigationButtons: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 24,
+      paddingBottom: 40,
+      gap: 16,
+    },
+    navButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      gap: 8,
+    },
+    previousButton: {
+      backgroundColor: colors.navButtonBg,
+      borderWidth: 2,
+      borderColor: colors.navButtonBorder,
+      minWidth: 140,
+    },
+    navButtonDisabled: {
+      opacity: 0.4,
+    },
+    navButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+    },
+    previousButtonText: {
+      color: colors.navButtonText,
+    },
+    navButtonTextDisabled: {
+      color: colors.navButtonTextDisabled,
+    },
+    completeButton: {
+      backgroundColor: colors.completeButtonBg,
+      flex: 1,
+      maxWidth: 220,
+    },
+    completeButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.completeButtonText,
+    },
+
+    // Course Completed Banner
+    completedBanner: {
+      backgroundColor: colors.completedBannerBg,
+      borderRadius: 12,
+      padding: 28,
+      marginBottom: 28,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.completedBannerBorder,
+    },
+    completedBannerIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.completedBannerIconBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    completedBannerTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: colors.completedBannerTitle,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    completedBannerText: {
+      fontSize: 15,
+      color: colors.completedBannerText,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+
+    // Loading & Error
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.loadingBg,
+    },
+    loadingText: {
+      marginTop: 16,
+      fontSize: 16,
+      color: colors.loadingText,
+      fontWeight: '500',
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.errorBg,
+      paddingHorizontal: 32,
+    },
+    errorText: {
+      fontSize: 16,
+      color: colors.errorText,
+      marginTop: 16,
+      textAlign: 'center',
+      lineHeight: 24,
+    },
+    warningText: {
+      fontSize: 14,
+      color: '#F59E0B',
+    },
+    retryButton: {
+      marginTop: 24,
+      backgroundColor: colors.retryButtonBg,
+      paddingHorizontal: 32,
+      paddingVertical: 14,
+      borderRadius: 8,
+    },
+    retryButtonText: {
+      color: colors.retryButtonText,
+      fontSize: 15,
+      fontWeight: '600',
+    },
+
+    // Colors for inline usage
+    backButtonIcon: colors.backButtonIcon,
+    menuIcon: colors.menuIcon,
+    checkIcon: colors.checkIcon,
+    lockIcon: colors.lockIcon,
+    playIcon: colors.playIcon,
+    inProgressIcon: colors.inProgressIcon,
+    sidebarMetaIcon: colors.sidebarMetaText,
+    noVideoIcon: colors.noVideoText,
+  });
+};

@@ -6,7 +6,6 @@ import {
   Pressable,
   ActivityIndicator,
   Dimensions,
-  StyleSheet,
   StatusBar,
   Animated,
 } from "react-native";
@@ -14,6 +13,8 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import LazyImage from "../../../common/LazyImage";
 import { orderService } from "../../../service/orderService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
+import { useTheme } from "../../../context/ThemeContext";
+import getStyles from "./GalleryScreen.styles";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -23,513 +24,266 @@ const isImageUrl = (url) => {
   return /\.(png|jpg|jpeg|webp|gif|svg)$/i.test(u);
 };
 
+const FILTERS = [
+  { key: "ALL", label: "All", icon: "grid-view" },
+  { key: "TEMPLATES", label: "Templates", icon: "dashboard" },
+  { key: "ICONS", label: "Icons", icon: "category" },
+  { key: "RECENT", label: "Recent", icon: "schedule" },
+];
+
 export default function GalleryScreen() {
+  const { theme } = useTheme();
+
+  // Get styles based on theme
+  const styles = getStyles(theme);
+
+  // Theme colors for inline styles
+  const isDark = theme === "dark";
+  const colors = {
+    primaryBlue: isDark ? "#60A5FA" : "#084F8C",
+    primaryWhite: isDark ? "#FFFFFF" : "#0F172A",
+    textMuted: isDark ? "#64748B" : "#94A3B8",
+    textSecondary: isDark ? "#94A3B8" : "#475569",
+    emptyIconColor: isDark ? "#475569" : "#CBD5E1",
+    loadingColor: isDark ? "#60A5FA" : "#084F8C",
+    filterButtonText: isDark ? "#94A3B8" : "#64748B",
+  };
+
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [activeFilter, setActiveFilter] = useState("ALL");
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
-    let mounted = true;
-    const fetchPurchased = async () => {
-      setLoading(true);
-      try {
-        const res = await orderService.getPurchasedTemplates();
-        if (mounted) {
-          setTemplates(Array.isArray(res) ? res : []);
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 600,
-            useNativeDriver: true,
-          }).start();
-        }
-      } catch (err) {
-        if (mounted) setTemplates([]);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    fetchPurchased();
-    return () => {
-      mounted = false;
-    };
+    fetchTemplates();
   }, []);
 
-  const filtered = templates.filter((t) =>
-    activeFilter === "ALL"
-      ? true
-      : String(t.type).toUpperCase() === activeFilter
-  );
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  }, [templates]);
 
-  return (
-    <View style={styles.container}>
-      {/* Premium Header with Gradient Effect */}
-      <View style={styles.header}>
-        <View style={styles.headerGradient} />
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
-            <View>
-              <Text style={styles.headerTitle}>Gallery</Text>
-              <Text style={styles.headerSubtitle}>
-                {filtered.length} resources
+  const fetchTemplates = async () => {
+    setLoading(true);
+    try {
+      const response = await orderService.getPurchasedTemplates();
+      const data = response?.content || response || [];
+      setTemplates(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+      setTemplates([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredTemplates = templates.filter((item) => {
+    if (activeFilter === "ALL") return true;
+    if (activeFilter === "TEMPLATES") return item.type === "TEMPLATES";
+    if (activeFilter === "ICONS") return item.type === "ICONS";
+    if (activeFilter === "RECENT") {
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      return new Date(item.purchaseDate || item.createdAt) >= oneWeekAgo;
+    }
+    return true;
+  });
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const getImageUrl = (item) => {
+    if (item.images && item.images.length > 0) {
+      const thumbnail = item.images.find((img) => img.isThumbnail);
+      return thumbnail?.imageUrl || item.images[0]?.imageUrl;
+    }
+    return item.imageUrl || item.thumbnailUrl;
+  };
+
+  const renderCard = (item, index) => {
+    const imageUrl = getImageUrl(item);
+
+    return (
+      <Animated.View
+        key={item.id || index}
+        style={[
+          styles.card,
+          {
+            opacity: fadeAnim,
+            transform: [
+              {
+                translateY: fadeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <LazyImage
+          source={{ uri: imageUrl }}
+          style={styles.cardImage}
+          resizeMode="cover"
+        />
+        <View style={styles.cardContent}>
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {item.name || "Untitled"}
+          </Text>
+          <Text style={styles.cardSubtitle} numberOfLines={1}>
+            {item.description || "No description"}
+          </Text>
+          <View style={styles.cardFooter}>
+            <Text style={styles.cardDate}>
+              {formatDate(item.purchaseDate || item.createdAt)}
+            </Text>
+            <View style={styles.cardBadge}>
+              <Text style={styles.cardBadgeText}>
+                {item.type === "ICONS" ? "Icon" : "Template"}
               </Text>
             </View>
           </View>
-
-          <View style={styles.headerActions}>
-            <Pressable
-              style={[
-                styles.filterTab,
-                activeFilter === "ALL" && styles.filterTabActive,
-              ]}
-              onPress={() => setActiveFilter("ALL")}
-            >
-              <Icon
-                name="grid-view"
-                size={20}
-                color={activeFilter === "ALL" ? "#FFFFFF" : "#64748B"}
-              />
-              <Text
-                style={[
-                  styles.filterText,
-                  activeFilter === "ALL" && styles.filterTextActive,
-                ]}
-              >
-                All
-              </Text>
+          <View style={styles.cardActions}>
+            <Pressable style={styles.cardActionButton}>
+              <Icon name="visibility" size={14} color={colors.textSecondary} />
+              <Text style={styles.cardActionText}>View</Text>
             </Pressable>
             <Pressable
-              style={[
-                styles.filterTab,
-                activeFilter === "ICONS" && styles.filterTabActive,
-              ]}
-              onPress={() => setActiveFilter("ICONS")}
+              style={[styles.cardActionButton, styles.cardActionButtonPrimary]}
             >
-              <Icon
-                name="photo"
-                size={20}
-                color={activeFilter === "ICONS" ? "#FFFFFF" : "#64748B"}
-              />
+              <Icon name="edit" size={14} color="#FFFFFF" />
               <Text
-                style={[
-                  styles.filterText,
-                  activeFilter === "ICONS" && styles.filterTextActive,
-                ]}
+                style={[styles.cardActionText, styles.cardActionTextPrimary]}
               >
-                Icons
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.filterTab,
-                activeFilter === "TEMPLATES" && styles.filterTabActive,
-              ]}
-              onPress={() => setActiveFilter("TEMPLATES")}
-            >
-              <Icon
-                name="view-quilt"
-                size={20}
-                color={activeFilter === "TEMPLATES" ? "#FFFFFF" : "#64748B"}
-              />
-              <Text
-                style={[
-                  styles.filterText,
-                  activeFilter === "TEMPLATES" && styles.filterTextActive,
-                ]}
-              >
-                Templates
+                Use
               </Text>
             </Pressable>
           </View>
         </View>
+      </Animated.View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={isDark ? "#1E293B" : "#FFFFFF"}
+      />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <SidebarToggleButton iconColor={colors.primaryWhite} iconSize={26} />
+          <Text style={styles.headerTitle}>My Gallery</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <Pressable style={styles.headerButton} onPress={fetchTemplates}>
+            <Icon name="refresh" size={22} color={colors.primaryWhite} />
+          </Pressable>
+        </View>
       </View>
 
+      {/* Stats */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{templates.length}</Text>
+          <Text style={styles.statLabel}>Total Items</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>
+            {templates.filter((t) => t.type === "TEMPLATES").length}
+          </Text>
+          <Text style={styles.statLabel}>Templates</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>
+            {templates.filter((t) => t.type === "ICONS").length}
+          </Text>
+          <Text style={styles.statLabel}>Icons</Text>
+        </View>
+      </View>
+
+      {/* Filters */}
+      <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
+        >
+          {FILTERS.map((filter) => (
+            <Pressable
+              key={filter.key}
+              onPress={() => setActiveFilter(filter.key)}
+              style={[
+                styles.filterButton,
+                activeFilter === filter.key && styles.filterButtonActive,
+              ]}
+            >
+              <Icon
+                name={filter.icon}
+                size={16}
+                color={
+                  activeFilter === filter.key
+                    ? "#FFFFFF"
+                    : colors.filterButtonText
+                }
+              />
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  activeFilter === filter.key && styles.filterButtonTextActive,
+                ]}
+              >
+                {filter.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Content */}
       {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#0862b0ff" />
-          <Text style={styles.loadingText}>Loading resources...</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.loadingColor} />
+          <Text style={styles.loadingText}>Loading your gallery...</Text>
+        </View>
+      ) : filteredTemplates.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Icon
+            name="collections"
+            size={64}
+            color={colors.emptyIconColor}
+            style={styles.emptyIcon}
+          />
+          <Text style={styles.emptyTitle}>No Items Found</Text>
+          <Text style={styles.emptyText}>
+            {activeFilter === "ALL"
+              ? "Your gallery is empty.\nPurchase templates to see them here."
+              : `No ${activeFilter.toLowerCase()} found.\nTry a different filter.`}
+          </Text>
         </View>
       ) : (
-        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={{ paddingBottom: 24 }}
-            showsVerticalScrollIndicator={false}
-          >
-            {filtered.length === 0 ? (
-              <View style={styles.emptyState}>
-                <View style={styles.emptyIconWrapper}>
-                  <Icon name="collections" size={64} color="#0862b0ff" />
-                </View>
-                <Text style={styles.emptyTitle}>No Resources Yet</Text>
-                <Text style={styles.emptyText}>
-                  You haven't purchased any resources. Explore and buy now!
-                </Text>
-              </View>
-            ) : (
-              filtered.map((template) => {
-                const isIcons = String(template.type).toUpperCase() === "ICONS";
-                const cardStyle = isIcons
-                  ? styles.iconCard
-                  : styles.templateCard;
-                return (
-                  <View
-                    key={template.resourceTemplateId}
-                    style={styles.section}
-                  >
-                    <View style={styles.sectionHeader}>
-                      <View style={styles.sectionHeaderLeft}>
-                        <View
-                          style={[
-                            styles.sectionIconWrapper,
-                            isIcons ? styles.iconsBg : styles.templatesBg,
-                          ]}
-                        >
-                          <Icon
-                            name={isIcons ? "photo" : "view-quilt"}
-                            size={20}
-                            color="#FFFFFF"
-                          />
-                        </View>
-                        <View>
-                          <Text style={styles.sectionTitle}>
-                            {template.name}
-                          </Text>
-                          <Text style={styles.sectionSubtitle}>
-                            {template.items?.length || 0} items
-                          </Text>
-                        </View>
-                      </View>
-                      <View
-                        style={[
-                          styles.typeBadge,
-                          isIcons ? styles.badgeIcons : styles.badgeTemplates,
-                        ]}
-                      >
-                        <Text style={styles.typeText}>
-                          {String(template.type).toUpperCase()}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      style={styles.horizontalScroll}
-                      contentContainerStyle={styles.horizontalScrollContent}
-                    >
-                      {(template.items || []).map((item, index) => (
-                        <Pressable
-                          key={
-                            item.resourceItemId ||
-                            `${template.resourceTemplateId}-${index}`
-                          }
-                          style={cardStyle}
-                          android_ripple={{ color: "rgba(8, 98, 176, 0.1)" }}
-                        >
-                          <View style={styles.cardInner}>
-                            {isImageUrl(item.imageUrl || item.itemUrl) ? (
-                              <LazyImage
-                                source={{
-                                  uri: String(item.imageUrl || item.itemUrl)
-                                    .trim()
-                                    .replace(/^`|`$/g, ""),
-                                }}
-                                style={styles.resourceImage}
-                              />
-                            ) : (
-                              <View style={styles.emptyThumb}>
-                                <Icon
-                                  name={isIcons ? "image" : "insert-drive-file"}
-                                  size={40}
-                                  color="#CBD5E1"
-                                />
-                              </View>
-                            )}
-                            <View style={styles.cardOverlay} />
-                            <View style={styles.itemIndexBadge}>
-                              <Text style={styles.itemIndexText}>
-                                #{item.itemIndex ?? index + 1}
-                              </Text>
-                            </View>
-                          </View>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  </View>
-                );
-              })
-            )}
-          </ScrollView>
-        </Animated.View>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.gridContainer}>
+            {filteredTemplates.map((item, index) => renderCard(item, index))}
+          </View>
+        </ScrollView>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F1F5F9",
-  },
-  header: {
-    paddingTop: (StatusBar.currentHeight || 0) + 16,
-    paddingBottom: 20,
-    position: "relative",
-    overflow: "hidden",
-  },
-  headerGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E7FF",
-    shadowColor: "#1E40AF",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  headerContent: {
-    paddingHorizontal: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontFamily: "Pacifico-Regular",
-    color: "#084F8C",
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    color: "#1E40AF",
-    marginTop: 2,
-    fontWeight: "500",
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  filterTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: "#F1F5F9",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  filterTabActive: {
-    backgroundColor: "#0862b0ff",
-    borderColor: "#0862b0ff",
-    shadowColor: "#1E40AF",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  filterText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#64748B",
-  },
-  filterTextActive: {
-    color: "#FFFFFF",
-  },
-  scroll: {
-    flex: 1,
-    padding: 20,
-  },
-  loadingBox: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 16,
-  },
-  loadingText: {
-    fontSize: 15,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 80,
-    paddingHorizontal: 32,
-  },
-  emptyIconWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#EEF2FF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 24,
-  },
-  emptyTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#1E293B",
-    marginBottom: 8,
-  },
-  emptyText: {
-    fontSize: 15,
-    fontWeight: "400",
-    color: "#64748B",
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  section: {
-    marginBottom: 24,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  sectionHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    flex: 1,
-  },
-  sectionIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconsBg: {
-    backgroundColor: "#0862b0ff",
-  },
-  templatesBg: {
-    backgroundColor: "#1065afff",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#0f4085ff",
-    letterSpacing: 0.3,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#64748B",
-    marginTop: 2,
-  },
-  typeBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  badgeIcons: {
-    backgroundColor: "#EEF2FF",
-  },
-  badgeTemplates: {
-    backgroundColor: "#F5F3FF",
-  },
-  typeText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#0862b0ff",
-    letterSpacing: 0.5,
-  },
-  horizontalScroll: {
-    marginTop: 4,
-    marginHorizontal: -4,
-  },
-  horizontalScrollContent: {
-    paddingHorizontal: 4,
-    gap: 14,
-  },
-  iconCard: {
-    width: 130,
-    height: 130,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-  templateCard: {
-    width: 150,
-    height: 150,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-  cardInner: {
-    flex: 1,
-    position: "relative",
-  },
-  resourceImage: {
-    width: "100%",
-    height: "100%",
-  },
-  emptyThumb: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F8FAFC",
-  },
-  cardOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0)",
-  },
-  itemIndexBadge: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  itemIndexText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-});

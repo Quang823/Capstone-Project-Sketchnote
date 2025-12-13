@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,10 +15,11 @@ import { useCallback } from "react";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
-import { designerProductsStyles } from "./DesignerProductsScreen.styles";
+import getStyles from "./DesignerProductsScreen.styles";
 import { resourceService } from "../../../service/resourceService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
+import { useTheme } from "../../../context/ThemeContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -26,6 +27,9 @@ export default function DesignerProductsScreen() {
   const navigation = useNavigation();
   const { setActiveNavItem } = useNavContext();
   const [activeNavItemLocal, setActiveNavItemLocal] = useState("products");
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   useEffect(() => {
     setActiveNavItem("products");
@@ -38,7 +42,7 @@ export default function DesignerProductsScreen() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [loading, setLoading] = useState(false);
-  
+
   // Modal states for confirmations
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -70,7 +74,7 @@ export default function DesignerProductsScreen() {
         sortBy,
         sortDir,
         search || "",
-        null  // Don't filter by isArchived
+        null // Don't filter by isArchived
       );
 
       setProducts(response.content || []);
@@ -117,9 +121,10 @@ export default function DesignerProductsScreen() {
   };
 
   // Client-side filtering by status
-  const filteredProducts = filter === "ALL"
-    ? products
-    : products.filter(product => product.status === filter);
+  const filteredProducts =
+    filter === "ALL"
+      ? products
+      : products.filter((product) => product.status === filter);
 
   const isSelectedProductArchived = selectedProduct
     ? selectedProduct.isArchived !== undefined
@@ -225,24 +230,31 @@ export default function DesignerProductsScreen() {
       product.isArchived !== undefined
         ? Boolean(product.isArchived)
         : product.status === "ARCHIVED";
-    setArchiveAction(isArchived ? 'unarchive' : 'archive');
+    setArchiveAction(isArchived ? "unarchive" : "archive");
     setSelectedProduct(product);
     setShowArchiveModal(true);
   };
 
   const confirmArchiveAction = async () => {
     try {
-      if (archiveAction === 'unarchive') {
-        await resourceService.unarchiveResourceTemplate(selectedProduct.resourceTemplateId);
+      if (archiveAction === "unarchive") {
+        await resourceService.unarchiveResourceTemplate(
+          selectedProduct.resourceTemplateId
+        );
       } else {
-        await resourceService.archiveResourceTemplate(selectedProduct.resourceTemplateId);
+        await resourceService.archiveResourceTemplate(
+          selectedProduct.resourceTemplateId
+        );
       }
       setShowArchiveModal(false);
       setShowDetailModal(false);
       fetchProducts();
       Toast.show({
         type: "success",
-        text1: archiveAction === 'unarchive' ? "Product Unarchived" : "Product Archived",
+        text1:
+          archiveAction === "unarchive"
+            ? "Product Unarchived"
+            : "Product Archived",
         text2: `"${selectedProduct.name}" has been ${archiveAction}d successfully`,
         position: "top",
         visibilityTime: 3000,
@@ -329,49 +341,49 @@ export default function DesignerProductsScreen() {
   };
 
   return (
-    <View style={designerProductsStyles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={designerProductsStyles.header}>
-        <View style={designerProductsStyles.headerLeft}>
-          <SidebarToggleButton iconColor="#084F8C" iconSize={26} />
-          <Text style={designerProductsStyles.headerTitle}>Products</Text>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <SidebarToggleButton iconColor={isDark ? "#FFFFFF" : "#084F8C"} iconSize={26} />
+          <Text style={styles.headerTitle}>Products</Text>
         </View>
-        <View style={designerProductsStyles.headerActions}>
+        <View style={styles.headerActions}>
           <Pressable
             onPress={() => setShowFilterModal(true)}
-            style={designerProductsStyles.headerActionIcon}
+            style={styles.headerActionIcon}
           >
-            <Icon name="filter-list" size={22} color="#084F8C" />
+            <Icon name="filter-list" size={22} color={isDark ? "#FFFFFF" : "#084F8C"} />
           </Pressable>
         </View>
       </View>
 
-
       {/* Stats Cards */}
-      <View style={designerProductsStyles.statsContainer}>
-        <View style={designerProductsStyles.statCard}>
-          <Text style={designerProductsStyles.statNumber}>{totalElements}</Text>
-          <Text style={designerProductsStyles.statLabel}>Total products</Text>
+      <View style={styles.statsContainer}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{totalElements}</Text>
+          <Text style={styles.statLabel}>Total products</Text>
         </View>
-        <View style={designerProductsStyles.statCard}>
-          <Text style={designerProductsStyles.statNumber}>{currentPage + 1}</Text>
-          <Text style={designerProductsStyles.statLabel}>Current Page</Text>
-        </View>
-        <View style={designerProductsStyles.statCard}>
-          <Text style={designerProductsStyles.statNumber}>
-            {totalPages}
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>
+            {currentPage + 1}
           </Text>
-          <Text style={designerProductsStyles.statLabel}>Total Pages</Text>
+          <Text style={styles.statLabel}>Current Page</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNumber}>{totalPages}</Text>
+          <Text style={styles.statLabel}>Total Pages</Text>
         </View>
       </View>
 
       {/* Search Bar */}
-      <View style={designerProductsStyles.searchContainer}>
-        <View style={designerProductsStyles.searchInputContainer}>
-          <Icon name="search" size={20} color="#6B7280" />
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Icon name="search" size={20} color={isDark ? "#94A3B8" : "#6B7280"} />
           <TextInput
-            style={designerProductsStyles.searchInput}
+            style={styles.searchInput}
             placeholder="Search products..."
+            placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -379,7 +391,7 @@ export default function DesignerProductsScreen() {
       </View>
 
       {/* Filter Tabs */}
-      <View style={designerProductsStyles.filterTabs}>
+      <View style={styles.filterTabs}>
         {[
           "ALL",
           "PENDING_REVIEW",
@@ -391,15 +403,15 @@ export default function DesignerProductsScreen() {
           <Pressable
             key={status}
             style={[
-              designerProductsStyles.filterTab,
-              filter === status && designerProductsStyles.filterTabActive,
+              styles.filterTab,
+              filter === status && styles.filterTabActive,
             ]}
             onPress={() => setFilter(status)}
           >
             <Text
               style={[
-                designerProductsStyles.filterTabText,
-                filter === status && designerProductsStyles.filterTabTextActive,
+                styles.filterTabText,
+                filter === status && styles.filterTabTextActive,
               ]}
             >
               {getStatusText(status)}
@@ -410,12 +422,12 @@ export default function DesignerProductsScreen() {
 
       {/* Products List */}
       <ScrollView
-        style={designerProductsStyles.productsList}
+        style={styles.productsList}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
-          <View style={designerProductsStyles.emptyState}>
-            <Text style={designerProductsStyles.emptyStateTitle}>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateTitle}>
               Loading...
             </Text>
           </View>
@@ -428,83 +440,45 @@ export default function DesignerProductsScreen() {
             return (
               <Pressable
                 key={product.resourceTemplateId}
-                style={{
-                  backgroundColor: "#FFFFFF",
-                  borderRadius: 12,
-                  marginHorizontal: 16,
-                  marginBottom: 16,
-                  padding: 16,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 3,
-                  borderLeftWidth: 4,
-                  borderLeftColor: getStatusColor(product.status),
-                }}
+                style={[
+                  styles.productCardContainer,
+                  { borderLeftColor: getStatusColor(product.status) }
+                ]}
                 onPress={() => handleProductPress(product)}
               >
-                <View style={{ flexDirection: "row", gap: 12 }}>
+                <View style={styles.productContentRow}>
                   {/* Thumbnail */}
                   {product.images && product.images.length > 0 ? (
                     <Image
                       source={{
-                        uri: product.images[0].url || product.images[0].imageUrl,
+                        uri:
+                          product.images[0].url || product.images[0].imageUrl,
                       }}
-                      style={{
-                        width: 80,
-                        height: 80,
-                        borderRadius: 8,
-                        backgroundColor: "#F3F4F6",
-                      }}
+                      style={styles.productThumbnailImage}
                     />
                   ) : (
-                    <View
-                      style={{
-                        width: 80,
-                        height: 80,
-                        borderRadius: 8,
-                        backgroundColor: "#F3F4F6",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon name="image" size={32} color="#9CA3AF" />
+                    <View style={styles.productThumbnailPlaceholder}>
+                      <Icon name="image" size={32} color={isDark ? "#64748B" : "#9CA3AF"} />
                     </View>
                   )}
 
                   {/* Content */}
-                  <View style={{ flex: 1 }}>
+                  <View style={styles.productInfoColumn}>
                     {/* Header Row */}
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        marginBottom: 6,
-                      }}
-                    >
+                    <View style={styles.productHeaderRow}>
                       <Text
-                        style={{
-                          fontSize: 16,
-                          fontWeight: "700",
-                          color: "#1F2937",
-                          flex: 1,
-                          marginRight: 8,
-                        }}
+                        style={styles.productTitleText}
                         numberOfLines={1}
                       >
                         {product.name}
                       </Text>
                       <View
-                        style={{
-                          backgroundColor: getStatusColor(product.status),
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          borderRadius: 6,
-                        }}
+                        style={[
+                          styles.statusBadgeContainer,
+                          { backgroundColor: getStatusColor(product.status) }
+                        ]}
                       >
-                        <Text style={{ color: "#FFF", fontSize: 10, fontWeight: "600" }}>
+                        <Text style={styles.statusBadgeText}>
                           {getStatusText(product.status)}
                         </Text>
                       </View>
@@ -512,44 +486,39 @@ export default function DesignerProductsScreen() {
 
                     {/* Description */}
                     <Text
-                      style={{
-                        fontSize: 13,
-                        color: "#6B7280",
-                        marginBottom: 8,
-                        lineHeight: 18,
-                      }}
+                      style={styles.productDescriptionText}
                       numberOfLines={2}
                     >
                       {product.description}
                     </Text>
 
                     {/* Metrics Grid */}
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <View style={styles.metricsContainer}>
+                      <View style={styles.metricItem}>
                         <Icon name="attach-money" size={14} color="#10B981" />
-                        <Text style={{ fontSize: 12, color: "#374151", fontWeight: "600" }}>
+                        <Text style={styles.metricText}>
                           {formatCurrency(product.price)}
                         </Text>
                       </View>
 
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <View style={styles.metricItem}>
                         <Icon name="shopping-cart" size={14} color="#3B82F6" />
-                        <Text style={{ fontSize: 12, color: "#374151" }}>
+                        <Text style={styles.metricTextSecondary}>
                           {product.totalPurchases ?? 0} sales
                         </Text>
                       </View>
 
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <View style={styles.metricItem}>
                         <Icon name="trending-up" size={14} color="#F59E0B" />
-                        <Text style={{ fontSize: 12, color: "#374151" }}>
+                        <Text style={styles.metricTextSecondary}>
                           {formatCurrency(product.totalRevenue ?? 0)}
                         </Text>
                       </View>
 
                       {product.averageRating && (
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                        <View style={styles.metricItem}>
                           <Icon name="star" size={14} color="#FBBF24" />
-                          <Text style={{ fontSize: 12, color: "#374151" }}>
+                          <Text style={styles.metricTextSecondary}>
                             {product.averageRating.toFixed(1)}
                           </Text>
                         </View>
@@ -557,53 +526,33 @@ export default function DesignerProductsScreen() {
                     </View>
 
                     {/* Bottom Row */}
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginTop: 8,
-                      }}
-                    >
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                        <Icon name="category" size={12} color="#9CA3AF" />
-                        <Text style={{ fontSize: 11, color: "#9CA3AF" }}>
+                    <View style={styles.bottomRow}>
+                      <View style={styles.typeContainer}>
+                        <Icon name="category" size={12} color={isDark ? "#64748B" : "#9CA3AF"} />
+                        <Text style={styles.typeText}>
                           {product.type}
                         </Text>
                       </View>
 
-                      <View style={{ flexDirection: "row", gap: 8 }}>
+                      <View style={styles.actionButtonsRow}>
                         <Pressable
-                          style={{
-                            backgroundColor: "#E0F2FE",
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
-                            borderRadius: 8,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
+                          style={styles.actionButtonContainer}
                           onPress={(e) => {
                             e.stopPropagation();
                             handleCreateVersionNavigation(product);
                           }}
                         >
-                          <Icon name="post-add" size={16} color="#0284C7" />
-                          <Text style={{ fontSize: 11, color: "#0284C7", fontWeight: "600" }}>
+                          <Icon name="post-add" size={16} color={styles.actionButtonText} />
+                          <Text style={styles.filterTabText}>
                             New Version
                           </Text>
                         </Pressable>
 
                         <Pressable
-                          style={{
-                            backgroundColor: isArchived ? "#E0E7FF" : "#FEF3C7",
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
-                            borderRadius: 8,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
+                          style={[
+                            styles.archiveButtonContainer,
+                            { backgroundColor: isArchived ? styles.unarchiveButtonBg : styles.archiveButtonBg }
+                          ]}
                           onPress={(e) => {
                             e.stopPropagation();
                             handleToggleArchive(product);
@@ -612,9 +561,14 @@ export default function DesignerProductsScreen() {
                           <Icon
                             name={isArchived ? "unarchive" : "archive"}
                             size={16}
-                            color={isArchived ? "#4338CA" : "#B45309"}
+                            color={isArchived ? styles.unarchiveButtonText : styles.archiveButtonText}
                           />
-                          <Text style={{ fontSize: 11, color: isArchived ? "#4338CA" : "#B45309", fontWeight: "600" }}>
+                          <Text
+                            style={[
+                              styles.archiveButtonText,
+                              { color: isArchived ? styles.unarchiveButtonText : styles.archiveButtonText }
+                            ]}
+                          >
                             {isArchived ? "Unarchive" : "Archive"}
                           </Text>
                         </Pressable>
@@ -628,12 +582,12 @@ export default function DesignerProductsScreen() {
         )}
 
         {!loading && filteredProducts.length === 0 && (
-          <View style={designerProductsStyles.emptyState}>
-            <Icon name="inventory" size={64} color="#D1D5DB" />
-            <Text style={designerProductsStyles.emptyStateTitle}>
+          <View style={styles.emptyState}>
+            <Icon name="inventory" size={64} color={styles.emptyIconColor} />
+            <Text style={styles.emptyStateTitle}>
               No products
             </Text>
-            <Text style={designerProductsStyles.emptyStateText}>
+            <Text style={styles.emptyStateText}>
               {searchQuery
                 ? "No matching products found"
                 : "You haven't added any products yet"}
@@ -642,45 +596,31 @@ export default function DesignerProductsScreen() {
         )}
       </ScrollView>
       {!loading && (
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "center",
-            alignItems: "center",
-            marginVertical: 16,
-          }}
-        >
+        <View style={styles.paginationContainer}>
           <Pressable
             onPress={() => handlePageChange(currentPage - 1)}
             disabled={currentPage === 0}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              backgroundColor: currentPage === 0 ? "#E5E7EB" : "#3B82F6",
-              borderRadius: 8,
-              marginRight: 8,
-            }}
+            style={[
+              styles.paginationButtonPrev,
+              currentPage === 0 ? styles.paginationButtonDisabled : styles.paginationButtonActive
+            ]}
           >
-            <Text style={{ color: "#FFF" }}>Prev</Text>
+            <Text style={styles.paginationButtonTextPrimary}>Prev</Text>
           </Pressable>
 
-          <Text style={{ fontSize: 16, color: "#374151" }}>
+          <Text style={styles.paginationText}>
             Page {currentPage + 1} / {totalPages}
           </Text>
 
           <Pressable
             onPress={() => handlePageChange(currentPage + 1)}
             disabled={currentPage + 1 >= totalPages}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              backgroundColor:
-                currentPage + 1 >= totalPages ? "#E5E7EB" : "#3B82F6",
-              borderRadius: 8,
-              marginLeft: 8,
-            }}
+            style={[
+              styles.paginationButtonNext,
+              currentPage + 1 >= totalPages ? styles.paginationButtonDisabled : styles.paginationButtonActive
+            ]}
           >
-            <Text style={{ color: "#FFF" }}>Next</Text>
+            <Text style={styles.paginationButtonTextPrimary}>Next</Text>
           </Pressable>
         </View>
       )}
@@ -693,34 +633,34 @@ export default function DesignerProductsScreen() {
         onRequestClose={() => setShowFilterModal(false)}
       >
         <Pressable
-          style={designerProductsStyles.modalOverlay}
+          style={styles.modalOverlay}
           onPress={() => setShowFilterModal(false)}
           activeOpacity={1}
         >
           <Pressable
-            style={designerProductsStyles.modalContent}
+            style={styles.modalContent}
             onPress={(e) => e.stopPropagation()}
           >
-            <View style={designerProductsStyles.modalHeader}>
-              <View style={designerProductsStyles.modalHeaderLeft}>
-                <View style={designerProductsStyles.modalIconWrapper}>
-                  <Icon name="filter-list" size={22} color="#1E3A8A" />
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <View style={styles.modalIconWrapper}>
+                  <Icon name="filter-list" size={22} color={isDark ? "#60A5FA" : "#1E3A8A"} />
                 </View>
-                <Text style={designerProductsStyles.modalTitle}>
+                <Text style={styles.modalTitle}>
                   Filter Status
                 </Text>
               </View>
               <Pressable
                 onPress={() => setShowFilterModal(false)}
-                style={designerProductsStyles.modalCloseBtn}
+                style={styles.modalCloseBtn}
               >
-                <Icon name="close" size={22} color="#64748B" />
+                <Icon name="close" size={22} color={isDark ? "#94A3B8" : "#64748B"} />
               </Pressable>
             </View>
 
-            <View style={designerProductsStyles.modalBody}>
+            <View style={styles.modalBody}>
               {[
-                { value: "ALL", icon: "apps", color: "#64748B" },
+                { value: "ALL", icon: "apps", color: isDark ? "#94A3B8" : "#64748B" },
                 { value: "PENDING_REVIEW", icon: "schedule", color: "#3B82F6" },
                 { value: "PUBLISHED", icon: "check-circle", color: "#10B981" },
                 { value: "REJECTED", icon: "cancel", color: "#EF4444" },
@@ -730,31 +670,34 @@ export default function DesignerProductsScreen() {
                 <Pressable
                   key={status.value}
                   style={[
-                    designerProductsStyles.modalOption,
-                    filter === status.value &&
-                    designerProductsStyles.modalOptionActive,
+                    styles.modalOption,
+                    filter === status && styles.modalOptionActive,
                   ]}
                   onPress={() => {
                     setFilter(status.value);
                     setShowFilterModal(false);
                   }}
                 >
-                  <View style={designerProductsStyles.modalOptionLeft}>
+                  <View style={styles.modalOptionLeft}>
                     <View
                       style={[
-                        designerProductsStyles.modalOptionIcon,
+                        styles.modalOptionIcon,
                         { backgroundColor: status.color + "20" },
                       ]}
                     >
-                      <Icon name={status.icon} size={20} color={status.color} />
+                      <Icon
+                        name={status.icon}
+                        size={20}
+                        color={status.color}
+                      />
                     </View>
-                    <Text style={designerProductsStyles.modalOptionText}>
+                    <Text style={styles.modalOptionText}>
                       {getStatusText(status.value)}
                     </Text>
                   </View>
                   {filter === status.value && (
-                    <View style={designerProductsStyles.checkIconWrapper}>
-                      <Icon name="check" size={20} color="#1E3A8A" />
+                    <View style={styles.checkIconWrapper}>
+                      <Icon name="check" size={16} color="#FFF" />
                     </View>
                   )}
                 </Pressable>
@@ -764,726 +707,178 @@ export default function DesignerProductsScreen() {
         </Pressable>
       </Modal>
 
-      {/* Detail Modal */}
-      <Modal
-        visible={showDetailModal}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setShowDetailModal(false)}
-      >
-        <Pressable
-          style={designerProductsStyles.detailModalOverlay}
-          onPress={() => setShowDetailModal(false)}
-          activeOpacity={1}
-        >
-          <Pressable
-            style={designerProductsStyles.detailModalContent}
-            onPress={(e) => e.stopPropagation()}
-          >
-            {/* Handle (drag indicator) */}
-            <View style={designerProductsStyles.dragHandle} />
-
-            {/* HEADER */}
-            <View style={designerProductsStyles.detailModalHeader}>
-              <View style={designerProductsStyles.modalHeaderLeft}>
-                <View style={designerProductsStyles.modalIconWrapper}>
-                  <Icon name="inventory-2" size={22} color="#1E3A8A" />
-                </View>
-                <Text style={designerProductsStyles.modalTitle}>
-                  Product Details
-                </Text>
-              </View>
-
-              <Pressable
-                onPress={() => setShowDetailModal(false)}
-                style={designerProductsStyles.modalCloseBtn}
-              >
-                <Icon name="close" size={22} color="#64748B" />
-              </Pressable>
-            </View>
-
-            <ScrollView
-              style={designerProductsStyles.detailModalBody}
-              showsVerticalScrollIndicator={false}
-            >
-              {selectedProduct && (
-                <View style={designerProductsStyles.detailBodyRow}>
-                  <View style={designerProductsStyles.leftPane}>
-                    <View style={designerProductsStyles.leftPaneCard}>
-                      {/* Image Gallery - Show all images from current version */}
-                      {(() => {
-                        const currentVersion = selectedProduct.versions?.find(
-                          v => v.versionId === selectedProduct.currentPublishedVersionId
-                        );
-                        const allImages = currentVersion?.images || selectedProduct.images || [];
-
-                        if (allImages.length === 0) {
-                          return (
-                            <View style={designerProductsStyles.heroPlaceholder}>
-                              <Icon name="image" size={48} color="#9CA3AF" />
-                              <Text style={{ color: "#9CA3AF", fontSize: 12, marginTop: 8 }}>No images</Text>
-                            </View>
-                          );
-                        }
-
-                        return (
-                          <View>
-                            {/* Main Image */}
-                            <Image
-                              source={{ uri: allImages[0].imageUrl || allImages[0].url }}
-                              style={designerProductsStyles.detailImage}
-                            />
-
-                            {/* Thumbnail Gallery */}
-                            {allImages.length > 1 && (
-                              <View style={{ marginTop: 12 }}>
-                                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                                  <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151" }}>
-                                    All Images
-                                  </Text>
-                                  <View style={{ backgroundColor: "#EFF6FF", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 }}>
-                                    <Text style={{ fontSize: 10, color: "#3B82F6", fontWeight: "600" }}>
-                                      {allImages.length} images
-                                    </Text>
-                                  </View>
-                                </View>
-                                <ScrollView
-                                  horizontal
-                                  showsHorizontalScrollIndicator={false}
-                                  style={{ marginHorizontal: -4 }}
-                                >
-                                  {allImages.map((img, idx) => (
-                                    <View
-                                      key={idx}
-                                      style={{
-                                        marginHorizontal: 4,
-                                        borderRadius: 8,
-                                        borderWidth: img.isThumbnail ? 2 : 1,
-                                        borderColor: img.isThumbnail ? "#3B82F6" : "#E5E7EB",
-                                        overflow: "hidden",
-                                      }}
-                                    >
-                                      <Image
-                                        source={{ uri: img.imageUrl || img.url }}
-                                        style={{
-                                          width: 80,
-                                          height: 80,
-                                          backgroundColor: "#F3F4F6",
-                                        }}
-                                      />
-                                      {img.isThumbnail && (
-                                        <View style={{
-                                          position: "absolute",
-                                          top: 4,
-                                          right: 4,
-                                          backgroundColor: "#3B82F6",
-                                          paddingHorizontal: 6,
-                                          paddingVertical: 2,
-                                          borderRadius: 4
-                                        }}>
-                                          <Text style={{ color: "#FFFFFF", fontSize: 8, fontWeight: "600" }}>
-                                            MAIN
-                                          </Text>
-                                        </View>
-                                      )}
-                                    </View>
-                                  ))}
-                                </ScrollView>
-                              </View>
-                            )}
-                          </View>
-                        );
-                      })()}
-                    </View>
-                  </View>
-
-                  <View style={designerProductsStyles.rightPane}>
-                    <View style={designerProductsStyles.infoCard}>
-                      <View style={designerProductsStyles.detailSection}>
-                        <Text style={designerProductsStyles.detailLabel}>
-                          Product name
-                        </Text>
-                        <Text style={designerProductsStyles.detailValue}>
-                          {selectedProduct.name}
-                        </Text>
-                      </View>
-
-                      <View style={designerProductsStyles.detailSection}>
-                        <Text style={designerProductsStyles.detailLabel}>
-                          Description
-                        </Text>
-                        <Text style={designerProductsStyles.detailValue}>
-                          {selectedProduct.description}
-                        </Text>
-                      </View>
-
-                      <View style={designerProductsStyles.detailRow}>
-                        <View style={designerProductsStyles.detailCol}>
-                          <Text style={designerProductsStyles.detailLabel}>
-                            Price
-                          </Text>
-                          <Text style={designerProductsStyles.detailValue}>
-                            {formatCurrency(selectedProduct.price)}
-                          </Text>
-                        </View>
-
-                        <View style={designerProductsStyles.detailCol}>
-                          <Text style={designerProductsStyles.detailLabel}>
-                            Type
-                          </Text>
-                          <Text style={designerProductsStyles.detailValue}>
-                            {selectedProduct.type}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Sales Metrics Cards */}
-                      <View style={{ marginVertical: 12 }}>
-                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151", marginBottom: 10 }}>
-                          Sales Performance
-                        </Text>
-                        <View style={{ flexDirection: "row", gap: 10 }}>
-                          <View style={{ flex: 1, backgroundColor: "#DBEAFE", padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: "#3B82F6" }}>
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                              <Icon name="shopping-cart" size={16} color="#3B82F6" />
-                              <Text style={{ fontSize: 11, color: "#1E40AF", fontWeight: "600" }}>Purchases</Text>
-                            </View>
-                            <Text style={{ fontSize: 20, fontWeight: "700", color: "#1E3A8A" }}>
-                              {selectedProduct.totalPurchases ?? 0}
-                            </Text>
-                          </View>
-
-                          <View style={{ flex: 1, backgroundColor: "#D1FAE5", padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: "#10B981" }}>
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                              <Icon name="attach-money" size={16} color="#10B981" />
-                              <Text style={{ fontSize: 11, color: "#065F46", fontWeight: "600" }}>Revenue</Text>
-                            </View>
-                            <Text style={{ fontSize: 16, fontWeight: "700", color: "#065F46" }}>
-                              {formatCurrency(selectedProduct.totalRevenue ?? 0)}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-                          <View style={{ flex: 1, backgroundColor: "#FEF3C7", padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: "#F59E0B" }}>
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                              <Icon name="star" size={16} color="#F59E0B" />
-                              <Text style={{ fontSize: 11, color: "#92400E", fontWeight: "600" }}>Rating</Text>
-                            </View>
-                            <Text style={{ fontSize: 20, fontWeight: "700", color: "#92400E" }}>
-                              {selectedProduct.averageRating ? `${selectedProduct.averageRating.toFixed(1)} ⭐` : "N/A"}
-                            </Text>
-                          </View>
-
-                          <View style={{ flex: 1, backgroundColor: "#E0E7FF", padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: "#6366F1" }}>
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                              <Icon name="layers" size={16} color="#6366F1" />
-                              <Text style={{ fontSize: 11, color: "#3730A3", fontWeight: "600" }}>Version</Text>
-                            </View>
-                            <Text style={{ fontSize: 20, fontWeight: "700", color: "#3730A3" }}>
-                              {selectedProduct.currentVersionNumber ?? "N/A"}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      <View style={designerProductsStyles.detailRow}>
-                        <View style={designerProductsStyles.detailCol}>
-                          <Text style={designerProductsStyles.detailLabel}>
-                            Created At
-                          </Text>
-                          <Text style={designerProductsStyles.detailValue}>
-                            {formatDate(selectedProduct.createdAt)}
-                          </Text>
-                        </View>
-                        <View style={designerProductsStyles.detailCol}>
-                          <Text style={designerProductsStyles.detailLabel}>
-                            Updated At
-                          </Text>
-                          <Text style={designerProductsStyles.detailValue}>
-                            {formatDate(selectedProduct.updatedAt)}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={designerProductsStyles.detailSection}>
-                        <Text style={designerProductsStyles.detailLabel}>
-                          Status
-                        </Text>
-                        <View
-                          style={[
-                            designerProductsStyles.statusBadgeLarge,
-                            {
-                              backgroundColor: getStatusColor(
-                                selectedProduct.status
-                              ),
-                            },
-                          ]}
-                        >
-                          <Icon name="circle" size={8} color="#FFFFFF" />
-                          <Text style={designerProductsStyles.statusTextLarge}>
-                            {getStatusText(selectedProduct.status)}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {selectedProduct.isArchived !== null && selectedProduct.isArchived !== undefined && (
-                        <View style={designerProductsStyles.detailSection}>
-                          <Text style={designerProductsStyles.detailLabel}>
-                            Archive Status
-                          </Text>
-                          <Text style={designerProductsStyles.detailValue}>
-                            {selectedProduct.isArchived ? "Archived" : "Active"}
-                          </Text>
-                        </View>
-                      )}
-
-
-                      {/* Versions Section */}
-                      {selectedProduct.versions && selectedProduct.versions.length > 0 && (
-                        <View style={designerProductsStyles.detailSection}>
-                          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                            <Text style={designerProductsStyles.detailLabel}>
-                              Version History
-                            </Text>
-                            <View style={{ backgroundColor: "#EFF6FF", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-                              <Text style={{ fontSize: 11, color: "#3B82F6", fontWeight: "600" }}>
-                                {selectedProduct.versions.length} versions
-                              </Text>
-                            </View>
-                          </View>
-                          {selectedProduct.versions.map((version, index) => (
-                            <View
-                              key={version.versionId}
-                              style={{
-                                backgroundColor: version.status === "PUBLISHED" ? "#F0FDF4" : "#F9FAFB",
-                                padding: 14,
-                                borderRadius: 10,
-                                marginTop: 10,
-                                borderLeftWidth: 4,
-                                borderLeftColor: version.status === "PUBLISHED" ? "#10B981" : version.status === "PENDING_REVIEW" ? "#3B82F6" : "#6B7280",
-                                shadowColor: "#000",
-                                shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.05,
-                                shadowRadius: 2,
-                                elevation: 1,
-                              }}
-                            >
-                              <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
-                                  {/* Version Thumbnail */}
-                                  {(() => {
-                                    const thumbnail = version.images?.find(img => img.isThumbnail) || version.images?.[0];
-                                    if (thumbnail && thumbnail.imageUrl && thumbnail.imageUrl !== "string") {
-                                      return (
-                                        <Image
-                                          source={{ uri: thumbnail.imageUrl }}
-                                          style={{
-                                            width: 50,
-                                            height: 50,
-                                            borderRadius: 8,
-                                            backgroundColor: "#F3F4F6",
-                                          }}
-                                        />
-                                      );
-                                    }
-                                    return (
-                                      <View
-                                        style={{
-                                          width: 50,
-                                          height: 50,
-                                          borderRadius: 8,
-                                          backgroundColor: "#F3F4F6",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                        }}
-                                      >
-                                        <Icon name="image" size={24} color="#9CA3AF" />
-                                      </View>
-                                    );
-                                  })()}
-                                  <View style={{ flex: 1 }}>
-                                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                                      <View style={{ backgroundColor: "#FFFFFF", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: "#E5E7EB" }}>
-                                        <Text style={{ fontSize: 13, fontWeight: "700", color: "#1F2937" }}>
-                                          v{version.versionNumber}
-                                        </Text>
-                                      </View>
-                                      <View
-                                        style={{
-                                          backgroundColor: getStatusColor(version.status),
-                                          paddingHorizontal: 8,
-                                          paddingVertical: 4,
-                                          borderRadius: 6,
-                                        }}
-                                      >
-                                        <Text style={{ color: "#FFF", fontSize: 10, fontWeight: "600" }}>
-                                          {getStatusText(version.status)}
-                                        </Text>
-                                      </View>
-                                      {version.versionId === selectedProduct.currentPublishedVersionId && (
-                                        <View
-                                          style={{
-                                            backgroundColor: "#DBEAFE",
-                                            paddingHorizontal: 8,
-                                            paddingVertical: 4,
-                                            borderRadius: 6,
-                                          }}
-                                        >
-                                          <Text style={{ color: "#1E40AF", fontSize: 10, fontWeight: "600" }}>
-                                            CURRENT
-                                          </Text>
-                                        </View>
-                                      )}
-                                    </View>
-                                    <Text style={{ fontSize: 14, color: "#1F2937", fontWeight: "600", marginTop: 4 }} numberOfLines={1}>
-                                      {version.name}
-                                    </Text>
-                                  </View>
-                                </View>
-                              </View>
-                              <Text style={{ fontSize: 12, color: "#6B7280", marginBottom: 10, lineHeight: 16 }}>
-                                {version.description}
-                              </Text>
-
-                              {/* Metrics Row */}
-                              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFFFFF", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                                  <Icon name="attach-money" size={14} color="#10B981" />
-                                  <Text style={{ fontSize: 11, color: "#374151", fontWeight: "600" }}>
-                                    {formatCurrency(version.price)}
-                                  </Text>
-                                </View>
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFFFFF", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                                  <Icon name="shopping-cart" size={14} color="#3B82F6" />
-                                  <Text style={{ fontSize: 11, color: "#374151" }}>
-                                    {version.purchaseCount} sales
-                                  </Text>
-                                </View>
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFFFFF", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                                  <Icon name="star" size={14} color="#FBBF24" />
-                                  <Text style={{ fontSize: 11, color: "#374151" }}>
-                                    {version.averageRating > 0 ? version.averageRating.toFixed(1) : "N/A"}
-                                  </Text>
-                                </View>
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFFFFF", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                                  <Icon name="comment" size={14} color="#8B5CF6" />
-                                  <Text style={{ fontSize: 11, color: "#374151" }}>
-                                    {version.feedbackCount} reviews
-                                  </Text>
-                                </View>
-                              </View>
-
-                              {/* Dates */}
-                              <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                                  <Icon name="calendar-today" size={11} color="#9CA3AF" />
-                                  <Text style={{ fontSize: 10, color: "#9CA3AF" }}>
-                                    Released: {formatDate(version.releaseDate)}
-                                  </Text>
-                                </View>
-                                {version.expiredTime && (
-                                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                                    <Icon name="event-busy" size={11} color="#EF4444" />
-                                    <Text style={{ fontSize: 10, color: "#EF4444" }}>
-                                      Expires: {formatDate(version.expiredTime)}
-                                    </Text>
-                                  </View>
-                                )}
-                              </View>
-
-                              {/* Action Buttons */}
-                              <View style={{ flexDirection: "row", gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#E5E7EB" }}>
-                                {version.status === "PENDING_REVIEW" ? (
-                                  <>
-                                    <Pressable
-                                      style={{
-                                        flex: 1,
-                                        backgroundColor: "#3B82F6",
-                                        paddingVertical: 8,
-                                        paddingHorizontal: 12,
-                                        borderRadius: 8,
-                                        flexDirection: "row",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        gap: 6,
-                                      }}
-                                      onPress={() => handleUpdateVersion(version)}
-                                    >
-                                      <Icon name="edit" size={16} color="#FFFFFF" />
-                                      <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>
-                                        Update
-                                      </Text>
-                                    </Pressable>
-                                    <Pressable
-                                      style={{ flex: 1, backgroundColor: "#EF4444", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
-                                      onPress={() => handleDeleteVersion(version)}
-                                    >
-                                      <Icon name="delete" size={16} color="#FFFFFF" />
-                                      <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>Delete</Text>
-                                    </Pressable>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Pressable
-                                      style={{
-                                        flex: 1,
-                                        backgroundColor: "#10B981",
-                                        paddingVertical: 8,
-                                        paddingHorizontal: 12,
-                                        borderRadius: 8,
-                                        flexDirection: "row",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        gap: 6,
-                                      }}
-                                      onPress={() => handlePublishVersion(version)}
-                                    >
-                                      <Icon name="publish" size={16} color="#FFFFFF" />
-                                      <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>
-                                        Publish
-                                      </Text>
-                                    </Pressable>
-                                    <Pressable
-                                      style={{ flex: 1, backgroundColor: "#EF4444", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
-                                      onPress={() => handleDeleteVersion(version)}
-                                    >
-                                      <Icon name="delete" size={16} color="#FFFFFF" />
-                                      <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>Delete</Text>
-                                    </Pressable>
-                                  </>
-                                )}
-                              </View>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-
-                      {selectedProduct.designerInfo && (
-                        <View style={designerProductsStyles.detailSection}>
-                          <Text style={designerProductsStyles.detailLabel}>
-                            Designer info
-                          </Text>
-                          <View style={designerProductsStyles.designerInfo}>
-                            <View style={designerProductsStyles.designerAvatar}>
-                              <Icon name="person" size={20} color="#1E3A8A" />
-                            </View>
-                            <View
-                              style={designerProductsStyles.designerDetails}
-                            >
-                              <Text style={designerProductsStyles.designerName}>
-                                {selectedProduct.designerInfo.firstName}{" "}
-                                {selectedProduct.designerInfo.lastName}
-                              </Text>
-                              <Text
-                                style={designerProductsStyles.designerEmail}
-                              >
-                                {selectedProduct.designerInfo.email}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              )}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      {/* Archive/Unarchive Confirmation Modal */}
+      {/* Confirmation Modals */}
+      {/* Archive Modal */}
       <Modal
         visible={showArchiveModal}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={() => setShowArchiveModal(false)}
       >
-        <View style={designerProductsStyles.modalOverlay}>
-          <View style={[designerProductsStyles.modalContent, { maxWidth: 420, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center' }]}>
-            <View style={[designerProductsStyles.modalIconContainer, { backgroundColor: archiveAction === 'unarchive' ? '#EFF6FF' : '#FEF3C7' }]}>
-              <Icon 
-                name={archiveAction === 'unarchive' ? "unarchive" : "archive"} 
-                size={36} 
-                color={archiveAction === 'unarchive' ? "#3B82F6" : "#F59E0B"} 
-              />
-            </View>
-            <Text style={[designerProductsStyles.modalTitle, { textAlign: 'center', marginBottom: 12 }]}>
-              {archiveAction === 'unarchive' ? 'Unarchive Product?' : 'Archive Product?'}
-            </Text>
-            <Text style={designerProductsStyles.modalMessage}>
-              Are you sure you want to {archiveAction}{'\n'}
-              <Text style={{ fontWeight: '700', color: '#1F2937' }}>"{selectedProduct?.name}"</Text>?
-            </Text>
-
-            <View style={designerProductsStyles.modalButtons}>
-              <Pressable
-                style={designerProductsStyles.cancelButton}
-                onPress={() => setShowArchiveModal(false)}
-              >
-                <Text style={designerProductsStyles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
-                style={designerProductsStyles.confirmButton}
-                onPress={confirmArchiveAction}
-              >
-                <LinearGradient
-                  colors={archiveAction === 'unarchive' ? ["#3B82F6", "#2563EB"] : ["#F59E0B", "#D97706"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={designerProductsStyles.confirmButtonGradient}
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ padding: 24, alignItems: "center" }}>
+              <View style={[styles.modalIconContainer, { backgroundColor: "#FEF3C7" }]}>
+                <Icon name="archive" size={32} color="#D97706" />
+              </View>
+              <Text style={[styles.modalTitle, { textAlign: "center", marginBottom: 12 }]}>
+                {archiveAction === "unarchive" ? "Unarchive Product?" : "Archive Product?"}
+              </Text>
+              <Text style={styles.modalMessage}>
+                {archiveAction === "unarchive"
+                  ? `Are you sure you want to unarchive "${selectedProduct?.name}"? It will be visible to users again.`
+                  : `Are you sure you want to archive "${selectedProduct?.name}"? It will be hidden from users.`}
+              </Text>
+              <View style={styles.modalButtons}>
+                <Pressable
+                  style={styles.cancelButton}
+                  onPress={() => setShowArchiveModal(false)}
                 >
-                  <Text style={designerProductsStyles.confirmButtonText}>
-                    {archiveAction === 'unarchive' ? 'Unarchive' : 'Archive'}
-                  </Text>
-                </LinearGradient>
-              </Pressable>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.confirmButton}
+                  onPress={confirmArchiveAction}
+                >
+                  <LinearGradient
+                    colors={["#D97706", "#B45309"]}
+                    style={styles.confirmButtonGradient}
+                  >
+                    <Text style={styles.confirmButtonText}>
+                      {archiveAction === "unarchive" ? "Unarchive" : "Archive"}
+                    </Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Publish Version Confirmation Modal */}
-      <Modal
-        visible={showPublishModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowPublishModal(false)}
-      >
-        <View style={designerProductsStyles.modalOverlay}>
-          <View style={[designerProductsStyles.modalContent, { maxWidth: 420, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center' }]}>
-            <View style={[designerProductsStyles.modalIconContainer, { backgroundColor: '#D1FAE5' }]}>
-              <Icon name="publish" size={36} color="#10B981" />
-            </View>
-            <Text style={[designerProductsStyles.modalTitle, { textAlign: 'center', marginBottom: 12 }]}>Publish Version</Text>
-            <Text style={designerProductsStyles.modalMessage}>
-              Are you sure you want to publish version{'\n'}
-              <Text style={{ fontWeight: '700', color: '#1F2937' }}>v{selectedVersion?.versionNumber}</Text>?
-              {'\n\n'}
-              <Text style={{ fontSize: 13, color: '#9CA3AF' }}>This will make it the current published version.</Text>
-            </Text>
-
-            <View style={designerProductsStyles.modalButtons}>
-              <Pressable
-                style={designerProductsStyles.cancelButton}
-                onPress={() => setShowPublishModal(false)}
-              >
-                <Text style={designerProductsStyles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
-                style={designerProductsStyles.confirmButton}
-                onPress={confirmPublishVersion}
-              >
-                <LinearGradient
-                  colors={["#10B981", "#059669"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={designerProductsStyles.confirmButtonGradient}
-                >
-                  <Text style={designerProductsStyles.confirmButtonText}>
-                    Publish
-                  </Text>
-                </LinearGradient>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Delete Version Confirmation Modal */}
-      <Modal
-        visible={showDeleteVersionModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowDeleteVersionModal(false)}
-      >
-        <View style={designerProductsStyles.modalOverlay}>
-          <View style={[designerProductsStyles.modalContent, { maxWidth: 420, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center' }]}>
-            <View style={[designerProductsStyles.modalIconContainer, { backgroundColor: '#FEE2E2' }]}>
-              <Icon name="delete" size={36} color="#EF4444" />
-            </View>
-            <Text style={[designerProductsStyles.modalTitle, { textAlign: 'center', marginBottom: 12 }]}>Delete Version</Text>
-            <Text style={designerProductsStyles.modalMessage}>
-              Are you sure you want to delete version{'\n'}
-              <Text style={{ fontWeight: '700', color: '#EF4444' }}>v{selectedVersion?.versionNumber}</Text>?
-              {'\n\n'}
-              <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '600' }}>⚠️ This action cannot be undone.</Text>
-            </Text>
-
-            <View style={designerProductsStyles.modalButtons}>
-              <Pressable
-                style={designerProductsStyles.cancelButton}
-                onPress={() => setShowDeleteVersionModal(false)}
-              >
-                <Text style={designerProductsStyles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
-                style={designerProductsStyles.confirmButton}
-                onPress={confirmDeleteVersion}
-              >
-                <LinearGradient
-                  colors={["#EF4444", "#DC2626"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={designerProductsStyles.confirmButtonGradient}
-                >
-                  <Text style={designerProductsStyles.confirmButtonText}>
-                    Delete
-                  </Text>
-                </LinearGradient>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Delete Product Confirmation Modal */}
+      {/* Delete Modal */}
       <Modal
         visible={showDeleteModal}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={() => setShowDeleteModal(false)}
       >
-        <View style={designerProductsStyles.modalOverlay}>
-          <View style={[designerProductsStyles.modalContent, { maxWidth: 420, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center' }]}>
-            <View style={[designerProductsStyles.modalIconContainer, { backgroundColor: '#FEE2E2' }]}>
-              <Icon name="delete-forever" size={36} color="#EF4444" />
-            </View>
-            <Text style={[designerProductsStyles.modalTitle, { textAlign: 'center', marginBottom: 12 }]}>Delete Product</Text>
-            <Text style={designerProductsStyles.modalMessage}>
-              Are you sure you want to delete{'\n'}
-              <Text style={{ fontWeight: '700', color: '#EF4444' }}>"{selectedProduct?.name}"</Text>?
-              {'\n\n'}
-              <Text style={{ fontSize: 13, color: '#EF4444', fontWeight: '600' }}>⚠️ This action cannot be undone.</Text>
-            </Text>
-
-            <View style={designerProductsStyles.modalButtons}>
-              <Pressable
-                style={designerProductsStyles.cancelButton}
-                onPress={() => setShowDeleteModal(false)}
-              >
-                <Text style={designerProductsStyles.cancelButtonText}>Cancel</Text>
-              </Pressable>
-
-              <Pressable
-                style={designerProductsStyles.confirmButton}
-                onPress={confirmDeleteProduct}
-              >
-                <LinearGradient
-                  colors={["#EF4444", "#DC2626"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={designerProductsStyles.confirmButtonGradient}
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ padding: 24, alignItems: "center" }}>
+              <View style={[styles.modalIconContainer, { backgroundColor: "#FEE2E2" }]}>
+                <Icon name="delete-forever" size={32} color="#DC2626" />
+              </View>
+              <Text style={[styles.modalTitle, { textAlign: "center", marginBottom: 12 }]}>
+                Delete Product?
+              </Text>
+              <Text style={styles.modalMessage}>
+                Are you sure you want to delete "{selectedProduct?.name}"? This action cannot be undone.
+              </Text>
+              <View style={styles.modalButtons}>
+                <Pressable
+                  style={styles.cancelButton}
+                  onPress={() => setShowDeleteModal(false)}
                 >
-                  <Text style={designerProductsStyles.confirmButtonText}>
-                    Delete
-                  </Text>
-                </LinearGradient>
-              </Pressable>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.confirmButton}
+                  onPress={confirmDeleteProduct}
+                >
+                  <LinearGradient
+                    colors={["#EF4444", "#DC2626"]}
+                    style={styles.confirmButtonGradient}
+                  >
+                    <Text style={styles.confirmButtonText}>Delete</Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Publish Version Modal */}
+      <Modal
+        visible={showPublishModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPublishModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ padding: 24, alignItems: "center" }}>
+              <View style={[styles.modalIconContainer, { backgroundColor: "#D1FAE5" }]}>
+                <Icon name="publish" size={32} color="#059669" />
+              </View>
+              <Text style={[styles.modalTitle, { textAlign: "center", marginBottom: 12 }]}>
+                Publish Version?
+              </Text>
+              <Text style={styles.modalMessage}>
+                Are you sure you want to publish version {selectedVersion?.versionNumber}? It will become available for purchase.
+              </Text>
+              <View style={styles.modalButtons}>
+                <Pressable
+                  style={styles.cancelButton}
+                  onPress={() => setShowPublishModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.confirmButton}
+                  onPress={confirmPublishVersion}
+                >
+                  <LinearGradient
+                    colors={["#10B981", "#059669"]}
+                    style={styles.confirmButtonGradient}
+                  >
+                    <Text style={styles.confirmButtonText}>Publish</Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Version Modal */}
+      <Modal
+        visible={showDeleteVersionModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeleteVersionModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ padding: 24, alignItems: "center" }}>
+              <View style={[styles.modalIconContainer, { backgroundColor: "#FEE2E2" }]}>
+                <Icon name="delete" size={32} color="#DC2626" />
+              </View>
+              <Text style={[styles.modalTitle, { textAlign: "center", marginBottom: 12 }]}>
+                Delete Version?
+              </Text>
+              <Text style={styles.modalMessage}>
+                Are you sure you want to delete version {selectedVersion?.versionNumber}? This action cannot be undone.
+              </Text>
+              <View style={styles.modalButtons}>
+                <Pressable
+                  style={styles.cancelButton}
+                  onPress={() => setShowDeleteVersionModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.confirmButton}
+                  onPress={confirmDeleteVersion}
+                >
+                  <LinearGradient
+                    colors={["#EF4444", "#DC2626"]}
+                    style={styles.confirmButtonGradient}
+                  >
+                    <Text style={styles.confirmButtonText}>Delete</Text>
+                  </LinearGradient>
+                </Pressable>
+              </View>
             </View>
           </View>
         </View>

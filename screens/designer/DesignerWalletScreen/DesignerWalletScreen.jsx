@@ -21,13 +21,44 @@ import { paymentService } from "../../../service/paymentService";
 import { bankAccountService } from "../../../service/bankAccountService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
-import styles from "./DesignerWalletScreen.styles";
+import { useTheme } from "../../../context/ThemeContext";
+import getStyles, { getAlertStyles } from "./DesignerWalletScreen.styles";
+
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
 export default function DesignerWalletScreen() {
   const navigation = useNavigation();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const { setActiveNavItem } = useNavContext();
+  const { theme } = useTheme();
+
+  // Get styles based on theme
+  const styles = getStyles(theme);
+  const alertStyles = getAlertStyles(theme);
+
+  // Theme colors for inline styles
+  const isDark = theme === "dark";
+  const colors = {
+    primaryBlue: isDark ? "#60A5FA" : "#084F8C",
+    primaryWhite: isDark ? "#FFFFFF" : "#084F8C",
+    textPrimary: isDark ? "#F1F5F9" : "#1E293B",
+    textSecondary: isDark ? "#94A3B8" : "#64748B",
+    textMuted: isDark ? "#64748B" : "#94A3B8",
+    background: isDark ? "#0F172A" : "#F8FAFC",
+    cardBackground: isDark ? "#1E293B" : "#FFFFFF",
+    borderColor: isDark ? "#334155" : "#E2E8F0",
+    inputBackground: isDark ? "#0F172A" : "#F8FAFF",
+    tabActiveBg: "#3B82F6",
+    tabInactiveBg: isDark ? "#334155" : "#F1F5F9",
+    tabActiveText: "#FFFFFF",
+    tabInactiveText: isDark ? "#94A3B8" : "#64748B",
+    bankItemBg: isDark ? "#1E293B" : "#FFFFFF",
+    bankItemSelectedBg: isDark ? "#1E3A5F" : "#DBEAFE",
+    bankItemBorder: isDark ? "#334155" : "#E2E8F0",
+    bankItemSelectedBorder: "#3B82F6",
+    bankSelectorBg: isDark ? "#0F172A" : "#F8FAFC",
+  };
+
   const [activeNavItemLocal, setActiveNavItemLocal] = useState("wallet");
   const [walletData, setWalletData] = useState({
     balance: 0,
@@ -49,9 +80,9 @@ export default function DesignerWalletScreen() {
   // Alert modal state
   const [alertModal, setAlertModal] = useState({
     visible: false,
-    type: 'error', // 'error', 'success', 'warning'
-    title: '',
-    message: ''
+    type: "error",
+    title: "",
+    message: "",
   });
 
   // Bank selection states
@@ -70,7 +101,7 @@ export default function DesignerWalletScreen() {
 
   // Close alert modal
   const closeAlert = () => {
-    setAlertModal({ visible: false, type: 'error', title: '', message: '' });
+    setAlertModal({ visible: false, type: "error", title: "", message: "" });
   };
 
   // Format helpers
@@ -93,12 +124,15 @@ export default function DesignerWalletScreen() {
   // Fetch wallet data
   const fetchWallet = async () => {
     try {
-      // Fetch wallet balance and transactions
       const data = await paymentService.getWallet();
 
-      // Fetch withdrawal history to calculate total withdrawn
       try {
-        const withdrawalData = await paymentService.getWithdrawHistory(0, 1000, "createdAt", "DESC");
+        const withdrawalData = await paymentService.getWithdrawHistory(
+          0,
+          1000,
+          "createdAt",
+          "DESC"
+        );
         let withdrawals = [];
 
         if (withdrawalData && Array.isArray(withdrawalData.content)) {
@@ -109,37 +143,39 @@ export default function DesignerWalletScreen() {
           withdrawals = withdrawalData.result;
         }
 
-        // Calculate total withdrawn amount from successful withdrawals
         const totalWithdrawn = withdrawals
-          .filter(w =>
-            w.status === "SUCCESS" ||
-            w.status === "COMPLETED" ||
-            w.status === "APPROVED"
+          .filter(
+            (w) =>
+              w.status === "SUCCESS" ||
+              w.status === "COMPLETED" ||
+              w.status === "APPROVED"
           )
           .reduce((sum, w) => sum + (w.amount || 0), 0);
 
-        // Update wallet data with calculated totalWithdrawn
         setWalletData({
           ...data.result,
           totalWithdrawn: totalWithdrawn,
         });
       } catch (withdrawalError) {
         console.error("Error fetching withdrawal history:", withdrawalError);
-        // Continue with wallet data even if withdrawal fetch fails
         setWalletData(data.result);
       }
     } catch (error) {
       console.error("Error fetching wallet:", error.message);
-      showAlert('error', 'Error', 'Cannot fetch wallet data. Please try again.');
+      showAlert(
+        "error",
+        "Error",
+        "Cannot fetch wallet data. Please try again."
+      );
     }
   };
 
   // Handle bank selection from VietQR list
   const handleSelectBank = (bank) => {
     setSelectedBank(bank);
-    setBankInfo(prev => ({
+    setBankInfo((prev) => ({
       ...prev,
-      bankName: bank.shortName  // Use shortName as branch
+      bankName: bank.shortName,
     }));
     setShowBankSelector(false);
     setBankSearchQuery("");
@@ -151,7 +187,7 @@ export default function DesignerWalletScreen() {
     setBankInfo({
       bankName: account.branch,
       accountNumber: account.accountNumber,
-      accountName: account.accountHolderName
+      accountName: account.accountHolderName,
     });
     setShowSavedAccounts(false);
   };
@@ -172,12 +208,20 @@ export default function DesignerWalletScreen() {
   const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount);
     if (!amount || amount < 10000) {
-      showAlert('error', 'Invalid Amount', 'Minimum withdraw amount is 10,000 đ');
+      showAlert(
+        "error",
+        "Invalid Amount",
+        "Minimum withdraw amount is 10,000 đ"
+      );
       return;
     }
 
     if (amount > walletData.balance) {
-      showAlert('error', 'Insufficient Balance', 'You do not have enough balance to withdraw this amount.');
+      showAlert(
+        "error",
+        "Insufficient Balance",
+        "You do not have enough balance to withdraw this amount."
+      );
       return;
     }
 
@@ -186,7 +230,11 @@ export default function DesignerWalletScreen() {
       !bankInfo.accountNumber ||
       !bankInfo.accountName
     ) {
-      showAlert('error', 'Missing Information', 'Please fill in all bank information.');
+      showAlert(
+        "error",
+        "Missing Information",
+        "Please fill in all bank information."
+      );
       return;
     }
 
@@ -203,13 +251,22 @@ export default function DesignerWalletScreen() {
       setShowWithdrawModal(false);
       setWithdrawAmount("");
 
-      showAlert('success', 'Success', `Withdrawal request of ${formatCurrency(amount)} has been submitted successfully.`);
+      showAlert(
+        "success",
+        "Success",
+        `Withdrawal request of ${formatCurrency(
+          amount
+        )} has been submitted successfully.`
+      );
 
-      // Refresh wallet data
       fetchWallet();
     } catch (error) {
       console.error("Withdrawal error:", error);
-      showAlert('error', 'Withdrawal Failed', error.message || 'Withdrawal failed. Please try again later.');
+      showAlert(
+        "error",
+        "Withdrawal Failed",
+        error.message || "Withdrawal failed. Please try again later."
+      );
     }
   };
 
@@ -217,7 +274,11 @@ export default function DesignerWalletScreen() {
   const handleDeposit = async () => {
     const amount = parseInt(depositAmount);
     if (!amount || amount < 10000) {
-      showAlert('error', 'Invalid Amount', 'Minimum deposit amount is 10,000 đ');
+      showAlert(
+        "error",
+        "Invalid Amount",
+        "Minimum deposit amount is 10,000 đ"
+      );
       return;
     }
 
@@ -228,7 +289,7 @@ export default function DesignerWalletScreen() {
       navigation.navigate("PaymentWebView", { paymentUrl: url.message });
     } catch (error) {
       console.error("Payment error:", error);
-      showAlert('error', 'Deposit Failed', 'Deposit failed. Please try again.');
+      showAlert("error", "Deposit Failed", "Deposit failed. Please try again.");
     }
   };
 
@@ -334,7 +395,7 @@ export default function DesignerWalletScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <SidebarToggleButton iconSize={26} iconColor={colors.primaryWhite} />
           <Text style={styles.headerTitle}>Wallet</Text>
         </View>
         <View style={{ width: 40 }} />
@@ -367,7 +428,7 @@ export default function DesignerWalletScreen() {
                 <MaterialCommunityIcons
                   name="wallet"
                   size={42}
-                  color="#084F8C"
+                  color={colors.primaryBlue}
                 />
                 <Text style={styles.walletLabel}>Wallet</Text>
               </View>
@@ -404,7 +465,7 @@ export default function DesignerWalletScreen() {
                 style={styles.depositButtonNew}
                 onPress={() => setShowDepositModal(true)}
               >
-                <Icon name="add-circle" size={18} color="#084F8C" />
+                <Icon name="add-circle" size={18} color={colors.primaryWhite} />
                 <Text style={styles.depositButtonTextNew}>Deposit</Text>
               </TouchableOpacity>
             </View>
@@ -440,7 +501,7 @@ export default function DesignerWalletScreen() {
                     isLandscape && { width: 40, height: 40, borderRadius: 20 },
                   ]}
                 >
-                  <Icon name="history" size={24} color="#084F8C" />
+                  <Icon name="history" size={24} color={colors.primaryBlue} />
                 </View>
                 <Text
                   style={[styles.actionName, isLandscape && { fontSize: 14 }]}
@@ -459,7 +520,11 @@ export default function DesignerWalletScreen() {
                     isLandscape && { width: 40, height: 40, borderRadius: 20 },
                   ]}
                 >
-                  <Icon name="swap-horiz" size={24} color="#084F8C" />
+                  <Icon
+                    name="swap-horiz"
+                    size={24}
+                    color={colors.primaryBlue}
+                  />
                 </View>
                 <Text
                   style={[styles.actionName, isLandscape && { fontSize: 14 }]}
@@ -478,7 +543,11 @@ export default function DesignerWalletScreen() {
                     isLandscape && { width: 40, height: 40, borderRadius: 20 },
                   ]}
                 >
-                  <Icon name="account-balance" size={24} color="#084F8C" />
+                  <Icon
+                    name="account-balance"
+                    size={24}
+                    color={colors.primaryBlue}
+                  />
                 </View>
                 <Text
                   style={[styles.actionName, isLandscape && { fontSize: 14 }]}
@@ -510,7 +579,11 @@ export default function DesignerWalletScreen() {
                 }
               >
                 <Text style={styles.viewAllText}>View All</Text>
-                <Icon name="arrow-forward" size={16} color="#3B82F6" />
+                <Icon
+                  name="arrow-forward"
+                  size={16}
+                  color={colors.primaryWhite}
+                />
               </Pressable>
             )}
           </View>
@@ -606,7 +679,7 @@ export default function DesignerWalletScreen() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Icon name="receipt" size={48} color="#CBD5E1" />
+              <Icon name="receipt" size={48} color={colors.emptyIconColor} />
               <Text style={styles.emptyStateText}>No recent transactions</Text>
             </View>
           )}
@@ -625,7 +698,7 @@ export default function DesignerWalletScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Withdrawal</Text>
               <Pressable onPress={handleCloseWithdrawModal}>
-                <Icon name="close" size={26} color="#0F172A" />
+                <Icon name="close" size={26} color={colors.textPrimary} />
               </Pressable>
             </View>
 
@@ -637,6 +710,7 @@ export default function DesignerWalletScreen() {
                 <TextInput
                   style={styles.amountInput}
                   placeholder="Enter amount"
+                  placeholderTextColor={colors.textMuted}
                   keyboardType="numeric"
                   value={withdrawAmount}
                   onChangeText={setWithdrawAmount}
@@ -667,49 +741,51 @@ export default function DesignerWalletScreen() {
               </Text>
 
               {/* BANK SELECTION OPTIONS */}
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <View style={styles.tabContainer}>
                 <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    paddingVertical: 10,
-                    paddingHorizontal: 12,
-                    backgroundColor: showBankSelector ? '#3B82F6' : '#F1F5F9',
-                    borderRadius: 8,
-                    alignItems: 'center',
-                  }}
+                  style={[
+                    styles.tabButton,
+                    showBankSelector
+                      ? styles.tabButtonActive
+                      : styles.tabButtonInactive,
+                  ]}
                   onPress={() => {
                     setShowBankSelector(!showBankSelector);
                     setShowSavedAccounts(false);
                   }}
                 >
-                  <Text style={{
-                    color: showBankSelector ? '#FFFFFF' : '#64748B',
-                    fontWeight: '600',
-                    fontSize: 13
-                  }}>
+                  <Text
+                    style={[
+                      styles.tabButtonText,
+                      showBankSelector
+                        ? styles.tabButtonTextActive
+                        : styles.tabButtonTextInactive,
+                    ]}
+                  >
                     Select Bank
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    paddingVertical: 10,
-                    paddingHorizontal: 12,
-                    backgroundColor: showSavedAccounts ? '#3B82F6' : '#F1F5F9',
-                    borderRadius: 8,
-                    alignItems: 'center',
-                  }}
+                  style={[
+                    styles.tabButton,
+                    showSavedAccounts
+                      ? styles.tabButtonActive
+                      : styles.tabButtonInactive,
+                  ]}
                   onPress={() => {
                     setShowSavedAccounts(!showSavedAccounts);
                     setShowBankSelector(false);
                   }}
                 >
-                  <Text style={{
-                    color: showSavedAccounts ? '#FFFFFF' : '#64748B',
-                    fontWeight: '600',
-                    fontSize: 13
-                  }}>
+                  <Text
+                    style={[
+                      styles.tabButtonText,
+                      showSavedAccounts
+                        ? styles.tabButtonTextActive
+                        : styles.tabButtonTextInactive,
+                    ]}
+                  >
                     Saved Accounts ({savedBankAccounts.length})
                   </Text>
                 </TouchableOpacity>
@@ -717,62 +793,65 @@ export default function DesignerWalletScreen() {
 
               {/* BANK SELECTOR */}
               {showBankSelector && (
-                <View style={{
-                  backgroundColor: '#F8FAFC',
-                  borderRadius: 12,
-                  padding: 12,
-                  marginBottom: 16,
-                  maxHeight: 300
-                }}>
+                <View style={styles.bankSelectorContainer}>
                   <TextInput
-                    style={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: 8,
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderWidth: 1,
-                      borderColor: '#E2E8F0',
-                      marginBottom: 8
-                    }}
+                    style={styles.bankSearchInput}
                     placeholder="Search bank..."
+                    placeholderTextColor={colors.textMuted}
                     value={bankSearchQuery}
                     onChangeText={setBankSearchQuery}
                   />
-                  <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+                  <ScrollView
+                    style={{ maxHeight: 220 }}
+                    showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled={true}
+                  >
                     {banks
-                      .filter(bank =>
-                        bank.name.toLowerCase().includes(bankSearchQuery.toLowerCase()) ||
-                        bank.shortName.toLowerCase().includes(bankSearchQuery.toLowerCase())
+                      .filter(
+                        (bank) =>
+                          bank.name
+                            .toLowerCase()
+                            .includes(bankSearchQuery.toLowerCase()) ||
+                          bank.shortName
+                            .toLowerCase()
+                            .includes(bankSearchQuery.toLowerCase())
                       )
-                      .map(bank => (
+                      .map((bank) => (
                         <TouchableOpacity
                           key={bank.id}
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            padding: 10,
-                            backgroundColor: selectedBank?.id === bank.id ? '#DBEAFE' : '#FFFFFF',
-                            borderRadius: 8,
-                            marginBottom: 6,
-                            borderWidth: 1,
-                            borderColor: selectedBank?.id === bank.id ? '#3B82F6' : '#E2E8F0'
-                          }}
+                          style={[
+                            styles.bankItemContainer,
+                            selectedBank?.id === bank.id &&
+                            styles.bankItemSelected,
+                          ]}
                           onPress={() => handleSelectBank(bank)}
                         >
                           <Image
                             source={{ uri: bank.logo }}
-                            style={{ width: 40, height: 40, marginRight: 12, borderRadius: 6 }}
+                            style={{
+                              width: 40,
+                              height: 40,
+                              marginRight: 12,
+                              borderRadius: 6,
+                            }}
                           />
                           <View style={{ flex: 1 }}>
-                            <Text style={{ fontWeight: '600', fontSize: 14, color: '#0F172A' }}>
+                            <Text style={styles.bankItemName}>
                               {bank.shortName}
                             </Text>
-                            <Text style={{ fontSize: 12, color: '#64748B' }} numberOfLines={1}>
+                            <Text
+                              style={styles.bankItemFullName}
+                              numberOfLines={1}
+                            >
                               {bank.name}
                             </Text>
                           </View>
                           {selectedBank?.id === bank.id && (
-                            <Icon name="check-circle" size={20} color="#3B82F6" />
+                            <Icon
+                              name="check-circle"
+                              size={20}
+                              color="#3B82F6"
+                            />
                           )}
                         </TouchableOpacity>
                       ))}
@@ -782,63 +861,62 @@ export default function DesignerWalletScreen() {
 
               {/* SAVED ACCOUNTS SELECTOR */}
               {showSavedAccounts && (
-                <View style={{
-                  backgroundColor: '#F8FAFC',
-                  borderRadius: 12,
-                  padding: 12,
-                  marginBottom: 16,
-                  maxHeight: 300
-                }}>
+                <View style={styles.bankSelectorContainer}>
                   {savedBankAccounts.length > 0 ? (
-                    <ScrollView style={{ maxHeight: 220 }} showsVerticalScrollIndicator={false} nestedScrollEnabled={true}>
+                    <ScrollView
+                      style={{ maxHeight: 220 }}
+                      showsVerticalScrollIndicator={false}
+                      nestedScrollEnabled={true}
+                    >
                       {savedBankAccounts.map((account, index) => (
                         <TouchableOpacity
                           key={index}
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            padding: 12,
-                            backgroundColor: selectedSavedAccount === account ? '#DBEAFE' : '#FFFFFF',
-                            borderRadius: 8,
-                            marginBottom: 8,
-                            borderWidth: 1,
-                            borderColor: selectedSavedAccount === account ? '#3B82F6' : '#E2E8F0'
-                          }}
+                          style={[
+                            styles.bankItemContainer,
+                            selectedSavedAccount === account &&
+                            styles.bankItemSelected,
+                          ]}
                           onPress={() => handleSelectSavedAccount(account)}
                         >
                           {account.logoUrl && (
                             <Image
                               source={{ uri: account.logoUrl }}
-                              style={{ width: 40, height: 40, marginRight: 12, borderRadius: 6 }}
+                              style={{
+                                width: 40,
+                                height: 40,
+                                marginRight: 12,
+                                borderRadius: 6,
+                              }}
                             />
                           )}
                           <View style={{ flex: 1 }}>
-                            <Text style={{ fontWeight: '600', fontSize: 14, color: '#0F172A' }}>
+                            <Text style={styles.bankItemName}>
                               {account.branch} - {account.bankName}
                             </Text>
-                            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                            <Text style={styles.bankItemFullName}>
                               {account.accountNumber}
                             </Text>
-                            <Text style={{ fontSize: 12, color: '#64748B' }}>
+                            <Text style={styles.bankItemFullName}>
                               {account.accountHolderName}
                             </Text>
                           </View>
                           {selectedSavedAccount === account && (
-                            <Icon name="check-circle" size={20} color="#3B82F6" />
+                            <Icon
+                              name="check-circle"
+                              size={20}
+                              color="#3B82F6"
+                            />
                           )}
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
                   ) : (
-                    <Text style={{ textAlign: 'center', color: '#94A3B8', padding: 20 }}>
+                    <Text style={styles.savedAccountEmpty}>
                       No saved accounts yet
                     </Text>
                   )}
                 </View>
               )}
-
-
-
 
               {/* 2-COLUMN BANK INPUTS */}
               <View style={styles.bankGrid}>
@@ -847,6 +925,7 @@ export default function DesignerWalletScreen() {
                   <TextInput
                     style={styles.bankInfoInputNew}
                     placeholder="Enter bank name"
+                    placeholderTextColor={colors.textMuted}
                     value={bankInfo.bankName}
                     onChangeText={(text) =>
                       setBankInfo({ ...bankInfo, bankName: text })
@@ -859,6 +938,7 @@ export default function DesignerWalletScreen() {
                   <TextInput
                     style={styles.bankInfoInputNew}
                     placeholder="Enter account number"
+                    placeholderTextColor={colors.textMuted}
                     keyboardType="numeric"
                     value={bankInfo.accountNumber}
                     onChangeText={(text) =>
@@ -873,14 +953,13 @@ export default function DesignerWalletScreen() {
                 <TextInput
                   style={styles.bankInfoInputNew}
                   placeholder="Enter account name"
+                  placeholderTextColor={colors.textMuted}
                   value={bankInfo.accountName}
                   onChangeText={(text) =>
                     setBankInfo({ ...bankInfo, accountName: text })
                   }
                 />
               </View>
-
-
             </ScrollView>
 
             {/* FOOTER BUTTONS */}
@@ -889,7 +968,12 @@ export default function DesignerWalletScreen() {
                 style={[styles.buttonNew, styles.cancelButtonNew]}
                 onPress={handleCloseWithdrawModal}
               >
-                <Text style={[styles.buttonTextNew, { color: "#64748B" }]}>
+                <Text
+                  style={[
+                    styles.buttonTextNew,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Cancel
                 </Text>
               </Pressable>
@@ -910,16 +994,15 @@ export default function DesignerWalletScreen() {
               </Pressable>
             </View>
           </View>
-        </View >
-      </Modal >
+        </View>
+      </Modal>
 
       {/* Deposit Modal */}
-      < Modal
+      <Modal
         visible={showDepositModal}
         animationType="slide"
         transparent
-        onRequestClose={() => setShowDepositModal(false)
-        }
+        onRequestClose={() => setShowDepositModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent]}>
@@ -927,7 +1010,7 @@ export default function DesignerWalletScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Deposit Funds</Text>
               <Pressable onPress={() => setShowDepositModal(false)}>
-                <Icon name="close" size={24} color="#0F172A" />
+                <Icon name="close" size={24} color={colors.textPrimary} />
               </Pressable>
             </View>
 
@@ -946,6 +1029,7 @@ export default function DesignerWalletScreen() {
                     value={depositAmount}
                     onChangeText={setDepositAmount}
                     placeholder="Enter amount"
+                    placeholderTextColor={colors.textMuted}
                     keyboardType="numeric"
                   />
                 </View>
@@ -979,10 +1063,7 @@ export default function DesignerWalletScreen() {
               <View style={styles.paymentSection}>
                 <Text style={styles.paymentLabel}>Payment Method</Text>
                 <View
-                  style={[
-                    styles.paymentMethod,
-                    styles.selectedPaymentMethod,
-                  ]}
+                  style={[styles.paymentMethod, styles.selectedPaymentMethod]}
                 >
                   <View style={styles.paymentMethodLeft}>
                     <Text style={styles.paymentIcon}>💳</Text>
@@ -1002,21 +1083,19 @@ export default function DesignerWalletScreen() {
                   onPress={() => setShowDepositModal(false)}
                 >
                   <Text
-                    style={[styles.buttonTextNew, { color: "#64748B" }]}
+                    style={[
+                      styles.buttonTextNew,
+                      { color: colors.textSecondary },
+                    ]}
                   >
                     Cancel
                   </Text>
                 </Pressable>
                 <Pressable
-                  style={[
-                    styles.buttonNew,
-                    styles.confirmButtonNew,
-                  ]}
+                  style={[styles.buttonNew, styles.confirmButtonNew]}
                   onPress={handleDeposit}
                 >
-                  <Text
-                    style={[styles.buttonTextNew, { color: "#FFFFFF" }]}
-                  >
+                  <Text style={[styles.buttonTextNew, { color: "#FFFFFF" }]}>
                     Confirm
                   </Text>
                 </Pressable>
@@ -1024,7 +1103,7 @@ export default function DesignerWalletScreen() {
             </ScrollView>
           </View>
         </View>
-      </Modal >
+      </Modal>
 
       {/* Beautiful Alert Modal */}
       <Modal
@@ -1033,116 +1112,58 @@ export default function DesignerWalletScreen() {
         transparent={true}
         onRequestClose={closeAlert}
       >
-        <View style={modalStyles.alertOverlay}>
-          <View style={modalStyles.alertContainer}>
+        <View style={alertStyles.alertOverlay}>
+          <View style={alertStyles.alertContainer}>
             {/* Icon Section */}
-            <View style={[
-              modalStyles.alertIconContainer,
-              alertModal.type === 'error' && { backgroundColor: '#FEE2E2' },
-              alertModal.type === 'success' && { backgroundColor: '#D1FAE5' },
-              alertModal.type === 'warning' && { backgroundColor: '#FEF3C7' }
-            ]}>
+            <View
+              style={[
+                alertStyles.alertIconContainer,
+                alertModal.type === "error" && { backgroundColor: "#FEE2E2" },
+                alertModal.type === "success" && { backgroundColor: "#D1FAE5" },
+                alertModal.type === "warning" && { backgroundColor: "#FEF3C7" },
+              ]}
+            >
               <Icon
                 name={
-                  alertModal.type === 'error' ? 'error-outline' :
-                    alertModal.type === 'success' ? 'check-circle-outline' :
-                      'warning'
+                  alertModal.type === "error"
+                    ? "error-outline"
+                    : alertModal.type === "success"
+                      ? "check-circle-outline"
+                      : "warning"
                 }
                 size={56}
                 color={
-                  alertModal.type === 'error' ? '#EF4444' :
-                    alertModal.type === 'success' ? '#10B981' :
-                      '#F59E0B'
+                  alertModal.type === "error"
+                    ? "#EF4444"
+                    : alertModal.type === "success"
+                      ? "#10B981"
+                      : "#F59E0B"
                 }
               />
             </View>
 
             {/* Title */}
-            <Text style={modalStyles.alertTitle}>{alertModal.title}</Text>
+            <Text style={alertStyles.alertTitle}>{alertModal.title}</Text>
 
             {/* Message */}
-            <Text style={modalStyles.alertMessage}>{alertModal.message}</Text>
+            <Text style={alertStyles.alertMessage}>{alertModal.message}</Text>
 
             {/* OK Button */}
             <TouchableOpacity
               style={[
-                modalStyles.alertButton,
-                alertModal.type === 'error' && { backgroundColor: '#EF4444' },
-                alertModal.type === 'success' && { backgroundColor: '#10B981' },
-                alertModal.type === 'warning' && { backgroundColor: '#F59E0B' }
+                alertStyles.alertButton,
+                alertModal.type === "error" && { backgroundColor: "#EF4444" },
+                alertModal.type === "success" && { backgroundColor: "#10B981" },
+                alertModal.type === "warning" && { backgroundColor: "#F59E0B" },
               ]}
               onPress={closeAlert}
               activeOpacity={0.8}
             >
-              <Text style={modalStyles.alertButtonText}>OK</Text>
+              <Text style={alertStyles.alertButtonText}>OK</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </View >
+    </View>
   );
 }
-
-// Alert Modal Styles
-const modalStyles = StyleSheet.create({
-  alertOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  alertContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 32,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  alertIconContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  alertTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  alertMessage: {
-    fontSize: 16,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 28,
-  },
-  alertButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 48,
-    borderRadius: 12,
-    width: '100%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  alertButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-});
-

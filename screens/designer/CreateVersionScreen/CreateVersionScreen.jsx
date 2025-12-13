@@ -8,20 +8,25 @@ import {
     Image
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { styles } from "../DesignerQuickUploadScreen/DesignerQuickUploadScreen.styles";
 import { resourceService } from "../../../service/resourceService";
 import MultipleImageUploader from "../../../common/MultipleImageUploader";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useTheme } from "../../../context/ThemeContext";
+import getStyles from "./CreateVersionScreen.styles";
 
 export default function CreateVersionScreen() {
     const navigation = useNavigation();
     const route = useRoute();
     const { resourceTemplateId, productName, currentType, versionId, versionData } = route.params || {};
     const isUpdateMode = !!versionId;
+
+    const { theme } = useTheme();
+    const isDark = theme === "dark";
+    const styles = useMemo(() => getStyles(theme), [theme]);
 
     // State
     const [name, setName] = useState("");
@@ -227,11 +232,11 @@ export default function CreateVersionScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <Pressable onPress={() => navigation.goBack()}>
-                    <Icon name="arrow-back" size={24} color="#084F8C" />
+                    <Icon name="arrow-back" size={24} color={styles.headerIconColor} />
                 </Pressable>
                 <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.headerTitle}>{isUpdateMode ? 'Update Version' : 'Create New Version'}</Text>
-                    <Text style={{ fontSize: 12, color: "#6B7280" }}>
+                    <Text style={{ fontSize: 12, color: styles.textSecondary }}>
                         for "{productName}"
                     </Text>
                 </View>
@@ -255,7 +260,7 @@ export default function CreateVersionScreen() {
                 {/* Basic Info */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Icon name="description" size={20} color="#084F8C" />
+                        <Icon name="description" size={20} color={styles.primaryBlue} />
                         <Text style={styles.sectionTitle}>Version Information</Text>
                     </View>
 
@@ -267,7 +272,7 @@ export default function CreateVersionScreen() {
                                 value={name}
                                 onChangeText={setName}
                                 placeholder="Enter version name"
-                                placeholderTextColor="#94A3B8"
+                                placeholderTextColor={styles.placeholderText}
                             />
                         </View>
 
@@ -278,7 +283,7 @@ export default function CreateVersionScreen() {
                                 value={description}
                                 onChangeText={setDescription}
                                 placeholder="Describe this version"
-                                placeholderTextColor="#94A3B8"
+                                placeholderTextColor={styles.placeholderText}
                                 multiline
                                 numberOfLines={2}
                             />
@@ -299,7 +304,7 @@ export default function CreateVersionScreen() {
                                     <Icon
                                         name="grid-view"
                                         size={16}
-                                        color={type === "TEMPLATES" ? "#FFFFFF" : "#64748B"}
+                                        color={type === "TEMPLATES" ? "#FFFFFF" : styles.textMuted}
                                     />
                                     <Text
                                         style={[
@@ -320,7 +325,7 @@ export default function CreateVersionScreen() {
                                     <Icon
                                         name="category"
                                         size={16}
-                                        color={type === "ICONS" ? "#FFFFFF" : "#64748B"}
+                                        color={type === "ICONS" ? "#FFFFFF" : styles.textMuted}
                                     />
                                     <Text
                                         style={[
@@ -346,7 +351,7 @@ export default function CreateVersionScreen() {
                                     }}
                                     keyboardType="numeric"
                                     placeholder="0"
-                                    placeholderTextColor="#94A3B8"
+                                    placeholderTextColor={styles.placeholderText}
                                 />
                                 <Text style={styles.priceSuffix}>.000đ</Text>
                             </View>
@@ -361,7 +366,7 @@ export default function CreateVersionScreen() {
                                 value={releaseDate}
                                 onChangeText={setReleaseDate}
                                 placeholder="YYYY-MM-DD"
-                                placeholderTextColor="#94A3B8"
+                                placeholderTextColor={styles.placeholderText}
                             />
                         </View>
 
@@ -374,7 +379,7 @@ export default function CreateVersionScreen() {
                                 <Text style={styles.dateText}>
                                     {expiredTime || "Select date"}
                                 </Text>
-                                <Icon name="calendar-today" size={18} color="#64748B" />
+                                <Icon name="calendar-today" size={18} color={styles.textSecondary} />
                             </Pressable>
                             {showExpiredPicker && (
                                 <DateTimePicker
@@ -402,13 +407,13 @@ export default function CreateVersionScreen() {
                 {/* Images */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Icon name="image" size={20} color="#084F8C" />
+                        <Icon name="image" size={20} color={styles.primaryBlue} />
                         <Text style={styles.sectionTitle}>Images</Text>
                     </View>
 
                     {/* Banner Images - Full Width */}
                     <View style={styles.sectionHeader}>
-                        <Icon name="image" size={18} color="#084F8C" />
+                        <Icon name="image" size={18} color={styles.primaryBlue} />
                         <Text style={styles.sectionTitle}>Banner Images</Text>
                         <View style={styles.badge}>
                             <Text style={styles.badgeText}>{images.length}</Text>
@@ -423,7 +428,7 @@ export default function CreateVersionScreen() {
                 {/* Item Source */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <Icon name="inventory" size={20} color="#084F8C" />
+                        <Icon name="inventory" size={20} color={styles.primaryBlue} />
                         <Text style={styles.sectionTitle}>Item Source</Text>
                     </View>
 
@@ -439,7 +444,7 @@ export default function CreateVersionScreen() {
                             <Icon
                                 name="upload-file"
                                 size={18}
-                                color={itemSource === "upload" ? "#FFFFFF" : "#64748B"}
+                                color={itemSource === "upload" ? "#FFFFFF" : styles.textMuted}
                             />
                             <Text
                                 style={[
@@ -462,7 +467,7 @@ export default function CreateVersionScreen() {
                             <Icon
                                 name="folder"
                                 size={18}
-                                color={itemSource === "project" ? "#FFFFFF" : "#64748B"}
+                                color={itemSource === "project" ? "#FFFFFF" : styles.textMuted}
                             />
                             <Text
                                 style={[
@@ -480,13 +485,13 @@ export default function CreateVersionScreen() {
                 {itemSource === "project" && (
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <Icon name="folder" size={20} color="#084F8C" />
+                            <Icon name="folder" size={20} color={styles.primaryBlue} />
                             <Text style={styles.sectionTitle}>Available Projects ({projects?.length || 0})</Text>
                         </View>
 
                         {projects?.length === 0 ? (
                             <View style={styles.emptyState}>
-                                <Icon name="folder-open" size={48} color="#CBD5E1" />
+                                <Icon name="folder-open" size={48} color={styles.emptyIconColor} />
                                 <Text style={styles.emptyText}>
                                     No projects available
                                 </Text>
@@ -523,7 +528,7 @@ export default function CreateVersionScreen() {
                                             <Icon
                                                 name="check-circle"
                                                 size={24}
-                                                color="#084F8C"
+                                                color={styles.primaryBlue}
                                             />
                                         )}
                                     </Pressable>
@@ -537,7 +542,7 @@ export default function CreateVersionScreen() {
                 {itemSource === "upload" && (
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <Icon name="collections" size={20} color="#084F8C" />
+                            <Icon name="collections" size={20} color={styles.primaryBlue} />
                             <Text style={styles.sectionTitle}>Item Images</Text>
                             <View style={styles.badge}>
                                 <Text style={styles.badgeText}>{localItems.length}</Text>

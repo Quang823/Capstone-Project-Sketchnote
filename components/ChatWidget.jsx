@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
     View,
     Text,
@@ -18,12 +18,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { chatService } from "../service/chatService";
 import { webSocketService } from "../service/webSocketService";
 import { useToast } from "../hooks/use-toast";
-import styles from "./ChatWidget.styles";
+import { getStyles } from "./ChatWidget.styles";
 import { authService } from "../service/authService";
+import { useTheme } from "../context/ThemeContext";
 
 const RECEIVER_ID = 8;
 
 export default function ChatWidget({ visible, onClose }) {
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
+
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState("");
     const [loading, setLoading] = useState(true);
@@ -150,6 +154,7 @@ export default function ChatWidget({ visible, onClose }) {
                 useNativeDriver: true,
                 tension: 65,
                 friction: 11,
+                useNativeDriver: true,
             }).start();
 
             setCurrentPage(null);
@@ -274,7 +279,7 @@ export default function ChatWidget({ visible, onClose }) {
                                 style={{ width: 34, height: 34, borderRadius: 17 }}
                             />
                         ) : (
-                            <Icon name="support-agent" size={22} color="rgba(70, 58, 237, 1)" />
+                            <Icon name="support-agent" size={22} color={styles.colors.iconColor} />
                         )}
                     </View>
                 )}
@@ -317,7 +322,7 @@ export default function ChatWidget({ visible, onClose }) {
                                 style={{ width: 34, height: 34, borderRadius: 17 }}
                             />
                         ) : (
-                            <Icon name="person" size={22} color="rgba(70, 58, 237, 1)" />
+                            <Icon name="person" size={22} color={styles.colors.iconColor} />
                         )}
                     </View>
                 )}
@@ -409,7 +414,7 @@ export default function ChatWidget({ visible, onClose }) {
                             }
                             ListEmptyComponent={
                                 <View style={styles.emptyContainer}>
-                                    <Icon name="brush" size={56} color="#C4B5FD" />
+                                    <Icon name="brush" size={56} color={styles.colors.emptyIconColor} />
                                     <Text style={styles.emptyText}>Start Sketching!</Text>
                                     <Text style={styles.emptySubtext}>
                                         Send your first message to begin the conversation
@@ -431,7 +436,7 @@ export default function ChatWidget({ visible, onClose }) {
                                     value={inputText}
                                     onChangeText={setInputText}
                                     placeholder="Sketch your message..."
-                                    placeholderTextColor="#94A3B8"
+                                    placeholderTextColor={styles.colors.inputPlaceholder}
                                     multiline
                                     maxLength={1000}
                                     editable={!sending}

@@ -1,4 +1,3 @@
-// DesignerQuickUploadScreen.js
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -15,17 +14,34 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
-import { styles } from "./DesignerQuickUploadScreen.styles";
+import getStyles from "./DesignerQuickUploadScreen.styles";
 import { resourceService } from "../../../service/resourceService";
 import MultipleImageUploader from "../../../common/MultipleImageUploader";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
+import { useTheme } from "../../../context/ThemeContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerQuickUploadScreen() {
   const navigation = useNavigation();
   const { setActiveNavItem } = useNavContext();
+  const { theme } = useTheme();
+
+  // Get styles based on theme
+  const styles = getStyles(theme);
+
+  // Theme colors for inline styles
+  const isDark = theme === "dark";
+  const colors = {
+    primaryBlue: isDark ? "#60A5FA" : "#084F8C",
+    primaryWhite: isDark ? "#FFFFFF" : "#084F8C",
+    textMuted: isDark ? "#64748B" : "#94A3B8",
+    textSecondary: isDark ? "#94A3B8" : "#64748B",
+    emptyIconColor: isDark ? "#475569" : "#CBD5E1",
+    typeButtonText: isDark ? "#94A3B8" : "#64748B",
+  };
+
   const [activeNavItemLocal, setActiveNavItemLocal] = useState("quickUpload");
 
   useEffect(() => {
@@ -205,10 +221,7 @@ export default function DesignerQuickUploadScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <SidebarToggleButton
-            iconColor="#084F8C"
-            iconSize={26}
-          />
+          <SidebarToggleButton iconColor={colors.primaryWhite} iconSize={26} />
           <Text style={styles.headerTitle}>Upload Template</Text>
         </View>
         <Pressable
@@ -231,7 +244,7 @@ export default function DesignerQuickUploadScreen() {
         {/* Basic Info */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Icon name="description" size={20} color="#084F8C" />
+            <Icon name="description" size={20} color={colors.primaryBlue} />
             <Text style={styles.sectionTitle}>Basic Information</Text>
           </View>
 
@@ -243,7 +256,7 @@ export default function DesignerQuickUploadScreen() {
                 value={name}
                 onChangeText={setName}
                 placeholder="Enter template name"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.textMuted}
               />
             </View>
 
@@ -254,7 +267,7 @@ export default function DesignerQuickUploadScreen() {
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Describe your template"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.textMuted}
                 multiline
                 numberOfLines={2}
               />
@@ -275,7 +288,9 @@ export default function DesignerQuickUploadScreen() {
                   <Icon
                     name="grid-view"
                     size={16}
-                    color={type === "TEMPLATES" ? "#FFFFFF" : "#64748B"}
+                    color={
+                      type === "TEMPLATES" ? "#FFFFFF" : colors.typeButtonText
+                    }
                   />
                   <Text
                     style={[
@@ -296,7 +311,7 @@ export default function DesignerQuickUploadScreen() {
                   <Icon
                     name="category"
                     size={16}
-                    color={type === "ICONS" ? "#FFFFFF" : "#64748B"}
+                    color={type === "ICONS" ? "#FFFFFF" : colors.typeButtonText}
                   />
                   <Text
                     style={[
@@ -322,7 +337,7 @@ export default function DesignerQuickUploadScreen() {
                   }}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={colors.textMuted}
                 />
                 <Text style={styles.priceSuffix}>.000đ</Text>
               </View>
@@ -341,7 +356,7 @@ export default function DesignerQuickUploadScreen() {
                   setReleaseDateISO(iso);
                 }}
                 placeholder="YYYY-MM-DD"
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={colors.textMuted}
               />
             </View>
 
@@ -354,7 +369,11 @@ export default function DesignerQuickUploadScreen() {
                 <Text style={styles.dateText}>
                   {expiredTime || "Select date"}
                 </Text>
-                <Icon name="calendar-today" size={18} color="#64748B" />
+                <Icon
+                  name="calendar-today"
+                  size={18}
+                  color={colors.textSecondary}
+                />
               </Pressable>
               {showExpiredPicker && (
                 <DateTimePicker
@@ -383,13 +402,13 @@ export default function DesignerQuickUploadScreen() {
           {/* Images */}
           <View style={[styles.section, styles.halfSection]}>
             <View style={styles.sectionHeader}>
-              <Icon name="image" size={20} color="#084F8C" />
+              <Icon name="image" size={20} color={colors.primaryBlue} />
               <Text style={styles.sectionTitle}>Images</Text>
             </View>
 
             {/* Banner Images - Full Width */}
             <View style={styles.sectionHeader}>
-              <Icon name="image" size={18} color="#084F8C" />
+              <Icon name="image" size={18} color={colors.primaryBlue} />
               <Text style={styles.sectionTitle}>Banner Images</Text>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{images.length}</Text>
@@ -404,7 +423,7 @@ export default function DesignerQuickUploadScreen() {
           {/* Item Source */}
           <View style={[styles.section, styles.halfSection]}>
             <View style={styles.sectionHeader}>
-              <Icon name="inventory" size={20} color="#084F8C" />
+              <Icon name="inventory" size={20} color={colors.primaryBlue} />
               <Text style={styles.sectionTitle}>Item Source</Text>
             </View>
 
@@ -420,7 +439,9 @@ export default function DesignerQuickUploadScreen() {
                 <Icon
                   name="upload-file"
                   size={18}
-                  color={itemSource === "upload" ? "#FFFFFF" : "#64748B"}
+                  color={
+                    itemSource === "upload" ? "#FFFFFF" : colors.typeButtonText
+                  }
                 />
                 <Text
                   style={[
@@ -443,7 +464,9 @@ export default function DesignerQuickUploadScreen() {
                 <Icon
                   name="folder"
                   size={18}
-                  color={itemSource === "project" ? "#FFFFFF" : "#64748B"}
+                  color={
+                    itemSource === "project" ? "#FFFFFF" : colors.typeButtonText
+                  }
                 />
                 <Text
                   style={[
@@ -462,16 +485,20 @@ export default function DesignerQuickUploadScreen() {
         {itemSource === "project" && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="folder" size={20} color="#084F8C" />
-              <Text style={styles.sectionTitle}>Available Projects ({projects?.length || 0})</Text>
+              <Icon name="folder" size={20} color={colors.primaryBlue} />
+              <Text style={styles.sectionTitle}>
+                Available Projects ({projects?.length || 0})
+              </Text>
             </View>
 
             {projects?.length === 0 ? (
               <View style={styles.emptyState}>
-                <Icon name="folder-open" size={48} color="#CBD5E1" />
-                <Text style={styles.emptyText}>
-                  No projects available
-                </Text>
+                <Icon
+                  name="folder-open"
+                  size={48}
+                  color={colors.emptyIconColor}
+                />
+                <Text style={styles.emptyText}>No projects available</Text>
               </View>
             ) : (
               <ScrollView
@@ -486,7 +513,7 @@ export default function DesignerQuickUploadScreen() {
                     style={[
                       styles.projectCard,
                       selectedProjectId === proj.projectId &&
-                      styles.projectCardActive,
+                        styles.projectCardActive,
                     ]}
                   >
                     <Image
@@ -505,7 +532,7 @@ export default function DesignerQuickUploadScreen() {
                       <Icon
                         name="check-circle"
                         size={24}
-                        color="#084F8C"
+                        color={colors.primaryBlue}
                       />
                     )}
                   </Pressable>
@@ -519,22 +546,18 @@ export default function DesignerQuickUploadScreen() {
         {itemSource === "upload" && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Icon name="collections" size={20} color="#084F8C" />
+              <Icon name="collections" size={20} color={colors.primaryBlue} />
               <Text style={styles.sectionTitle}>Item Images</Text>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{localItems.length}</Text>
               </View>
             </View>
             <MultipleImageUploader
-              onImageUploaded={(url) =>
-                setLocalItems((prev) => [...prev, url])
-              }
+              onImageUploaded={(url) => setLocalItems((prev) => [...prev, url])}
               maxImages={10}
             />
           </View>
         )}
-
-        {/* Removed bottom upload button: now on header */}
 
         <View style={{ height: 40 }} />
       </ScrollView>

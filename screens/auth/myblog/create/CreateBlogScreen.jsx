@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator, ScrollView, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { styles } from "./CreateBlogScreen.styles";
+import { getStyles } from "./CreateBlogScreen.styles";
 import { blogService } from "../../../../service/blogService";
 import ImageUploader from "../../../../common/ImageUploader";
+import { useTheme } from "../../../../context/ThemeContext";
 
 const { width } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -18,6 +19,9 @@ export default function CreateBlogScreen({ navigation }) {
     { sectionTitle: "", content: "", contentUrl: "", index: 0 }
   ]);
   const [loading, setLoading] = useState(false);
+
+  const { theme } = useTheme();
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const addContentSection = () => {
     setContents([
@@ -148,7 +152,7 @@ export default function CreateBlogScreen({ navigation }) {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Icon name="arrow-back" size={30} color="#084F8C" />
+            <Icon name="arrow-back" size={30} color={styles.iconColor1} />
           </Pressable>
 
           <View style={styles.headerTextContainer}>
@@ -166,28 +170,28 @@ export default function CreateBlogScreen({ navigation }) {
         {/* Progress Indicator */}
         <View style={styles.progressCard}>
           <View style={styles.progressItem}>
-            <View style={[styles.progressIcon, { backgroundColor: title.trim() ? '#DCFCE7' : '#FEE2E2' }]}>
+            <View style={[styles.progressIcon, { backgroundColor: title.trim() ? '#DCFCE7' : (theme === 'dark' ? '#450a0a' : '#FEE2E2') }]}>
               <Icon name={title.trim() ? 'check' : 'title'} size={20} color={title.trim() ? '#16A34A' : '#DC2626'} />
             </View>
             <Text style={styles.progressText}>Title</Text>
           </View>
           <View style={styles.progressDivider} />
           <View style={styles.progressItem}>
-            <View style={[styles.progressIcon, { backgroundColor: summary.trim() ? '#DCFCE7' : '#FEE2E2' }]}>
+            <View style={[styles.progressIcon, { backgroundColor: summary.trim() ? '#DCFCE7' : (theme === 'dark' ? '#450a0a' : '#FEE2E2') }]}>
               <Icon name={summary.trim() ? 'check' : 'description'} size={20} color={summary.trim() ? '#16A34A' : '#DC2626'} />
             </View>
             <Text style={styles.progressText}>Summary</Text>
           </View>
           <View style={styles.progressDivider} />
           <View style={styles.progressItem}>
-            <View style={[styles.progressIcon, { backgroundColor: imageUrl ? '#DCFCE7' : '#FEE2E2' }]}>
+            <View style={[styles.progressIcon, { backgroundColor: imageUrl ? '#DCFCE7' : (theme === 'dark' ? '#450a0a' : '#FEE2E2') }]}>
               <Icon name={imageUrl ? 'check' : 'image'} size={20} color={imageUrl ? '#16A34A' : '#DC2626'} />
             </View>
             <Text style={styles.progressText}>Image</Text>
           </View>
           <View style={styles.progressDivider} />
           <View style={styles.progressItem}>
-            <View style={[styles.progressIcon, { backgroundColor: contents.length > 0 ? '#DCFCE7' : '#FEE2E2' }]}>
+            <View style={[styles.progressIcon, { backgroundColor: contents.length > 0 ? '#DCFCE7' : (theme === 'dark' ? '#450a0a' : '#FEE2E2') }]}>
               <Icon name={contents.length > 0 ? 'check' : 'article'} size={20} color={contents.length > 0 ? '#16A34A' : '#DC2626'} />
             </View>
             <Text style={styles.progressText}>Content</Text>
@@ -200,13 +204,13 @@ export default function CreateBlogScreen({ navigation }) {
           <View style={styles.leftColumn}>
             <View style={styles.inputCard}>
               <View style={styles.inputHeader}>
-                <Icon name="title" size={20} color="#084F8C" />
+                <Icon name="title" size={20} color={styles.iconColor} />
                 <Text style={styles.inputLabel}>Blog Title</Text>
               </View>
               <TextInput
                 style={styles.input}
                 placeholder="Enter an engaging title..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={styles.placeholderText}
                 value={title}
                 onChangeText={setTitle}
               />
@@ -217,13 +221,13 @@ export default function CreateBlogScreen({ navigation }) {
 
             <View style={styles.inputCard}>
               <View style={styles.inputHeader}>
-                <Icon name="description" size={20} color="#084F8C" />
+                <Icon name="description" size={20} color={styles.iconColor} />
                 <Text style={styles.inputLabel}>Summary</Text>
               </View>
               <TextInput
                 style={[styles.input, styles.textArea]}
                 placeholder="Write a compelling summary that captures attention..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={styles.placeholderText}
                 value={summary}
                 onChangeText={setSummary}
                 multiline
@@ -238,7 +242,7 @@ export default function CreateBlogScreen({ navigation }) {
           <View style={styles.rightColumn}>
             <View style={styles.inputCard}>
               <View style={styles.inputHeader}>
-                <Icon name="photo-camera" size={20} color="#084F8C" />
+                <Icon name="photo-camera" size={20} color={styles.iconColor} />
                 <Text style={styles.inputLabel}>Featured Image</Text>
               </View>
               <ImageUploader
@@ -256,7 +260,7 @@ export default function CreateBlogScreen({ navigation }) {
         <View style={styles.sectionHeaderCard}>
           <View style={styles.sectionHeaderLeft}>
             <View style={styles.sectionIconWrapper}>
-              <Icon name="article" size={24} color="#084F8C" />
+              <Icon name="article" size={24} color={styles.iconColor} />
             </View>
             <View>
               <Text style={styles.sectionHeaderTitle}>Content Sections</Text>
@@ -299,7 +303,7 @@ export default function CreateBlogScreen({ navigation }) {
                 <TextInput
                   style={styles.input}
                   placeholder="e.g., Introduction, Main Points, Conclusion..."
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={styles.placeholderText}
                   value={section.sectionTitle}
                   onChangeText={(text) => updateContentSection(index, "sectionTitle", text)}
                 />
@@ -311,7 +315,7 @@ export default function CreateBlogScreen({ navigation }) {
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   placeholder="Write your section content here..."
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={styles.placeholderText}
                   value={section.content}
                   onChangeText={(text) => updateContentSection(index, "content", text)}
                   multiline
@@ -337,7 +341,7 @@ export default function CreateBlogScreen({ navigation }) {
         <View style={styles.bottomActionsContainer}>
           {/* Add Section Button */}
           <Pressable onPress={addContentSection} style={styles.addSectionButtonRow}>
-            <Icon name="add-circle-outline" size={20} color="#084F8C" />
+            <Icon name="add-circle-outline" size={20} color={styles.iconColor} />
             <Text style={styles.addSectionTextRow}>Add Section</Text>
           </Pressable>
 

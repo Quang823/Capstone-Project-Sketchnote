@@ -12,13 +12,29 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import styles from "./TransactionHistoryScreen.styles";
+import { useTheme } from "../../../context/ThemeContext";
+import getStyles from "./TransactionHistoryScreen.styles";
 
 const TABS = ["All", "Deposits", "Expenses", "Pending"];
 
 export default function TransactionHistoryScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const { theme } = useTheme();
+
+  // Get styles based on theme
+  const styles = getStyles(theme);
+
+  // Theme colors for inline styles
+  const isDark = theme === "dark";
+  const colors = {
+    primaryBlue: isDark ? "#60A5FA" : "#084F8C",
+    primaryWhite: isDark ? "#FFFFFF" : "#084F8C",
+    textPrimary: isDark ? "#F1F5F9" : "#1E293B",
+    emptyIconColor: isDark ? "#475569" : "#CBD5E1",
+    closeIconColor: isDark ? "#F1F5F9" : "#0F172A",
+  };
+
   const { transactions: initialTransactions = [] } = route.params || {};
 
   const [transactions, setTransactions] = useState(initialTransactions);
@@ -156,7 +172,7 @@ export default function TransactionHistoryScreen() {
     const config = getTransactionConfig(item);
     return (
       <Pressable
-        style={[styles.card, { borderColor: "#E0E7FF", borderWidth: 1 }]}
+        style={styles.card}
         onPress={() => {
           setSelectedTx(item);
           setModalVisible(true);
@@ -203,7 +219,7 @@ export default function TransactionHistoryScreen() {
             onPress={() => navigation.goBack()}
             style={styles.backButton}
           >
-            <Icon name="arrow-back" size={24} color="#084F8C" />
+            <Icon name="arrow-back" size={24} color={colors.primaryWhite} />
           </Pressable>
           <Text style={styles.headerTitle}>Transaction History</Text>
           <View style={{ width: 24 }} />
@@ -285,7 +301,7 @@ export default function TransactionHistoryScreen() {
         contentContainerStyle={{ padding: 16 }}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
-            <Icon name="receipt" size={48} color="#CBD5E1" />
+            <Icon name="receipt" size={48} color={colors.emptyIconColor} />
             <Text style={styles.emptyText}>No transactions found</Text>
           </View>
         }
@@ -298,7 +314,7 @@ export default function TransactionHistoryScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Transaction Details</Text>
               <Pressable onPress={() => setModalVisible(false)}>
-                <Icon name="close" size={26} color="#0F172A" />
+                <Icon name="close" size={26} color={colors.closeIconColor} />
               </Pressable>
             </View>
 
@@ -407,7 +423,9 @@ export default function TransactionHistoryScreen() {
                           </View>
                         )}
 
-                        <View style={styles.detailRow}>
+                        <View
+                          style={[styles.detailRow, { borderBottomWidth: 0 }]}
+                        >
                           <Text style={styles.detailLabel}>Description</Text>
                           <Text
                             style={[

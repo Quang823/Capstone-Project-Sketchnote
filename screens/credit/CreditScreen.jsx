@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -13,14 +13,18 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
-import { styles } from './CreditScreen.styles';
+import { getStyles } from './CreditScreen.styles';
 import Toast from 'react-native-toast-message';
 import LottieView from 'lottie-react-native';
 import { creditService } from '../../service/creditService';
 import SidebarToggleButton from "../../components/navigation/SidebarToggleButton";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function CreditScreen() {
     const navigation = useNavigation();
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
+
     const [loading, setLoading] = useState(true);
     const [creditData, setCreditData] = useState({ balance: 0, totalPurchased: 0, totalUsed: 0 });
     const [history, setHistory] = useState([]);
@@ -171,7 +175,7 @@ export default function CreditScreen() {
                 {/* Popular Badge */}
                 {pkg.isPopular && (
                     <View style={styles.popularBadge}>
-                        <Icon name="star" size={14} color="#ffffff" />
+                        <Icon name="star" size={14} color={styles.colors.popularBadgeText} />
                         <Text style={styles.popularText}>POPULAR</Text>
                     </View>
                 )}
@@ -188,7 +192,7 @@ export default function CreditScreen() {
                     <Icon
                         name="stars"
                         size={36}
-                        color={pkg.isPopular ? "#084F8C" : "#64748b"}
+                        color={pkg.isPopular ? styles.colors.iconColor : styles.colors.textSecondary}
                     />
                 </View>
 
@@ -206,7 +210,7 @@ export default function CreditScreen() {
                 {/* Savings */}
                 {pkg.savingsAmount > 0 && (
                     <View style={styles.savingsTag}>
-                        <Icon name="savings" size={14} color="#059669" />
+                        <Icon name="savings" size={14} color={styles.colors.savingsTagText} />
                         <Text style={styles.savingsText}>
                             Save {pkg.savingsAmount.toLocaleString()}đ
                         </Text>
@@ -237,7 +241,7 @@ export default function CreditScreen() {
                     onPress={() => handlePurchasePackage(pkg)}
                 >
                     <Text style={styles.buyButtonText}>Select Plan</Text>
-                    <Icon name="arrow-forward" size={18} color="#ffffff" />
+                    <Icon name="arrow-forward" size={18} color={styles.colors.buyButtonText} />
                 </Pressable>
             </View>
         </Pressable>
@@ -246,7 +250,7 @@ export default function CreditScreen() {
     const renderHistoryItem = (item) => {
         const isUsage = item.type === 'USAGE';
         const color = isUsage ? '#ef4444' : '#10b981';
-        const bgColor = isUsage ? '#fef2f2' : '#f0fdf4';
+        const bgColor = isUsage ? '#fef2f2' : styles.colors.historyIconBg;
         const iconName = isUsage ? 'trending-down' : 'trending-up';
 
         return (
@@ -289,7 +293,7 @@ export default function CreditScreen() {
             {/* HEADER */}
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
-                    <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
+                    <SidebarToggleButton iconSize={26} iconColor={styles.colors.iconColor} />
                     <Text style={styles.headerTitle}>AI Credits</Text>
                 </View>
             </View>
@@ -453,7 +457,7 @@ export default function CreditScreen() {
                             }
                         >
                             <Text style={styles.viewAllText}>View All</Text>
-                            <Icon name="arrow-forward" size={16} color="#3B82F6" />
+                            <Icon name="arrow-forward" size={16} color={styles.colors.viewAllText} />
                         </Pressable>
                     </View>
 
@@ -462,7 +466,7 @@ export default function CreditScreen() {
                             history.slice(0, 5).map(renderHistoryItem)
                         ) : (
                             <View style={styles.emptyState}>
-                                <Icon name="receipt-long" size={48} color="#cbd5e1" />
+                                <Icon name="receipt-long" size={48} color={styles.colors.textTertiary} />
                                 <Text style={styles.emptyText}>No transactions yet</Text>
                             </View>
                         )}
@@ -481,13 +485,13 @@ export default function CreditScreen() {
                         {/* Modal Header */}
                         <View style={styles.modalHeader}>
                             <View style={styles.modalIconContainer}>
-                                <Icon name="account-balance-wallet" size={32} color="#084F8C" />
+                                <Icon name="account-balance-wallet" size={32} color={styles.colors.iconColor} />
                             </View>
                             <Pressable
                                 style={styles.modalClose}
                                 onPress={() => setCustomAmountModalVisible(false)}
                             >
-                                <Icon name="close" size={24} color="#64748b" />
+                                <Icon name="close" size={24} color={styles.colors.textSecondary} />
                             </Pressable>
                         </View>
 
@@ -504,7 +508,7 @@ export default function CreditScreen() {
                                 onChangeText={setCustomAmount}
                                 placeholder="0"
                                 keyboardType="numeric"
-                                placeholderTextColor="#cbd5e1"
+                                placeholderTextColor={styles.colors.textTertiary}
                             />
                             <Text style={styles.inputSuffix}>credits</Text>
                         </View>
@@ -552,13 +556,13 @@ export default function CreditScreen() {
                         {/* Modal Header */}
                         <View style={styles.modalHeader}>
                             <View style={styles.modalIconContainer}>
-                                <Icon name="card-giftcard" size={32} color="#084F8C" />
+                                <Icon name="card-giftcard" size={32} color={styles.colors.iconColor} />
                             </View>
                             <Pressable
                                 style={styles.modalClose}
                                 onPress={() => setPurchaseModalVisible(false)}
                             >
-                                <Icon name="close" size={24} color="#64748b" />
+                                <Icon name="close" size={24} color={styles.colors.textSecondary} />
                             </Pressable>
                         </View>
 
@@ -569,7 +573,7 @@ export default function CreditScreen() {
                         <View style={styles.packageDetails}>
                             <View style={styles.detailRow}>
                                 <View style={styles.detailLeft}>
-                                    <Icon name="stars" size={20} color="#084F8C" />
+                                    <Icon name="stars" size={20} color={styles.colors.iconColor} />
                                     <Text style={styles.detailLabel}>Credits</Text>
                                 </View>
                                 <Text style={styles.detailValue}>
@@ -579,7 +583,7 @@ export default function CreditScreen() {
 
                             <View style={styles.detailRow}>
                                 <View style={styles.detailLeft}>
-                                    <Icon name="payments" size={20} color="#084F8C" />
+                                    <Icon name="payments" size={20} color={styles.colors.iconColor} />
                                     <Text style={styles.detailLabel}>Price</Text>
                                 </View>
                                 <View style={styles.detailRight}>
@@ -596,7 +600,7 @@ export default function CreditScreen() {
 
                             {selectedPackage?.savingsAmount > 0 && (
                                 <View style={styles.savingsBanner}>
-                                    <Icon name="local-offer" size={16} color="#059669" />
+                                    <Icon name="local-offer" size={16} color={styles.colors.savingsTagText} />
                                     <Text style={styles.savingsBannerText}>
                                         You save {selectedPackage?.savingsAmount?.toLocaleString()}đ with this package!
                                     </Text>

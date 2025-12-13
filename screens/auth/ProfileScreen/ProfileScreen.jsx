@@ -5,18 +5,17 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  StyleSheet,
   ScrollView,
   Animated,
   ImageBackground,
   useWindowDimensions,
   Easing,
   Modal,
+  StatusBar,
 } from "react-native";
-import { Image } from "expo-image"; // Use expo-image for GIF animation support
+import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { Picker } from "@react-native-picker/picker";
 import { AuthContext } from "../../../context/AuthContext";
 import { authService } from "../../../service/authService";
 import { bankAccountService } from "../../../service/bankAccountService";
@@ -25,8 +24,14 @@ import SidebarToggleButton from "../../../components/navigation/SidebarToggleBut
 import { useToast } from "../../../hooks/use-toast";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
+import getStyles from "./ProfileScreen.styles";
+import { useTheme } from "../../../context/ThemeContext";
 
 const ProfileScreen = () => {
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  const isDark = theme === "dark";
+
   const { user, setUser } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +51,7 @@ const ProfileScreen = () => {
   const fadeAnim = useState(new Animated.Value(0))[0];
   const scaleAnim = useState(new Animated.Value(0.9))[0];
   const rotateAnim = useState(new Animated.Value(0))[0];
+  const buttonScaleAnim = useState(new Animated.Value(1))[0];
   const { toast } = useToast();
   const { width, height } = useWindowDimensions();
   const isLargeScreen = width >= 768;
@@ -102,8 +108,6 @@ const ProfileScreen = () => {
     }
   }, [profile?.hasActiveSubscription]);
 
-
-
   // Fetch banks from VietQR
   useEffect(() => {
     const fetchBanks = async () => {
@@ -131,6 +135,23 @@ const ProfileScreen = () => {
     fetchBankAccounts();
   }, [user]);
 
+  // Button press animation
+  const handleButtonPressIn = () => {
+    Animated.spring(buttonScaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleButtonPressOut = () => {
+    Animated.spring(buttonScaleAnim, {
+      toValue: 1,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true,
+    }).start();
+  };
+
   // --- Handle Avatar Upload ---
   const handleChooseAvatar = async () => {
     try {
@@ -147,8 +168,7 @@ const ProfileScreen = () => {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false, // Disabled to preserve GIF animations
-        // Allow all image types including GIF
+        allowsEditing: false,
         allowsMultipleSelection: false,
       });
 
@@ -158,11 +178,10 @@ const ProfileScreen = () => {
       if (!asset?.uri) return;
 
       const fileUri = asset.uri;
-      const fileSize = asset.fileSize; // Get file size for validation
+      const fileSize = asset.fileSize;
 
       setUploading(true);
 
-      // Pass file size to uploadToCloudinary for validation
       const uploadResult = await uploadToCloudinary(fileUri, { fileSize });
 
       setUser((prev) => ({ ...prev, avatarUrl: uploadResult.secure_url }));
@@ -170,13 +189,16 @@ const ProfileScreen = () => {
 
       toast({
         title: "Upload Successful!",
-        description: `Avatar updated${uploadResult.format === 'gif' ? ' (animated)' : ''}.`,
+        description: `Avatar updated${
+          uploadResult.format === "gif" ? " (animated)" : ""
+        }.`,
         variant: "success",
       });
     } catch (err) {
       toast({
         title: "Upload failed",
-        description: err.message || "Failed to upload avatar. Please try again.",
+        description:
+          err.message || "Failed to upload avatar. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -220,7 +242,6 @@ const ProfileScreen = () => {
   // --- Handle Add Bank Account ---
   const handleAddBankAccount = async () => {
     try {
-      // Validation
       if (!selectedBank) {
         toast({
           title: "Validation Error",
@@ -254,18 +275,16 @@ const ProfileScreen = () => {
         bankName: selectedBank.name,
         accountNumber: accountNumber.trim(),
         accountHolderName: accountHolderName.trim(),
-        branch: selectedBank.shortName, // Use shortName as specified
-        logoUrl: selectedBank.logo, // Pass bank logo
-        isDefault: true, // Set to true as specified
+        branch: selectedBank.shortName,
+        logoUrl: selectedBank.logo,
+        isDefault: true,
       };
 
       await bankAccountService.createBankAccount(accountData);
 
-      // Refresh bank accounts list
       const accounts = await bankAccountService.getBankAccounts();
       setBankAccounts(accounts);
 
-      // Reset form
       setAccountNumber("");
       setAccountHolderName("");
       setSelectedBank(null);
@@ -291,6 +310,10 @@ const ProfileScreen = () => {
   if (loading)
     return (
       <View style={styles.centerContainer}>
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={isDark ? "#0F172A" : "#F8FAFC"}
+        />
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -303,15 +326,23 @@ const ProfileScreen = () => {
   if (!profile)
     return (
       <View style={styles.centerContainer}>
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={isDark ? "#0F172A" : "#F8FAFC"}
+        />
         <Text style={styles.errorText}>No profile found.</Text>
       </View>
     );
 
   return (
     <View style={styles.container}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={isDark ? "#0F172A" : "#F8FAFC"}
+      />
       <SidebarToggleButton
         iconSize={26}
-        iconColor="#1E40AF"
+        iconColor={isDark ? "#FFFFFF" : "#1E40AF"}
         style={styles.toggleButton}
       />
 
@@ -322,7 +353,7 @@ const ProfileScreen = () => {
             uri: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763007145/z9ps3ywttozk9re6pszu.jpg",
           }}
           style={styles.headerBackground}
-          imageStyle={{ opacity: 0.9 }}
+          imageStyle={{ opacity: isDark ? 0.7 : 0.9 }}
         >
           <View style={styles.headerOverlay}>
             <Text style={styles.headerTitle}>My Profile</Text>
@@ -415,6 +446,7 @@ const ProfileScreen = () => {
                 onChangeText={(t) =>
                   setProfile((prev) => ({ ...prev, firstName: t }))
                 }
+                placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
               />
 
               <Text style={styles.inputLabel}>Last Name</Text>
@@ -424,11 +456,17 @@ const ProfileScreen = () => {
                 onChangeText={(t) =>
                   setProfile((prev) => ({ ...prev, lastName: t }))
                 }
+                placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
               />
 
               <Text style={styles.inputLabel}>
                 Email{" "}
-                <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: isDark ? "#64748B" : "#9CA3AF",
+                  }}
+                >
                   (cannot change)
                 </Text>
               </Text>
@@ -452,15 +490,39 @@ const ProfileScreen = () => {
 
               {/* Bank Account Section */}
               <View style={styles.bankAccountSection}>
-                <View style={styles.bankAccountHeader}>
+                <View style={styles.bankAccountHeaderRow}>
                   <Text style={styles.inputLabel}>Bank Accounts</Text>
-                  <TouchableOpacity
-                    style={styles.addBankButton}
-                    onPress={() => setShowBankModal(true)}
-                    activeOpacity={0.7}
+
+                  {/* Enhanced Add Bank Button */}
+                  <Animated.View
+                    style={[
+                      styles.addBankButtonWrapper,
+                      { transform: [{ scale: buttonScaleAnim }] },
+                    ]}
                   >
-                    <Text style={styles.addBankButtonText}>+ Add Bank</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setShowBankModal(true)}
+                      onPressIn={handleButtonPressIn}
+                      onPressOut={handleButtonPressOut}
+                      activeOpacity={1}
+                    >
+                      <LinearGradient
+                        colors={
+                          isDark
+                            ? ["#3B82F6", "#2563EB", "#1D4ED8"]
+                            : ["#60A5FA", "#3B82F6", "#2563EB"]
+                        }
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.addBankButton}
+                      >
+                        <View style={styles.addBankIconWrapper}>
+                          <Text style={styles.addBankIcon}>+</Text>
+                        </View>
+                        <Text style={styles.addBankButtonText}>Add Bank</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </Animated.View>
                 </View>
 
                 {bankAccounts.length > 0 ? (
@@ -483,7 +545,10 @@ const ProfileScreen = () => {
                               <Text style={styles.bankName}>
                                 {account.branch}
                                 {account.bankName && (
-                                  <Text style={styles.bankNameSeparator}> - </Text>
+                                  <Text style={styles.bankNameSeparator}>
+                                    {" "}
+                                    -{" "}
+                                  </Text>
                                 )}
                                 <Text style={styles.bankFullNameText}>
                                   {account.bankName}
@@ -492,7 +557,9 @@ const ProfileScreen = () => {
                             </View>
                             <View style={styles.accountDetails}>
                               <View style={styles.accountRow}>
-                                <Text style={styles.accountLabel}>Account:</Text>
+                                <Text style={styles.accountLabel}>
+                                  Account:
+                                </Text>
                                 <Text style={styles.accountNumber}>
                                   {account.accountNumber}
                                 </Text>
@@ -526,7 +593,13 @@ const ProfileScreen = () => {
             <TouchableOpacity activeOpacity={0.8} onPress={handleSave}>
               <LinearGradient
                 colors={
-                  saving ? ["#A5B4FC", "#93C5FD"] : ["#3B82F6", "#2563EB"]
+                  saving
+                    ? isDark
+                      ? ["#475569", "#334155"]
+                      : ["#A5B4FC", "#93C5FD"]
+                    : isDark
+                    ? ["#3B82F6", "#2563EB"]
+                    : ["#3B82F6", "#2563EB"]
                 }
                 style={styles.saveButton}
               >
@@ -537,12 +610,12 @@ const ProfileScreen = () => {
                 )}
               </LinearGradient>
             </TouchableOpacity>
-          </View >
-        </View >
-      </ScrollView >
+          </View>
+        </View>
+      </ScrollView>
 
       {/* Bank Account Modal */}
-      < Modal
+      <Modal
         visible={showBankModal}
         transparent={true}
         animationType="slide"
@@ -570,7 +643,7 @@ const ProfileScreen = () => {
             </View>
 
             {/* Bank Selection */}
-            <Text style={[styles.inputLabel, { marginHorizontal: 20 }]}>Select Bank</Text>
+            <Text style={styles.modalInputLabel}>Select Bank</Text>
 
             {/* Search Input */}
             <TextInput
@@ -578,16 +651,23 @@ const ProfileScreen = () => {
               placeholder="Search bank name..."
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
             />
 
             {/* Bank List with Logos */}
-            <ScrollView style={styles.bankListContainer} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.bankListContainer}
+              showsVerticalScrollIndicator={false}
+            >
               {banks
                 .filter(
                   (bank) =>
-                    bank.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    bank.shortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    bank.name
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase()) ||
+                    bank.shortName
+                      .toLowerCase()
+                      .includes(searchQuery.toLowerCase()) ||
                     bank.code.toLowerCase().includes(searchQuery.toLowerCase())
                 )
                 .map((bank) => (
@@ -621,25 +701,23 @@ const ProfileScreen = () => {
             </ScrollView>
 
             {/* Account Details Form */}
-            <Text style={[styles.inputLabel, { marginHorizontal: 20, marginTop: 16 }]}>
-              Account Number
-            </Text>
+            <Text style={styles.modalInputLabel}>Account Number</Text>
             <TextInput
-              style={[styles.input, { marginHorizontal: 20 }]}
+              style={styles.modalInput}
               value={accountNumber}
               onChangeText={setAccountNumber}
               placeholder="Enter account number"
               keyboardType="numeric"
+              placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
             />
 
-            <Text style={[styles.inputLabel, { marginHorizontal: 20 }]}>
-              Account Holder Name
-            </Text>
+            <Text style={styles.modalInputLabel}>Account Holder Name</Text>
             <TextInput
-              style={[styles.input, { marginHorizontal: 20 }]}
+              style={styles.modalInput}
               value={accountHolderName}
               onChangeText={setAccountHolderName}
               placeholder="Enter account holder name"
+              placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
             />
 
             <View style={styles.modalButtons}>
@@ -672,459 +750,9 @@ const ProfileScreen = () => {
             </View>
           </View>
         </View>
-      </Modal >
-    </View >
+      </Modal>
+    </View>
   );
 };
 
 export default ProfileScreen;
-
-// ------------------ Styles ------------------
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
-  toggleButton: {
-    position: "absolute",
-    top: 40,
-    left: 16,
-    zIndex: 10,
-  },
-
-  headerBackground: {
-    width: "100%",
-    height: 150,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerOverlay: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0,0,0,0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitle: { fontSize: 40, fontFamily: "Pacifico-Regular", color: "#fff" },
-  headerSubtitle: {
-    fontSize: 25,
-    fontFamily: "Pacifico-Regular",
-    color: "#E2E8F0",
-    marginTop: 4,
-  },
-
-  // TWO COLUMNS
-  twoColumnContainer: {
-    width: "100%",
-    padding: 20,
-    gap: 30,
-  },
-  leftColumn: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rightColumn: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    width: "100%",
-  },
-
-  // Avatar
-  avatarContainer: {
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarWrapper: {
-    width: 420,
-    height: 420,
-    borderRadius: 240,
-    overflow: "hidden",
-    backgroundColor: "#E2E8F0",
-  },
-  avatar: { width: "100%", height: "100%" },
-  avatarOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cameraButton: {
-    position: "absolute",
-    bottom: 30,
-    right: 30,
-    backgroundColor: "#3B82F6",
-    borderRadius: 55,
-    padding: 10,
-    borderWidth: 2,
-    borderColor: "#fff",
-  },
-  cameraIcon: { color: "#fff", fontSize: 34 },
-
-  premiumRing: {
-    position: "absolute",
-    width: 460,
-    height: 460,
-    borderRadius: 230,
-    top: -20,
-    left: -20,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  premiumRingGradient: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 230,
-  },
-
-  userName: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: "#1E3A8A",
-    marginTop: 30,
-  },
-  roleBadge: {
-    backgroundColor: "#DBEAFE",
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    borderRadius: 16,
-    marginTop: 4,
-  },
-  roleText: { color: "#2563EB", fontWeight: "600", fontSize: 18 },
-
-  // Form
-  formCard: {
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 18,
-    elevation: 2,
-    shadowOpacity: 0.1,
-    marginRight: 30,
-  },
-  inputLabel: {
-    fontSize: 14,
-    color: "#1E40AF",
-    fontWeight: "600",
-    marginTop: 10,
-    marginBottom: 6,
-  },
-  input: {
-    backgroundColor: "#EFF6FF",
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: "#1E3A8A",
-  },
-  disabledInput: {
-    backgroundColor: "#E5E7EB",
-    color: "#9CA3AF",
-  },
-
-  saveButton: {
-    marginTop: 10,
-    padding: 15,
-    borderRadius: 14,
-    width: "100%",
-    alignItems: "center",
-  },
-  saveText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-
-  centerContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  // Bank Account Styles
-  bankAccountSection: {
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
-  },
-  bankAccountHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  addBankButton: {
-    backgroundColor: "#3B82F6",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  addBankButtonText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  bankAccountsList: {
-    gap: 12,
-  },
-  bankAccountCard: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: "#BFDBFE",
-    borderRadius: 16,
-    padding: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    shadowColor: "#3B82F6",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  bankAccountLogo: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: "#E5E7EB",
-  },
-  bankAccountInfo: {
-    flex: 1,
-  },
-  bankAccountHeader: {
-    marginBottom: 4,
-  },
-  bankName: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#1E3A8A",
-    lineHeight: 20,
-  },
-  bankNameSeparator: {
-    fontWeight: "400",
-    color: "#9CA3AF",
-  },
-  bankFullNameText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#6B7280",
-  },
-  accountDetails: {
-    gap: 2,
-  },
-  accountRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  accountLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#9CA3AF",
-    minWidth: 55,
-  },
-  accountNumber: {
-    fontSize: 15,
-    color: "#3B82F6",
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  accountHolder: {
-    fontSize: 14,
-    color: "#1F2937",
-    fontWeight: "600",
-  },
-  defaultBadge: {
-    backgroundColor: "#10B981",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    shadowColor: "#10B981",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  defaultText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  noBankText: {
-    fontSize: 14,
-    color: "#9CA3AF",
-    fontStyle: "italic",
-    textAlign: "center",
-    paddingVertical: 20,
-  },
-
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 0,
-    width: "100%",
-    maxWidth: 550,
-    maxHeight: "85%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
-    overflow: "hidden",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    backgroundColor: "#3B82F6",
-  },
-  modalTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#fff",
-    flex: 1,
-  },
-  closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  closeButtonText: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  searchInput: {
-    backgroundColor: "#F3F4F6",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: "#1F2937",
-    marginHorizontal: 20,
-    marginTop: 20,
-    marginBottom: 12,
-  },
-  bankListContainer: {
-    maxHeight: 300,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  bankItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
-    backgroundColor: "#fff",
-  },
-  bankItemSelected: {
-    backgroundColor: "#EFF6FF",
-    borderLeftWidth: 4,
-    borderLeftColor: "#3B82F6",
-  },
-  bankLogo: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    backgroundColor: "#fff",
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  bankInfo: {
-    flex: 1,
-  },
-  bankShortName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1F2937",
-    marginBottom: 2,
-  },
-  bankFullName: {
-    fontSize: 13,
-    color: "#6B7280",
-    lineHeight: 18,
-  },
-  checkmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#10B981",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkmarkText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  pickerContainer: {
-    backgroundColor: "#EFF6FF",
-    borderWidth: 1,
-    borderColor: "#BFDBFE",
-    borderRadius: 10,
-    marginBottom: 16,
-    overflow: "hidden",
-    marginHorizontal: 20,
-  },
-  picker: {
-    height: 50,
-  },
-  modalButtons: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: "#F3F4F6",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-  },
-  cancelButtonText: {
-    color: "#374151",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  submitButton: {
-    flex: 1,
-    backgroundColor: "#3B82F6",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#3B82F6",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  submitButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-});

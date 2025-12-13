@@ -8,7 +8,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { 
+    this.state = {
       hasError: false,
       error: null,
       errorInfo: null
@@ -27,7 +27,7 @@ export class ErrorBoundary extends React.Component {
       error,
       errorInfo
     });
-    
+
     // Gọi callback nếu có
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
@@ -35,12 +35,12 @@ export class ErrorBoundary extends React.Component {
   }
 
   handleReset = () => {
-    this.setState({ 
+    this.setState({
       hasError: false,
       error: null,
       errorInfo: null
     });
-    
+
     if (this.props.onReset) {
       this.props.onReset();
     }
@@ -60,11 +60,11 @@ export class ErrorBoundary extends React.Component {
       // Default fallback UI
       return (
         <View style={styles.container}>
-          <Text style={styles.title}>Đã xảy ra lỗi</Text>
+          <Text style={styles.title}>Error</Text>
           <Text style={styles.message}>
-            {this.props.message || 'Không thể hiển thị nội dung này'}
+            {this.props.message || 'Cannot display content'}
           </Text>
-          
+
           {__DEV__ && this.state.error && (
             <View style={styles.errorDetails}>
               <Text style={styles.errorText}>
@@ -72,12 +72,12 @@ export class ErrorBoundary extends React.Component {
               </Text>
             </View>
           )}
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.button}
             onPress={this.handleReset}
           >
-            <Text style={styles.buttonText}>Thử lại</Text>
+            <Text style={styles.buttonText}>Try again</Text>
           </TouchableOpacity>
         </View>
       );
