@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Alert,
   TextInput,
   StyleSheet,
 } from "react-native";
@@ -21,6 +20,7 @@ import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../../context/ThemeContext";
+import Toast from "react-native-toast-message";
 
 export default function MyCoursesScreen() {
   const [enrollments, setEnrollments] = useState([]);
@@ -40,7 +40,11 @@ export default function MyCoursesScreen() {
       const data = await courseService.getAllCourseEnrollments2();
       setEnrollments(data.result || []);
     } catch (error) {
-      console.error("Error fetching courses:", error.message);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Failed to load courses. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -64,7 +68,6 @@ export default function MyCoursesScreen() {
 
       await feedbackService.postFeedbackCourse(payload);
     } catch (error) {
-      console.error("Error creating feedback:", error.message);
       throw error;
     }
   };
@@ -85,11 +88,19 @@ export default function MyCoursesScreen() {
 
   const submitFeedback = async () => {
     if (rating === 0) {
-      Alert.alert("Rating Required", "Please select a rating before submitting.");
+      Toast.show({
+        type: "error",
+        text1: "Rating Required",
+        text2: "Please select a rating before submitting.",
+      });
       return;
     }
     if (!comment.trim()) {
-      Alert.alert("Comment Required", "Please write a comment about your experience.");
+      Toast.show({
+        type: "error",
+        text1: "Comment Required",
+        text2: "Please write a comment about your experience.",
+      });
       return;
     }
     try {
@@ -99,9 +110,18 @@ export default function MyCoursesScreen() {
         rating,
         comment: comment.trim(),
       });
-      Alert.alert("Success", "Thank you for your feedback!", [{ text: "OK", onPress: closeFeedbackModal }]);
+      Toast.show({
+        type: "success",
+        text1: "Success!",
+        text2: "Thank you for your feedback!",
+      });
+      closeFeedbackModal();
     } catch (error) {
-      Alert.alert("Error", error?.message || "Failed to submit feedback. Please try again.");
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error?.message || "Failed to submit feedback. Please try again.",
+      });
     } finally {
       setSubmittingFeedback(false);
     }
@@ -114,6 +134,18 @@ export default function MyCoursesScreen() {
     return `${hours.toString().padStart(2, "0")}:${minutes
       .toString()
       .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      Icons: { bg: "rgba(239, 68, 68, 0.95)", shadow: "#DC2626" },
+      Characters: { bg: "rgba(59, 130, 246, 0.95)", shadow: "#2563EB" },
+      ShapesAndFrames: { bg: "rgba(16, 185, 129, 0.95)", shadow: "#059669" },
+      Layouts: { bg: "rgba(245, 158, 11, 0.95)", shadow: "#D97706" },
+      EverydayObjects: { bg: "rgba(168, 85, 247, 0.95)", shadow: "#9333EA" },
+      LessonNote: { bg: "rgba(236, 72, 153, 0.95)", shadow: "#DB2777" },
+    };
+    return colors[category] || { bg: "rgba(8, 79, 140, 0.95)", shadow: "#084F8C" };
   };
 
   const handleCoursePress = (course) => {
@@ -148,21 +180,27 @@ export default function MyCoursesScreen() {
               }}
               style={myCoursesStyles.courseImage}
             />
-            <View style={myCoursesStyles.imageGradient}>
-              <View style={myCoursesStyles.categoryBadge}>
-                <Icon name="auto-awesome" size={12} color="#FFF" />
-                <Text style={myCoursesStyles.categoryText}>
-                  {course.category || "Other"}
-                </Text>
-              </View>
+
+            {/* Category badge on top-left */}
+            <View style={[
+              myCoursesStyles.categoryBadge,
+              {
+                backgroundColor: getCategoryColor(course.category).bg,
+                shadowColor: getCategoryColor(course.category).shadow,
+              }
+            ]}>
+              <Icon name="auto-awesome" size={10} color="#FFF" />
+              <Text style={myCoursesStyles.categoryText}>
+                {course.category || "Other"}
+              </Text>
             </View>
 
-            {/* Feedback button on image */}
+            {/* Feedback button on top-right */}
             <Pressable
               style={[myCoursesStyles.feedbackButtonFloat, isDark && myCoursesStyles.feedbackButtonFloatDark]}
               onPress={() => openFeedbackModal(course)}
             >
-              <Icon name="star" size={18} color="#FFB300" />
+              <Icon name="star" size={16} color="#FFB300" />
             </Pressable>
           </View>
 
@@ -329,7 +367,7 @@ export default function MyCoursesScreen() {
             <View style={[myCoursesStyles.modalHeader, isDark && myCoursesStyles.modalHeaderDark]}>
               <View style={myCoursesStyles.modalIconContainer}>
                 <View style={[myCoursesStyles.modalIcon, isDark && myCoursesStyles.modalIconDark]}>
-                  <Icon name="rate-review" size={24} color={isDark ? "#60A5FA" : "#084F8C"} />
+                  <Icon name="rate-review" size={20} color={isDark ? "#60A5FA" : "#084F8C"} />
                 </View>
               </View>
               <Text style={[myCoursesStyles.modalTitle, isDark && myCoursesStyles.modalTitleDark]}>Share Your Experience</Text>
@@ -337,7 +375,7 @@ export default function MyCoursesScreen() {
                 {selectedCourse?.title}
               </Text>
               <Pressable onPress={closeFeedbackModal} style={[myCoursesStyles.closeButton, isDark && myCoursesStyles.closeButtonDark]}>
-                <Icon name="close" size={24} color={isDark ? "#94A3B8" : "#94A3B8"} />
+                <Icon name="close" size={20} color={isDark ? "#94A3B8" : "#94A3B8"} />
               </Pressable>
             </View>
 
@@ -353,7 +391,7 @@ export default function MyCoursesScreen() {
                   >
                     <Icon
                       name={star <= rating ? "star" : "star-border"}
-                      size={40}
+                      size={32}
                       color={star <= rating ? "#FFB300" : (isDark ? "#334155" : "#E2E8F0")}
                     />
                   </Pressable>
@@ -414,7 +452,7 @@ export default function MyCoursesScreen() {
                 ) : (
                   <>
                     <Text style={myCoursesStyles.submitButtonText}>Submit Review</Text>
-                    <Icon name="send" size={18} color="#FFFFFF" />
+                    <Icon name="send" size={16} color="#FFFFFF" />
                   </>
                 )}
               </Pressable>

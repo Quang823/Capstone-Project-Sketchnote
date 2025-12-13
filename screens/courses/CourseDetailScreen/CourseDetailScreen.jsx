@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -43,8 +43,8 @@ const formatDuration = (seconds) => {
 
 const formatDate = (dateString) => {
   const date = new Date(dateString);
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
 };
@@ -64,6 +64,9 @@ export default function CourseDetailScreen() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [feedbackData, setFeedbackData] = useState(null);
 
+  // Biến này dùng để chặn double-click/double-tap
+  const isProcessing = useRef(false);
+
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(50);
 
@@ -73,7 +76,6 @@ export default function CourseDetailScreen() {
 
     fetchCourseDetail(courseId);
     fetchFeedback(courseId);
-
   }, [courseId]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -103,86 +105,60 @@ export default function CourseDetailScreen() {
   };
 
   const handleBuyCourse = async () => {
-    console.log("=== START handleBuyCourse ===");
-    console.log("Course ID:", course.id);
-    console.log("Course Price:", course.price);
+    // 1. CHẶN DOUBLE CLICK
+    if (isProcessing.current) {
+      console.log("Already processing, blocking duplicate call");
+      return;
+    }
+    isProcessing.current = true;
 
+    // 2. UI FEEDBACK NGAY LẬP TỨC
     setShowPurchaseModal(false);
     setLoading(true);
 
     try {
-      // Step 1: Charge from wallet (deduct money)
-      console.log("Step 1: Calling buyCourse API to deduct money...");
-      const res = await courseService.buyCourse(course.price);
-      console.log("buyCourse Response:", JSON.stringify(res, null, 2));
+      console.log("=== START TRANSACTION ===");
+      console.log("Course ID:", course.id);
+      console.log("Course Price:", course.price);
 
-      if (res.code === 402) {
-        console.log("Insufficient balance (402), showing confirm modal");
-        setShowConfirmModal(true);
-        setLoading(false);
-        return;
-      }
+      // Gọi enrollCourse - backend sẽ tự lo việc charge và enroll
+      console.log(
+        "Calling enrollCourse API (backend handles payment + enrollment)..."
+      );
+      const enrollRes = await courseService.enrollCourse(course.id);
+      console.log("enrollCourse Response:", JSON.stringify(enrollRes, null, 2));
 
-      if (res.code && res.code !== 200) {
-        console.log("Buy failed with code:", res.code, "message:", res.message);
-        Toast.show({
-          type: "error",
-          text1: "Buy Failed",
-          text2: res.message || "An error occurred",
-        });
-        setLoading(false);
-        return;
-      }
+      // Enrollment thành công
+      console.log("Enrollment successful!");
+      Toast.show({
+        type: "success",
+        text1: "Buy Success",
+        text2: "Course purchased successfully!",
+      });
 
-      if (res.result?.status === "SUCCESS") {
-        console.log("Payment SUCCESS! Now enrolling in course...");
-
-        // Step 2: Enroll in course (only after successful payment)
-        try {
-          console.log("Step 2: Calling enrollCourse API...");
-          const enrollRes = await courseService.enrollCourse(course.id);
-          console.log("enrollCourse Response:", JSON.stringify(enrollRes, null, 2));
-        } catch (enrollError) {
-          console.error("Enrollment failed after payment:", enrollError);
-          // If enrollment fails after payment, show specific error
-          Toast.show({
-            type: "error",
-            text1: "Enrollment Failed",
-            text2: "Payment successful but enrollment failed. Please contact support.",
-          });
-          setLoading(false);
-          return;
-        }
-
-        console.log("Both payment and enrollment successful!");
-        Toast.show({
-          type: "success",
-          text1: "Buy Success",
-          text2: "Course purchased successfully!",
-        });
-
-        console.log("Fetching updated course details...");
-        await fetchCourseDetail(courseId);
-        setLoading(false);
-        console.log("=== END handleBuyCourse - Starting learning ===");
-        handleStartLearning();
-      } else {
-        console.log("Payment result status is not SUCCESS:", res.result?.status);
-        Toast.show({
-          type: "error",
-          text1: "Buy Failed",
-          text2: "Unknown error occurred",
-        });
-        setLoading(false);
-      }
+      console.log("Fetching updated course details...");
+      await fetchCourseDetail(courseId);
+      console.log("=== END TRANSACTION - Starting learning ===");
+      handleStartLearning();
     } catch (error) {
       console.error("Error in handleBuyCourse:", error);
-      Toast.show({
-        type: "error",
-        text1: "Buy Failed",
-        text2: error.message || "Something went wrong",
-      });
+
+      // Xử lý lỗi không đủ tiền
+      if (error.message && error.message.includes("Insufficient balance")) {
+        console.log("Insufficient balance, showing confirm modal");
+        setShowConfirmModal(true);
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Buy Failed",
+          text2: error.message || "Something went wrong",
+        });
+      }
+    } finally {
+      // 3. LUÔN LUÔN RESET TRẠNG THÁI Ở ĐÂY
       setLoading(false);
+      isProcessing.current = false;
+      console.log("Transaction lock released");
     }
   };
 
@@ -215,7 +191,6 @@ export default function CourseDetailScreen() {
       const data = await feedbackService.getAllFeedbackCourse(courseId);
 
       setFeedbackData(data);
-
     } catch (error) {
       console.error("Error fetching feedback:", error.message);
     }
@@ -290,12 +265,7 @@ export default function CourseDetailScreen() {
     return (
       <View style={styles.ratingBarContainer}>
         <View style={styles.ratingBarBg}>
-          <View
-            style={[
-              styles.ratingBarFill,
-              { width: `${percentage}%` },
-            ]}
-          />
+          <View style={[styles.ratingBarFill, { width: `${percentage}%` }]} />
         </View>
         <Text style={styles.ratingBarText}>{count}</Text>
       </View>
@@ -337,7 +307,10 @@ export default function CourseDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+      >
         {/* HERO SECTION */}
         <View style={styles.heroContainer}>
           <Image
@@ -346,15 +319,15 @@ export default function CourseDetailScreen() {
             resizeMode="cover"
           />
           <LinearGradient
-            colors={[styles.colors.heroOverlayStart, styles.colors.heroOverlayEnd]}
+            colors={[
+              styles.colors.heroOverlayStart,
+              styles.colors.heroOverlayEnd,
+            ]}
             style={styles.heroOverlay}
           />
 
           <View style={styles.heroHeader}>
-            <Pressable
-              style={styles.backButton}
-              onPress={handleBackPress}
-            >
+            <Pressable style={styles.backButton} onPress={handleBackPress}>
               <Icon name="arrow-back" size={24} color={styles.colors.white} />
             </Pressable>
           </View>
@@ -365,7 +338,9 @@ export default function CourseDetailScreen() {
                 <Text style={styles.levelBadgeText}>{course.level}</Text>
               </View>
               <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>{course.category || "Design"}</Text>
+                <Text style={styles.categoryBadgeText}>
+                  {course.category || "Design"}
+                </Text>
               </View>
             </View>
 
@@ -380,7 +355,9 @@ export default function CourseDetailScreen() {
               <View style={styles.heroDivider} />
               <View style={styles.heroMetaItem}>
                 <Icon name="people" size={20} color={styles.colors.white} />
-                <Text style={styles.heroMetaText}>{course.students} Students</Text>
+                <Text style={styles.heroMetaText}>
+                  {course.students} Students
+                </Text>
               </View>
               <View style={styles.heroDivider} />
               <View style={styles.heroMetaItem}>
@@ -391,23 +368,32 @@ export default function CourseDetailScreen() {
           </View>
         </View>
 
-        <ReanimatedView
-          style={[styles.twoColumnContainer, animatedStyle]}
-        >
+        <ReanimatedView style={[styles.twoColumnContainer, animatedStyle]}>
           {/* LEFT COLUMN - Info & Content */}
           <View style={styles.leftColumn}>
-            <Shadow distance={8} startColor={styles.colors.shadowColor + "08"} finalColor={styles.colors.shadowColor + "00"} style={{ width: '100%' }}>
+            <Shadow
+              distance={8}
+              startColor={styles.colors.shadowColor + "08"}
+              finalColor={styles.colors.shadowColor + "00"}
+              style={{ width: "100%" }}
+            >
               <View style={styles.mainCard}>
                 <View style={styles.courseInfo}>
-                  <Text style={styles.sectionHeaderTitle}>About this course</Text>
+                  <Text style={styles.sectionHeaderTitle}>
+                    About this course
+                  </Text>
 
                   <View style={styles.instructorRow}>
                     <View style={styles.instructorAvatar}>
                       <Text style={styles.instructorInitial}>I</Text>
                     </View>
                     <View>
-                      <Text style={styles.instructorName}>{course.instructor}</Text>
-                      <Text style={styles.instructorRole}>Course Instructor</Text>
+                      <Text style={styles.instructorName}>
+                        {course.instructor}
+                      </Text>
+                      <Text style={styles.instructorRole}>
+                        Course Instructor
+                      </Text>
                     </View>
                   </View>
 
@@ -418,13 +404,15 @@ export default function CourseDetailScreen() {
                   </View>
 
                   <View style={styles.includesSection}>
-                    <Text style={styles.includesTitle}>
-                      What you'll learn
-                    </Text>
+                    <Text style={styles.includesTitle}>What you'll learn</Text>
                     <View style={styles.includesGrid}>
                       {course.includes.map((item, index) => (
                         <View key={index} style={styles.includeItem}>
-                          <Icon name="check-circle" size={20} color={styles.colors.success} />
+                          <Icon
+                            name="check-circle"
+                            size={20}
+                            color={styles.colors.success}
+                          />
                           <Text style={styles.includeText}>{item}</Text>
                         </View>
                       ))}
@@ -437,9 +425,16 @@ export default function CourseDetailScreen() {
             {/* DEDICATED FEEDBACK SECTION */}
             {feedbackData && (
               <View style={{ marginTop: 32 }}>
-                <Shadow distance={8} startColor={styles.colors.shadowColor + "08"} finalColor={styles.colors.shadowColor + "00"} style={{ width: '100%' }}>
+                <Shadow
+                  distance={8}
+                  startColor={styles.colors.shadowColor + "08"}
+                  finalColor={styles.colors.shadowColor + "00"}
+                  style={{ width: "100%" }}
+                >
                   <View style={styles.feedbackCard}>
-                    <Text style={styles.sectionHeaderTitle}>Student Feedback</Text>
+                    <Text style={styles.sectionHeaderTitle}>
+                      Student Feedback
+                    </Text>
 
                     <View style={styles.feedbackContent}>
                       {/* LEFT: Rating Summary */}
@@ -449,7 +444,9 @@ export default function CourseDetailScreen() {
                             {feedbackData.averageRating?.toFixed(1) || "0.0"}
                           </Text>
                           <View style={styles.starsWrapper}>
-                            {renderStars(Math.round(feedbackData.averageRating || 0))}
+                            {renderStars(
+                              Math.round(feedbackData.averageRating || 0)
+                            )}
                           </View>
                           <Text style={styles.totalReviews}>
                             {feedbackData.totalFeedbacks} Course Rating
@@ -474,7 +471,8 @@ export default function CourseDetailScreen() {
                       {/* RIGHT: Reviews List */}
                       <View style={styles.reviewsListColumn}>
                         <View style={styles.reviewsList}>
-                          {feedbackData.feedbacks && feedbackData.feedbacks.length > 0 ? (
+                          {feedbackData.feedbacks &&
+                          feedbackData.feedbacks.length > 0 ? (
                             feedbackData.feedbacks.map((feedback) => (
                               <View key={feedback.id} style={styles.reviewItem}>
                                 <View style={styles.reviewHeader}>
@@ -485,9 +483,12 @@ export default function CourseDetailScreen() {
                                         style={styles.reviewerAvatar}
                                       />
                                     ) : (
-                                      <View style={styles.reviewerAvatarPlaceholder}>
+                                      <View
+                                        style={styles.reviewerAvatarPlaceholder}
+                                      >
                                         <Text style={styles.reviewerInitial}>
-                                          {feedback.userFullName?.charAt(0) || "U"}
+                                          {feedback.userFullName?.charAt(0) ||
+                                            "U"}
                                         </Text>
                                       </View>
                                     )}
@@ -527,25 +528,38 @@ export default function CourseDetailScreen() {
 
           {/* RIGHT COLUMN - Price & Curriculum */}
           <View style={styles.rightColumn}>
-            <Shadow distance={8} startColor={styles.colors.shadowColor + "08"} finalColor={styles.colors.shadowColor + "00"} style={{ width: '100%' }}>
+            <Shadow
+              distance={8}
+              startColor={styles.colors.shadowColor + "08"}
+              finalColor={styles.colors.shadowColor + "00"}
+              style={{ width: "100%" }}
+            >
               <View style={styles.stickyCard}>
                 {/* Decorative top glow */}
                 <View style={styles.cardGlowTop} />
 
                 <View style={styles.priceSection}>
                   {/* Badge "Best Value" nếu giá tốt */}
-                  {course.originalPrice && course.price < course.originalPrice && (
-                    <View style={styles.bestValueBadge}>
-                      <Icon name="local-offer" size={14} color={styles.colors.bestValueIcon} />
-                      <Text style={styles.bestValueText}>Best Value Today!</Text>
-                    </View>
-                  )}
+                  {course.originalPrice &&
+                    course.price < course.originalPrice && (
+                      <View style={styles.bestValueBadge}>
+                        <Icon
+                          name="local-offer"
+                          size={14}
+                          color={styles.colors.bestValueIcon}
+                        />
+                        <Text style={styles.bestValueText}>
+                          Best Value Today!
+                        </Text>
+                      </View>
+                    )}
 
                   {/* Price */}
                   <Text style={styles.priceLabel}>Course Price</Text>
 
                   <View style={styles.priceRow}>
-                    {course.originalPrice && course.price < course.originalPrice ? (
+                    {course.originalPrice &&
+                    course.price < course.originalPrice ? (
                       <>
                         <Text style={styles.originalPrice}>
                           {course.originalPrice.toLocaleString("vi-VN")}đ
@@ -562,37 +576,62 @@ export default function CourseDetailScreen() {
                   </View>
 
                   {/* Discount percentage nếu có */}
-                  {course.originalPrice && course.price < course.originalPrice && (
-                    <View style={styles.discountBadge}>
-                      <Text style={styles.discountText}>
-                        -{Math.round(((course.originalPrice - course.price) / course.originalPrice) * 100)}%
-                      </Text>
-                    </View>
-                  )}
+                  {course.originalPrice &&
+                    course.price < course.originalPrice && (
+                      <View style={styles.discountBadge}>
+                        <Text style={styles.discountText}>
+                          -
+                          {Math.round(
+                            ((course.originalPrice - course.price) /
+                              course.originalPrice) *
+                              100
+                          )}
+                          %
+                        </Text>
+                      </View>
+                    )}
 
                   {/* Main CTA Button */}
                   {course.isEnrolled ? (
-                    <Pressable style={styles.primaryButton} onPress={handleStartLearning}>
+                    <Pressable
+                      style={styles.primaryButton}
+                      onPress={handleStartLearning}
+                    >
                       <LinearGradient
                         colors={["#10B981", "#059669"]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.buttonGradient}
                       >
-                        <Icon name="play-arrow" size={24} color={styles.colors.white} />
-                        <Text style={styles.buttonText}>Start Learning Now</Text>
+                        <Icon
+                          name="play-arrow"
+                          size={24}
+                          color={styles.colors.white}
+                        />
+                        <Text style={styles.buttonText}>
+                          Start Learning Now
+                        </Text>
                       </LinearGradient>
                     </Pressable>
                   ) : (
-                    <Pressable style={styles.primaryButton} onPress={handleOpenPurchaseModal}>
+                    <Pressable
+                      style={styles.primaryButton}
+                      onPress={handleOpenPurchaseModal}
+                    >
                       <LinearGradient
                         colors={["#3B82F6", "#1D4ED8"]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.buttonGradient}
                       >
-                        <Icon name="shopping-cart" size={22} color={styles.colors.white} />
-                        <Text style={styles.buttonText}>Buy Now Only {course.price?.toLocaleString("vi-VN")}đ</Text>
+                        <Icon
+                          name="shopping-cart"
+                          size={22}
+                          color={styles.colors.white}
+                        />
+                        <Text style={styles.buttonText}>
+                          Buy Now Only {course.price?.toLocaleString("vi-VN")}đ
+                        </Text>
                       </LinearGradient>
                     </Pressable>
                   )}
@@ -600,11 +639,21 @@ export default function CourseDetailScreen() {
                   {/* Trust elements */}
                   <View style={styles.trustRow}>
                     <View style={styles.trustItem}>
-                      <Icon name="verified" size={18} color={styles.colors.success} />
-                      <Text style={styles.trustText}>Certificate of Completion</Text>
+                      <Icon
+                        name="verified"
+                        size={18}
+                        color={styles.colors.success}
+                      />
+                      <Text style={styles.trustText}>
+                        Certificate of Completion
+                      </Text>
                     </View>
                     <View style={styles.trustItem}>
-                      <Icon name="access-time" size={18} color={styles.colors.star} />
+                      <Icon
+                        name="access-time"
+                        size={18}
+                        color={styles.colors.star}
+                      />
                       <Text style={styles.trustText}>Learn for Life</Text>
                     </View>
                   </View>
@@ -612,28 +661,21 @@ export default function CourseDetailScreen() {
 
                 <View style={styles.curriculumSection}>
                   <View style={styles.curriculumHeader}>
-                    <Text style={styles.curriculumTitle}>
-                      Curriculum
-                    </Text>
+                    <Text style={styles.curriculumTitle}>Curriculum</Text>
                     <Text style={styles.curriculumMeta}>
                       {course.totalLessons} lessons • {course.duration}
                     </Text>
                   </View>
 
                   {course.lessons.map((lesson, index) => (
-                    <View
-                      key={lesson.lessonId}
-                      style={styles.lessonItem}
-                    >
+                    <View key={lesson.lessonId} style={styles.lessonItem}>
                       <Pressable
                         style={styles.lessonHeader}
                         onPress={() => toggleLesson(lesson.lessonId)}
                       >
                         <View style={styles.lessonHeaderLeft}>
                           <View style={styles.lessonIndexBadge}>
-                            <Text style={styles.lessonIndex}>
-                              {index + 1}
-                            </Text>
+                            <Text style={styles.lessonIndex}>{index + 1}</Text>
                           </View>
                           <View style={styles.lessonInfo}>
                             <Text style={styles.lessonTitle} numberOfLines={1}>
@@ -672,7 +714,7 @@ export default function CourseDetailScreen() {
       </ScrollView>
 
       {/* Modal Confirm - Purchase */}
-      < Modal
+      <Modal
         visible={showPurchaseModal}
         transparent={true}
         animationType="fade"
@@ -681,25 +723,37 @@ export default function CourseDetailScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalIconContainer}>
-              <Icon name="shopping-cart" size={32} color={styles.colors.shoppingCartIcon} />
+              <Icon
+                name="shopping-cart"
+                size={32}
+                color={styles.colors.shoppingCartIcon}
+              />
             </View>
             <Text style={styles.modalTitle}>Confirm Purchase</Text>
             <Text style={styles.modalMessage}>
               Do you want to purchase "{course.title}" for{" "}
-              <Text style={{ fontWeight: '700', color: styles.colors.text }}>{course.price?.toLocaleString("vi-VN") || "0"} đ</Text>?
+              <Text style={{ fontWeight: "700", color: styles.colors.text }}>
+                {course.price?.toLocaleString("vi-VN") || "0"} đ
+              </Text>
+              ?
             </Text>
 
             <View style={styles.modalButtons}>
               <Pressable
                 style={styles.cancelButton}
                 onPress={handleCancelPurchase}
+                disabled={loading}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </Pressable>
 
               <Pressable
-                style={styles.confirmButton}
+                style={[
+                  courseDetailStyles.confirmButton,
+                  loading && { opacity: 0.6 },
+                ]}
                 onPress={handleBuyCourse}
+                disabled={loading}
               >
                 <LinearGradient
                   colors={["#2348bfff", "#1e40afff"]}
@@ -707,9 +761,13 @@ export default function CourseDetailScreen() {
                   end={{ x: 1, y: 0 }}
                   style={styles.confirmButtonGradient}
                 >
-                  <Text style={styles.confirmButtonText}>
-                    Confirm
-                  </Text>
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={courseDetailStyles.confirmButtonText}>
+                      Confirm
+                    </Text>
+                  )}
                 </LinearGradient>
               </Pressable>
             </View>
@@ -726,12 +784,19 @@ export default function CourseDetailScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={[styles.modalIconContainer, { backgroundColor: '#FEF2F2' }]}>
-              <Icon name="account-balance-wallet" size={32} color={styles.colors.error} />
+            <View
+              style={[
+                styles.modalIconContainer,
+                { backgroundColor: "#FEF2F2" },
+              ]}
+            >
+              <Icon
+                name="account-balance-wallet"
+                size={32}
+                color={styles.colors.error}
+              />
             </View>
-            <Text style={styles.modalTitle}>
-              Insufficient Balance
-            </Text>
+            <Text style={styles.modalTitle}>Insufficient Balance</Text>
             <Text style={styles.modalMessage}>
               You don't have enough balance to purchase this course. Would you
               like to go to your wallet to deposit funds?
@@ -755,9 +820,7 @@ export default function CourseDetailScreen() {
                   end={{ x: 1, y: 0 }}
                   style={styles.confirmButtonGradient}
                 >
-                  <Text style={styles.confirmButtonText}>
-                    Go to Wallet
-                  </Text>
+                  <Text style={styles.confirmButtonText}>Go to Wallet</Text>
                 </LinearGradient>
               </Pressable>
             </View>

@@ -24,8 +24,11 @@ import { useTheme } from "../../../context/ThemeContext";
 const courseCategories = [
   { id: "all", name: "All", icon: "apps" },
   { id: "Icons", name: "Icons", icon: "emoji-emotions" },
-  { id: "Illustrations", name: "Illustrations", icon: "palette" },
-  { id: "Typography", name: "Typography", icon: "text-fields" },
+  { id: "Characters", name: "Characters", icon: "person" },
+  { id: "ShapesAndFrames", name: "Shapes & Frames", icon: "crop_square" },
+  { id: "Layouts", name: "Layouts", icon: "dashboard" },
+  { id: "EverydayObjects", name: "Everyday Objects", icon: "lightbulb" },
+  { id: "LessonNote", name: "Lesson Note", icon: "note" },
 ];
 
 export default function CoursesScreen() {
@@ -199,6 +202,19 @@ export default function CoursesScreen() {
     fetchCourses();
   };
 
+  // Get category color
+  const getCategoryColor = (category) => {
+    const colors = {
+      Icons: "rgba(59, 130, 246, 0.95)", // Blue
+      Characters: "rgba(139, 92, 246, 0.95)", // Purple
+      ShapesAndFrames: "rgba(236, 72, 153, 0.95)", // Pink
+      Layouts: "rgba(16, 185, 129, 0.95)", // Green
+      EverydayObjects: "rgba(251, 146, 60, 0.95)", // Orange
+      LessonNote: "rgba(244, 63, 94, 0.95)", // Red
+    };
+    return colors[category] || "rgba(100, 116, 139, 0.95)"; // Default gray
+  };
+
   // Get hot new releases (top 4 new courses from not enrolled)
   const hotNewReleases = notEnrolledCourses
     .filter((course) => course.isNew)
@@ -357,12 +373,19 @@ export default function CoursesScreen() {
             <View style={coursesStyles.badgesContainer}>
               {item.isNew && (
                 <View style={coursesStyles.newBadge}>
-                  <Icon name="fiber-new" size={16} color="#FFF" />
+                  <Icon name="fiber-new" size={14} color="#FFF" />
                   <Text style={coursesStyles.newBadgeText}>NEW</Text>
                 </View>
               )}
-              <View style={coursesStyles.levelBadge}>
-                <Text style={coursesStyles.levelBadgeText}>{item.level}</Text>
+              <View
+                style={[
+                  coursesStyles.categoryBadge,
+                  { backgroundColor: getCategoryColor(item.category) },
+                ]}
+              >
+                <Text style={coursesStyles.categoryBadgeText}>
+                  {item.category}
+                </Text>
               </View>
             </View>
           </View>
@@ -819,15 +842,12 @@ export default function CoursesScreen() {
                 </Text>
               </View>
               <Pressable
-                style={[
-                  coursesStyles.filterButton,
-                  isDark && coursesStyles.filterButtonDark,
-                ]}
+                style={coursesStyles.filterButton}
                 onPress={() => navigation.navigate("MyCourses")}
               >
                 <Text
                   style={{
-                    color: isDark ? "#60A5FA" : "#2348bfff",
+                    color: "#2348bfff",
                     fontSize: 14,
                     fontWeight: "600",
                     marginRight: 4,
@@ -835,11 +855,7 @@ export default function CoursesScreen() {
                 >
                   View All
                 </Text>
-                <Icon
-                  name="arrow-forward"
-                  size={18}
-                  color={isDark ? "#60A5FA" : "#2348bfff"}
-                />
+                <Icon name="arrow-forward" size={18} color="#2348bfff" />
               </Pressable>
             </View>
             <ScrollView
