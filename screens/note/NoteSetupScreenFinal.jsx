@@ -1,8 +1,7 @@
-import React, { useState, useRef, useContext, useEffect } from "react";
+import React, { useState, useRef, useContext, useEffect, useMemo } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   TextInput,
   ScrollView,
@@ -21,6 +20,8 @@ import * as offlineStorage from "../../utils/offlineStorage";
 import { AuthContext } from "../../context/AuthContext";
 import NetInfo from "@react-native-community/netinfo";
 import SidebarToggleButton from "../../components/navigation/SidebarToggleButton";
+import { getStyles } from "./NoteSetupScreenFinal.styles";
+import { useTheme } from "../../context/ThemeContext";
 
 
 const PAPER_SIZES = [
@@ -41,6 +42,8 @@ const ORIENTATIONS = [
 export default function NoteSetupScreen({ navigation, route }) {
   const scrollRef = useRef(null);
   const categoryRefs = useRef({});
+  const { theme } = useTheme();
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   const [selectedTab, setSelectedTab] = useState("cover");
   const [noteTitle, setNoteTitle] = useState("");
@@ -315,13 +318,13 @@ export default function NoteSetupScreen({ navigation, route }) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <SidebarToggleButton iconSize={26} iconColor={styles.colors.headerIcon} />
           <Text style={styles.headerTitle}>Create note</Text>
         </View>
         <TouchableOpacity onPress={handleCreate} disabled={isCreating}>
           <LinearGradient
             colors={
-              isCreating ? ["#94a3b8", "#64748b"] : ["#1863dbff", "#084F8C"]
+              isCreating ? styles.colors.createButtonDisabled : styles.colors.createButtonBg
             }
             style={styles.createButton}
           >
@@ -440,7 +443,7 @@ export default function NoteSetupScreen({ navigation, route }) {
             <TextInput
               style={styles.titleInput}
               placeholder="Enter note title"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={styles.colors.inputPlaceholder}
               value={noteTitle}
               onChangeText={setNoteTitle}
             />
@@ -450,7 +453,7 @@ export default function NoteSetupScreen({ navigation, route }) {
               <TextInput
                 style={styles.descriptionInput}
                 placeholder="Enter project description"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={styles.colors.inputPlaceholder}
                 value={noteDescription}
                 onChangeText={setNoteDescription}
                 multiline
@@ -488,7 +491,7 @@ export default function NoteSetupScreen({ navigation, route }) {
                     <MaterialCommunityIcons
                       name={item.icon}
                       size={18}
-                      color={orientation === item.id ? "#3b82f6" : "#64748b"}
+                      color={orientation === item.id ? styles.colors.orientationIconActive : styles.colors.orientationIcon}
                     />
                     <Text
                       style={[
@@ -536,12 +539,12 @@ export default function NoteSetupScreen({ navigation, route }) {
         <View style={styles.bottomSection}>
           {isLoadingTemplates ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#1863dbff" />
+              <ActivityIndicator size="large" color={styles.colors.loadingIndicator} />
               <Text style={styles.loadingText}>Loading templates...</Text>
             </View>
           ) : categories.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="image-off" size={48} color="#94a3b8" />
+              <MaterialCommunityIcons name="image-off" size={48} color={styles.colors.loadingText} />
               <Text style={styles.emptyText}>No templates available</Text>
             </View>
           ) : (
@@ -779,53 +782,18 @@ export default function NoteSetupScreen({ navigation, route }) {
         animationType="fade"
         onRequestClose={() => setTitleModalVisible(false)}
       >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.4)",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 16,
-          }}
-        >
-          <View
-            style={{
-              width: 300,
-              maxWidth: "95%",
-              backgroundColor: "#FFFFFF",
-              borderRadius: 16,
-              padding: 16,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: "700",
-                color: "#111827",
-                marginBottom: 12,
-              }}
-            >
-              Missing title
-            </Text>
-            <Text style={{ fontSize: 14, color: "#374151", marginBottom: 16 }}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Missing title</Text>
+            <Text style={styles.modalText}>
               Please enter a note title.
             </Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
               <TouchableOpacity
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 10,
-                  alignItems: "center",
-                  backgroundColor: "#3B82F6",
-                }}
+                style={styles.modalButton}
                 onPress={() => setTitleModalVisible(false)}
               >
-                <Text
-                  style={{ color: "white", fontSize: 14, fontWeight: "600" }}
-                >
-                  OK
-                </Text>
+                <Text style={styles.modalButtonText}>OK</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -834,488 +802,3 @@ export default function NoteSetupScreen({ navigation, route }) {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F0F9FF",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 15,
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontFamily: "Pacifico-Regular",
-    color: "#084F8C",
-    letterSpacing: -0.5,
-  },
-  cancelButton: {
-    fontSize: 16,
-    color: "#64748b",
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontFamily: "Pacifico-Regular",
-    color: "#084F8C",
-    letterSpacing: 0.5,
-  },
-  createButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  createButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#ffffff",
-  },
-  content: {
-    flex: 1,
-  },
-  topSection: {
-    flexDirection: "row",
-    padding: 20,
-    paddingTop: 30,
-    gap: 20,
-  },
-  leftColumn: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  rightColumn: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    gap: 16,
-  },
-  tabContainer: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 20,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: "center",
-    padding: 12,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  tabButtonActive: {
-    borderColor: "#3b82f6",
-    backgroundColor: "#EFF6FF",
-  },
-  tabLabel: {
-    fontSize: 14,
-    color: "#64748b",
-    fontWeight: "500",
-  },
-  tabLabelActive: {
-    color: "#3b82f6",
-    fontWeight: "600",
-  },
-  previewContainer: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  previewCard: {
-    flex: 1,
-  },
-  previewBox: {
-    height: 180,
-    borderRadius: 12,
-    padding: 16,
-    justifyContent: "flex-end",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    overflow: "hidden",
-  },
-  previewPortrait: {
-    height: 330,
-  },
-  previewLandscape: {
-    height: 150,
-  },
-  previewBoxInner: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  previewImage: {
-    position: "absolute",
-    top: 0,
-    left: 15,
-    right: 0,
-    bottom: 0,
-    width: "100%",
-    height: "100%",
-  },
-  previewLines: {
-    position: "absolute",
-    top: 16,
-    left: 16,
-    right: 16,
-    gap: 8,
-  },
-  previewLine: {
-    height: 2,
-    backgroundColor: "rgba(0,0,0,0.1)",
-  },
-  previewLabel: {
-    fontSize: 12,
-    color: "#64748b",
-    fontWeight: "500",
-    marginBottom: -8,
-  },
-  titleInput: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-    color: "#0f172a",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  descriptionInput: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 15,
-    color: "#0f172a",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    minHeight: 80,
-  },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  settingColumn: {
-    gap: 8,
-  },
-  settingLabel: {
-    fontSize: 15,
-    color: "#475569",
-    fontWeight: "500",
-  },
-  addButton: {
-    padding: 4,
-  },
-  toggle: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#E2E8F0",
-    padding: 2,
-  },
-  toggleActive: {
-    backgroundColor: "#085497ff",
-  },
-  toggleThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
-  },
-  toggleThumbActive: {
-    transform: [{ translateX: 22 }],
-  },
-  dropdown: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  dropdownText: {
-    fontSize: 15,
-    color: "#0f172a",
-    fontWeight: "500",
-  },
-  orientationTabs: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  orientationTab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    gap: 8,
-  },
-  orientationTabActive: {
-    backgroundColor: "#EFF6FF",
-    borderColor: "#3b82f6",
-  },
-  orientationTabText: {
-    fontSize: 14,
-    color: "#64748b",
-    fontWeight: "500",
-  },
-  orientationTabTextActive: {
-    color: "#3b82f6",
-    fontWeight: "600",
-  },
-  dropdownMenu: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    marginTop: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  dropdownItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  dropdownItemText: {
-    flex: 1,
-    fontSize: 15,
-    color: "#0f172a",
-  },
-  sizeButtons: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  sizeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  sizeButtonActive: {
-    backgroundColor: "#1366aeff",
-    borderColor: "#084F8C",
-  },
-  sizeButtonText: {
-    fontSize: 14,
-    color: "#64748b",
-    fontWeight: "500",
-  },
-  sizeButtonTextActive: {
-    color: "#ffffff",
-    fontWeight: "600",
-  },
-  bottomSection: {
-    paddingHorizontal: 20,
-  },
-  categoryScroll: {
-    marginBottom: 20,
-  },
-  categoryScrollContent: {
-    gap: 12,
-  },
-  categoryPill: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  categoryPillText: {
-    fontSize: 14,
-    color: "#475569",
-    fontWeight: "600",
-  },
-  categoryHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 20,
-    gap: 12,
-  },
-  categoryLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E2E8F0",
-  },
-  categoryTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#0f172a",
-  },
-  templatesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 20,
-  },
-  templateCard: {
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: "#E2E8F0",
-  },
-  paperCardPortrait: {
-    width: 140,
-  },
-  paperCardLandscape: {
-    width: 200,
-  },
-  templateCardActive: {
-    borderColor: "#3b82f6",
-    backgroundColor: "#EFF6FF",
-  },
-  templatePreview: {
-    width: "100%",
-    height: 100,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  paperTemplatePreview: {
-    width: "100%",
-    height: 160,
-    borderRadius: 8,
-    backgroundColor: "#F8FAFC",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  paperPreviewPortrait: {
-    height: 160,
-  },
-  paperPreviewLandscape: {
-    height: 120,
-  },
-  templateName: {
-    fontSize: 13,
-    color: "#64748b",
-    textAlign: "center",
-  },
-  // Horizontal cover templates
-  horizontalTemplates: {
-    paddingRight: 20,
-    gap: 12,
-    paddingBottom: 20,
-  },
-  coverTemplateCard: {
-    alignItems: "center",
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 2,
-    borderColor: "#E2E8F0",
-  },
-  coverCardPortrait: {
-    width: 140,
-  },
-  coverCardLandscape: {
-    width: 200,
-  },
-  coverTemplateCardActive: {
-    borderColor: "#3b82f6",
-    backgroundColor: "#EFF6FF",
-  },
-  coverTemplatePreview: {
-    borderRadius: 8,
-    marginBottom: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-  },
-  coverPreviewPortrait: {
-    width: 120,
-    height: 180,
-  },
-  coverPreviewLandscape: {
-    width: 180,
-    height: 120,
-  },
-  coverEmoji: {
-    fontSize: 48,
-  },
-  coverTemplateName: {
-    fontSize: 11,
-    color: "#64748b",
-    textAlign: "center",
-    height: 32,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 14,
-    color: "#64748b",
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: "#64748b",
-  },
-});

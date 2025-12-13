@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
     View,
     Text,
@@ -15,11 +15,12 @@ import { orderService } from "../../service/orderService";
 import { projectService } from "../../service/projectService";
 import * as offlineStorage from "../../utils/offlineStorage";
 import { useToast } from "../../hooks/use-toast";
-import { styles } from "./TemplateSelectionScreen.styles";
+import { getStyles } from "./TemplateSelectionScreen.styles";
+import { useTheme } from "../../context/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
-const AnimatedTemplateCard = ({ item, onPress, disabled }) => {
+const AnimatedTemplateCard = ({ item, onPress, disabled, styles }) => {
     const scaleAnim = new Animated.Value(1);
 
     const handlePressIn = () => {
@@ -57,10 +58,10 @@ const AnimatedTemplateCard = ({ item, onPress, disabled }) => {
                         />
                     ) : (
                         <LinearGradient
-                            colors={["#EFF6FF", "#DBEAFE"]}
+                            colors={styles.colors.imagePlaceholderGradient}
                             style={styles.placeholderImage}
                         >
-                            <Icon name="image" size={56} color="#93C5FD" />
+                            <Icon name="image" size={56} color={styles.colors.imagePlaceholderIcon} />
                         </LinearGradient>
                     )}
                     <LinearGradient
@@ -69,7 +70,7 @@ const AnimatedTemplateCard = ({ item, onPress, disabled }) => {
                     />
                     <View style={styles.badge}>
                         <LinearGradient
-                            colors={["#F59E0B", "#D97706"]}
+                            colors={styles.colors.badgeGradient}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                             style={styles.badgeGradient}
@@ -91,7 +92,7 @@ const AnimatedTemplateCard = ({ item, onPress, disabled }) => {
                     <View style={styles.cardFooter}>
                         <View style={styles.itemCount}>
                             <View style={styles.pageCountBadge}>
-                                <Icon name="layers" size={14} color="#3B82F6" />
+                                <Icon name="layers" size={14} color={styles.colors.pageCountText} />
                                 <Text style={styles.itemCountText}>
                                     {item.items?.length || 0} {item.items?.length !== 1 ? "pages" : "page"}
                                 </Text>
@@ -99,7 +100,7 @@ const AnimatedTemplateCard = ({ item, onPress, disabled }) => {
                         </View>
                         <View style={styles.useButton}>
                             <Text style={styles.useButtonText}>Use</Text>
-                            <Icon name="arrow-forward" size={14} color="#3B82F6" />
+                            <Icon name="arrow-forward" size={14} color={styles.colors.useButtonText} />
                         </View>
                     </View>
                 </View>
@@ -109,6 +110,8 @@ const AnimatedTemplateCard = ({ item, onPress, disabled }) => {
 };
 
 export default function TemplateSelectionScreen({ navigation }) {
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
@@ -251,13 +254,14 @@ export default function TemplateSelectionScreen({ navigation }) {
             item={item}
             onPress={() => createProjectFromTemplate(item)}
             disabled={creating}
+            styles={styles}
         />
     );
 
     return (
         <View style={styles.container}>
             <LinearGradient
-                colors={["#F0F9FF", "#E0F2FE", "#BAE6FD"]}
+                colors={styles.colors.gradient}
                 style={styles.background}
             />
 
@@ -267,7 +271,7 @@ export default function TemplateSelectionScreen({ navigation }) {
                     style={styles.backButton}
                     onPress={() => navigation.goBack()}
                 >
-                    <Icon name="arrow-back" size={24} color="#0C4A6E" />
+                    <Icon name="arrow-back" size={24} color={styles.colors.backButtonIcon} />
                 </TouchableOpacity>
                 <View style={styles.headerTitleContainer}>
                     <Text style={styles.headerTitle}>Choose Template</Text>
@@ -287,10 +291,10 @@ export default function TemplateSelectionScreen({ navigation }) {
             ) : templates.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <LinearGradient
-                        colors={["#EFF6FF", "#DBEAFE"]}
+                        colors={styles.colors.emptyIconGradient}
                         style={styles.emptyIconContainer}
                     >
-                        <Icon name="inventory-2" size={64} color="#3B82F6" />
+                        <Icon name="inventory-2" size={64} color={styles.colors.emptyIcon} />
                     </LinearGradient>
                     <Text style={styles.emptyTitle}>No Templates Yet</Text>
                     <Text style={styles.emptyDescription}>

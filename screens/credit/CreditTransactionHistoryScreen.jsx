@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
     View,
     Text,
@@ -8,19 +8,22 @@ import {
     Modal,
     Dimensions,
     ScrollView,
-    StyleSheet,
     ActivityIndicator
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
 import { creditService } from "../../service/creditService";
+import { getStyles } from "./CreditTransactionHistoryScreen.styles";
+import { useTheme } from "../../context/ThemeContext";
 
 const TABS = ["All", "Deposits", "Usage"];
 const screenWidth = Dimensions.get("window").width;
 
 export default function CreditTransactionHistoryScreen() {
     const navigation = useNavigation();
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
 
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -115,7 +118,7 @@ export default function CreditTransactionHistoryScreen() {
         const config = getTransactionConfig(item);
         return (
             <Pressable
-                style={[styles.card, { borderColor: "#E0E7FF", borderWidth: 1 }]}
+                style={styles.card}
                 onPress={() => {
                     setSelectedTx(item);
                     setModalVisible(true);
@@ -150,7 +153,7 @@ export default function CreditTransactionHistoryScreen() {
                         onPress={() => navigation.goBack()}
                         style={styles.backButton}
                     >
-                        <Icon name="arrow-back" size={24} color="#084F8C" />
+                        <Icon name="arrow-back" size={24} color={styles.colors.iconColor} />
                     </Pressable>
                     <Text style={styles.headerTitle}>Credit History</Text>
                     <View style={{ width: 24 }} />
@@ -183,7 +186,7 @@ export default function CreditTransactionHistoryScreen() {
             {/* List */}
             {loading ? (
                 <View style={styles.centerContainer}>
-                    <ActivityIndicator size="large" color="#084F8C" />
+                    <ActivityIndicator size="large" color={styles.colors.loadingColor} />
                 </View>
             ) : (
                 <FlatList
@@ -193,7 +196,7 @@ export default function CreditTransactionHistoryScreen() {
                     contentContainerStyle={{ padding: 16 }}
                     ListEmptyComponent={
                         <View style={styles.emptyBox}>
-                            <Icon name="receipt" size={48} color="#CBD5E1" />
+                            <Icon name="receipt" size={48} color={styles.colors.emptyIcon} />
                             <Text style={styles.emptyText}>No transactions found</Text>
                         </View>
                     }
@@ -207,7 +210,7 @@ export default function CreditTransactionHistoryScreen() {
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Transaction Details</Text>
                             <Pressable onPress={() => setModalVisible(false)}>
-                                <Icon name="close" size={26} color="#0F172A" />
+                                <Icon name="close" size={26} color={styles.colors.modalCloseIcon} />
                             </Pressable>
                         </View>
 
@@ -289,204 +292,3 @@ export default function CreditTransactionHistoryScreen() {
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#F8FAFC",
-    },
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: "#FFFFFF",
-        paddingTop: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: "#E2E8F0",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    headerLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 15,
-        flex: 1,
-    },
-    headerTitle: {
-        fontSize: 26,
-        fontFamily: "Pacifico-Regular",
-        color: "#084F8C",
-        letterSpacing: -0.5,
-    },
-    container: {
-        flex: 1,
-        backgroundColor: "#F8FAFC",
-    },
-    header: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        backgroundColor: "#FFFFFF",
-        paddingTop: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: "#E2E8F0",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    headerLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 15,
-        flex: 1,
-    },
-    headerTitle: {
-        fontSize: 26,
-        fontFamily: "Pacifico-Regular",
-        color: "#084F8C",
-        letterSpacing: -0.5,
-    },
-    backButton: {
-        padding: 12,
-        borderRadius: 30,
-        backgroundColor: "#F8FAFC",
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 6,
-        elevation: 3,
-    },
-    tabBar: {
-        flexDirection: "row",
-        backgroundColor: "#FFFFFF",
-        borderRadius: 16,
-        marginHorizontal: 20,
-        marginTop: 20,
-        marginBottom: 10,
-        overflow: "hidden",
-        elevation: 2,
-    },
-    tab: { flex: 1, paddingVertical: 12, alignItems: "center" },
-    tabText: { fontSize: 14, color: "#64748B", fontWeight: "600" },
-    tabTextActive: { color: "#084F8C" },
-    tabIndicator: {
-        position: "absolute",
-        bottom: 0,
-        width: screenWidth / 3,
-        height: 3,
-        backgroundColor: "#084F8C",
-    },
-    card: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#FFFFFF",
-        borderRadius: 20,
-        padding: 16,
-        marginBottom: 12,
-        shadowColor: "#084F8C",
-        shadowOpacity: 0.12,
-        shadowRadius: 20,
-        elevation: 6,
-    },
-    iconWrap: {
-        width: 48,
-        height: 48,
-        borderRadius: 16,
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 12,
-    },
-    cardTitle: {
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#1E293B",
-        marginBottom: 2,
-    },
-    cardDescription: { fontSize: 13, color: "#94A3B8", marginBottom: 2 },
-    cardDate: { fontSize: 12, color: "#64748B" },
-    amount: { fontSize: 15, fontWeight: "700" },
-    emptyBox: {
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 40,
-    },
-    emptyText: { fontSize: 14, color: "#94A3B8", marginTop: 12 },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0,0,0,0.45)",
-        justifyContent: "flex-end",
-    },
-    modalContent: {
-        backgroundColor: "#FFFFFF",
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        padding: 24,
-        maxHeight: "85%",
-        shadowColor: "#084F8C",
-        shadowOpacity: 0.15,
-        shadowRadius: 25,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: "#E0E7FF",
-    },
-    modalHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: "#E0E7FF",
-        paddingBottom: 12,
-    },
-    modalTitle: { fontSize: 20, fontWeight: "800", color: "#084F8C" },
-    modalIconSection: {
-        alignItems: "center",
-        marginBottom: 24,
-    },
-    modalIcon: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        justifyContent: "center",
-        alignItems: "center",
-        marginBottom: 12,
-    },
-    modalLabel: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#64748B",
-        marginBottom: 8,
-    },
-    modalAmount: { fontSize: 28, fontWeight: "700", color: "#1E293B" },
-    detailSection: {
-        backgroundColor: "#F8FAFF",
-        borderRadius: 20,
-        padding: 16,
-        marginBottom: 16,
-    },
-    detailRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: "#E0E7FF",
-    },
-    detailLabel: { fontSize: 14, color: "#64748B", fontWeight: "500" },
-    detailValue: { fontSize: 14, color: "#1E293B", fontWeight: "600" },
-    closeBtn: {
-        backgroundColor: "#084F8C",
-        paddingVertical: 14,
-        borderRadius: 16,
-        alignItems: "center",
-    },
-    closeBtnText: { color: "#FFF", fontWeight: "700", fontSize: 16 },
-});

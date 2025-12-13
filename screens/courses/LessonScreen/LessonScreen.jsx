@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,13 +11,14 @@ import {
   useWindowDimensions,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { lessonStyles } from "./LessonScreen.styles";
+import { getStyles } from "./LessonScreen.styles";
 import { courseService } from "../../../service/courseService";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import YoutubePlayer from "react-native-youtube-iframe";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import Toast from "react-native-toast-message";
+import { useTheme } from "../../../context/ThemeContext";
 
 // Breakpoints
 const TABLET_BREAKPOINT = 768;
@@ -34,13 +35,13 @@ export default function LessonScreen() {
   const isTablet = windowWidth >= TABLET_BREAKPOINT;
   const isLandscape = windowWidth > windowHeight;
   const sidebarWidth = isTablet ? SIDEBAR_WIDTH_TABLET : SIDEBAR_WIDTH_PHONE;
-  
+
   // For phone: show sidebar as modal, for tablet: show side by side
   const showSidebarInline = isTablet;
-  
+
   // Calculate player dimensions
-  const mainContentWidth = showSidebarInline 
-    ? windowWidth - sidebarWidth 
+  const mainContentWidth = showSidebarInline
+    ? windowWidth - sidebarWidth
     : windowWidth;
   const playerWidth = mainContentWidth - (isTablet ? 64 : 32);
   const playerHeight = Math.round((playerWidth * 9) / 16);
@@ -60,6 +61,9 @@ export default function LessonScreen() {
   const [sidebarVisible, setSidebarVisible] = useState(false); // For phone modal
   const videoRef = useRef(null);
   const progressIntervalRef = useRef(null);
+
+  const { theme } = useTheme();
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   // Fetch course enrollment data with lessons
   const fetchCourseData = useCallback(async () => {
@@ -338,22 +342,22 @@ export default function LessonScreen() {
   };
 
   // Get current video ID
-  const currentVideoId = currentLesson?.videoUrl 
-    ? getYouTubeVideoId(currentLesson.videoUrl) 
+  const currentVideoId = currentLesson?.videoUrl
+    ? getYouTubeVideoId(currentLesson.videoUrl)
     : null;
 
   // Get lesson status icon and color
   const getLessonStatusIcon = (lesson, index) => {
     if (lesson.lessonProgressStatus === "COMPLETED") {
-      return { icon: "check-circle", color: "#22C55E" }; // Green check
+      return { icon: "check-circle", color: styles.checkIcon }; // Green check
     }
     if (!isLessonUnlocked(index)) {
-      return { icon: "lock", color: "#9CA3AF" }; // Gray lock
+      return { icon: "lock", color: styles.lockIcon }; // Gray lock
     }
     if (lesson.lessonProgressStatus === "IN_PROGRESS") {
-      return { icon: "play-circle-outline", color: "#F59E0B" }; // Orange in progress
+      return { icon: "play-circle-outline", color: styles.inProgressIcon }; // Orange in progress
     }
-    return { icon: "play-circle-outline", color: "#2563EB" }; // Blue ready to start
+    return { icon: "play-circle-outline", color: styles.playIcon }; // Blue ready to start
   };
 
   // Calculate completed lessons count
@@ -364,14 +368,14 @@ export default function LessonScreen() {
   // Loading state
   if (loading) {
     return (
-      <View style={lessonStyles.loadingContainer}>
+      <View style={styles.loadingContainer}>
         <LottieView
           source={loadingAnimation}
           autoPlay
           loop
           style={{ width: 200, height: 200 }}
         />
-        <Text style={lessonStyles.loadingText}>Loading course...</Text>
+        <Text style={styles.loadingText}>Loading course...</Text>
       </View>
     );
   }
@@ -379,14 +383,14 @@ export default function LessonScreen() {
   // Error state
   if (error) {
     return (
-      <View style={lessonStyles.errorContainer}>
+      <View style={styles.errorContainer}>
         <Icon name="error-outline" size={64} color="#EF4444" />
-        <Text style={lessonStyles.errorText}>{error}</Text>
+        <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity
-          style={lessonStyles.retryButton}
+          style={styles.retryButton}
           onPress={fetchCourseData}
         >
-          <Text style={lessonStyles.retryButtonText}>Retry</Text>
+          <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -399,9 +403,9 @@ export default function LessonScreen() {
   const renderSidebarContent = () => (
     <>
       {/* Sidebar Header */}
-      <View style={[lessonStyles.sidebarHeader, !isTablet && { paddingTop: 50 }]}>
+      <View style={[styles.sidebarHeader, !isTablet && { paddingTop: 50 }]}>
         <TouchableOpacity
-          style={lessonStyles.backButton}
+          style={styles.backButton}
           onPress={() => {
             if (!isTablet) {
               setSidebarVisible(false);
@@ -409,43 +413,43 @@ export default function LessonScreen() {
             navigation.goBack();
           }}
         >
-          <Icon name="arrow-back" size={20} color="#111827" />
+          <Icon name="arrow-back" size={20} color={styles.backButtonIcon} />
         </TouchableOpacity>
-        <Text style={[lessonStyles.sidebarHeaderText, !isTablet && { fontSize: 14 }]} numberOfLines={1}>
+        <Text style={[styles.sidebarHeaderText, !isTablet && { fontSize: 14 }]} numberOfLines={1}>
           {course?.title || "Course"}
         </Text>
         {!isTablet && (
           <TouchableOpacity
-            style={lessonStyles.backButton}
+            style={styles.backButton}
             onPress={() => setSidebarVisible(false)}
           >
-            <Icon name="close" size={20} color="#1E293B" />
+            <Icon name="close" size={20} color={styles.backButtonIcon} />
           </TouchableOpacity>
         )}
       </View>
 
       {/* Course Progress Overview */}
-      <View style={lessonStyles.overviewItem}>
-        <Text style={lessonStyles.overviewText}>
+      <View style={styles.overviewItem}>
+        <Text style={styles.overviewText}>
           Progress: {progressPercent.toFixed(1)}%
         </Text>
-        <View style={[lessonStyles.progressBar, { marginTop: 8 }]}>
+        <View style={[styles.progressBar, { marginTop: 8 }]}>
           <View
             style={[
-              lessonStyles.progressFill,
+              styles.progressFill,
               { width: `${progressPercent}%` },
             ]}
           />
         </View>
         <Text
-          style={[lessonStyles.overviewText, { marginTop: 6, fontSize: 12 }]}
+          style={[styles.overviewText, { marginTop: 6, fontSize: 12 }]}
         >
           {completedLessonsCount} / {lessons.length} lessons completed
         </Text>
       </View>
 
       {/* Lessons List */}
-      <ScrollView style={lessonStyles.sidebarScroll}>
+      <ScrollView style={styles.sidebarScroll}>
         {lessons.map((lesson, index) => {
           const isUnlocked = isLessonUnlocked(index);
           const isActive = index === currentLessonIndex;
@@ -453,12 +457,12 @@ export default function LessonScreen() {
           const statusIcon = getLessonStatusIcon(lesson, index);
 
           return (
-            <View key={lesson.lessonId} style={lessonStyles.sidebarItemContainer}>
+            <View key={lesson.lessonId} style={styles.sidebarItemContainer}>
               <TouchableOpacity
                 style={[
-                  lessonStyles.sidebarItem,
-                  isActive && lessonStyles.sidebarItemActive,
-                  !isUnlocked && lessonStyles.sidebarItemLocked,
+                  styles.sidebarItem,
+                  isActive && styles.sidebarItemActive,
+                  !isUnlocked && styles.sidebarItemLocked,
                 ]}
                 onPress={() => {
                   if (isUnlocked) {
@@ -475,9 +479,9 @@ export default function LessonScreen() {
                 />
                 <Text
                   style={[
-                    lessonStyles.sidebarItemText,
-                    isActive && lessonStyles.sidebarItemTextActive,
-                    !isUnlocked && lessonStyles.sidebarItemTextLocked,
+                    styles.sidebarItemText,
+                    isActive && styles.sidebarItemTextActive,
+                    !isUnlocked && styles.sidebarItemTextLocked,
                   ]}
                   numberOfLines={2}
                 >
@@ -487,7 +491,7 @@ export default function LessonScreen() {
                   <Icon
                     name={isExpanded ? "expand-less" : "expand-more"}
                     size={20}
-                    color={isActive ? "#FFFFFF" : "#64748B"}
+                    color={isActive ? "#FFFFFF" : styles.sidebarMetaIcon}
                     style={{ marginLeft: "auto" }}
                   />
                 )}
@@ -495,24 +499,24 @@ export default function LessonScreen() {
 
               {/* Expanded Lesson Info */}
               {isExpanded && isUnlocked && (
-                <View style={lessonStyles.sidebarItemExpanded}>
-                  <Text style={lessonStyles.sidebarItemContent}>
+                <View style={styles.sidebarItemExpanded}>
+                  <Text style={styles.sidebarItemContent}>
                     {lesson.description || lesson.content}
                   </Text>
 
-                  <View style={lessonStyles.sidebarItemMeta}>
-                    <View style={lessonStyles.sidebarMetaRow}>
-                      <Icon name="schedule" size={16} color="#64748B" />
-                      <Text style={lessonStyles.sidebarMetaText}>
+                  <View style={styles.sidebarItemMeta}>
+                    <View style={styles.sidebarMetaRow}>
+                      <Icon name="schedule" size={16} color={styles.sidebarMetaIcon} />
+                      <Text style={styles.sidebarMetaText}>
                         {formatDuration(lesson.duration)}
                       </Text>
                     </View>
 
                     {lesson.lessonProgressStatus === "COMPLETED" && (
-                      <View style={lessonStyles.progressCircleContainer}>
+                      <View style={styles.progressCircleContainer}>
                         <View
                           style={[
-                            lessonStyles.progressCircleInner,
+                            styles.progressCircleInner,
                             { borderColor: "#22C55E" },
                           ]}
                         >
@@ -524,8 +528,8 @@ export default function LessonScreen() {
 
                   <TouchableOpacity
                     style={[
-                      lessonStyles.sidebarPlayButton,
-                      !isUnlocked && lessonStyles.sidebarPlayButtonLocked,
+                      styles.sidebarPlayButton,
+                      !isUnlocked && styles.sidebarPlayButtonLocked,
                     ]}
                     onPress={() => {
                       handleSelectLesson(index);
@@ -544,8 +548,8 @@ export default function LessonScreen() {
                     />
                     <Text
                       style={[
-                        lessonStyles.sidebarPlayText,
-                        !isUnlocked && lessonStyles.sidebarPlayTextLocked,
+                        styles.sidebarPlayText,
+                        !isUnlocked && styles.sidebarPlayTextLocked,
                       ]}
                     >
                       {lesson.lessonProgressStatus === "COMPLETED"
@@ -563,10 +567,10 @@ export default function LessonScreen() {
   );
 
   return (
-    <View style={[lessonStyles.container, !isTablet && { flexDirection: 'column' }]}>
+    <View style={[styles.container, !isTablet && { flexDirection: 'column' }]}>
       {/* Tablet: Inline Sidebar */}
       {isTablet && (
-        <View style={[lessonStyles.sidebar, { width: sidebarWidth }]}>
+        <View style={[styles.sidebar, { width: sidebarWidth }]}>
           {renderSidebarContent()}
         </View>
       )}
@@ -579,42 +583,42 @@ export default function LessonScreen() {
           transparent={false}
           onRequestClose={() => setSidebarVisible(false)}
         >
-          <View style={[lessonStyles.sidebar, { width: '100%', flex: 1 }]}>
+          <View style={[styles.sidebar, { width: '100%', flex: 1 }]}>
             {renderSidebarContent()}
           </View>
         </Modal>
       )}
 
       {/* Main Content */}
-      <View style={[lessonStyles.mainContent, !isTablet && { flex: 1 }]}>
+      <View style={[styles.mainContent, !isTablet && { flex: 1 }]}>
         {/* Header */}
         <View style={[
-          lessonStyles.header, 
-          !isTablet && { 
-            paddingHorizontal: 16, 
+          styles.header,
+          !isTablet && {
+            paddingHorizontal: 16,
             paddingTop: 50,
-            paddingVertical: 12 
+            paddingVertical: 12
           }
         ]}>
           {/* Menu button for phone */}
           {!isTablet && (
             <TouchableOpacity
-              style={[lessonStyles.backButton, { marginRight: 12 }]}
+              style={[styles.backButton, { marginRight: 12 }]}
               onPress={() => setSidebarVisible(true)}
             >
-              <Icon name="menu" size={24} color="#1E293B" />
+              <Icon name="menu" size={24} color={styles.menuIcon} />
             </TouchableOpacity>
           )}
           <Text style={[
-            lessonStyles.headerTitle, 
+            styles.headerTitle,
             !isTablet && { fontSize: 16, flex: 1 }
           ]} numberOfLines={1}>
-            {isTablet 
+            {isTablet
               ? `Lesson ${currentLessonIndex + 1}: ${currentLesson?.title || ""}`
               : currentLesson?.title || ""
             }
           </Text>
-          <View style={lessonStyles.headerActions}>
+          <View style={styles.headerActions}>
             {currentLesson?.lessonProgressStatus === "COMPLETED" && (
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Icon name="check-circle" size={20} color="#22C55E" />
@@ -630,29 +634,29 @@ export default function LessonScreen() {
 
         {/* Progress Bar */}
         <View style={[
-          lessonStyles.progressContainer,
+          styles.progressContainer,
           !isTablet && { paddingHorizontal: 16 }
         ]}>
-          <View style={lessonStyles.progressBar}>
+          <View style={styles.progressBar}>
             <View
               style={[
-                lessonStyles.progressFill,
+                styles.progressFill,
                 { width: `${progressPercent}%` },
               ]}
             />
           </View>
-          <Text style={lessonStyles.progressText}>
+          <Text style={styles.progressText}>
             {progressPercent.toFixed(0)}%
           </Text>
         </View>
 
         {/* Content Scroll */}
         <ScrollView style={[
-          lessonStyles.contentScroll,
+          styles.contentScroll,
           !isTablet && { paddingHorizontal: 16 }
         ]}>
           {isTablet && (
-            <Text style={lessonStyles.lessonMainTitle}>
+            <Text style={styles.lessonMainTitle}>
               {currentLesson?.title}
             </Text>
           )}
@@ -661,7 +665,7 @@ export default function LessonScreen() {
           {currentVideoId ? (
             <View
               style={[
-                lessonStyles.playerWrap,
+                styles.playerWrap,
                 { width: playerWidth, height: playerHeight },
               ]}
             >
@@ -673,7 +677,7 @@ export default function LessonScreen() {
                 videoId={currentVideoId}
                 onChangeState={onVideoStateChange}
                 webViewStyle={{ backgroundColor: "#000000" }}
-                webViewProps={{ 
+                webViewProps={{
                   allowsFullscreenVideo: true,
                   allowsInlineMediaPlayback: true,
                 }}
@@ -687,29 +691,29 @@ export default function LessonScreen() {
           ) : (
             <View
               style={[
-                lessonStyles.playerWrap,
-                lessonStyles.noVideoPlaceholder,
+                styles.playerWrap,
+                styles.noVideoPlaceholder,
                 { height: isTablet ? 300 : 200 },
               ]}
             >
-              <Icon name="videocam-off" size={48} color="#9CA3AF" />
-              <Text style={lessonStyles.noVideoText}>No video available</Text>
+              <Icon name="videocam-off" size={48} color={styles.noVideoIcon} />
+              <Text style={styles.noVideoText}>No video available</Text>
             </View>
           )}
 
           {/* Tabs */}
-          <View style={lessonStyles.tabs}>
+          <View style={styles.tabs}>
             <TouchableOpacity
               style={[
-                lessonStyles.tab,
-                activeTab === "overview" && lessonStyles.tabActive,
+                styles.tab,
+                activeTab === "overview" && styles.tabActive,
               ]}
               onPress={() => setActiveTab("overview")}
             >
               <Text
                 style={[
-                  lessonStyles.tabText,
-                  activeTab === "overview" && lessonStyles.tabTextActive,
+                  styles.tabText,
+                  activeTab === "overview" && styles.tabTextActive,
                 ]}
               >
                 Overview
@@ -717,15 +721,15 @@ export default function LessonScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[
-                lessonStyles.tab,
-                activeTab === "content" && lessonStyles.tabActive,
+                styles.tab,
+                activeTab === "content" && styles.tabActive,
               ]}
               onPress={() => setActiveTab("content")}
             >
               <Text
                 style={[
-                  lessonStyles.tabText,
-                  activeTab === "content" && lessonStyles.tabTextActive,
+                  styles.tabText,
+                  activeTab === "content" && styles.tabTextActive,
                 ]}
               >
                 Content
@@ -734,23 +738,23 @@ export default function LessonScreen() {
           </View>
 
           {/* Tab Content */}
-          <View style={lessonStyles.tabContent}>
+          <View style={styles.tabContent}>
             {activeTab === "overview" && (
               <View>
-                <Text style={lessonStyles.contentText}>
+                <Text style={styles.contentText}>
                   {currentLesson?.description || "No description available."}
                 </Text>
                 <View style={{ marginTop: 16 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                    <Icon name="schedule" size={18} color="#64748B" />
-                    <Text style={[lessonStyles.contentText, { marginLeft: 8 }]}>
+                    <Icon name="schedule" size={18} color={styles.sidebarMetaIcon} />
+                    <Text style={[styles.contentText, { marginLeft: 8 }]}>
                       Duration: {formatDuration(currentLesson?.duration)}
                     </Text>
                   </View>
                   {currentLesson?.timeSpent > 0 && (
                     <View style={{ flexDirection: "row", alignItems: "center" }}>
-                      <Icon name="timer" size={18} color="#64748B" />
-                      <Text style={[lessonStyles.contentText, { marginLeft: 8 }]}>
+                      <Icon name="timer" size={18} color={styles.sidebarMetaIcon} />
+                      <Text style={[styles.contentText, { marginLeft: 8 }]}>
                         Time spent: {formatDuration(currentLesson?.timeSpent)}
                       </Text>
                     </View>
@@ -759,7 +763,7 @@ export default function LessonScreen() {
               </View>
             )}
             {activeTab === "content" && (
-              <Text style={lessonStyles.contentText}>
+              <Text style={styles.contentText}>
                 {currentLesson?.content || "No content available."}
               </Text>
             )}
@@ -767,14 +771,14 @@ export default function LessonScreen() {
 
           {/* Navigation Buttons */}
           <View style={[
-            lessonStyles.navigationButtons,
+            styles.navigationButtons,
             !isTablet && { flexDirection: 'column', gap: 12 }
           ]}>
             <TouchableOpacity
               style={[
-                lessonStyles.navButton,
-                lessonStyles.previousButton,
-                currentLessonIndex === 0 && lessonStyles.navButtonDisabled,
+                styles.navButton,
+                styles.previousButton,
+                currentLessonIndex === 0 && styles.navButtonDisabled,
                 !isTablet && { width: '100%', justifyContent: 'center' }
               ]}
               onPress={handlePreviousLesson}
@@ -787,9 +791,9 @@ export default function LessonScreen() {
               />
               <Text
                 style={[
-                  lessonStyles.navButtonText,
-                  lessonStyles.previousButtonText,
-                  currentLessonIndex === 0 && lessonStyles.navButtonTextDisabled,
+                  styles.navButtonText,
+                  styles.previousButtonText,
+                  currentLessonIndex === 0 && styles.navButtonTextDisabled,
                 ]}
               >
                 Previous
@@ -799,9 +803,10 @@ export default function LessonScreen() {
             {currentLesson?.lessonProgressStatus !== "COMPLETED" ? (
               <TouchableOpacity
                 style={[
-                  lessonStyles.navButton, 
-                  lessonStyles.completeButton,
-                  !isTablet && { width: '100%', maxWidth: '100%' }
+                  styles.navButton,
+                  styles.completeButton,
+                  saving && styles.navButtonDisabled,
+                  !isTablet && { width: '100%', justifyContent: 'center' }
                 ]}
                 onPress={handleCompleteLesson}
                 disabled={saving}
@@ -810,8 +815,8 @@ export default function LessonScreen() {
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
-                    <Icon name="check" size={18} color="#FFFFFF" />
-                    <Text style={lessonStyles.completeButtonText}>
+                    <Icon name="check-circle" size={18} color="#FFFFFF" />
+                    <Text style={styles.completeButtonText}>
                       Mark as Complete
                     </Text>
                   </>
@@ -820,33 +825,38 @@ export default function LessonScreen() {
             ) : (
               <TouchableOpacity
                 style={[
-                  lessonStyles.navButton,
-                  {
-                    backgroundColor: "#0EA5E9",
-                    flex: isTablet ? 1 : undefined,
-                    width: isTablet ? undefined : '100%',
-                    maxWidth: isTablet ? 200 : '100%',
-                  },
-                  currentLessonIndex >= lessons.length - 1 &&
-                    lessonStyles.navButtonDisabled,
+                  styles.navButton,
+                  styles.completeButton,
+                  (currentLessonIndex === lessons.length - 1 || !isLessonUnlocked(currentLessonIndex + 1)) && styles.navButtonDisabled,
+                  !isTablet && { width: '100%', justifyContent: 'center' }
                 ]}
                 onPress={handleNextLesson}
-                disabled={
-                  currentLessonIndex >= lessons.length - 1 ||
-                  !isLessonUnlocked(currentLessonIndex + 1)
-                }
+                disabled={currentLessonIndex === lessons.length - 1 || !isLessonUnlocked(currentLessonIndex + 1)}
               >
-                <Text style={[lessonStyles.navButtonText, { color: "#FFFFFF" }]}>
-                  {currentLessonIndex >= lessons.length - 1
-                    ? "Course Completed"
-                    : "Next Lesson"}
+                <Text style={styles.completeButtonText}>
+                  Next Lesson
                 </Text>
-                {currentLessonIndex < lessons.length - 1 && (
-                  <Icon name="arrow-forward" size={18} color="#FFFFFF" />
-                )}
+                <Icon name="arrow-forward" size={18} color="#FFFFFF" />
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Course Completed Banner */}
+          {completedLessonsCount === lessons.length && lessons.length > 0 && (
+            <View style={styles.completedBanner}>
+              <View style={styles.completedBannerIcon}>
+                <Icon name="emoji-events" size={32} color="#FFFFFF" />
+              </View>
+              <Text style={styles.completedBannerTitle}>
+                Course Completed!
+              </Text>
+              <Text style={styles.completedBannerText}>
+                Congratulations! You have successfully completed all lessons in this course.
+              </Text>
+            </View>
+          )}
+
+          <View style={{ height: 40 }} />
         </ScrollView>
       </View>
     </View>

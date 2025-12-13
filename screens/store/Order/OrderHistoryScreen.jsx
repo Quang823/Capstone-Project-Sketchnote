@@ -14,30 +14,38 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
 import { orderService } from "../../../service/orderService";
-import { styles } from "./OrderHistoryScreen.styles";
+import getStyles from "./OrderHistoryScreen.styles";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import loadingAnimation from "../../../assets/loading.json";
 import LottieView from "lottie-react-native";
 import Toast from "react-native-toast-message";
 import { feedbackService } from "../../../service/feedbackService";
 import { useToast } from "../../../hooks/use-toast";
-const ITEMS_PER_PAGE = 10; // Increased for better list view
+import { useTheme } from "../../../context/ThemeContext";
+
+const ITEMS_PER_PAGE = 10;
 const screenWidth = Dimensions.get("window").width;
 const TABS = ["All", "Pending", "Completed", "Cancelled"];
 
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const styles = getStyles(theme);
+  const isDark = theme === "dark";
+
   const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [retryingOrderId, setRetryingOrderId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
+
   // Tab State
   const [activeTab, setActiveTab] = useState("All");
   const translateX = useRef(new Animated.Value(0)).current;
@@ -58,7 +66,6 @@ export default function OrderHistoryScreen() {
       setLoading(true);
       const response = await orderService.getOrderByUserId();
 
-      // Sắp xếp orders theo ngày mới nhất lên trên
       const sortedOrders = (response || []).sort((a, b) => {
         const dateA = new Date(a.issueDate);
         const dateB = new Date(b.issueDate);
@@ -82,37 +89,47 @@ export default function OrderHistoryScreen() {
 
   const handleTabPress = (tab, index) => {
     setActiveTab(tab);
-    setCurrentPage(1); // Reset page when changing tab
+    setCurrentPage(1);
     Animated.spring(translateX, {
       toValue: ((screenWidth - 40) / 4) * index,
       useNativeDriver: true,
     }).start();
   };
 
-  // Filter Orders based on Tab
   const getFilteredOrders = () => {
     if (activeTab === "All") return allOrders;
-    if (activeTab === "Pending") return allOrders.filter(o => o.orderStatus === "PENDING" || o.paymentStatus === "PENDING");
-    if (activeTab === "Completed") return allOrders.filter(o => o.orderStatus === "COMPLETED" || o.orderStatus === "SUCCESS");
-    if (activeTab === "Cancelled") return allOrders.filter(o => o.orderStatus === "CANCELLED" || o.orderStatus === "FAILED");
+    if (activeTab === "Pending")
+      return allOrders.filter(
+        (o) => o.orderStatus === "PENDING" || o.paymentStatus === "PENDING"
+      );
+    if (activeTab === "Completed")
+      return allOrders.filter(
+        (o) => o.orderStatus === "COMPLETED" || o.orderStatus === "SUCCESS"
+      );
+    if (activeTab === "Cancelled")
+      return allOrders.filter(
+        (o) => o.orderStatus === "CANCELLED" || o.orderStatus === "FAILED"
+      );
     return allOrders;
   };
 
   const filteredOrders = getFilteredOrders();
 
-  // Pagination
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIdx = startIdx + ITEMS_PER_PAGE;
   const ordersToDisplay = filteredOrders.slice(startIdx, endIdx);
 
-  // Stats Calculation
   const totalSpent = allOrders
-    .filter(o => o.paymentStatus === "PAID" || o.paymentStatus === "SUCCESS")
+    .filter((o) => o.paymentStatus === "PAID" || o.paymentStatus === "SUCCESS")
     .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-  const pendingCount = allOrders.filter(o => o.orderStatus === "PENDING").length;
-  const completedCount = allOrders.filter(o => o.orderStatus === "COMPLETED" || o.orderStatus === "SUCCESS").length;
+  const pendingCount = allOrders.filter(
+    (o) => o.orderStatus === "PENDING"
+  ).length;
+  const completedCount = allOrders.filter(
+    (o) => o.orderStatus === "COMPLETED" || o.orderStatus === "SUCCESS"
+  ).length;
 
   const openFeedbackModal = (item) => {
     setSelectedItem(item);
@@ -136,7 +153,6 @@ export default function OrderHistoryScreen() {
         text2: "Please select a rating before submitting.",
         variant: "destructive",
       });
-
       return;
     }
 
@@ -169,12 +185,7 @@ export default function OrderHistoryScreen() {
         variant: "destructive",
       });
 
-      Toast.show({
-        type: "success",
-        text1: "Feedback Submitted",
-        text2: "Thank you for sharing your experience!",
-      });
-
+      closeFeedbackModal();
     } catch (error) {
       console.error("Error creating feedback:", error.message);
       toast({
@@ -214,26 +225,41 @@ export default function OrderHistoryScreen() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "PENDING": return "#F59E0B";
-      case "COMPLETED": return "#10B981";
-      case "SUCCESS": return "#10B981";
-      case "CANCELLED": return "#EF4444";
-      case "CONFIRMED": return "#3B82F6";
-      case "PAID": return "#8B5CF6";
-      case "FAILED": return "#EF4444";
-      default: return "#64748B";
+      case "PENDING":
+        return "#F59E0B";
+      case "COMPLETED":
+        return "#10B981";
+      case "SUCCESS":
+        return "#10B981";
+      case "CANCELLED":
+        return "#EF4444";
+      case "CONFIRMED":
+        return "#3B82F6";
+      case "PAID":
+        return "#8B5CF6";
+      case "FAILED":
+        return "#EF4444";
+      default:
+        return "#64748B";
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case "PENDING": return "schedule";
-      case "COMPLETED": return "check-circle";
-      case "SUCCESS": return "check-circle";
-      case "CANCELLED": return "cancel";
-      case "CONFIRMED": return "check";
-      case "FAILED": return "error";
-      default: return "info";
+      case "PENDING":
+        return "schedule";
+      case "COMPLETED":
+        return "check-circle";
+      case "SUCCESS":
+        return "check-circle";
+      case "CANCELLED":
+        return "cancel";
+      case "CONFIRMED":
+        return "check";
+      case "FAILED":
+        return "error";
+      default:
+        return "info";
     }
   };
 
@@ -249,7 +275,9 @@ export default function OrderHistoryScreen() {
             <Icon
               name={star <= rating ? "star" : "star-border"}
               size={40}
-              color={star <= rating ? "#FFB300" : "#BDC3C7"}
+              color={
+                star <= rating ? "#FFB300" : isDark ? "#64748B" : "#BDC3C7"
+              }
             />
           </Pressable>
         ))}
@@ -260,6 +288,10 @@ export default function OrderHistoryScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
+        <StatusBar
+          barStyle={isDark ? "light-content" : "dark-content"}
+          backgroundColor={isDark ? "#0F172A" : "#F8FAFC"}
+        />
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -272,9 +304,17 @@ export default function OrderHistoryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={isDark ? "#1E293B" : "#FFFFFF"}
+      />
+
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <SidebarToggleButton
+            iconSize={26}
+            iconColor={isDark ? "#FFFFFF" : "#084F8C"}
+          />
           <Text style={styles.headerTitle}>Order History</Text>
         </View>
       </View>
@@ -282,15 +322,30 @@ export default function OrderHistoryScreen() {
       {/* Summary Box */}
       <View style={styles.summaryBox}>
         <View style={styles.summaryItem}>
-          <Icon name="shopping-bag" size={20} color="#084F8C" style={{ marginBottom: 4 }} />
+          <Icon
+            name="shopping-bag"
+            size={20}
+            color={isDark ? "#60A5FA" : "#084F8C"}
+            style={{ marginBottom: 4 }}
+          />
           <Text style={styles.summaryLabel}>Total Spent</Text>
-          <Text style={[styles.summaryValue, { color: "#084F8C" }]}>
+          <Text
+            style={[
+              styles.summaryValue,
+              { color: isDark ? "#60A5FA" : "#084F8C" },
+            ]}
+          >
             {totalSpent.toLocaleString()} đ
           </Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.summaryItem}>
-          <Icon name="check-circle" size={20} color="#10B981" style={{ marginBottom: 4 }} />
+          <Icon
+            name="check-circle"
+            size={20}
+            color="#10B981"
+            style={{ marginBottom: 4 }}
+          />
           <Text style={styles.summaryLabel}>Completed</Text>
           <Text style={[styles.summaryValue, { color: "#10B981" }]}>
             {completedCount}
@@ -298,7 +353,12 @@ export default function OrderHistoryScreen() {
         </View>
         <View style={styles.divider} />
         <View style={styles.summaryItem}>
-          <Icon name="schedule" size={20} color="#F59E0B" style={{ marginBottom: 4 }} />
+          <Icon
+            name="schedule"
+            size={20}
+            color="#F59E0B"
+            style={{ marginBottom: 4 }}
+          />
           <Text style={styles.summaryLabel}>Pending</Text>
           <Text style={[styles.summaryValue, { color: "#F59E0B" }]}>
             {pendingCount}
@@ -333,7 +393,11 @@ export default function OrderHistoryScreen() {
         style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={isDark ? "#60A5FA" : "#084F8C"}
+          />
         }
       >
         {ordersToDisplay.length === 0 ? (
@@ -365,21 +429,37 @@ export default function OrderHistoryScreen() {
               {/* Header */}
               <View style={styles.orderHeader}>
                 <View style={styles.orderHeaderLeft}>
-                  <View style={[styles.iconWrap, { backgroundColor: "#F1F5F9", padding: 8, borderRadius: 12 }]}>
-                    <Icon name="receipt" size={20} color="#084F8C" />
+                  <View style={styles.iconWrap}>
+                    <Icon
+                      name="receipt"
+                      size={20}
+                      color={isDark ? "#60A5FA" : "#084F8C"}
+                    />
                   </View>
                   <View>
-                    <Text style={styles.invoiceNumber}>#{order.invoiceNumber}</Text>
-                    <Text style={styles.cardDate}>{new Date(order.issueDate).toLocaleDateString()}</Text>
+                    <Text style={styles.invoiceNumber}>
+                      #{order.invoiceNumber}
+                    </Text>
+                    <Text style={styles.cardDate}>
+                      {new Date(order.issueDate).toLocaleDateString()}
+                    </Text>
                   </View>
                 </View>
                 <View
                   style={[
                     styles.statusBadge,
-                    { backgroundColor: `${getStatusColor(order.orderStatus)}15`, borderColor: `${getStatusColor(order.orderStatus)}30` },
+                    {
+                      backgroundColor: `${getStatusColor(order.orderStatus)}15`,
+                      borderColor: `${getStatusColor(order.orderStatus)}30`,
+                    },
                   ]}
                 >
-                  <Text style={[styles.statusText, { color: getStatusColor(order.orderStatus) }]}>
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: getStatusColor(order.orderStatus) },
+                    ]}
+                  >
                     {order.orderStatus}
                   </Text>
                 </View>
@@ -389,25 +469,31 @@ export default function OrderHistoryScreen() {
               <View style={styles.itemsContainer}>
                 {order?.items?.map((item) => {
                   const canShowFeedback =
-                    (order.orderStatus === "COMPLETED" || order.orderStatus === "SUCCESS") &&
+                    (order.orderStatus === "COMPLETED" ||
+                      order.orderStatus === "SUCCESS") &&
                     order.paymentStatus === "PAID" &&
                     item.resourceTemplateId;
 
                   return (
                     <View key={item.orderDetailId} style={styles.itemRow}>
                       <View style={styles.itemInfo}>
-                        <Text style={styles.itemName} numberOfLines={1}>{item.templateName}</Text>
+                        <Text style={styles.itemName} numberOfLines={1}>
+                          {item.templateName}
+                        </Text>
                         <Text style={styles.itemDesc} numberOfLines={1}>
                           {item.templateType}
                         </Text>
 
-                        {/* Feedback Button */}
                         {canShowFeedback && (
                           <Pressable
                             style={styles.feedbackButton}
                             onPress={() => openFeedbackModal(item)}
                           >
-                            <Icon name="rate-review" size={14} color="#1E40AF" />
+                            <Icon
+                              name="rate-review"
+                              size={14}
+                              color={isDark ? "#60A5FA" : "#1E40AF"}
+                            />
                             <Text style={styles.feedbackButtonText}>
                               Write Review
                             </Text>
@@ -443,10 +529,24 @@ export default function OrderHistoryScreen() {
                     style={[
                       styles.paymentBadge,
                       {
-                        backgroundColor: order.paymentStatus === "PAID" ? "#ECFDF5" : "#F1F5F9",
-                        borderColor: order.paymentStatus === "PAID" ? "#A7F3D0" : "#E2E8F0",
-                        borderWidth: 1
-                      }
+                        backgroundColor:
+                          order.paymentStatus === "PAID"
+                            ? isDark
+                              ? "#064E3B"
+                              : "#ECFDF5"
+                            : isDark
+                            ? "#334155"
+                            : "#F1F5F9",
+                        borderColor:
+                          order.paymentStatus === "PAID"
+                            ? isDark
+                              ? "#10B981"
+                              : "#A7F3D0"
+                            : isDark
+                            ? "#475569"
+                            : "#E2E8F0",
+                        borderWidth: 1,
+                      },
                     ]}
                   >
                     <Icon
@@ -454,13 +554,31 @@ export default function OrderHistoryScreen() {
                         order.paymentStatus === "PENDING"
                           ? "payment"
                           : order.paymentStatus === "FAILED"
-                            ? "error"
-                            : "check-circle"
+                          ? "error"
+                          : "check-circle"
                       }
                       size={14}
-                      color={order.paymentStatus === "PAID" ? "#059669" : "#64748B"}
+                      color={
+                        order.paymentStatus === "PAID"
+                          ? "#10B981"
+                          : isDark
+                          ? "#94A3B8"
+                          : "#64748B"
+                      }
                     />
-                    <Text style={[styles.paymentText, { color: order.paymentStatus === "PAID" ? "#059669" : "#64748B" }]}>
+                    <Text
+                      style={[
+                        styles.paymentText,
+                        {
+                          color:
+                            order.paymentStatus === "PAID"
+                              ? "#10B981"
+                              : isDark
+                              ? "#94A3B8"
+                              : "#64748B",
+                        },
+                      ]}
+                    >
                       {order.paymentStatus}
                     </Text>
                   </View>
@@ -530,7 +648,15 @@ export default function OrderHistoryScreen() {
               <Icon
                 name="chevron-left"
                 size={20}
-                color={currentPage === 1 ? "#BDC3C7" : "#084F8C"}
+                color={
+                  currentPage === 1
+                    ? isDark
+                      ? "#475569"
+                      : "#BDC3C7"
+                    : isDark
+                    ? "#60A5FA"
+                    : "#084F8C"
+                }
               />
             </Pressable>
 
@@ -569,7 +695,15 @@ export default function OrderHistoryScreen() {
               <Icon
                 name="chevron-right"
                 size={20}
-                color={currentPage === totalPages ? "#BDC3C7" : "#084F8C"}
+                color={
+                  currentPage === totalPages
+                    ? isDark
+                      ? "#475569"
+                      : "#BDC3C7"
+                    : isDark
+                    ? "#60A5FA"
+                    : "#084F8C"
+                }
               />
             </Pressable>
           </View>
@@ -603,7 +737,11 @@ export default function OrderHistoryScreen() {
                 </Text>
               </View>
               <Pressable onPress={closeFeedbackModal}>
-                <Icon name="close" size={24} color="#64748B" />
+                <Icon
+                  name="close"
+                  size={24}
+                  color={isDark ? "#94A3B8" : "#64748B"}
+                />
               </Pressable>
             </View>
 
@@ -628,16 +766,14 @@ export default function OrderHistoryScreen() {
               <TextInput
                 style={styles.commentInput}
                 placeholder="Share your experience with this resource..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={isDark ? "#64748B" : "#94A3B8"}
                 multiline
                 numberOfLines={5}
                 value={comment}
                 onChangeText={setComment}
                 textAlignVertical="top"
               />
-              <Text style={styles.charCount}>
-                {comment.length} characters
-              </Text>
+              <Text style={styles.charCount}>{comment.length} characters</Text>
             </View>
 
             {/* Action Buttons */}
@@ -653,7 +789,7 @@ export default function OrderHistoryScreen() {
                 style={[
                   styles.submitButton,
                   (submittingFeedback || rating === 0 || !comment.trim()) &&
-                  styles.submitButtonDisabled,
+                    styles.submitButtonDisabled,
                 ]}
                 onPress={createFeedback}
                 disabled={submittingFeedback || rating === 0 || !comment.trim()}
@@ -663,9 +799,7 @@ export default function OrderHistoryScreen() {
                 ) : (
                   <>
                     <Icon name="send" size={18} color="#FFFFFF" />
-                    <Text style={styles.submitButtonText}>
-                      Submit Review
-                    </Text>
+                    <Text style={styles.submitButtonText}>Submit Review</Text>
                   </>
                 )}
               </Pressable>

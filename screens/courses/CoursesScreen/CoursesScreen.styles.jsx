@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions } from "react-native";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 export const coursesStyles = StyleSheet.create({
   container: {
@@ -449,12 +449,12 @@ export const coursesStyles = StyleSheet.create({
     color: "#94A3B8",
   },
   filterButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#EFF6FF",
-    justifyContent: "center",
+    flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "#EFF6FF",
   },
   filterButtonDark: {
     backgroundColor: "#1E293B",

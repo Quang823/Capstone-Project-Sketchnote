@@ -37,7 +37,6 @@ import DesignerWalletScreen from "../screens/designer/DesignerWalletScreen/Desig
 import ProfileScreen from "../screens/auth/ProfileScreen/ProfileScreen";
 import VerifyEmailScreen from "../screens/auth/VerifyEmailScreen/VerifyEmailScreen";
 import GalleryScreen from "../screens/drawing/GalleryScreen/GalleryScreen";
-import ChatScreen from "../screens/chat/ChatScreen";
 import CreditScreen from "../screens/credit/CreditScreen";
 import CreditTransactionHistoryScreen from "../screens/credit/CreditTransactionHistoryScreen";
 import WithdrawalHistoryScreen from "../screens/designer/WithdrawalHistoryScreen/WithdrawalHistoryScreen";
@@ -76,7 +75,6 @@ export default function AppNavigator() {
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="CreditScreen" component={CreditScreen} />
       <Stack.Screen name="CreditTransactionHistory" component={CreditTransactionHistoryScreen} />
-      <Stack.Screen name="ChatScreen" component={ChatScreen} />
       <Stack.Screen name="Gallery" component={GalleryScreen} />
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
       <Stack.Screen name="BankAccounts" component={BankAccountsScreen} />

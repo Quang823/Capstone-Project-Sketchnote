@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
     View,
     Text,
@@ -13,10 +13,11 @@ import Toast from "react-native-toast-message";
 import { orderService } from "../../../service/orderService";
 import { authService } from "../../../service/authService";
 import { useCart } from "../../../context/CartContext";
-import { styles } from "./DesignerProfileScreen.styles";
+import { getStyles } from "./DesignerProfileScreen.styles";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
+import { useTheme } from "../../../context/ThemeContext";
 
 const FALLBACK_IMAGES = [
     "https://res.cloudinary.com/dk3yac2ie/image/upload/v1765185200/z1tfsj8jpe6fxsvhvfcx.avif",
@@ -24,7 +25,7 @@ const FALLBACK_IMAGES = [
     "https://res.cloudinary.com/dk3yac2ie/image/upload/v1765185200/wtwko9tms2mmit7kmntt.jpg",
 ];
 
-const ProductCard = ({ item, onPress, onAddToCart, onBuyNow, index = 0 }) => {
+const ProductCard = ({ item, onPress, onAddToCart, onBuyNow, index = 0, styles }) => {
     const [imageUri, setImageUri] = useState(
         item.images?.[0]?.imageUrl ||
         item.images?.[0]?.url ||
@@ -46,7 +47,7 @@ const ProductCard = ({ item, onPress, onAddToCart, onBuyNow, index = 0 }) => {
                         key={i}
                         name={i < filled ? "star" : "star-border"}
                         size={14}
-                        color={i < filled ? "#FBBF24" : "#CBD5E1"}
+                        color={i < filled ? styles.starFilled : styles.starEmpty}
                     />
                 ))}
             </View>
@@ -121,6 +122,9 @@ export default function DesignerProfileScreen() {
     const [designer, setDesigner] = useState(null);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const { theme } = useTheme();
+    const styles = useMemo(() => getStyles(theme), [theme]);
 
     useEffect(() => {
         const fetchDesignerData = async () => {
@@ -204,7 +208,7 @@ export default function DesignerProfileScreen() {
     if (!designer) {
         return (
             <View style={styles.centerContainer}>
-                <Icon name="person-off" size={80} color="#D1D5DB" />
+                <Icon name="person-off" size={80} color={styles.emptyIconColor} />
                 <Text style={styles.emptyText}>Designer not found</Text>
             </View>
         );
@@ -220,14 +224,14 @@ export default function DesignerProfileScreen() {
                 <View style={styles.headerGradient} />
                 <View style={styles.headerContent}>
                     <View style={styles.headerLeft}>
-                        <SidebarToggleButton iconSize={28} iconColor="#1E40AF" />
+                        <SidebarToggleButton iconSize={28} iconColor={styles.iconColor} />
                         <Text style={styles.headerTitle}>Designer Profile</Text>
                     </View>
                     <Pressable
                         style={styles.cartButton}
                         onPress={() => navigation.navigate("Cart")}
                     >
-                        <Icon name="shopping-cart" size={24} color="#084F8C" />
+                        <Icon name="shopping-cart" size={24} color={styles.cartIconColor} />
                         {cart.length > 0 && (
                             <View style={styles.cartBadge}>
                                 <Text style={styles.cartBadgeText}>{cart.length}</Text>
@@ -257,7 +261,7 @@ export default function DesignerProfileScreen() {
 
                             <View style={styles.statsContainer}>
                                 <View style={styles.statItem}>
-                                    <Icon name="inventory" size={20} color="#3B82F6" />
+                                    <Icon name="inventory" size={20} color={styles.statIconColor} />
                                     <Text style={styles.statValue}>{products.length}</Text>
                                     <Text style={styles.statLabel}>Products</Text>
                                 </View>
@@ -280,6 +284,7 @@ export default function DesignerProfileScreen() {
                                     key={item.resourceTemplateId || index}
                                     item={item}
                                     index={index}
+                                    styles={styles}
                                     onPress={() =>
                                         navigation.navigate("ResourceDetail", {
                                             resourceId: item.resourceTemplateId,
@@ -291,7 +296,7 @@ export default function DesignerProfileScreen() {
                         </View>
                     ) : (
                         <View style={styles.emptyProducts}>
-                            <Icon name="inventory-2" size={64} color="#D1D5DB" />
+                            <Icon name="inventory-2" size={64} color={styles.emptyIconColor} />
                             <Text style={styles.emptyProductsText}>
                                 No products available yet
                             </Text>

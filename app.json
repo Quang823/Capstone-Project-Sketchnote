@@ -15,7 +15,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -28,22 +31,35 @@
       "permissions": [
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
-        "READ_MEDIA_IMAGES"
-      ]
+        "READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO"
+      ],
+      "runtimeVersion": "1.0.0"
     },
     "web": {
       "enabled": false
     },
-
     "extra": {
       "googleWebClientId": "344952841102-b6movtu6pin8ps01m749irn85qo64acs.apps.googleusercontent.com",
       "googleAndroidClientId": "344952841102-0nv4upmksce529gvgigqanjftlo0m1p5.apps.googleusercontent.com",
-
       "eas": {
         "projectId": "ed0dcf01-092f-4444-98d8-4c2566156375"
       }
     },
-
     "plugins": [
       "expo-font",
       [
@@ -56,6 +72,9 @@
         }
       ],
       "expo-web-browser"
-    ]
+    ],
+    "updates": {
+      "url": "https://u.expo.dev/ed0dcf01-092f-4444-98d8-4c2566156375"
+    }
   }
 }

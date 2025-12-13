@@ -1,5 +1,4 @@
-// DesignerAnalyticsScreen.js - Enhanced với màu xanh chuyên nghiệp
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,22 +7,43 @@ import {
   Dimensions,
   ActivityIndicator,
   Platform,
-  Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LineChart, BarChart } from "react-native-chart-kit";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { styles } from "./DesignerAnalyticsScreen.styles";
+import getStyles from "./DesignerAnalyticsScreen.styles";
 import { dashboardService } from "../../../service/dashboardService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
+import { useTheme } from "../../../context/ThemeContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerAnalyticsScreen() {
   const navigation = useNavigation();
   const { setActiveNavItem } = useNavContext();
+  const { theme } = useTheme();
+
+  // Get styles based on theme
+  const styles = getStyles(theme);
+
+  // Theme colors for inline styles
+  const isDark = theme === "dark";
+  const colors = {
+    primaryBlue: isDark ? "#60A5FA" : "#084F8C",
+    primaryWhite: isDark ? "#FFFFFF" : "#084F8C",
+    accentBlue: "#3B82F6",
+    textMuted: isDark ? "#64748B" : "#94A3B8",
+    textSecondary: isDark ? "#94A3B8" : "#64748B",
+    emptyIconColor: isDark ? "#475569" : "#CBD5E1",
+    loadingColor: isDark ? "#60A5FA" : "#3B82F6",
+    chartLabelColor: isDark ? "rgba(148, 163, 184, 1)" : "rgba(71, 85, 105, 1)",
+    chartLineColor: isDark ? "#334155" : "#E2E8F0",
+    chartFillFrom: isDark ? "#60A5FA" : "#3B82F6",
+    barChartColor: isDark ? "#0EA5E9" : "#0EA5E9",
+  };
+
   const [activeNavItemLocal, setActiveNavItemLocal] = useState("analytics");
 
   useEffect(() => {
@@ -75,7 +95,7 @@ export default function DesignerAnalyticsScreen() {
       const res = await dashboardService.getTopTemplates();
       setTopTemplates(res);
     } catch (error) {
-
+      console.error("Error fetching top templates:", error);
     }
   };
 
@@ -85,7 +105,7 @@ export default function DesignerAnalyticsScreen() {
       const res = await dashboardService.getDashboardSummaryDesigner();
       setSummary(res);
     } catch (error) {
-
+      console.error("Error fetching summary:", error);
     }
   };
 
@@ -212,28 +232,28 @@ export default function DesignerAnalyticsScreen() {
 
     const ranking = rankingPoints.length
       ? {
-        labels: rankingPoints.map((point) => point.shortLabel),
-        datasets: [
-          {
-            data: rankingPoints.map((point) => point.value),
-          },
-        ],
-      }
+          labels: rankingPoints.map((point) => point.shortLabel),
+          datasets: [
+            {
+              data: rankingPoints.map((point) => point.value),
+            },
+          ],
+        }
       : null;
 
     const insights = rankingPoints.length
       ? {
-        bestPeriod: rankingPoints[0]?.longLabel || null,
-        bestValue: rankingPoints[0]?.value || 0,
-        lowestPeriod:
-          rankingPoints.length > 1
-            ? rankingPoints[rankingPoints.length - 1]?.longLabel || null
-            : null,
-        lowestValue:
-          rankingPoints.length > 1
-            ? rankingPoints[rankingPoints.length - 1]?.value || 0
-            : null,
-      }
+          bestPeriod: rankingPoints[0]?.longLabel || null,
+          bestValue: rankingPoints[0]?.value || 0,
+          lowestPeriod:
+            rankingPoints.length > 1
+              ? rankingPoints[rankingPoints.length - 1]?.longLabel || null
+              : null,
+          lowestValue:
+            rankingPoints.length > 1
+              ? rankingPoints[rankingPoints.length - 1]?.value || 0
+              : null,
+        }
       : null;
 
     return { timeline, ranking, insights, rankingDetails: rankingPoints };
@@ -246,11 +266,11 @@ export default function DesignerAnalyticsScreen() {
 
   const hasTimelineData = Boolean(
     timelineChartData?.datasets?.[0]?.data &&
-    timelineChartData.datasets[0].data.some((value) => value > 0)
+      timelineChartData.datasets[0].data.some((value) => value > 0)
   );
   const hasComparisonData = Boolean(
     comparisonChartData?.datasets?.[0]?.data &&
-    comparisonChartData.datasets[0].data.some((value) => value > 0)
+      comparisonChartData.datasets[0].data.some((value) => value > 0)
   );
 
   // Calculate statistics
@@ -282,18 +302,48 @@ export default function DesignerAnalyticsScreen() {
     return { totalRevenue, avgRevenue, maxRevenue, trend };
   }, [salesData]);
 
+  // Chart config
+  const getChartConfig = (type = "line") => ({
+    backgroundGradientFromOpacity: 0,
+    backgroundGradientToOpacity: 0,
+    decimalPlaces: 0,
+    color: (opacity = 1) =>
+      type === "bar"
+        ? `rgba(14, 165, 233, ${opacity})`
+        : `rgba(59, 130, 246, ${opacity})`,
+    labelColor: () => colors.chartLabelColor,
+    propsForDots: {
+      r: "5",
+      strokeWidth: "2",
+      stroke: isDark ? "#3B82F6" : "#1E40AF",
+      fill: "#3B82F6",
+    },
+    fillShadowGradientFrom: colors.chartFillFrom,
+    fillShadowGradientFromOpacity: 0.3,
+    fillShadowGradientTo: colors.chartFillFrom,
+    fillShadowGradientToOpacity: 0.05,
+    propsForBackgroundLines: {
+      stroke: colors.chartLineColor,
+      strokeDasharray: "",
+    },
+    barPercentage: 0.7,
+  });
+
   if (loading && !salesData) {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+            <SidebarToggleButton
+              iconSize={26}
+              iconColor={colors.primaryWhite}
+            />
             <Text style={styles.headerTitle}>Sales Analytics</Text>
           </View>
           <View style={{ width: 40 }} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
+          <ActivityIndicator size="large" color={colors.loadingColor} />
           <Text style={styles.loadingText}>Loading data...</Text>
         </View>
       </View>
@@ -304,7 +354,7 @@ export default function DesignerAnalyticsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor="#084F8C" />
+          <SidebarToggleButton iconSize={26} iconColor={colors.primaryWhite} />
           <Text style={styles.headerTitle}>Sales Analytics</Text>
         </View>
         <View style={{ width: 40 }} />
@@ -318,17 +368,17 @@ export default function DesignerAnalyticsScreen() {
               style={styles.dateButton}
               onPress={() => setShowStartPicker(true)}
             >
-              <Icon name="calendar-today" size={18} color="#3B82F6" />
+              <Icon name="calendar-today" size={18} color={colors.accentBlue} />
               <Text style={styles.dateButtonText}>{formatDate(startDate)}</Text>
             </Pressable>
 
-            <Icon name="arrow-forward" size={18} color="#94A3B8" />
+            <Icon name="arrow-forward" size={18} color={colors.textMuted} />
 
             <Pressable
               style={styles.dateButton}
               onPress={() => setShowEndPicker(true)}
             >
-              <Icon name="calendar-today" size={18} color="#3B82F6" />
+              <Icon name="calendar-today" size={18} color={colors.accentBlue} />
               <Text style={styles.dateButtonText}>{formatDate(endDate)}</Text>
             </Pressable>
           </View>
@@ -410,7 +460,7 @@ export default function DesignerAnalyticsScreen() {
           </View>
         </View>
 
-        {/* Overview Cards - 2x2 Grid với màu xanh gradient */}
+        {/* Overview Cards - 2x2 Grid */}
         <View style={styles.overviewGrid}>
           <View style={[styles.overviewCard, styles.cardOrange]}>
             <View style={styles.overviewHeader}>
@@ -459,7 +509,7 @@ export default function DesignerAnalyticsScreen() {
           <View style={styles.chartCard}>
             {loading ? (
               <View style={styles.chartLoading}>
-                <ActivityIndicator size="small" color="#3B82F6" />
+                <ActivityIndicator size="small" color={colors.loadingColor} />
               </View>
             ) : timelineChartData && hasTimelineData ? (
               <>
@@ -469,27 +519,7 @@ export default function DesignerAnalyticsScreen() {
                   height={240}
                   formatYLabel={formatCurrencyCompact}
                   fromZero
-                  chartConfig={{
-                    backgroundGradientFromOpacity: 0,
-                    backgroundGradientToOpacity: 0,
-                    decimalPlaces: 0,
-                    color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-                    labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
-                    propsForDots: {
-                      r: "5",
-                      strokeWidth: "2",
-                      stroke: "#1E40AF",
-                      fill: "#3B82F6",
-                    },
-                    fillShadowGradientFrom: "#3B82F6",
-                    fillShadowGradientFromOpacity: 0.3,
-                    fillShadowGradientTo: "#3B82F6",
-                    fillShadowGradientToOpacity: 0.05,
-                    propsForBackgroundLines: {
-                      stroke: "#E2E8F0",
-                      strokeDasharray: "",
-                    },
-                  }}
+                  chartConfig={getChartConfig("line")}
                   bezier
                   yLabelsOffset={12}
                   segments={4}
@@ -539,7 +569,11 @@ export default function DesignerAnalyticsScreen() {
               </>
             ) : (
               <View style={styles.emptyChart}>
-                <Icon name="insert-chart" size={56} color="#CBD5E1" />
+                <Icon
+                  name="insert-chart"
+                  size={56}
+                  color={colors.emptyIconColor}
+                />
                 <Text style={styles.emptyChartText}>No data available</Text>
               </View>
             )}
@@ -559,20 +593,12 @@ export default function DesignerAnalyticsScreen() {
                 yAxisLabel=""
                 yAxisSuffix=""
                 chartConfig={{
-                  backgroundGradientFromOpacity: 0,
-                  backgroundGradientToOpacity: 0,
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(14, 165, 233, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
+                  ...getChartConfig("bar"),
                   formatYLabel: (value) => formatCurrencyCompact(value),
                   formatXLabel: (value) => value,
                   style: {
                     borderRadius: 16,
                   },
-                  propsForBackgroundLines: {
-                    stroke: "#E2E8F0",
-                  },
-                  barPercentage: 0.7,
                 }}
                 style={{
                   marginVertical: 8,
@@ -588,7 +614,11 @@ export default function DesignerAnalyticsScreen() {
                       style={styles.chartLegendItem}
                     >
                       <View style={styles.chartLegendLabelRow}>
-                        <Icon name="calendar-today" size={16} color="#3B82F6" />
+                        <Icon
+                          name="calendar-today"
+                          size={16}
+                          color={colors.accentBlue}
+                        />
                         <Text style={styles.chartLegendLabel}>
                           {detail.longLabel || detail.shortLabel}
                         </Text>
