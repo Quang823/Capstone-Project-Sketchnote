@@ -193,4 +193,16 @@ export const authService = {
       throw new Error(message);
     }
   },
+  // Get all admin users
+  getUserRoleAdmin: async () => {
+    try {
+      const res = await authApiController.getUserRoleAdmin();
+      if (res?.data?.result) return res.data.result;
+      throw new Error("Failed to get admin users.");
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.message || "Failed to get admin users.";
+      throw new Error(message);
+    }
+  },
 };

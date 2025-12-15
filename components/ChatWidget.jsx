@@ -22,7 +22,7 @@ import { getStyles } from "./ChatWidget.styles";
 import { authService } from "../service/authService";
 import { useTheme } from "../context/ThemeContext";
 
-const RECEIVER_ID = 8;
+
 
 export default function ChatWidget({ visible, onClose }) {
     const { theme } = useTheme();
@@ -45,7 +45,9 @@ export default function ChatWidget({ visible, onClose }) {
     const { toast } = useToast();
     const slideAnim = useRef(new Animated.Value(500)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
-
+    const [adminUsers, setAdminUsers] = useState([]);
+    const RECEIVER_ID = adminUsers[0]?.id || null;
+    //   const RECEIVER_ID = 1;
     // Pulse animation cho status dot
     useEffect(() => {
         const pulse = Animated.loop(
@@ -83,6 +85,17 @@ export default function ChatWidget({ visible, onClose }) {
                 console.error("Error fetching current user profile:", error);
             }
         };
+        const getAdminUsers = async () => {
+            try {
+                const adminUsers = await authService.getUserRoleAdmin();
+                console.log(adminUsers)
+                setAdminUsers(adminUsers);
+
+            } catch (error) {
+                console.error("Error fetching admin users:", error);
+            }
+        };
+        getAdminUsers();
         getUser();
     }, []);
 
