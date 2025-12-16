@@ -24,6 +24,7 @@ import SidebarToggleButton from "../../../components/navigation/SidebarToggleBut
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import { useTheme } from "../../../context/ThemeContext";
+import NotificationButton from "../../../components/common/NotificationButton";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DEFAULT_RESOURCE_IMAGE =
@@ -569,19 +570,22 @@ export default function ResourceStoreScreen() {
               </Text>
             </View>
           </View>
-          <Pressable
-            style={[resourceStoreStyles.cartButton, isDark && resourceStoreStyles.cartButtonDark]}
-            onPress={() => navigation.navigate("Cart")}
-          >
-            <Icon name="shopping-cart" size={24} color={isDark ? "#FFFFFF" : "#084F8C"} />
-            {cart.length > 0 && (
-              <View style={resourceStoreStyles.cartBadge}>
-                <Text style={resourceStoreStyles.cartBadgeText}>
-                  {cart.length}
-                </Text>
-              </View>
-            )}
-          </Pressable>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <NotificationButton />
+            <Pressable
+              style={[resourceStoreStyles.cartButton, isDark && resourceStoreStyles.cartButtonDark]}
+              onPress={() => navigation.navigate("Cart")}
+            >
+              <Icon name="shopping-cart" size={24} color={isDark ? "#FFFFFF" : "#084F8C"} />
+              {cart.length > 0 && (
+                <View style={resourceStoreStyles.cartBadge}>
+                  <Text style={resourceStoreStyles.cartBadgeText}>
+                    {cart.length}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -772,6 +776,6 @@ export default function ResourceStoreScreen() {
 
         <View style={{ height: 80 }} />
       </ScrollView>
-    </View>
+    </View >
   );
 }

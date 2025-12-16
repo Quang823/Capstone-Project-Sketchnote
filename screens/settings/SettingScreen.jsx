@@ -4,6 +4,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import { settingStyles } from "./SettingScreen.styles";
 import SidebarToggleButton from "../../components/navigation/SidebarToggleButton";
 import { useTheme } from "../../context/ThemeContext";
+import NotificationButton from "../../components/common/NotificationButton";
 
 export default function SettingScreen() {
     const { theme, toggleTheme } = useTheme();
@@ -24,6 +25,7 @@ export default function SettingScreen() {
                         Settings
                     </Text>
                 </View>
+                <NotificationButton />
             </View>
 
             <ScrollView style={settingStyles.content}>

@@ -136,6 +136,9 @@ export default function GlobalSidebar() {
         case "settings":
           navigation.navigate("Settings");
           break;
+        case "wallet":
+          navigation.navigate("DesignerWallet");
+          break;
         default:
           break;
       }
@@ -216,8 +219,12 @@ export default function GlobalSidebar() {
     { icon: "person-outline", label: "My Blogs", id: "blogMine", gradient: ["#EF4444", "#DC2626"] },
   ];
 
-  const accountNavItems = [
+  const customerAccountItems = [
+    { icon: "account-balance-wallet", label: "Wallet", id: "wallet", gradient: ["#14B8A6", "#0D9488"] },
     { icon: "person", label: "Profile", id: "profile", gradient: ["#6366F1", "#4F46E5"] },
+  ];
+
+  const accountNavItems = [
     { icon: "policy", label: "Policy", id: "policy", gradient: ["#64748B", "#475569"] },
     { icon: "settings", label: "Settings", id: "settings", gradient: ["#64748B", "#475569"] },
   ];
@@ -594,6 +601,9 @@ export default function GlobalSidebar() {
 
               {renderSectionTitle("BLOG")}
               {blogItems.map(renderNavItem)}
+
+              {renderSectionTitle("ACCOUNT")}
+              {customerAccountItems.map(renderNavItem)}
 
               {renderSectionTitle("SETTINGS")}
               {accountNavItems.map(renderNavItem)}

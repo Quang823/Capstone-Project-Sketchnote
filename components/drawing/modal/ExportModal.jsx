@@ -247,7 +247,7 @@ const ExportModal = ({
                 </View>
                 {!isPro && (
                   <Text style={styles.proHint}>
-                    HD, 2K và 4K chỉ dành cho người dùng Pro
+                    HD, 2K and 4K only for Pro users
                   </Text>
                 )}
               </View>

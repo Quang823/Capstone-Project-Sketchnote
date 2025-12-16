@@ -360,11 +360,6 @@ export default function BlogDetailScreen() {
 
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
-      {/* Fixed Back Button - Outside ScrollView */}
-      <Pressable style={[styles.backButton, isDark && styles.backButtonDark]} onPress={handleBackPress}>
-        <Icon name="arrow-back" size={30} color={isDark ? "#FFFFFF" : "#3B82F6"} />
-      </Pressable>
-
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero Section with Gradient Overlay */}
         <View style={styles.heroSection}>
@@ -382,6 +377,7 @@ export default function BlogDetailScreen() {
                 />
               </>
             )}
+
           </View>
 
           {/* Content Overlay on Hero */}
@@ -734,6 +730,9 @@ export default function BlogDetailScreen() {
           </View>
         </View>
       </ScrollView>
+      <Pressable style={[styles.backButton, isDark && styles.backButtonDark]} onPress={handleBackPress}>
+        <Icon name="arrow-back" size={30} color={isDark ? "#FFFFFF" : "#3B82F6"} />
+      </Pressable>
     </View>
   );
 }

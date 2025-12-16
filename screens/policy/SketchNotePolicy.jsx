@@ -255,13 +255,6 @@ const SketchNotePolicy = () => {
             />
           </View>
 
-          <View style={styles.menuButtonWrapper}>
-            <SidebarToggleButton
-              iconSize={26}
-              iconColor={isDark ? "#FFFFFF" : "#1E40AF"}
-            />
-          </View>
-
           <View style={styles.headerContent}>
             <View style={styles.iconContainer}>
               <LottieView
@@ -418,6 +411,12 @@ const SketchNotePolicy = () => {
           </View>
         </Animated.View>
       </ScrollView>
+      <View style={styles.menuButtonWrapper}>
+        <SidebarToggleButton
+          iconSize={26}
+          iconColor={isDark ? "#FFFFFF" : "#1E40AF"}
+        />
+      </View>
       {chatVisible && (
         <ChatWidget
           visible={chatVisible}
