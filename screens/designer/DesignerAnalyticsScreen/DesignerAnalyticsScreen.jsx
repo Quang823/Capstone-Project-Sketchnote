@@ -17,6 +17,7 @@ import { dashboardService } from "../../../service/dashboardService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 import { useTheme } from "../../../context/ThemeContext";
+import NotificationButton from "../../../components/common/NotificationButton";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -232,28 +233,28 @@ export default function DesignerAnalyticsScreen() {
 
     const ranking = rankingPoints.length
       ? {
-          labels: rankingPoints.map((point) => point.shortLabel),
-          datasets: [
-            {
-              data: rankingPoints.map((point) => point.value),
-            },
-          ],
-        }
+        labels: rankingPoints.map((point) => point.shortLabel),
+        datasets: [
+          {
+            data: rankingPoints.map((point) => point.value),
+          },
+        ],
+      }
       : null;
 
     const insights = rankingPoints.length
       ? {
-          bestPeriod: rankingPoints[0]?.longLabel || null,
-          bestValue: rankingPoints[0]?.value || 0,
-          lowestPeriod:
-            rankingPoints.length > 1
-              ? rankingPoints[rankingPoints.length - 1]?.longLabel || null
-              : null,
-          lowestValue:
-            rankingPoints.length > 1
-              ? rankingPoints[rankingPoints.length - 1]?.value || 0
-              : null,
-        }
+        bestPeriod: rankingPoints[0]?.longLabel || null,
+        bestValue: rankingPoints[0]?.value || 0,
+        lowestPeriod:
+          rankingPoints.length > 1
+            ? rankingPoints[rankingPoints.length - 1]?.longLabel || null
+            : null,
+        lowestValue:
+          rankingPoints.length > 1
+            ? rankingPoints[rankingPoints.length - 1]?.value || 0
+            : null,
+      }
       : null;
 
     return { timeline, ranking, insights, rankingDetails: rankingPoints };
@@ -266,11 +267,11 @@ export default function DesignerAnalyticsScreen() {
 
   const hasTimelineData = Boolean(
     timelineChartData?.datasets?.[0]?.data &&
-      timelineChartData.datasets[0].data.some((value) => value > 0)
+    timelineChartData.datasets[0].data.some((value) => value > 0)
   );
   const hasComparisonData = Boolean(
     comparisonChartData?.datasets?.[0]?.data &&
-      comparisonChartData.datasets[0].data.some((value) => value > 0)
+    comparisonChartData.datasets[0].data.some((value) => value > 0)
   );
 
   // Calculate statistics
@@ -340,7 +341,7 @@ export default function DesignerAnalyticsScreen() {
             />
             <Text style={styles.headerTitle}>Sales Analytics</Text>
           </View>
-          <View style={{ width: 40 }} />
+          <NotificationButton />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.loadingColor} />
@@ -357,7 +358,7 @@ export default function DesignerAnalyticsScreen() {
           <SidebarToggleButton iconSize={26} iconColor={colors.primaryWhite} />
           <Text style={styles.headerTitle}>Sales Analytics</Text>
         </View>
-        <View style={{ width: 40 }} />
+        <NotificationButton />
       </View>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Date Range Selector */}

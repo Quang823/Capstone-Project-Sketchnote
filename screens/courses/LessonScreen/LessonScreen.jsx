@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   View,
   Text,
@@ -148,132 +154,147 @@ export default function LessonScreen() {
   };
 
   // Handle video state change - auto complete when video ends
-  const onVideoStateChange = useCallback(async (state) => {
-    if (state === "ended") {
-      // Video ended - auto save and move to next lesson
-      if (!currentLesson || saving) return;
-      if (currentLesson.lessonProgressStatus === "COMPLETED") {
-        // Already completed, just move to next
-        const nextIndex = currentLessonIndex + 1;
-        if (nextIndex < lessons.length && isLessonUnlocked(nextIndex)) {
-          setCurrentLessonIndex(nextIndex);
-        }
-        return;
-      }
-
-      try {
-        setSaving(true);
-
-        const progressData = {
-          lastPosition: currentLesson.duration,
-          timeSpent: currentLesson.duration,
-          completed: true,
-        };
-
-        await courseService.saveLessonProgress(
-          courseId,
-          currentLesson.lessonId,
-          progressData
-        );
-
-        // Refresh data to get updated progress
-        await fetchCourseData();
-
-        // Show completion toast
-        Toast.show({
-          type: "success",
-          position: "top",
-          text1: "✓ Lesson Completed!",
-          text2: `Great job! You've completed "${currentLesson.title}"`,
-          duration: 3000,
-        });
-
-        // Check if all lessons are completed
-        const allLessonsCompleted = lessons.every(
-          (lesson, idx) =>
-            idx < lessons.length && (lesson.lessonProgressStatus === "COMPLETED" || idx === currentLessonIndex)
-        );
-
-        // Check if there's a next lesson
-        const nextIndex = currentLessonIndex + 1;
-        if (nextIndex < lessons.length) {
-          // Auto move to next lesson
-          setTimeout(() => {
+  const onVideoStateChange = useCallback(
+    async (state) => {
+      if (state === "ended") {
+        // Video ended - auto save and move to next lesson
+        if (!currentLesson || saving) return;
+        if (currentLesson.lessonProgressStatus === "COMPLETED") {
+          // Already completed, just move to next
+          const nextIndex = currentLessonIndex + 1;
+          if (nextIndex < lessons.length && isLessonUnlocked(nextIndex)) {
             setCurrentLessonIndex(nextIndex);
-          }, 1500);
-        } else if (allLessonsCompleted) {
-          // Show course completion toast
-          setTimeout(() => {
-            Toast.show({
-              type: "success",
-              position: "top",
-              text1: "🎉 Course Completed!",
-              text2: `Congratulations! You've completed all lessons in this course.`,
-              duration: 4000,
-            });
-          }, 1500);
+          }
+          return;
         }
-        // If all lessons completed, just stay on current screen (don't navigate)
-      } catch (err) {
-        console.error("Error saving lesson progress:", err);
-        Toast.show({
-          type: "error",
-          position: "top",
-          text1: "Error",
-          text2: "Failed to save lesson progress. Please try again.",
-          duration: 3000,
-        });
-      } finally {
-        setSaving(false);
+
+        try {
+          setSaving(true);
+
+          const progressData = {
+            lastPosition: currentLesson.duration,
+            timeSpent: currentLesson.duration,
+            completed: true,
+          };
+
+          await courseService.saveLessonProgress(
+            courseId,
+            currentLesson.lessonId,
+            progressData
+          );
+
+          // Refresh data to get updated progress
+          await fetchCourseData();
+
+          // Show completion toast
+          Toast.show({
+            type: "success",
+            position: "top",
+            text1: "✓ Lesson Completed!",
+            text2: `Great job! You've completed "${currentLesson.title}"`,
+            duration: 3000,
+          });
+
+          // Check if all lessons are completed
+          const allLessonsCompleted = lessons.every(
+            (lesson, idx) =>
+              idx < lessons.length &&
+              (lesson.lessonProgressStatus === "COMPLETED" ||
+                idx === currentLessonIndex)
+          );
+
+          // Check if there's a next lesson
+          const nextIndex = currentLessonIndex + 1;
+          if (nextIndex < lessons.length) {
+            // Auto move to next lesson
+            setTimeout(() => {
+              setCurrentLessonIndex(nextIndex);
+            }, 1500);
+          } else if (allLessonsCompleted) {
+            // Show course completion toast
+            setTimeout(() => {
+              Toast.show({
+                type: "success",
+                position: "top",
+                text1: "🎉 Course Completed!",
+                text2: `Congratulations! You've completed all lessons in this course.`,
+                duration: 4000,
+              });
+            }, 1500);
+          }
+          // If all lessons completed, just stay on current screen (don't navigate)
+        } catch (err) {
+          console.error("Error saving lesson progress:", err);
+          Toast.show({
+            type: "error",
+            position: "top",
+            text1: "Error",
+            text2: "Failed to save lesson progress. Please try again.",
+            duration: 3000,
+          });
+        } finally {
+          setSaving(false);
+        }
       }
-    }
-  }, [currentLesson, saving, currentLessonIndex, lessons, courseId, fetchCourseData]);
+    },
+    [
+      currentLesson,
+      saving,
+      currentLessonIndex,
+      lessons,
+      courseId,
+      fetchCourseData,
+    ]
+  );
 
   // Handle video playback status update from expo-av
-  const onPlaybackStatusUpdate = useCallback(async (status) => {
-    setVideoStatus(status);
-    
-    if (!status.isLoaded) return;
-    
-    // Update progress states
-    if (status.durationMillis) {
-      setVideoDuration(Math.floor(status.durationMillis / 1000));
-    }
-    if (status.positionMillis) {
-      setVideoProgress(Math.floor(status.positionMillis / 1000));
-    }
-    setIsVideoPlaying(status.isPlaying);
+  const onPlaybackStatusUpdate = useCallback(
+    async (status) => {
+      setVideoStatus(status);
 
-    // Auto-save progress periodically (every 10 seconds of video watched)
-    const currentPosition = Math.floor(status.positionMillis / 1000);
-    if (
-      currentLesson &&
-      currentLesson.lessonProgressStatus !== "COMPLETED" &&
-      currentPosition > 0 &&
-      currentPosition - lastSavedPositionRef.current >= 10
-    ) {
-      lastSavedPositionRef.current = currentPosition;
-      try {
-        const progressData = {
-          lastPosition: currentPosition,
-          timeSpent: currentPosition,
-          completed: false,
-        };
-        await courseService.saveLessonProgress(
-          courseId,
-          currentLesson.lessonId,
-          progressData
-        );
-      } catch (err) {
-        console.error("Error auto-saving progress:", err);
+      if (!status.isLoaded) return;
+
+      // Update progress states
+      if (status.durationMillis) {
+        setVideoDuration(Math.floor(status.durationMillis / 1000));
       }
-    }
+      if (status.positionMillis) {
+        setVideoProgress(Math.floor(status.positionMillis / 1000));
+      }
+      setIsVideoPlaying(status.isPlaying);
 
-    // Handle video ended
-    if (status.didJustFinish && !status.isLooping) {
-      onVideoStateChange("ended");
-    }
-  }, [currentLesson, courseId, onVideoStateChange]);
+      // Auto-save progress periodically (every 10 seconds of video watched)
+      const currentPosition = Math.floor(status.positionMillis / 1000);
+      if (
+        currentLesson &&
+        currentLesson.lessonProgressStatus !== "COMPLETED" &&
+        currentPosition > 0 &&
+        currentPosition - lastSavedPositionRef.current >= 10
+      ) {
+        lastSavedPositionRef.current = currentPosition;
+        try {
+          const progressData = {
+            lastPosition: currentPosition,
+            timeSpent: currentPosition,
+            completed: false,
+          };
+          await courseService.saveLessonProgress(
+            courseId,
+            currentLesson.lessonId,
+            progressData
+          );
+        } catch (err) {
+          console.error("Error auto-saving progress:", err);
+        }
+      }
+
+      // Handle video ended
+      if (status.didJustFinish && !status.isLooping) {
+        onVideoStateChange("ended");
+      }
+    },
+    [currentLesson, courseId, onVideoStateChange]
+  );
 
   // Reset video states when lesson changes
   useEffect(() => {
@@ -281,12 +302,14 @@ export default function LessonScreen() {
     setVideoDuration(0);
     setVideoStatus({});
     lastSavedPositionRef.current = 0;
-    
+
     // Seek to last position if lesson has progress
     if (currentLesson?.lastPosition > 0 && videoRef.current) {
       setTimeout(async () => {
         try {
-          await videoRef.current.setPositionAsync(currentLesson.lastPosition * 1000);
+          await videoRef.current.setPositionAsync(
+            currentLesson.lastPosition * 1000
+          );
         } catch (err) {
           console.error("Error seeking to last position:", err);
         }
@@ -297,10 +320,12 @@ export default function LessonScreen() {
   // Check if video URL is a Cloudinary/direct video URL (not YouTube)
   const isDirectVideoUrl = (url) => {
     if (!url) return false;
-    return url.includes("cloudinary.com") || 
-           url.endsWith(".mp4") || 
-           url.endsWith(".webm") ||
-           url.endsWith(".mov");
+    return (
+      url.includes("cloudinary.com") ||
+      url.endsWith(".mp4") ||
+      url.endsWith(".webm") ||
+      url.endsWith(".mov")
+    );
   };
 
   // Save lesson progress and mark as complete (manual button)
@@ -337,7 +362,9 @@ export default function LessonScreen() {
       // Check if all lessons are completed
       const allLessonsCompleted = lessons.every(
         (lesson, idx) =>
-          idx < lessons.length && (lesson.lessonProgressStatus === "COMPLETED" || idx === currentLessonIndex)
+          idx < lessons.length &&
+          (lesson.lessonProgressStatus === "COMPLETED" ||
+            idx === currentLessonIndex)
       );
 
       // Check if there's a next lesson
@@ -409,7 +436,8 @@ export default function LessonScreen() {
   };
 
   // Check if current lesson has a valid video URL
-  const hasVideoUrl = currentLesson?.videoUrl && currentLesson.videoUrl.length > 0;
+  const hasVideoUrl =
+    currentLesson?.videoUrl && currentLesson.videoUrl.length > 0;
 
   // Get lesson status icon and color
   const getLessonStatusIcon = (lesson, index) => {
@@ -451,10 +479,7 @@ export default function LessonScreen() {
       <View style={styles.errorContainer}>
         <Icon name="error-outline" size={64} color="#EF4444" />
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={fetchCourseData}
-        >
+        <TouchableOpacity style={styles.retryButton} onPress={fetchCourseData}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
@@ -480,7 +505,10 @@ export default function LessonScreen() {
         >
           <Icon name="arrow-back" size={20} color={styles.backButtonIcon} />
         </TouchableOpacity>
-        <Text style={[styles.sidebarHeaderText, !isTablet && { fontSize: 14 }]} numberOfLines={1}>
+        <Text
+          style={[styles.sidebarHeaderText, !isTablet && { fontSize: 14 }]}
+          numberOfLines={1}
+        >
           {course?.title || "Course"}
         </Text>
         {!isTablet && (
@@ -494,7 +522,7 @@ export default function LessonScreen() {
       </View>
 
       {/* Course Progress Overview */}
-      <View style={styles.overviewItem}>
+      {/* <View style={styles.overviewItem}>
         <Text style={styles.overviewText}>
           Progress: {progressPercent.toFixed(1)}%
         </Text>
@@ -511,7 +539,7 @@ export default function LessonScreen() {
         >
           {completedLessonsCount} / {lessons.length} lessons completed
         </Text>
-      </View>
+      </View> */}
 
       {/* Lessons List */}
       <ScrollView style={styles.sidebarScroll}>
@@ -571,7 +599,11 @@ export default function LessonScreen() {
 
                   <View style={styles.sidebarItemMeta}>
                     <View style={styles.sidebarMetaRow}>
-                      <Icon name="schedule" size={16} color={styles.sidebarMetaIcon} />
+                      <Icon
+                        name="schedule"
+                        size={16}
+                        color={styles.sidebarMetaIcon}
+                      />
                       <Text style={styles.sidebarMetaText}>
                         {formatDuration(lesson.duration)}
                       </Text>
@@ -632,7 +664,7 @@ export default function LessonScreen() {
   );
 
   return (
-    <View style={[styles.container, !isTablet && { flexDirection: 'column' }]}>
+    <View style={[styles.container, !isTablet && { flexDirection: "column" }]}>
       {/* Tablet: Inline Sidebar */}
       {isTablet && (
         <View style={[styles.sidebar, { width: sidebarWidth }]}>
@@ -648,7 +680,7 @@ export default function LessonScreen() {
           transparent={false}
           onRequestClose={() => setSidebarVisible(false)}
         >
-          <View style={[styles.sidebar, { width: '100%', flex: 1 }]}>
+          <View style={[styles.sidebar, { width: "100%", flex: 1 }]}>
             {renderSidebarContent()}
           </View>
         </Modal>
@@ -657,14 +689,16 @@ export default function LessonScreen() {
       {/* Main Content */}
       <View style={[styles.mainContent, !isTablet && { flex: 1 }]}>
         {/* Header */}
-        <View style={[
-          styles.header,
-          !isTablet && {
-            paddingHorizontal: 16,
-            paddingTop: 50,
-            paddingVertical: 12
-          }
-        ]}>
+        <View
+          style={[
+            styles.header,
+            !isTablet && {
+              paddingHorizontal: 16,
+              paddingTop: 50,
+              paddingVertical: 12,
+            },
+          ]}
+        >
           {/* Menu button for phone */}
           {!isTablet && (
             <TouchableOpacity
@@ -674,21 +708,28 @@ export default function LessonScreen() {
               <Icon name="menu" size={24} color={styles.menuIcon} />
             </TouchableOpacity>
           )}
-          <Text style={[
-            styles.headerTitle,
-            !isTablet && { fontSize: 16, flex: 1 }
-          ]} numberOfLines={1}>
+          <Text
+            style={[styles.headerTitle, !isTablet && { fontSize: 16, flex: 1 }]}
+            numberOfLines={1}
+          >
             {isTablet
-              ? `Lesson ${currentLessonIndex + 1}: ${currentLesson?.title || ""}`
-              : currentLesson?.title || ""
-            }
+              ? `Lesson ${currentLessonIndex + 1}: ${
+                  currentLesson?.title || ""
+                }`
+              : currentLesson?.title || ""}
           </Text>
           <View style={styles.headerActions}>
             {currentLesson?.lessonProgressStatus === "COMPLETED" && (
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Icon name="check-circle" size={20} color="#22C55E" />
                 {isTablet && (
-                  <Text style={{ color: "#22C55E", marginLeft: 4, fontWeight: "600" }}>
+                  <Text
+                    style={{
+                      color: "#22C55E",
+                      marginLeft: 4,
+                      fontWeight: "600",
+                    }}
+                  >
                     Completed
                   </Text>
                 )}
@@ -698,34 +739,40 @@ export default function LessonScreen() {
         </View>
 
         {/* Progress Bar */}
-        <View style={[
-          styles.progressContainer,
-          !isTablet && { paddingHorizontal: 16 }
-        ]}>
+        <View
+          style={[
+            styles.progressContainer,
+            !isTablet && { paddingHorizontal: 16 },
+          ]}
+        >
           <View style={styles.progressBar}>
             <View
-              style={[
-                styles.progressFill,
-                { width: `${progressPercent}%` },
-              ]}
+              style={[styles.progressFill, { width: `${progressPercent}%` }]}
             />
           </View>
-          <Text style={styles.progressText}>
-            {progressPercent.toFixed(0)}%
-          </Text>
+          <Text style={styles.progressText}>{progressPercent.toFixed(0)}%</Text>
         </View>
 
         {/* Content Scroll */}
-        <ScrollView style={[
-          styles.contentScroll,
-          !isTablet && { paddingHorizontal: 16 }
-        ]}>
+        <ScrollView
+          style={[styles.contentScroll, !isTablet && { paddingHorizontal: 16 }]}
+        >
           {isTablet && (
-            <Text style={styles.lessonMainTitle}>
-              {currentLesson?.title}
-            </Text>
+            <Text style={styles.lessonMainTitle}>{currentLesson?.title}</Text>
           )}
-
+          {/* Course Completed Banner */}
+          {completedLessonsCount === lessons.length && lessons.length > 0 && (
+            <View style={styles.completedBanner}>
+              <View style={styles.completedBannerIcon}>
+                <Icon name="emoji-events" size={32} color="#FFFFFF" />
+              </View>
+              <Text style={styles.completedBannerTitle}>Course Completed!</Text>
+              <Text style={styles.completedBannerText}>
+                Congratulations! You have successfully completed all lessons in
+                this course.
+              </Text>
+            </View>
+          )}
           {/* Video Player */}
           {hasVideoUrl ? (
             <View
@@ -737,35 +784,52 @@ export default function LessonScreen() {
               <Video
                 ref={videoRef}
                 source={{ uri: currentLesson.videoUrl }}
-                style={{ width: playerWidth, height: playerHeight, borderRadius: 12 }}
+                style={{
+                  width: playerWidth,
+                  height: playerHeight,
+                  borderRadius: 12,
+                }}
                 useNativeControls
                 resizeMode={ResizeMode.CONTAIN}
                 isLooping={false}
                 onPlaybackStatusUpdate={onPlaybackStatusUpdate}
                 shouldPlay={false}
-                positionMillis={currentLesson?.lastPosition ? currentLesson.lastPosition * 1000 : 0}
+                positionMillis={
+                  currentLesson?.lastPosition
+                    ? currentLesson.lastPosition * 1000
+                    : 0
+                }
               />
               {/* Video Progress Info */}
               {videoStatus.isLoaded && (
-                <View style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  paddingHorizontal: 8,
-                  paddingTop: 8,
-                }}>
-                  <Text style={{ fontSize: 12, color: '#64748B' }}>
-                    {formatDuration(videoProgress)} / {formatDuration(videoDuration || currentLesson?.duration)}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    paddingHorizontal: 8,
+                    paddingTop: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: 12, color: "#64748B" }}>
+                    {formatDuration(videoProgress)} /{" "}
+                    {formatDuration(videoDuration || currentLesson?.duration)}
                   </Text>
                   {isVideoPlaying && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <View style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: '#22C55E',
-                        marginRight: 4,
-                      }} />
-                      <Text style={{ fontSize: 12, color: '#22C55E' }}>Playing</Text>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <View
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: "#22C55E",
+                          marginRight: 4,
+                        }}
+                      />
+                      <Text style={{ fontSize: 12, color: "#22C55E" }}>
+                        Playing
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -787,10 +851,7 @@ export default function LessonScreen() {
           {/* Tabs */}
           <View style={styles.tabs}>
             <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === "overview" && styles.tabActive,
-              ]}
+              style={[styles.tab, activeTab === "overview" && styles.tabActive]}
               onPress={() => setActiveTab("overview")}
             >
               <Text
@@ -803,10 +864,7 @@ export default function LessonScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === "content" && styles.tabActive,
-              ]}
+              style={[styles.tab, activeTab === "content" && styles.tabActive]}
               onPress={() => setActiveTab("content")}
             >
               <Text
@@ -828,15 +886,31 @@ export default function LessonScreen() {
                   {currentLesson?.description || "No description available."}
                 </Text>
                 <View style={{ marginTop: 16 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-                    <Icon name="schedule" size={18} color={styles.sidebarMetaIcon} />
+                  {/* <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <Icon
+                      name="schedule"
+                      size={18}
+                      color={styles.sidebarMetaIcon}
+                    />
                     <Text style={[styles.contentText, { marginLeft: 8 }]}>
                       Duration: {formatDuration(currentLesson?.duration)}
                     </Text>
-                  </View>
+                  </View> */}
                   {currentLesson?.timeSpent > 0 && (
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                      <Icon name="timer" size={18} color={styles.sidebarMetaIcon} />
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
+                      <Icon
+                        name="timer"
+                        size={18}
+                        color={styles.sidebarMetaIcon}
+                      />
                       <Text style={[styles.contentText, { marginLeft: 8 }]}>
                         Time spent: {formatDuration(currentLesson?.timeSpent)}
                       </Text>
@@ -853,16 +927,18 @@ export default function LessonScreen() {
           </View>
 
           {/* Navigation Buttons */}
-          <View style={[
-            styles.navigationButtons,
-            !isTablet && { flexDirection: 'column', gap: 12 }
-          ]}>
+          <View
+            style={[
+              styles.navigationButtons,
+              !isTablet && { flexDirection: "column", gap: 12 },
+            ]}
+          >
             <TouchableOpacity
               style={[
                 styles.navButton,
                 styles.previousButton,
                 currentLessonIndex === 0 && styles.navButtonDisabled,
-                !isTablet && { width: '100%', justifyContent: 'center' }
+                !isTablet && { width: "100%", justifyContent: "center" },
               ]}
               onPress={handlePreviousLesson}
               disabled={currentLessonIndex === 0}
@@ -889,7 +965,7 @@ export default function LessonScreen() {
                   styles.navButton,
                   styles.completeButton,
                   saving && styles.navButtonDisabled,
-                  !isTablet && { width: '100%', justifyContent: 'center' }
+                  !isTablet && { width: "100%", justifyContent: "center" },
                 ]}
                 onPress={handleCompleteLesson}
                 disabled={saving}
@@ -910,34 +986,22 @@ export default function LessonScreen() {
                 style={[
                   styles.navButton,
                   styles.completeButton,
-                  (currentLessonIndex === lessons.length - 1 || !isLessonUnlocked(currentLessonIndex + 1)) && styles.navButtonDisabled,
-                  !isTablet && { width: '100%', justifyContent: 'center' }
+                  (currentLessonIndex === lessons.length - 1 ||
+                    !isLessonUnlocked(currentLessonIndex + 1)) &&
+                    styles.navButtonDisabled,
+                  !isTablet && { width: "100%", justifyContent: "center" },
                 ]}
                 onPress={handleNextLesson}
-                disabled={currentLessonIndex === lessons.length - 1 || !isLessonUnlocked(currentLessonIndex + 1)}
+                disabled={
+                  currentLessonIndex === lessons.length - 1 ||
+                  !isLessonUnlocked(currentLessonIndex + 1)
+                }
               >
-                <Text style={styles.completeButtonText}>
-                  Next Lesson
-                </Text>
+                <Text style={styles.completeButtonText}>Next Lesson</Text>
                 <Icon name="arrow-forward" size={18} color="#FFFFFF" />
               </TouchableOpacity>
             )}
           </View>
-
-          {/* Course Completed Banner */}
-          {completedLessonsCount === lessons.length && lessons.length > 0 && (
-            <View style={styles.completedBanner}>
-              <View style={styles.completedBannerIcon}>
-                <Icon name="emoji-events" size={32} color="#FFFFFF" />
-              </View>
-              <Text style={styles.completedBannerTitle}>
-                Course Completed!
-              </Text>
-              <Text style={styles.completedBannerText}>
-                Congratulations! You have successfully completed all lessons in this course.
-              </Text>
-            </View>
-          )}
 
           <View style={{ height: 40 }} />
         </ScrollView>

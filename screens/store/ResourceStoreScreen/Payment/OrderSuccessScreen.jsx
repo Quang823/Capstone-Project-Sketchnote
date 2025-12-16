@@ -7,12 +7,9 @@ import {
   Pressable,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { MotiView } from "moti";
 import { LinearGradient } from "expo-linear-gradient";
 import { orderService } from "../../../../service/orderService";
 import { styles } from "./OrderSuccessScreen.styles";
-import LottieView from "lottie-react-native";
-import loadingAnimation from "../../../../assets/loading.json";
 
 export default function OrderSuccessScreen() {
   const route = useRoute();
@@ -60,12 +57,7 @@ export default function OrderSuccessScreen() {
   if (loading) {
     return (
       <LinearGradient colors={["#EBF4FF", "#FFFFFF"]} style={styles.center}>
-        <LottieView
-          source={loadingAnimation}
-          autoPlay
-          loop
-          style={{ width: 260, height: 200 }}
-        />
+        <ActivityIndicator size="large" color="#3B82F6" />
         <Text style={styles.loadingText}>Loading your order...</Text>
       </LinearGradient>
     );
@@ -112,62 +104,51 @@ export default function OrderSuccessScreen() {
       style={styles.gradient}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Header with animated success/fail icon */}
-        <MotiView
-          from={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: "spring", damping: 15 }}
-        >
-          <View style={styles.headerCard}>
-            <View
-              style={[
-                styles.iconCircle,
-                isPaymentSuccess
-                  ? styles.iconCircleSuccess
-                  : isPaymentFailed
-                    ? styles.iconCircleFailed
-                    : styles.iconCirclePending,
-              ]}
-            >
-              <Text style={styles.headerIcon}>
-                {isPaymentSuccess ? "✓" : isPaymentFailed ? "✕" : "⏳"}
-              </Text>
-            </View>
-
-            {isPaymentSuccess ? (
-              <Text style={styles.titleSuccess}>Payment Successful!</Text>
-            ) : isPaymentFailed ? (
-              <Text style={styles.titleFailed}>Payment Failed</Text>
-            ) : (
-              <Text style={styles.titlePending}>Payment Pending</Text>
-            )}
-
-            <Text style={styles.headerSubtitle}>
-              {order?.invoiceNumber
-                ? `Invoice #${order.invoiceNumber}`
-                : `Order #${order?.orderId || orderId}`}
+        {/* Header */}
+        <View style={styles.headerCard}>
+          <View
+            style={[
+              styles.iconCircle,
+              isPaymentSuccess
+                ? styles.iconCircleSuccess
+                : isPaymentFailed
+                  ? styles.iconCircleFailed
+                  : styles.iconCirclePending,
+            ]}
+          >
+            <Text style={styles.headerIcon}>
+              {isPaymentSuccess ? "✓" : isPaymentFailed ? "✕" : "⏳"}
             </Text>
-
-            <View style={styles.divider} />
-
-            <View style={styles.totalAmountBox}>
-              <Text style={styles.totalLabel}>Total Amount</Text>
-              <Text style={styles.totalAmount}>
-                {formatVND(order?.totalAmount)}
-              </Text>
-            </View>
           </View>
-        </MotiView>
+
+          {isPaymentSuccess ? (
+            <Text style={styles.titleSuccess}>Payment Successful!</Text>
+          ) : isPaymentFailed ? (
+            <Text style={styles.titleFailed}>Payment Failed</Text>
+          ) : (
+            <Text style={styles.titlePending}>Payment Pending</Text>
+          )}
+
+          <Text style={styles.headerSubtitle}>
+            {order?.invoiceNumber
+              ? `Invoice #${order.invoiceNumber}`
+              : `Order #${order?.orderId || orderId}`}
+          </Text>
+
+          <View style={styles.divider} />
+
+          <View style={styles.totalAmountBox}>
+            <Text style={styles.totalLabel}>Total Amount</Text>
+            <Text style={styles.totalAmount}>
+              {formatVND(order?.totalAmount)}
+            </Text>
+          </View>
+        </View>
 
         {/* Content Grid */}
         <View style={styles.grid}>
           {/* Left - Order Details */}
-          <MotiView
-            from={{ opacity: 0, translateX: -20 }}
-            animate={{ opacity: 1, translateX: 0 }}
-            transition={{ delay: 100 }}
-            style={styles.colLeft}
-          >
+          <View style={styles.colLeft}>
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>Order Details</Text>
@@ -243,19 +224,13 @@ export default function OrderSuccessScreen() {
 
               {/* Failed Warning */}
               {isPaymentFailed && (
-                <MotiView
-                  from={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 200 }}
-                >
-                  <View style={styles.warningBox}>
-                    <Text style={styles.warningIcon}>⚠️</Text>
-                    <Text style={styles.warningText}>
-                      Your payment could not be processed. Please check your
-                      wallet or try again later.
-                    </Text>
-                  </View>
-                </MotiView>
+                <View style={styles.warningBox}>
+                  <Text style={styles.warningIcon}>⚠️</Text>
+                  <Text style={styles.warningText}>
+                    Your payment could not be processed. Please check your
+                    wallet or try again later.
+                  </Text>
+                </View>
               )}
 
               {/* Buttons */}
@@ -291,15 +266,10 @@ export default function OrderSuccessScreen() {
                 </Pressable>
               </View>
             </View>
-          </MotiView>
+          </View>
 
           {/* Right - Order Items */}
-          <MotiView
-            from={{ opacity: 0, translateX: 20 }}
-            animate={{ opacity: 1, translateX: 0 }}
-            transition={{ delay: 200 }}
-            style={styles.colRight}
-          >
+          <View style={styles.colRight}>
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>Order Items</Text>
@@ -315,40 +285,33 @@ export default function OrderSuccessScreen() {
               >
                 <View style={styles.itemsContainer}>
                   {order?.items?.map((item, index) => (
-                    <MotiView
-                      key={index}
-                      from={{ opacity: 0, translateY: 20 }}
-                      animate={{ opacity: 1, translateY: 0 }}
-                      transition={{ delay: 300 + index * 80 }}
-                    >
-                      <View style={styles.itemCard}>
-                        <View style={styles.itemHeader}>
-                          <View style={styles.itemNumberCircle}>
-                            <Text style={styles.itemNumber}>{index + 1}</Text>
-                          </View>
-                          <Text style={styles.itemName} numberOfLines={2}>
-                            {item.templateName}
+                    <View key={index} style={styles.itemCard}>
+                      <View style={styles.itemHeader}>
+                        <View style={styles.itemNumberCircle}>
+                          <Text style={styles.itemNumber}>{index + 1}</Text>
+                        </View>
+                        <Text style={styles.itemName} numberOfLines={2}>
+                          {item.templateName}
+                        </Text>
+                      </View>
+
+                      <Text style={styles.itemDesc} numberOfLines={2}>
+                        {item.templateDescription}
+                      </Text>
+
+                      <View style={styles.itemFooter}>
+                        <View style={styles.priceTag}>
+                          <Text style={styles.itemPrice}>
+                            {formatVND(item.unitPrice)}
                           </Text>
                         </View>
-
-                        <Text style={styles.itemDesc} numberOfLines={2}>
-                          {item.templateDescription}
-                        </Text>
-
-                        <View style={styles.itemFooter}>
-                          <View style={styles.priceTag}>
-                            <Text style={styles.itemPrice}>
-                              {formatVND(item.unitPrice)}
-                            </Text>
-                          </View>
-                        </View>
                       </View>
-                    </MotiView>
+                    </View>
                   ))}
                 </View>
               </ScrollView>
             </View>
-          </MotiView>
+          </View>
         </View>
       </ScrollView>
     </LinearGradient>
