@@ -472,7 +472,7 @@ export default function CourseDetailScreen() {
                       <View style={styles.reviewsListColumn}>
                         <View style={styles.reviewsList}>
                           {feedbackData.feedbacks &&
-                          feedbackData.feedbacks.length > 0 ? (
+                            feedbackData.feedbacks.length > 0 ? (
                             feedbackData.feedbacks.map((feedback) => (
                               <View key={feedback.id} style={styles.reviewItem}>
                                 <View style={styles.reviewHeader}>
@@ -559,7 +559,7 @@ export default function CourseDetailScreen() {
 
                   <View style={styles.priceRow}>
                     {course.originalPrice &&
-                    course.price < course.originalPrice ? (
+                      course.price < course.originalPrice ? (
                       <>
                         <Text style={styles.originalPrice}>
                           {course.originalPrice.toLocaleString("vi-VN")}đ
@@ -584,7 +584,7 @@ export default function CourseDetailScreen() {
                           {Math.round(
                             ((course.originalPrice - course.price) /
                               course.originalPrice) *
-                              100
+                            100
                           )}
                           %
                         </Text>
@@ -749,7 +749,7 @@ export default function CourseDetailScreen() {
 
               <Pressable
                 style={[
-                  courseDetailStyles.confirmButton,
+                  styles.confirmButton,
                   loading && { opacity: 0.6 },
                 ]}
                 onPress={handleBuyCourse}
@@ -764,7 +764,7 @@ export default function CourseDetailScreen() {
                   {loading ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
-                    <Text style={courseDetailStyles.confirmButtonText}>
+                    <Text style={styles.confirmButtonText}>
                       Confirm
                     </Text>
                   )}

@@ -37,4 +37,7 @@ export const authApiController = {
   loginGoogleMobile: async (idToken) => {
     return await publicApi.post(`/api/auth/login-google-mobile`, { idToken });
   },
+  getUserRoleAdmin: async () => {
+    return await privateApi.get(`/api/users/role?role=ADMIN`);
+  },
 };

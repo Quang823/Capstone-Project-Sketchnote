@@ -73,7 +73,7 @@ export const styles = StyleSheet.create({
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 4,
-        zIndex: 10,
+        zIndex: 999, // Increased zIndex to ensure it's always on top
     },
     backButtonDark: {
         backgroundColor: "rgba(30, 41, 59, 0.95)",
