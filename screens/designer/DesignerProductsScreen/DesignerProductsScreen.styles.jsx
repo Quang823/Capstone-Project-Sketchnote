@@ -909,6 +909,142 @@ const getStyles = (theme = "light") => {
       color: "#FFFFFF",
     },
 
+    // =============== DETAIL MODAL STYLES ===============
+    detailImageGallery: {
+      marginBottom: 20,
+    },
+    imageGalleryScroll: {
+      marginBottom: 8,
+    },
+    detailGalleryImage: {
+      width: 280,
+      height: 200,
+      borderRadius: 16,
+      marginRight: 12,
+      backgroundColor: colors.inputBackground,
+    },
+    detailProductName: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: colors.textPrimary,
+      marginBottom: 8,
+    },
+    detailStatusBadge: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+      alignSelf: "flex-start",
+    },
+    detailSectionTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 12,
+    },
+    detailText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    detailGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 16,
+    },
+    detailGridItem: {
+      width: "48%",
+      marginBottom: 12,
+    },
+
+    // Version Card Styles
+    versionCard: {
+      backgroundColor: colors.cardBackground,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.borderColor,
+      shadowColor: colors.shadowColor,
+      shadowOpacity: theme === "dark" ? 0.3 : 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    versionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    versionNumber: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    versionStatusBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    versionStatusText: {
+      color: "#FFF",
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    versionDate: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginBottom: 8,
+    },
+    versionDescription: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      marginBottom: 12,
+      lineHeight: 18,
+    },
+    versionActions: {
+      flexDirection: "row",
+      gap: 8,
+      flexWrap: "wrap",
+    },
+    versionActionButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      backgroundColor: colors.inputBackground,
+    },
+    versionActionText: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
+
+    // Detail Action Buttons
+    detailActionButton: {
+      flex: 1,
+      borderRadius: 14,
+      overflow: "hidden",
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: theme === "dark" ? 0.4 : 0.15,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    detailActionGradient: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 14,
+      gap: 8,
+    },
+    detailActionText: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: "#FFFFFF",
+      letterSpacing: 0.3,
+    },
+
     // Colors for inline use
     primaryBlue: colors.primaryBlue,
     textPrimary: colors.textPrimary,

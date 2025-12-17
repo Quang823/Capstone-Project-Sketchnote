@@ -805,6 +805,37 @@ const getStyles = (theme = "light") => {
       color: colors.textMuted,
       padding: 20,
     },
+    // Save bank account checkbox styles
+    saveAccountOption: {
+      marginTop: 16,
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderColor,
+    },
+    checkboxContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: colors.accentBlue,
+      marginRight: 10,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    checkboxChecked: {
+      backgroundColor: colors.accentBlue,
+      borderColor: colors.accentBlue,
+    },
+    checkboxLabel: {
+      fontSize: 14,
+      color: colors.textPrimary,
+      flex: 1,
+      fontWeight: "500",
+    },
   });
 };
 
