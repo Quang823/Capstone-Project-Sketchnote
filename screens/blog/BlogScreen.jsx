@@ -21,6 +21,7 @@ import SidebarToggleButton from "../../components/navigation/SidebarToggleButton
 import loadingAnimation from "../../assets/loading.json";
 import LottieView from "lottie-react-native";
 import { useTheme } from "../../context/ThemeContext";
+import NotificationButton from "../../components/common/NotificationButton";
 
 const { width } = Dimensions.get("window");
 
@@ -135,6 +136,7 @@ export default function BlogScreen() {
           <SidebarToggleButton iconSize={26} iconColor={isDark ? "#FFFFFF" : "#1E40AF"} />
           <Text style={[blogStyles.headerTitle, isDark && blogStyles.headerTitleDark]}>Blog & Insights</Text>
         </View>
+        <NotificationButton />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>

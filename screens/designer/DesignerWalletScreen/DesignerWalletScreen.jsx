@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   Animated,
 } from "react-native";
+import LottieView from "lottie-react-native";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -111,16 +112,14 @@ export default function DesignerWalletScreen() {
     return new Intl.NumberFormat("vi-VN").format(amount) + " đ";
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
+  const formatDate = (d) =>
+    new Date(d).toLocaleString("vi-VN", {
       day: "2-digit",
-      month: "short",
+      month: "2-digit",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
 
   // Fetch wallet data
   const fetchWallet = async () => {
@@ -358,7 +357,9 @@ export default function DesignerWalletScreen() {
   }, []);
 
   // Recent transactions (last 5)
-  const recentTransactions = walletData.transactions.slice(0, 5);
+  const recentTransactions = [...(walletData.transactions || [])]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
   const isLandscape = windowWidth > windowHeight;
   const isPortrait = !isLandscape;
   const isWide = windowWidth > 900;
@@ -646,11 +647,11 @@ export default function DesignerWalletScreen() {
                       <Text style={styles.transactionDateNew}>
                         {formatDate(transaction.createdAt)}
                       </Text>
-                      {transaction.orderCode && (
+                      {/* {transaction.orderCode && (
                         <Text style={styles.transactionDateNew}>
                           Order: {transaction.orderCode}
                         </Text>
-                      )}
+                      )} */}
                     </View>
 
                     <View style={styles.transactionRightNew}>
@@ -706,7 +707,12 @@ export default function DesignerWalletScreen() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Icon name="receipt" size={48} color={colors.emptyIconColor} />
+              <LottieView
+                source={require("../../../assets/transaction.json")}
+                autoPlay
+                loop
+                style={{ width: 100, height: 100 }}
+              />
               <Text style={styles.emptyStateText}>No recent transactions</Text>
             </View>
           )}

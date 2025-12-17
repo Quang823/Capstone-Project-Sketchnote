@@ -107,7 +107,6 @@ export default function CourseDetailScreen() {
   const handleBuyCourse = async () => {
     // 1. CHẶN DOUBLE CLICK
     if (isProcessing.current) {
-      console.log("Already processing, blocking duplicate call");
       return;
     }
     isProcessing.current = true;
@@ -117,28 +116,15 @@ export default function CourseDetailScreen() {
     setLoading(true);
 
     try {
-      console.log("=== START TRANSACTION ===");
-      console.log("Course ID:", course.id);
-      console.log("Course Price:", course.price);
-
-      // Gọi enrollCourse - backend sẽ tự lo việc charge và enroll
-      console.log(
-        "Calling enrollCourse API (backend handles payment + enrollment)..."
-      );
       const enrollRes = await courseService.enrollCourse(course.id);
-      console.log("enrollCourse Response:", JSON.stringify(enrollRes, null, 2));
-
       // Enrollment thành công
-      console.log("Enrollment successful!");
       Toast.show({
         type: "success",
         text1: "Buy Success",
         text2: "Course purchased successfully!",
       });
 
-      console.log("Fetching updated course details...");
       await fetchCourseDetail(courseId);
-      console.log("=== END TRANSACTION - Starting learning ===");
       handleStartLearning();
     } catch (error) {
       console.error("Error in handleBuyCourse:", error);
@@ -158,7 +144,6 @@ export default function CourseDetailScreen() {
       // 3. LUÔN LUÔN RESET TRẠNG THÁI Ở ĐÂY
       setLoading(false);
       isProcessing.current = false;
-      console.log("Transaction lock released");
     }
   };
 
@@ -239,7 +224,7 @@ export default function CourseDetailScreen() {
       }
     } catch (error) {
       console.error("Error fetching course detail:", error.message);
-      setError("Không thể tải thông tin khóa học");
+      setError("Error fetching course detail");
     } finally {
       setLoading(false);
     }
@@ -290,13 +275,13 @@ export default function CourseDetailScreen() {
       <View style={styles.errorContainer}>
         <Icon name="error-outline" size={64} color={styles.colors.error} />
         <Text style={styles.errorText}>
-          {error || "Không tìm thấy khóa học"}
+          {error || "Can not load course detail"}
         </Text>
         <Pressable
           style={styles.retryButton}
           onPress={() => fetchCourseDetail(courseId)}
         >
-          <Text style={styles.retryButtonText}>Thử lại</Text>
+          <Text style={styles.retryButtonText}>Retry</Text>
         </Pressable>
       </View>
     );
@@ -325,12 +310,6 @@ export default function CourseDetailScreen() {
             ]}
             style={styles.heroOverlay}
           />
-
-          <View style={styles.heroHeader}>
-            <Pressable style={styles.backButton} onPress={handleBackPress}>
-              <Icon name="arrow-back" size={24} color={styles.colors.white} />
-            </Pressable>
-          </View>
 
           <View style={styles.heroContent}>
             <View style={styles.heroBadges}>
@@ -606,7 +585,7 @@ export default function CourseDetailScreen() {
                         <Icon
                           name="play-arrow"
                           size={24}
-                          color={styles.colors.white}
+                          color={styles.colors.ratingBarBg}
                         />
                         <Text style={styles.buttonText}>
                           Start Learning Now
@@ -712,7 +691,11 @@ export default function CourseDetailScreen() {
           </View>
         </ReanimatedView>
       </ScrollView>
-
+      <View style={styles.heroHeader}>
+        <Pressable style={styles.backButton} onPress={handleBackPress}>
+          <Icon name="arrow-back" size={24} color={styles.colors.white} />
+        </Pressable>
+      </View>
       {/* Modal Confirm - Purchase */}
       <Modal
         visible={showPurchaseModal}
@@ -748,10 +731,7 @@ export default function CourseDetailScreen() {
               </Pressable>
 
               <Pressable
-                style={[
-                  styles.confirmButton,
-                  loading && { opacity: 0.6 },
-                ]}
+                style={[styles.confirmButton, loading && { opacity: 0.6 }]}
                 onPress={handleBuyCourse}
                 disabled={loading}
               >
@@ -764,9 +744,7 @@ export default function CourseDetailScreen() {
                   {loading ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
-                    <Text style={styles.confirmButtonText}>
-                      Confirm
-                    </Text>
+                    <Text style={styles.confirmButtonText}>Confirm</Text>
                   )}
                 </LinearGradient>
               </Pressable>

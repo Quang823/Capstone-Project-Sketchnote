@@ -9,6 +9,7 @@ import {
   ScrollView,
   Dimensions,
 } from "react-native";
+import LottieView from "lottie-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -89,18 +90,17 @@ export default function TransactionHistoryScreen() {
           transaction.status === "SUCCESS"
             ? "#16A34A"
             : transaction.status === "PENDING"
-            ? "#F59E0B"
-            : "#DC2626",
+              ? "#F59E0B"
+              : "#DC2626",
         sign: "+",
         label:
           transaction.status === "SUCCESS"
             ? "Deposit Success"
             : transaction.status === "PENDING"
-            ? "Pending Deposit"
-            : "Deposit Failed",
-        description: `Deposit to wallet${
-          transaction.orderCode ? ` • #${transaction.orderCode}` : ""
-        }`,
+              ? "Pending Deposit"
+              : "Deposit Failed",
+        description: `Deposit to wallet${transaction.orderCode ? ` • #${transaction.orderCode}` : ""
+          }`,
         category: "deposit",
       },
       COURSE_FEE: {
@@ -301,7 +301,12 @@ export default function TransactionHistoryScreen() {
         contentContainerStyle={{ padding: 16 }}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
-            <Icon name="receipt" size={48} color={colors.emptyIconColor} />
+            <LottieView
+              source={require("../../../assets/transaction.json")}
+              autoPlay
+              loop
+              style={{ width: 100, height: 100 }}
+            />
             <Text style={styles.emptyText}>No transactions found</Text>
           </View>
         }

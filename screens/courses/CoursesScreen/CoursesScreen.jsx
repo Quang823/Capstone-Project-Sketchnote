@@ -19,13 +19,14 @@ import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../../context/ThemeContext";
+import NotificationButton from "../../../components/common/NotificationButton";
 
 // Course Categories
 const courseCategories = [
   { id: "all", name: "All", icon: "apps" },
   { id: "Icons", name: "Icons", icon: "emoji-emotions" },
   { id: "Characters", name: "Characters", icon: "person" },
-  { id: "ShapesAndFrames", name: "Shapes & Frames", icon: "crop_square" },
+  { id: "ShapesAndFrames", name: "Shapes & Frames", icon: "crop-square" },
   { id: "Layouts", name: "Layouts", icon: "dashboard" },
   { id: "EverydayObjects", name: "Everyday Objects", icon: "lightbulb" },
   { id: "LessonNote", name: "Lesson Note", icon: "note" },
@@ -559,24 +560,7 @@ export default function CoursesScreen() {
               </Text>
             </View>
           </View>
-          <Pressable
-            style={[
-              coursesStyles.notificationButton,
-              isDark && coursesStyles.notificationButtonDark,
-            ]}
-          >
-            <Icon
-              name="notifications-none"
-              size={24}
-              color={isDark ? "#FFFFFF" : "#084F8C"}
-            />
-            <View
-              style={[
-                coursesStyles.notificationBadge,
-                isDark && coursesStyles.notificationBadgeDark,
-              ]}
-            />
-          </Pressable>
+          <NotificationButton />
         </View>
       </LinearGradient>
 
@@ -636,7 +620,7 @@ export default function CoursesScreen() {
                     coursesStyles.categoryButton,
                     isDark && coursesStyles.categoryButtonDark,
                     selectedCategory === category.id &&
-                      coursesStyles.selectedCategoryButton,
+                    coursesStyles.selectedCategoryButton,
                   ]}
                   onPress={() => handleCategoryPress(category.id)}
                 >
@@ -647,8 +631,8 @@ export default function CoursesScreen() {
                       selectedCategory === category.id
                         ? "#FFF"
                         : isDark
-                        ? "#94A3B8"
-                        : "#64748B"
+                          ? "#94A3B8"
+                          : "#64748B"
                     }
                   />
                   <Text
@@ -656,7 +640,7 @@ export default function CoursesScreen() {
                       coursesStyles.categoryText,
                       isDark && coursesStyles.categoryTextDark,
                       selectedCategory === category.id &&
-                        coursesStyles.selectedCategoryText,
+                      coursesStyles.selectedCategoryText,
                     ]}
                   >
                     {category.name}

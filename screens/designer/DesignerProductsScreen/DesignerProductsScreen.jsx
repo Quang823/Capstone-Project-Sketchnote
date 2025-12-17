@@ -20,6 +20,7 @@ import { resourceService } from "../../../service/resourceService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 import { useTheme } from "../../../context/ThemeContext";
+import NotificationButton from "../../../components/common/NotificationButton";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -349,6 +350,7 @@ export default function DesignerProductsScreen() {
           <Text style={styles.headerTitle}>Products</Text>
         </View>
         <View style={styles.headerActions}>
+          <NotificationButton />
           <Pressable
             onPress={() => setShowFilterModal(true)}
             style={styles.headerActionIcon}

@@ -422,7 +422,7 @@ export default function ResourceDetailScreen() {
                     <View style={styles.infoTextContainer}>
                       <Text style={[styles.infoLabel, isDark && styles.infoLabelDark]}>Download Count</Text>
                       <Text style={[styles.infoValue, isDark && styles.infoValueDark]}>
-                        {resource.downloadCount ?? 120}
+                        {resource.downloadCount ?? 0}
                       </Text>
                     </View>
                   </View>

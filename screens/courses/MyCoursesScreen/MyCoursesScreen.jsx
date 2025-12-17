@@ -21,6 +21,7 @@ import loadingAnimation from "../../../assets/loading.json";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../../context/ThemeContext";
 import Toast from "react-native-toast-message";
+import NotificationButton from "../../../components/common/NotificationButton";
 
 export default function MyCoursesScreen() {
   const [enrollments, setEnrollments] = useState([]);
@@ -291,6 +292,7 @@ export default function MyCoursesScreen() {
             </Text>
           </View>
         </View>
+        <NotificationButton />
       </View>
 
 
