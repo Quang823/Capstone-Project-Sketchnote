@@ -41,6 +41,16 @@ export const paymentService = {
           throw new Error(message);
         }
     },
-    
+     getAllWalletTransaction: async (page,size,type,sortBy,sortDirection) => {
+        try {
+            const res = await paymentApiController.getAllWalletTransaction(page,size,type,sortBy,sortDirection);
+            return res.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Get all wallet transaction failed.";
+          throw new Error(message);
+        }
+     },
+     
     
 }
