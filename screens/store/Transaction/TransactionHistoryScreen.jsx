@@ -8,19 +8,31 @@ import {
   Modal,
   ScrollView,
   Dimensions,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import LottieView from "lottie-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { useTheme } from "../../../context/ThemeContext";
+import { paymentService } from "../../../service/paymentService";
 import getStyles from "./TransactionHistoryScreen.styles";
 
-const TABS = ["All", "Deposits", "Expenses", "Pending"];
+// Map tabs to API type parameters
+const TABS = [
+  { label: "All", type: null },
+  { label: "Deposit", type: "DEPOSIT" },
+  { label: "Payment", type: "PAYMENT" },
+  { label: "Withdraw", type: "WITHDRAW" },
+  { label: "Course Fee", type: "COURSE_FEE" },
+  { label: "Subscription", type: "SUBSCRIPTION" },
+  { label: "AI Credits", type: "PURCHASE_AI_CREDITS" },
+  { label: "Resource", type: "PURCHASE_RESOURCE" },
+];
 
 export default function TransactionHistoryScreen() {
   const navigation = useNavigation();
-  const route = useRoute();
   const { theme } = useTheme();
 
   // Get styles based on theme
@@ -36,48 +48,89 @@ export default function TransactionHistoryScreen() {
     closeIconColor: isDark ? "#F1F5F9" : "#0F172A",
   };
 
-  const { transactions: initialTransactions = [] } = route.params || {};
-
-  const [transactions, setTransactions] = useState(initialTransactions);
+  const [transactions, setTransactions] = useState([]);
+  const [currentBalance, setCurrentBalance] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("All");
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [activeTab, setActiveTab] = useState(TABS[0]);
   const [selectedTx, setSelectedTx] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  useEffect(() => {
-    if (transactions.length === 0) {
-      fetchHistory();
-    }
-  }, []);
+  // Pagination state
+  const [pageNo, setPageNo] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
 
-  const fetchHistory = async () => {
+  const PAGE_SIZE = 10;
+
+  useEffect(() => {
+    fetchTransactions(0, true);
+  }, [activeTab]);
+
+  const fetchTransactions = async (page = 0, reset = false) => {
+    if (loading || loadingMore) return;
+
     try {
-      setLoading(true);
-      const historyData = await import("../../../service/creditService").then(
-        (m) => m.creditService.getCreditTransactionHistory()
-      );
-      if (Array.isArray(historyData)) {
-        setTransactions(historyData);
-      } else if (
-        historyData &&
-        historyData.content &&
-        Array.isArray(historyData.content)
-      ) {
-        setTransactions(historyData.content);
+      if (reset) {
+        setLoading(true);
+        setTransactions([]);
+      } else {
+        setLoadingMore(true);
       }
+
+      const data = await paymentService.getAllWalletTransaction(
+        page,
+        PAGE_SIZE,
+        activeTab.type,
+        "createdAt",
+        "DESC"
+      );
+
+      setCurrentBalance(data.currentBalance || 0);
+
+      let newTransactions = data.transactions || [];
+
+      if (reset) {
+        setTransactions(newTransactions);
+      } else {
+        setTransactions((prev) => [...prev, ...newTransactions]);
+      }
+
+      setPageNo(data.pageNo);
+      setTotalPages(data.totalPages);
+      setHasMore(!data.last);
     } catch (error) {
-      console.error("Failed to fetch history", error);
+      console.error("Failed to fetch transactions:", error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setPageNo(0);
+    fetchTransactions(0, true);
+  };
+
+  const handleLoadMore = () => {
+    if (hasMore && !loadingMore && !loading) {
+      fetchTransactions(pageNo + 1, false);
     }
   };
 
   const translateX = useRef(new Animated.Value(0)).current;
   const screenWidth = Dimensions.get("window").width;
+
   const handleTabPress = (tab, index) => {
     setActiveTab(tab);
+    setPageNo(0);
+    setHasMore(true);
+    const tabWidth = screenWidth / TABS.length;
     Animated.spring(translateX, {
-      toValue: (screenWidth / 4) * index,
+      toValue: tabWidth * index,
       useNativeDriver: true,
     }).start();
   };
@@ -99,8 +152,7 @@ export default function TransactionHistoryScreen() {
             : transaction.status === "PENDING"
               ? "Pending Deposit"
               : "Deposit Failed",
-        description: `Deposit to wallet${transaction.orderCode ? ` • #${transaction.orderCode}` : ""
-          }`,
+        description: transaction.description || `Deposit to wallet${transaction.orderCode ? ` • #${transaction.orderCode}` : ""}`,
         category: "deposit",
       },
       COURSE_FEE: {
@@ -108,7 +160,7 @@ export default function TransactionHistoryScreen() {
         color: "#8B5CF6",
         sign: "-",
         label: "Course Fee",
-        description: "Course enrollment payment",
+        description: transaction.description || "Course enrollment payment",
         category: "expense",
       },
       PAYMENT: {
@@ -116,7 +168,7 @@ export default function TransactionHistoryScreen() {
         color: "#DC2626",
         sign: "-",
         label: "Payment",
-        description: "Payment transaction",
+        description: transaction.description || "Payment transaction",
         category: "expense",
       },
       PURCHASE: {
@@ -124,49 +176,72 @@ export default function TransactionHistoryScreen() {
         color: "#DC2626",
         sign: "-",
         label: "Purchase",
-        description: "Product purchase",
+        description: transaction.description || "Product purchase",
+        category: "expense",
+      },
+      WITHDRAW: {
+        icon: "account-balance",
+        color: "#EF4444",
+        sign: "-",
+        label: "Withdrawal",
+        description: transaction.description || "Withdraw to bank account",
+        category: "expense",
+      },
+      PURCHASE_RESOURCE: {
+        icon: "shopping-bag",
+        color: "#DC2626",
+        sign: "-",
+        label: "Resource Purchase",
+        description: transaction.description || "Purchase resource",
+        category: "expense",
+      },
+      PURCHASE_AI_CREDITS: {
+        icon: "stars",
+        color: "#F59E0B",
+        sign: "-",
+        label: "AI Credits Purchase",
+        description: transaction.description || "Purchase AI credits",
+        category: "expense",
+      },
+      PURCHASE_SUBSCRIPTION: {
+        icon: "card-membership",
+        color: "#8B5CF6",
+        sign: "-",
+        label: "Subscription Purchase",
+        description: transaction.description || "Purchase subscription",
+        category: "expense",
+      },
+      SUBSCRIPTION: {
+        icon: "card-membership",
+        color: "#8B5CF6",
+        sign: "-",
+        label: "Subscription",
+        description: transaction.description || "Subscription transaction",
         category: "expense",
       },
     };
-    return configs[transaction.type] || configs.PURCHASE;
+    return configs[transaction.type] || {
+      icon: "receipt",
+      color: "#64748B",
+      sign: "-",
+      label: transaction.type || "Transaction",
+      description: transaction.description || "Transaction",
+      category: "other",
+    };
   };
 
-  const totalDeposit = transactions
-    .filter((t) => t.type === "DEPOSIT" && t.status === "SUCCESS")
-    .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-  const totalExpense = transactions
-    .filter(
-      (t) =>
-        ["COURSE_FEE", "PAYMENT", "PURCHASE"].includes(t.type) &&
-        t.status === "SUCCESS"
-    )
-    .reduce((sum, t) => sum + (t.amount || 0), 0);
-
-  const totalPending = transactions.filter(
-    (t) => t.status === "PENDING"
-  ).length;
-
-  const filteredData = transactions
-    .filter((t) => {
-      if (activeTab === "All") return true;
-      if (activeTab === "Deposits") return t.type === "DEPOSIT";
-      if (activeTab === "Expenses")
-        return ["COURSE_FEE", "PAYMENT", "PURCHASE"].includes(t.type);
-      if (activeTab === "Pending") return t.status === "PENDING";
-      return true;
-    })
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
   const formatCurrency = (n) => (n ?? 0).toLocaleString("vi-VN") + " đ";
-  const formatDate = (d) =>
-    new Date(d).toLocaleString("vi-VN", {
+  const formatDate = (d) => {
+    // Handle both "2025-12-16 19:41:57" and ISO format
+    const date = new Date(d.replace(" ", "T"));
+    return date.toLocaleString("vi-VN", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
 
   const renderItem = ({ item }) => {
     const config = getTransactionConfig(item);
@@ -198,6 +273,11 @@ export default function TransactionHistoryScreen() {
             {config.sign}
             {formatCurrency(item.amount)}
           </Text>
+          {item.balanceAfter !== null && item.balanceAfter !== undefined && (
+            <Text style={styles.cardDate}>
+              Balance: {formatCurrency(item.balanceAfter)}
+            </Text>
+          )}
           <View
             style={[styles.badge, { backgroundColor: `${config.color}15` }]}
           >
@@ -207,6 +287,15 @@ export default function TransactionHistoryScreen() {
           </View>
         </View>
       </Pressable>
+    );
+  };
+
+  const renderFooter = () => {
+    if (!loadingMore) return null;
+    return (
+      <View style={{ paddingVertical: 20 }}>
+        <ActivityIndicator size="small" color={colors.primaryBlue} />
+      </View>
     );
   };
 
@@ -226,91 +315,67 @@ export default function TransactionHistoryScreen() {
         </View>
       </View>
 
-      {/* Summary */}
-      <View style={styles.summaryBox}>
-        <View style={styles.summaryItem}>
-          <Icon
-            name="account-balance-wallet"
-            size={20}
-            color="#16A34A"
-            style={{ marginBottom: 4 }}
-          />
-          <Text style={styles.summaryLabel}>Total Deposit</Text>
-          <Text style={[styles.summaryValue, { color: "#16A34A" }]}>
-            +{formatCurrency(totalDeposit)}
-          </Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.summaryItem}>
-          <Icon
-            name="trending-down"
-            size={20}
-            color="#DC2626"
-            style={{ marginBottom: 4 }}
-          />
-          <Text style={styles.summaryLabel}>Total Expense</Text>
-          <Text style={[styles.summaryValue, { color: "#DC2626" }]}>
-            -{formatCurrency(totalExpense)}
-          </Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.summaryItem}>
-          <Icon
-            name="schedule"
-            size={20}
-            color="#F59E0B"
-            style={{ marginBottom: 4 }}
-          />
-          <Text style={styles.summaryLabel}>Pending</Text>
-          <Text
-            style={[styles.summaryValue, { color: "#F59E0B", fontSize: 18 }]}
-          >
-            {totalPending}
-          </Text>
-        </View>
-      </View>
-
       {/* Tabs */}
       <View style={styles.tabBar}>
-        <Animated.View
-          style={[styles.tabIndicator, { transform: [{ translateX }] }]}
-        />
-        {TABS.map((tab, index) => (
-          <Pressable
-            key={tab}
-            style={styles.tab}
-            onPress={() => handleTabPress(tab, index)}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab && styles.tabTextActive,
-              ]}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
+          {TABS.map((tab, index) => (
+            <Pressable
+              key={tab.label}
+              style={[styles.tab, { flex: 1, minWidth: screenWidth / 4 }]}
+              onPress={() => handleTabPress(tab, index)}
             >
-              {tab}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab.label === tab.label && styles.tabTextActive,
+                ]}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
       </View>
 
       {/* List */}
-      <FlatList
-        data={filteredData}
-        keyExtractor={(item) => item.transactionId?.toString()}
-        renderItem={renderItem}
-        contentContainerStyle={{ padding: 16 }}
-        ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <LottieView
-              source={require("../../../assets/transaction.json")}
-              autoPlay
-              loop
-              style={{ width: 100, height: 100 }}
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <ActivityIndicator size="large" color={colors.primaryBlue} />
+        </View>
+      ) : (
+        <FlatList
+          data={transactions}
+          keyExtractor={(item, index) => `${item.transactionId}-${index}`}
+          renderItem={renderItem}
+          contentContainerStyle={{ padding: 16 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[colors.primaryBlue]}
+              tintColor={colors.primaryBlue}
             />
-            <Text style={styles.emptyText}>No transactions found</Text>
-          </View>
-        }
-      />
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
+          ListEmptyComponent={
+            <View style={styles.emptyBox}>
+              <LottieView
+                source={require("../../../assets/transaction.json")}
+                autoPlay
+                loop
+                style={{ width: 100, height: 100 }}
+              />
+              <Text style={styles.emptyText}>No transactions found</Text>
+            </View>
+          }
+        />
+      )}
 
       {/* Modal Detail */}
       <Modal visible={modalVisible} transparent animationType="slide">
@@ -390,6 +455,15 @@ export default function TransactionHistoryScreen() {
                           </Text>
                         </View>
 
+                        {selectedTx.balanceAfter !== null && selectedTx.balanceAfter !== undefined && (
+                          <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>Balance After</Text>
+                            <Text style={styles.detailValue}>
+                              {formatCurrency(selectedTx.balanceAfter)}
+                            </Text>
+                          </View>
+                        )}
+
                         {selectedTx.orderCode && (
                           <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Order Code</Text>
@@ -428,19 +502,21 @@ export default function TransactionHistoryScreen() {
                           </View>
                         )}
 
-                        <View
-                          style={[styles.detailRow, { borderBottomWidth: 0 }]}
-                        >
-                          <Text style={styles.detailLabel}>Description</Text>
-                          <Text
-                            style={[
-                              styles.detailValue,
-                              { maxWidth: "60%", textAlign: "right" },
-                            ]}
+                        {selectedTx.description && (
+                          <View
+                            style={[styles.detailRow, { borderBottomWidth: 0 }]}
                           >
-                            {config.description}
-                          </Text>
-                        </View>
+                            <Text style={styles.detailLabel}>Description</Text>
+                            <Text
+                              style={[
+                                styles.detailValue,
+                                { maxWidth: "60%", textAlign: "right" },
+                              ]}
+                            >
+                              {selectedTx.description}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     </>
                   );

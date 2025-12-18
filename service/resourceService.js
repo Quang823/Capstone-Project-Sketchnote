@@ -91,6 +91,16 @@ export const resourceService = {
           throw new Error(message);
         }
     },
+    getResourceProjectByUserIdV2 : async ()=>{
+        try {
+            const response = await resourceController.getResourceProjectByUserIdV2();
+            return response.data.result;
+        } catch (error) {
+            const message =
+            error.response?.data?.message || error.message || "Get resource project by user id v2 failed.";
+          throw new Error(message);
+        }
+    },
     /////////////////////////////////////////////////////////
     createResourceVersion : async (resourceId,data)=>{
         try {
