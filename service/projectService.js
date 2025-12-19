@@ -545,7 +545,11 @@ export const projectService = {
 
             isConnected = true;
 
-            const topicPath = `/topic/project/${projectId}`;
+            // *** ROUTE SEPARATED: Subscribe to stroke topic only ***
+            // Stroke drawing messages go to /topic/project/{projectId}/stroke
+            // Collaboration messages (element, page, sync) go to /topic/project/{projectId}/collaboration
+            // This projectService handles stroke sync; collaborationManager handles the rest
+            const topicPath = `/topic/project/${projectId}/stroke`;
 
             // ✅ FIXED: Store subscription for cleanup
             activeSubscription = stompClient.subscribe(topicPath, (message) => {
@@ -661,7 +665,10 @@ export const projectService = {
           type: actionType,
           payload: payload,
         });
-        const destination = `/app/project/${projectId}/action`;
+        // *** ROUTE SEPARATED: Use /stroke for drawing actions ***
+        // /stroke → CanvasController (stroke drawing)
+        // /collaboration → CollaborationWebSocketController (element, page, sync)
+        const destination = `/app/project/${projectId}/stroke`;
         const frame = buildFrame(
           "SEND",
           { destination, "content-type": "application/json" },

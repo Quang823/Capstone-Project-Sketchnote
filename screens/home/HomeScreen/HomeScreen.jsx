@@ -6,6 +6,7 @@ import React, {
   useMemo,
   useContext,
 } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -258,9 +259,11 @@ export default function HomeScreen({ navigation }) {
     }
   }, [currentPage, pageSize]);
 
-  useEffect(() => {
-    fetchProjects(0); // Load first page on mount
-  }, []); // Only run once on mount
+  useFocusEffect(
+    useCallback(() => {
+      fetchProjects(0);
+    }, [fetchProjects])
+  );
 
   // Pagination handlers
   const handlePageChange = useCallback((newPage) => {
@@ -1080,7 +1083,10 @@ export default function HomeScreen({ navigation }) {
           {/* TABS */}
           <View style={{ flexDirection: "row", paddingHorizontal: 16, marginBottom: 12, gap: 12 }}>
             <TouchableOpacity
-              onPress={() => setActiveTab("cloud")}
+              onPress={() => {
+                setActiveTab("cloud");
+                fetchProjects(0);
+              }}
               style={{
                 paddingVertical: 8,
                 paddingHorizontal: 16,
@@ -1098,7 +1104,10 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => setActiveTab("local")}
+              onPress={() => {
+                setActiveTab("local");
+                fetchProjects(0);
+              }}
               style={{
                 paddingVertical: 8,
                 paddingHorizontal: 16,
@@ -1116,7 +1125,10 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => setActiveTab("shared")}
+              onPress={() => {
+                setActiveTab("shared");
+                fetchProjects(0);
+              }}
               style={{
                 paddingVertical: 8,
                 paddingHorizontal: 16,

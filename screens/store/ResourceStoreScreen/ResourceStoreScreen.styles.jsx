@@ -1,6 +1,8 @@
 // ResourceStoreScreen.styles.js
 import { StyleSheet, Dimensions } from "react-native";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+export const CARD_GAP = 12;
+export const CARD_WIDTH = (SCREEN_WIDTH - 40 - (4 * CARD_GAP)) / 5;
 
 export const resourceStoreStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FAFAFA" },
@@ -99,10 +101,7 @@ export const resourceStoreStyles = StyleSheet.create({
 
   // Promo Banner
   promoBanner: {
-    marginHorizontal: 20,
-    marginTop: 12,
-    height: 300, // Tăng chiều cao để chứa search bar
-    borderRadius: 24,
+    height: 300,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
@@ -142,7 +141,6 @@ export const resourceStoreStyles = StyleSheet.create({
     backgroundColor: "#EF4444",
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 30,
     marginTop: 12,
   },
   promoBadgeText: { color: "#FFF", fontWeight: "900", fontSize: 13 },
@@ -257,9 +255,9 @@ export const resourceStoreStyles = StyleSheet.create({
 
   // Card
   resourceCard: {
-    width: 320,
+    width: CARD_WIDTH,
     backgroundColor: "#FFF",
-    borderRadius: 24,
+    borderRadius: 12,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -269,8 +267,8 @@ export const resourceStoreStyles = StyleSheet.create({
     borderColor: "#334155",
   },
   imageContainer: {
-    height: 220,
-    borderRadius: 24,
+    height: CARD_WIDTH * 0.8, // Maintain aspect ratio
+    borderRadius: 12,
     overflow: "hidden",
     position: "relative",
     backgroundColor: "#F1F5F9",
@@ -281,7 +279,7 @@ export const resourceStoreStyles = StyleSheet.create({
   resourceImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 24,
+    borderRadius: 12,
   },
   // Badge gọn nhẹ, đẹp mắt
   typeBadge: {
@@ -296,7 +294,7 @@ export const resourceStoreStyles = StyleSheet.create({
   },
   typeBadgeText: {
     color: "#FFF",
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
@@ -333,7 +331,7 @@ export const resourceStoreStyles = StyleSheet.create({
   },
   trendingBadgeText: {
     color: "#FFF",
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
   },
   // Thông tin ngày
@@ -354,21 +352,23 @@ export const resourceStoreStyles = StyleSheet.create({
     color: "#64748B",
     fontWeight: "600",
   },
-  resourceInfo: { padding: 20 },
+  resourceInfo: { padding: 12 },
   resourceName: {
-    fontSize: 19,
+    fontSize: 11,
     fontWeight: "900",
     color: "#1E293B",
-    lineHeight: 26,
+    lineHeight: 14,
+    minHeight: 28,
   },
   resourceNameDark: {
     color: "#F8FAFC",
   },
   resourceDescription: {
-    fontSize: 14,
+    fontSize: 9,
     color: "#64748B",
-    marginTop: 8,
-    lineHeight: 20,
+    marginTop: 2,
+    lineHeight: 11,
+    minHeight: 22, // Ensure at least 2 lines of space
   },
   resourceDescriptionDark: {
     color: "#CBD5E1",
@@ -381,7 +381,7 @@ export const resourceStoreStyles = StyleSheet.create({
     marginTop: 8,
   },
   price: {
-    fontSize: 20,
+    fontSize: 11,
     fontWeight: "900",
     color: "#1E293B",
   },
@@ -389,7 +389,7 @@ export const resourceStoreStyles = StyleSheet.create({
     color: "#F8FAFC",
   },
   originalPrice: {
-    fontSize: 13,
+    fontSize: 9,
     color: "#94A3B8",
     textDecorationLine: "line-through",
     fontWeight: "600",
@@ -405,13 +405,13 @@ export const resourceStoreStyles = StyleSheet.create({
   addToCartButton: {
     flex: 1,
     backgroundColor: "#ECFDF5",
-    paddingVertical: 13,
-    borderRadius: 14,
+    paddingVertical: 4,
+    borderRadius: 6,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 6,
-    borderWidth: 1.5,
+    gap: 2,
+    borderWidth: 1,
     borderColor: "#A7F3D0",
   },
   addToCartButtonDark: {
@@ -419,7 +419,7 @@ export const resourceStoreStyles = StyleSheet.create({
     borderColor: "#059669",
   },
   addToCartText: {
-    fontSize: 13,
+    fontSize: 8,
     fontWeight: "800",
     color: "#059669",
   },
@@ -427,22 +427,22 @@ export const resourceStoreStyles = StyleSheet.create({
     color: "#6EE7B7",
   },
   buyNowText: {
-    fontSize: 13,
+    fontSize: 8,
     fontWeight: "800",
     color: "#FFF",
   },
   openResourceButton: {
     backgroundColor: "#10B981",
-    paddingVertical: 13,
-    borderRadius: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 8,
-    marginTop: 12,
+    gap: 4,
+    marginTop: 6,
   },
   openResourceText: {
-    fontSize: 14,
+    fontSize: 9,
     fontWeight: "800",
     color: "#FFF",
   },
@@ -452,6 +452,7 @@ export const resourceStoreStyles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
     paddingHorizontal: 2,
+    minHeight: 24, // Ensure space for dates even if empty
   },
 
   ratingContainer: {
@@ -479,7 +480,7 @@ export const resourceStoreStyles = StyleSheet.create({
   },
 
   datePillText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     color: "#475569",
   },
@@ -490,15 +491,43 @@ export const resourceStoreStyles = StyleSheet.create({
   buyNowButton: {
     flex: 1.4,
     backgroundColor: "#084F8C",
-    paddingVertical: 14,
-    borderRadius: 16,
+    paddingVertical: 6,
+    borderRadius: 8,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 6,
+    gap: 2,
     shadowColor: "rgba(34, 112, 238, 1)",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+  },
+  loadMoreCard: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH * 1.5, // Approximate height
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: CARD_GAP,
+    borderWidth: 2,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed",
+  },
+  loadMoreCardDark: {
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
+  },
+  loadMoreContent: {
+    alignItems: "center",
+    gap: 8,
+  },
+  loadMoreText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#084F8C",
+  },
+  loadMoreTextDark: {
+    color: "#60A5FA",
   },
 });

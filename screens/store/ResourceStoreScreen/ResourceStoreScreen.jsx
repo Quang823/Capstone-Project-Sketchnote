@@ -11,10 +11,11 @@ import {
   ImageBackground,
   Animated,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { Shadow } from "react-native-shadow-2";
 import { useNavigation } from "@react-navigation/native";
-import { resourceStoreStyles } from "./ResourceStoreScreen.styles";
+import { resourceStoreStyles, CARD_GAP, CARD_WIDTH } from "./ResourceStoreScreen.styles";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { resourceService } from "../../../service/resourceService";
 import { orderService } from "../../../service/orderService";
@@ -91,7 +92,7 @@ const AnimatedResourceCard = ({
           <Icon
             key={i}
             name={i < filled ? "star" : "star-border"}
-            size={15}
+            size={8}
             color={i < filled ? "#FBBF24" : (isDark ? "#475569" : "#CBD5E1")}
           />
         ))}
@@ -103,14 +104,14 @@ const AnimatedResourceCard = ({
     <Animated.View
       style={{
         transform: [{ scale: scaleValue }, { translateY }],
-        marginRight: 20,
+        marginRight: CARD_GAP,
       }}
     >
       <Shadow
-        distance={16}
+        distance={8}
         startColor="#00000010"
-        offset={[0, 8]}
-        style={{ borderRadius: 24 }}
+        offset={[0, 4]}
+        style={{ borderRadius: 12 }}
       >
         <Pressable
           onPress={onPress}
@@ -137,7 +138,7 @@ const AnimatedResourceCard = ({
             {/* Badge của bạn */}
             {item?.isOwner && (
               <View style={resourceStoreStyles.ownerBadge}>
-                <Icon name="verified" size={14} color="#10B981" />
+                <Icon name="verified" size={12} color="#10B981" />
                 <Text style={resourceStoreStyles.ownerBadgeText}>YOURS</Text>
               </View>
             )}
@@ -145,7 +146,7 @@ const AnimatedResourceCard = ({
             {/* Badge HOT */}
             {(item.isTrending || Math.random() > 0.65) && (
               <View style={resourceStoreStyles.trendingBadge}>
-                <Icon name="local-fire-department" size={16} color="#FFF" />
+                <Icon name="local-fire-department" size={12} color="#FFF" />
                 <Text style={resourceStoreStyles.trendingBadgeText}>HOT</Text>
               </View>
             )}
@@ -170,7 +171,7 @@ const AnimatedResourceCard = ({
               <View style={resourceStoreStyles.dateContainer}>
                 {item.releaseDate && (
                   <View style={[resourceStoreStyles.datePill, isDark && resourceStoreStyles.datePillDark]}>
-                    <Icon name="event" size={12} color={isDark ? "#94A3B8" : "#64748B"} />
+                    <Icon name="event" size={10} color={isDark ? "#94A3B8" : "#64748B"} />
                     <Text style={[resourceStoreStyles.datePillText, isDark && resourceStoreStyles.datePillTextDark]}>
                       {formatDate(item.releaseDate)}
                     </Text>
@@ -183,7 +184,7 @@ const AnimatedResourceCard = ({
                       { backgroundColor: isDark ? "#450a0a" : "#FEE2E2" },
                     ]}
                   >
-                    <Icon name="schedule" size={12} color="#EF4444" />
+                    <Icon name="schedule" size={10} color="#EF4444" />
                     <Text
                       style={[
                         resourceStoreStyles.datePillText,
@@ -217,7 +218,7 @@ const AnimatedResourceCard = ({
                 style={resourceStoreStyles.openResourceButton}
                 onPress={onPress}
               >
-                <Icon name="folder-open" size={18} color="#fff" />
+                <Icon name="folder-open" size={16} color="#fff" />
                 <Text style={resourceStoreStyles.openResourceText}>
                   Open Resource
                 </Text>
@@ -231,9 +232,9 @@ const AnimatedResourceCard = ({
                     onAddToCart();
                   }}
                 >
-                  <Icon name="add-shopping-cart" size={16} color={isDark ? "#6EE7B7" : "#059669"} />
+                  <Icon name="add-shopping-cart" size={14} color={isDark ? "#6EE7B7" : "#059669"} />
                   <Text style={[resourceStoreStyles.addToCartText, isDark && resourceStoreStyles.addToCartTextDark]}>
-                    Add to cart
+                    Add
                   </Text>
                 </Pressable>
                 <Pressable
@@ -243,8 +244,8 @@ const AnimatedResourceCard = ({
                     onBuyNow();
                   }}
                 >
-                  <Icon name="bolt" size={18} color="#fff" />
-                  <Text style={resourceStoreStyles.buyNowText}>Buy Now</Text>
+                  <Icon name="bolt" size={16} color="#fff" />
+                  <Text style={resourceStoreStyles.buyNowText}>Buy</Text>
                 </Pressable>
               </View>
             )}
@@ -252,6 +253,42 @@ const AnimatedResourceCard = ({
         </Pressable>
       </Shadow>
     </Animated.View>
+  );
+};
+
+const LoadMoreCard = ({ onPress, loading, isDark }) => {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={loading}
+      style={[
+        resourceStoreStyles.loadMoreCard,
+        isDark && resourceStoreStyles.loadMoreCardDark,
+      ]}
+    >
+      <View style={resourceStoreStyles.loadMoreContent}>
+        {loading ? (
+          <ActivityIndicator size="small" color={isDark ? "#60A5FA" : "#084F8C"} />
+        ) : (
+          <>
+            <Icon
+              name="add-circle-outline"
+              size={24}
+              color={isDark ? "#60A5FA" : "#084F8C"}
+            />
+            <Text
+              style={[
+                resourceStoreStyles.loadMoreText,
+                isDark && resourceStoreStyles.loadMoreTextDark,
+                { fontSize: 10 }
+              ]}
+            >
+              More
+            </Text>
+          </>
+        )}
+      </View>
+    </Pressable>
   );
 };
 
@@ -324,7 +361,6 @@ const PromoBanner = ({ searchQuery, setSearchQuery }) => {
         source={{ uri: currentImage }}
         style={{
           ...StyleSheet.absoluteFillObject,
-          borderRadius: 24,
           opacity: fadeCurrent,
         }}
         resizeMode="cover"
@@ -335,7 +371,6 @@ const PromoBanner = ({ searchQuery, setSearchQuery }) => {
         source={{ uri: nextImage }}
         style={{
           ...StyleSheet.absoluteFillObject,
-          borderRadius: 24,
           opacity: fadeNext,
         }}
         resizeMode="cover"
@@ -390,13 +425,49 @@ export default function ResourceStoreScreen() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  const fetchResourcesByType = async (type) => {
+  // Pagination states
+  const [pages, setPages] = useState({
+    all: 0,
+    popular: 0,
+    latest: 0,
+    filtered: 0,
+  });
+  const [hasMore, setHasMore] = useState({
+    all: true,
+    popular: true,
+    latest: true,
+    filtered: true,
+  });
+  const [loadingMore, setLoadingMore] = useState({
+    all: false,
+    popular: false,
+    latest: false,
+    filtered: false,
+  });
+
+  const PAGE_SIZE = 10;
+
+  const fetchResourcesByType = async (type, page = 0) => {
     try {
-      setLoading(true);
-      setIsFilteringByType(true);
-      const response = await orderService.getTemplatesByType(type, 0, 20);
+      if (page === 0) {
+        setLoading(true);
+        setIsFilteringByType(true);
+      } else {
+        setLoadingMore(prev => ({ ...prev, filtered: true }));
+      }
+
+      const response = await orderService.getTemplatesByType(type, page, PAGE_SIZE);
       const data = response?.content || response || [];
-      setFilteredByType(Array.isArray(data) ? data : []);
+      const items = Array.isArray(data) ? data : [];
+
+      if (page === 0) {
+        setFilteredByType(items);
+      } else {
+        setFilteredByType(prev => [...prev, ...items]);
+      }
+
+      setHasMore(prev => ({ ...prev, filtered: items.length === PAGE_SIZE }));
+      setPages(prev => ({ ...prev, filtered: page }));
     } catch (error) {
       console.error("Error fetching resources by type:", error);
       Toast.show({
@@ -404,15 +475,19 @@ export default function ResourceStoreScreen() {
         text1: "Error",
         text2: "Failed to load resources by type",
       });
-      setFilteredByType([]);
     } finally {
       setLoading(false);
+      setLoadingMore(prev => ({ ...prev, filtered: false }));
     }
   };
 
   const fetchAllData = async () => {
     try {
       setLoading(true);
+      // Reset pagination
+      setPages({ all: 0, popular: 0, latest: 0, filtered: 0 });
+      setHasMore({ all: true, popular: true, latest: true, filtered: true });
+
       let ownedAccumulator = [];
 
       try {
@@ -423,30 +498,24 @@ export default function ResourceStoreScreen() {
       }
 
       try {
-        const resAll = await resourceService.getAllResource(0, 10);
-        const allRaw = resAll?.content || [];
-        const owned = allRaw.filter((r) => r?.isOwner);
-        const notOwned = allRaw.filter((r) => !r?.isOwner);
+        const resAll = await resourceService.getAllResource(0, PAGE_SIZE);
+        const allRaw = resAll?.content || resAll || [];
+        const items = Array.isArray(allRaw) ? allRaw : [];
+        const owned = items.filter((r) => r?.isOwner);
+        const notOwned = items.filter((r) => !r?.isOwner);
         setAllResources(notOwned);
         ownedAccumulator.push(...owned);
-
-        // FIX: LẤY TYPE TỪ TẤT CẢ RESOURCE (CẢ OWNED + NOT OWNED)
-        const allFetchedResources = [
-          ...allRaw,
-          ...popularResources,
-          ...latestResources,
-        ]; // hoặc thêm ownedAccumulator
+        setHasMore(prev => ({ ...prev, all: items.length === PAGE_SIZE }));
 
         const types = [
           ...new Set(
-            allFetchedResources
+            items
               .map((r) => r.type)
               .filter(Boolean)
               .map((t) => t.trim().toUpperCase())
           ),
         ];
 
-        // Định dạng tên đẹp
         const formatCategoryName = (str) =>
           str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
@@ -456,21 +525,25 @@ export default function ResourceStoreScreen() {
       }
 
       try {
-        const res = await resourceService.getAllResourcePopular(10);
+        const res = await resourceService.getAllResourcePopular(PAGE_SIZE);
         const data = res?.result || res?.content || res || [];
-        const notOwned = data.filter((r) => !r?.isOwner);
+        const items = Array.isArray(data) ? data : [];
+        const notOwned = items.filter((r) => !r?.isOwner);
         setPopularResources(notOwned);
-        ownedAccumulator.push(...data.filter((r) => r?.isOwner));
+        ownedAccumulator.push(...items.filter((r) => r?.isOwner));
+        setHasMore(prev => ({ ...prev, popular: items.length === PAGE_SIZE }));
       } catch (e) {
         console.error(e);
       }
 
       try {
-        const res = await resourceService.getAllResourceLatest(10);
+        const res = await resourceService.getAllResourceLatest(PAGE_SIZE);
         const data = res?.result || res?.content || res || [];
-        const notOwned = data.filter((r) => !r?.isOwner);
+        const items = Array.isArray(data) ? data : [];
+        const notOwned = items.filter((r) => !r?.isOwner);
         setLatestResources(notOwned);
-        ownedAccumulator.push(...data.filter((r) => r?.isOwner));
+        ownedAccumulator.push(...items.filter((r) => r?.isOwner));
+        setHasMore(prev => ({ ...prev, latest: items.length === PAGE_SIZE }));
       } catch (e) {
         console.error(e);
       }
@@ -489,6 +562,45 @@ export default function ResourceStoreScreen() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLoadMore = async (section) => {
+    if (loadingMore[section] || !hasMore[section]) return;
+
+    const nextPage = pages[section] + 1;
+    setLoadingMore(prev => ({ ...prev, [section]: true }));
+
+    try {
+      let items = [];
+      if (section === 'all') {
+        const res = await resourceService.getAllResource(nextPage, PAGE_SIZE);
+        items = res?.content || res || [];
+        const notOwned = items.filter((r) => !r?.isOwner);
+        setAllResources(prev => [...prev, ...notOwned]);
+      } else if (section === 'popular') {
+        // Note: Popular and Latest might not support page-based pagination in current API
+        // but we'll try to use the same logic if they support it or just limit
+        const res = await resourceService.getAllResourcePopular(PAGE_SIZE * (nextPage + 1));
+        items = res?.result || res?.content || res || [];
+        const notOwned = items.filter((r) => !r?.isOwner);
+        setPopularResources(notOwned); // Replace for limit-based
+      } else if (section === 'latest') {
+        const res = await resourceService.getAllResourceLatest(PAGE_SIZE * (nextPage + 1));
+        items = res?.result || res?.content || res || [];
+        const notOwned = items.filter((r) => !r?.isOwner);
+        setLatestResources(notOwned); // Replace for limit-based
+      } else if (section === 'filtered') {
+        await fetchResourcesByType(selectedCategory.toUpperCase(), nextPage);
+        return; // fetchResourcesByType handles state
+      }
+
+      setHasMore(prev => ({ ...prev, [section]: items.length >= PAGE_SIZE * (nextPage + 1) || items.length === PAGE_SIZE }));
+      setPages(prev => ({ ...prev, [section]: nextPage }));
+    } catch (error) {
+      console.error(`Error loading more ${section}:`, error);
+    } finally {
+      setLoadingMore(prev => ({ ...prev, [section]: false }));
     }
   };
 
@@ -686,6 +798,13 @@ export default function ResourceStoreScreen() {
                   onBuyNow={() => handleAddToCart(item, true)}
                 />
               ))}
+              {hasMore.latest && (
+                <LoadMoreCard
+                  onPress={() => handleLoadMore('latest')}
+                  loading={loadingMore.latest}
+                  isDark={isDark}
+                />
+              )}
             </ScrollView>
           </View>
         )}
@@ -714,6 +833,13 @@ export default function ResourceStoreScreen() {
                   onBuyNow={() => handleAddToCart(item, true)}
                 />
               ))}
+              {hasMore.popular && (
+                <LoadMoreCard
+                  onPress={() => handleLoadMore('popular')}
+                  loading={loadingMore.popular}
+                  isDark={isDark}
+                />
+              )}
             </ScrollView>
           </View>
         )}
@@ -743,6 +869,13 @@ export default function ResourceStoreScreen() {
                     onBuyNow={() => handleAddToCart(item, true)}
                   />
                 ))}
+                {hasMore.filtered && (
+                  <LoadMoreCard
+                    onPress={() => handleLoadMore('filtered')}
+                    loading={loadingMore.filtered}
+                    isDark={isDark}
+                  />
+                )}
               </ScrollView>
             </View>
           )
@@ -769,6 +902,13 @@ export default function ResourceStoreScreen() {
                     onBuyNow={() => handleAddToCart(item, true)}
                   />
                 ))}
+                {hasMore.all && (
+                  <LoadMoreCard
+                    onPress={() => handleLoadMore('all')}
+                    loading={loadingMore.all}
+                    isDark={isDark}
+                  />
+                )}
               </ScrollView>
             </View>
           )
