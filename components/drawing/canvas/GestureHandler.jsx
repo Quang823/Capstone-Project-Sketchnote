@@ -34,51 +34,54 @@ import LassoSelectionBox from "../lasso/LassoSelectionBox";
 import useLassoTransform from "../../../hooks/useLassoTransform";
 
 import debounce from "lodash/debounce";
-export default function GestureHandler(
-  {
-    page,
-    tool,
-    eraserMode,
-    strokes,
-    allVisibleStrokes,
-    currentPoints,
-    setCurrentPoints,
-    color,
-    setColor,
-    setTool,
-    strokeWidth,
-    pencilWidth,
-    eraserSize,
-    brushWidth,
-    brushOpacity,
-    calligraphyWidth,
-    calligraphyOpacity,
-    configByTool = {},
-    onAddStroke,
-    onModifyStroke,
-    onModifyStrokesBulk,
-    onDeleteStroke,
-    children,
-    canvasRef,
-    setRealtimeText,
-    zoomState,
-    onSelectStroke,
-    activeLayerId,
-    onLiveUpdateStroke,
-    scrollRef, // 👈 Receive scrollRef
-    scrollOffsetY = 0,
-    scrollYShared, // ✅ Animated scroll value
-    pageOffsetY = 0, // ✅ Page offset trong project
-    onColorPicked, // 👈 Thêm prop
-    selectedId: selectedIdProp,
-    selectedBox: selectedBoxProp,
-    onSelectionChange,
-  },
-  ref
-) {
 
+const GestureHandler = forwardRef(({
+  page,
+  tool,
+  eraserMode,
+  strokes,
+  allVisibleStrokes,
+  currentPoints,
+  setCurrentPoints,
+  color,
+  setColor,
+  setTool,
+  strokeWidth,
+  pencilWidth,
+  eraserSize,
+  brushWidth,
+  brushOpacity,
+  calligraphyWidth,
+  calligraphyOpacity,
+  configByTool = {},
+  onAddStroke,
+  onModifyStroke,
+  onModifyStrokesBulk,
+  onDeleteStroke,
+  children,
+  canvasRef,
+  setRealtimeText,
+  zoomState,
+  onSelectStroke,
+  activeLayerId,
+  onLiveUpdateStroke,
+  scrollRef,
+  scrollOffsetY = 0,
+  scrollYShared,
+  pageOffsetY = 0,
+  onColorPicked,
+  shapeSettings,
+  tapeSettings,
+  selectedId: selectedIdProp,
+  selectedBox: selectedBoxProp,
+  onSelectionChange,
+}, ref) => {
   // Track last scheduled requestAnimationFrame ID to cancel on unmount
   const rafIdRef = useRef(null);
+  const shapeSettingsRef = useRef(shapeSettings);
+  shapeSettingsRef.current = shapeSettings;
+  const tapeSettingsRef = useRef(tapeSettings);
+  tapeSettingsRef.current = tapeSettings;
 
   // Cleanup: cancel any pending RAF to prevent leaks when unmounting
   useEffect(() => {
@@ -947,7 +950,7 @@ export default function GestureHandler(
             // Kiểm tra xem có phải shape với fill không
             const isShape =
               s.tool &&
-              ["rectangle", "circle", "triangle", "star", "polygon"].includes(
+              ["rect", "rectangle", "circle", "triangle", "star", "polygon"].includes(
                 s.tool
               );
             const hasFill = s.fill && s.fillColor;
@@ -974,7 +977,7 @@ export default function GestureHandler(
                   const dx = (e.x - centerX) / radiusX;
                   const dy = (e.y - centerY) / radiusY;
                   isInside = dx * dx + dy * dy <= 1;
-                } else if (s.tool === "rectangle") {
+                } else if (s.tool === "rect" || s.tool === "rectangle") {
                   // Rectangle luôn trong bbox
                   isInside = true;
                 } else if (
@@ -983,7 +986,8 @@ export default function GestureHandler(
                   s.tool === "polygon"
                 ) {
                   // Dùng pointInPolygon
-                  isInside = pointInPolygon(e.x, e.y, s.points);
+                  const pts = s.points || s.shape?.points;
+                  isInside = pointInPolygon(pts, e.x, e.y);
                 }
 
                 if (isInside) {
@@ -1314,6 +1318,7 @@ export default function GestureHandler(
           "polygon",
           "fill",
           "shape",
+          "tape",
         ].includes(tool)
       )
         return;
@@ -1556,6 +1561,7 @@ export default function GestureHandler(
           "polygon",
           "fill",
           "shape",
+          "tape",
         ].includes(tool)
       )
         return;
@@ -1873,6 +1879,7 @@ export default function GestureHandler(
           "shape",
           "fill",
           "eraser",
+          "tape",
         ].includes(tool)
       )
         return;
@@ -1958,8 +1965,41 @@ export default function GestureHandler(
         const shape = buildShape(tool, finalPoints);
         if (shape) newStroke.shape = shape.shape;
       } else if (tool === "shape") {
-        const shape = detectShape(finalPoints);
-        if (shape) Object.assign(newStroke, shape);
+        const currentShapeSettings = shapeSettingsRef.current;
+        const shapeType = currentShapeSettings?.shape || "rect";
+        const shape = buildShape(shapeType, finalPoints);
+        if (shape) {
+          newStroke.shape = shape.shape;
+          newStroke.color = currentShapeSettings?.color || "#000000";
+          newStroke.width = currentShapeSettings?.thickness || 2;
+          newStroke.shapeSettings = { ...currentShapeSettings };
+
+          if (currentShapeSettings?.fill) {
+            newStroke.fill = true;
+            newStroke.fillColor = currentShapeSettings.color;
+          }
+
+          if (shapeType === "pentagon") newStroke.sides = 5;
+          if (shapeType === "hexagon") newStroke.sides = 6;
+          if (shapeType === "octagon") newStroke.sides = 8;
+        }
+      }
+
+      else if (tool === "tape") {
+        const currentTapeSettings = tapeSettingsRef.current || {};
+        const mode = currentTapeSettings.mode || "line";
+
+        if (mode === "rectangle") {
+          const shape = buildShape("rect", finalPoints);
+          if (shape) {
+            newStroke.shape = shape.shape;
+          }
+        }
+        // For line mode, we use points directly (already in newStroke)
+
+        newStroke.tapeSettings = { ...currentTapeSettings };
+        newStroke.width = (currentTapeSettings.thickness || 4) * 5; // Approximate width for hit testing
+        newStroke.color = currentTapeSettings.color || "#FDA4AF";
       }
 
       if (tool !== "eraser" && typeof onAddStroke === "function") {
@@ -2748,7 +2788,10 @@ export default function GestureHandler(
         )}
     </>
   );
-}
+});
+
+
+export default GestureHandler;
 
 const styles = StyleSheet.create({
   backdrop: {

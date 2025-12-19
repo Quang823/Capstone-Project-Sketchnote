@@ -70,6 +70,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     projectId,
     userId,
     isCover = false,
+    shapeSettings,
+    tapeSettings,
     scrollRef, // 👈 Receive scrollRef
   },
   ref
@@ -317,7 +319,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       return Array.from(layerMap.values());
     };
 
-    setLayers(updater);
+    if (typeof setLayers === "function") {
+      requestAnimationFrame(() => {
+        setLayers(updater);
+      });
+    }
+
     setInternalLayers(updater);
   };
 
@@ -1303,7 +1310,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           return Array.from(layerMap.values());
         };
         setInternalLayers(updater);
-        if (typeof setLayers === "function") setLayers(updater);
+        if (typeof setLayers === "function") {
+          requestAnimationFrame(() => {
+            setLayers(updater);
+          });
+        }
+
       } catch (e) {
         console.error("[CanvasContainer] appendStrokes error:", e);
       }
@@ -1384,6 +1396,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             // ⬇️ truyền ref renderer để có thể nâng cấp eyedropper lấy pixel snapshot sau này
             canvasRef={rendererRef}
             getNearestFont={getNearestFont}
+            shapeSettings={shapeSettings}
+            tapeSettings={tapeSettings}
           >
             <CanvasRenderer
               ref={rendererRef}
@@ -1408,6 +1422,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               calligraphyOpacity={calligraphyOpacity}
               paperStyle={paperStyle}
               page={page}
+              shapeSettings={shapeSettings}
+              tapeSettings={tapeSettings}
               canvasHeight={canvasHeight}
               shapeType={shapeType}
               backgroundColor={backgroundColor}

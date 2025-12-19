@@ -36,6 +36,7 @@ import DocumentSidebar from "../document/DocumentSidebar";
 import DocumentOverviewModal from "../document/DocumentOverviewModal";
 import { projectService } from "../../../service/projectService";
 import { calculatePageDimensions } from "../../../utils/pageDimensions";
+import { useToast } from "../../../hooks/use-toast";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import RobotoRegular from "../../../assets/fonts/Roboto/Roboto_Condensed-Regular.ttf";
 import RobotoBold from "../../../assets/fonts/Roboto/Roboto_Condensed-Bold.ttf";
@@ -111,18 +112,96 @@ const FONT_MAP = {
 
 const FONT_SIZES = [18];
 
+// ✅ FIX: Use individual useFont calls at top level to avoid hooks in loops
+// Each font is loaded once and cached by Skia
 function usePreloadedFonts() {
-  const loaded = {};
-  for (const family in FONT_MAP) {
-    loaded[family] = {};
-    for (const styleKey of Object.keys(FONT_MAP[family])) {
-      loaded[family][styleKey] = {};
-      for (const sz of FONT_SIZES) {
-        loaded[family][styleKey][sz] = useFont(FONT_MAP[family][styleKey], sz);
-      }
-    }
-  }
-  return loaded;
+  // Load each font individually to follow React hooks rules
+  const robotoRegular18 = useFont(FONT_MAP.Roboto.Regular, 18);
+  const robotoBold18 = useFont(FONT_MAP.Roboto.Bold, 18);
+  const robotoItalic18 = useFont(FONT_MAP.Roboto.Italic, 18);
+  const robotoBoldItalic18 = useFont(FONT_MAP.Roboto.BoldItalic, 18);
+
+  const latoRegular18 = useFont(FONT_MAP.Lato.Regular, 18);
+  const latoBold18 = useFont(FONT_MAP.Lato.Bold, 18);
+  const latoItalic18 = useFont(FONT_MAP.Lato.Italic, 18);
+  const latoBoldItalic18 = useFont(FONT_MAP.Lato.BoldItalic, 18);
+
+  const montserratRegular18 = useFont(FONT_MAP.Montserrat.Regular, 18);
+  const montserratBold18 = useFont(FONT_MAP.Montserrat.Bold, 18);
+  const montserratItalic18 = useFont(FONT_MAP.Montserrat.Italic, 18);
+  const montserratBoldItalic18 = useFont(FONT_MAP.Montserrat.BoldItalic, 18);
+
+  const openSansRegular18 = useFont(FONT_MAP.OpenSans.Regular, 18);
+  const openSansBold18 = useFont(FONT_MAP.OpenSans.Bold, 18);
+  const openSansItalic18 = useFont(FONT_MAP.OpenSans.Italic, 18);
+  const openSansBoldItalic18 = useFont(FONT_MAP.OpenSans.BoldItalic, 18);
+
+  const interRegular18 = useFont(FONT_MAP.Inter.Regular, 18);
+  const interBold18 = useFont(FONT_MAP.Inter.Bold, 18);
+  const interItalic18 = useFont(FONT_MAP.Inter.Italic, 18);
+  const interBoldItalic18 = useFont(FONT_MAP.Inter.BoldItalic, 18);
+
+  const poppinsRegular18 = useFont(FONT_MAP.Poppins.Regular, 18);
+  const poppinsBold18 = useFont(FONT_MAP.Poppins.Bold, 18);
+  const poppinsItalic18 = useFont(FONT_MAP.Poppins.Italic, 18);
+  const poppinsBoldItalic18 = useFont(FONT_MAP.Poppins.BoldItalic, 18);
+
+  const pacificoRegular18 = useFont(FONT_MAP.Pacifico.Regular, 18);
+  const notoEmojiRegular18 = useFont(FONT_MAP.NotoColorEmoji.Regular, 18);
+
+  // ✅ Use useMemo to create the loaded object only once
+  return React.useMemo(() => ({
+    Roboto: {
+      Regular: { 18: robotoRegular18 },
+      Bold: { 18: robotoBold18 },
+      Italic: { 18: robotoItalic18 },
+      BoldItalic: { 18: robotoBoldItalic18 },
+    },
+    Lato: {
+      Regular: { 18: latoRegular18 },
+      Bold: { 18: latoBold18 },
+      Italic: { 18: latoItalic18 },
+      BoldItalic: { 18: latoBoldItalic18 },
+    },
+    Montserrat: {
+      Regular: { 18: montserratRegular18 },
+      Bold: { 18: montserratBold18 },
+      Italic: { 18: montserratItalic18 },
+      BoldItalic: { 18: montserratBoldItalic18 },
+    },
+    OpenSans: {
+      Regular: { 18: openSansRegular18 },
+      Bold: { 18: openSansBold18 },
+      Italic: { 18: openSansItalic18 },
+      BoldItalic: { 18: openSansBoldItalic18 },
+    },
+    Inter: {
+      Regular: { 18: interRegular18 },
+      Bold: { 18: interBold18 },
+      Italic: { 18: interItalic18 },
+      BoldItalic: { 18: interBoldItalic18 },
+    },
+    Poppins: {
+      Regular: { 18: poppinsRegular18 },
+      Bold: { 18: poppinsBold18 },
+      Italic: { 18: poppinsItalic18 },
+      BoldItalic: { 18: poppinsBoldItalic18 },
+    },
+    Pacifico: {
+      Regular: { 18: pacificoRegular18 },
+    },
+    NotoColorEmoji: {
+      Regular: { 18: notoEmojiRegular18 },
+    },
+  }), [
+    robotoRegular18, robotoBold18, robotoItalic18, robotoBoldItalic18,
+    latoRegular18, latoBold18, latoItalic18, latoBoldItalic18,
+    montserratRegular18, montserratBold18, montserratItalic18, montserratBoldItalic18,
+    openSansRegular18, openSansBold18, openSansItalic18, openSansBoldItalic18,
+    interRegular18, interBold18, interItalic18, interBoldItalic18,
+    poppinsRegular18, poppinsBold18, poppinsItalic18, poppinsBoldItalic18,
+    pacificoRegular18, notoEmojiRegular18,
+  ]);
 }
 
 function getNearestFont(loadedFonts, family, bold, italic, size = 18) {
@@ -185,33 +264,17 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     activeLayerId,
     setPageLayers, // 👈 Changed from setLayers to setPageLayers
     onColorPicked,
+    tapeSettings, // ✅ Tape settings
+    shapeSettings, // ✅ Shape settings
   },
   ref
 ) {
   const loadedFonts = usePreloadedFonts();
 
-  // ✅ FIX: Only dispose fonts on component unmount, not when loadedFonts changes
-  useEffect(() => {
-    return () => {
-      // ✅ Cleanup only when component unmounts
-      if (loadedFonts) {
-        for (const family in loadedFonts) {
-          for (const styleKey in loadedFonts[family]) {
-            for (const sz in loadedFonts[family][styleKey]) {
-              const font = loadedFonts[family][styleKey][sz];
-              if (font && typeof font.dispose === "function") {
-                try {
-                  font.dispose();
-                } catch (e) {
-                  console.warn('[MultiPageCanvas] Font dispose error:', e);
-                }
-              }
-            }
-          }
-        }
-      }
-    };
-  }, []); // ✅ Empty deps - only cleanup on unmount
+
+  // ✅ Skia's useFont hook manages font lifecycle automatically
+  // No manual dispose needed - fonts are garbage collected when component unmounts
+
 
   const drawingDataRef = useRef({ pages: {} });
 
@@ -222,6 +285,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const [applyMode, setApplyMode] = useState("append");
   const [placeTemplateOnNewLayer, setPlaceTemplateOnNewLayer] = useState(true);
 
+  const { toast } = useToast();
   // Initialize pages based on noteConfig
   const initialPages = useMemo(() => {
     if (!noteConfig) return [{ id: 1 }];
@@ -496,7 +560,12 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   // ➕ Thêm page mới
   const addPage = useCallback(() => {
     if (pages.length >= 10) {
-      Alert.alert("Limit", "You can only create up to 10 pages.");
+      toast({
+        type: "error",
+        text1: "Limit",
+        text2: "You can only create up to 10 pages.",
+        variant: "destructive",
+      });
       return;
     }
     const newId = Date.now();
@@ -1085,6 +1154,20 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         scrollTimeoutRef.current = null;
       }
       isScrollingProgrammaticallyRef.current = false;
+
+      // ✅ FIX: Explicitly clear large refs to release memory
+      if (pageRefs.current) {
+        Object.keys(pageRefs.current).forEach(key => {
+          pageRefs.current[key] = null;
+        });
+        pageRefs.current = {};
+      }
+      if (templateHistoryRef.current) {
+        templateHistoryRef.current.clear();
+      }
+      if (snapshotSignaturesRef.current) {
+        snapshotSignaturesRef.current = {};
+      }
     };
   }, []);
 
@@ -1940,6 +2023,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                         pressure,
                         thickness,
                         stabilization,
+                        tapeSettings, // ✅ Pass tape settings
+                        shapeSettings, // ✅ Pass shape settings
                         layers: pageLayers?.[p.id] || [
                           {
                             id: "layer1",
