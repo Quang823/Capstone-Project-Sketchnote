@@ -119,6 +119,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     canvasHeight,
     selectedId,
     toolConfigs = {},
+    tapeSettings,
     pressure = 0.5,
     thickness = 1,
     stabilization = 0,
@@ -355,8 +356,131 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     return <Group key="air-dots-group">{nodes}</Group>;
   }
 
+  const renderTape = (s) => {
+    if (!s || !s.tapeSettings) return null;
+    const { mode, pattern, color, thickness } = s.tapeSettings;
+    const baseColor = color || "#FDA4AF";
+    const width = (thickness || 4) * 5; // Scale thickness to pixel width
+
+    // Build the main path
+    const path = Skia.Path.Make();
+    if (mode === "rectangle" && s.shape) {
+      const { x, y, w, h } = s.shape;
+      path.addRect({ x, y, width: w, height: h });
+    } else if (s.points && s.points.length >= 2) {
+      // Line mode
+      const p1 = s.points[0];
+      const p2 = s.points[s.points.length - 1];
+      path.moveTo(p1.x, p1.y);
+      path.lineTo(p2.x, p2.y);
+    } else {
+      return null;
+    }
+
+    // Pattern rendering logic
+    const renderPattern = () => {
+      const patternPath = Skia.Path.Make();
+      const bounds = path.getBounds();
+      // Expand bounds for line mode thickness
+      const expansion = width;
+      const bx = bounds.x - expansion;
+      const by = bounds.y - expansion;
+      const bw = bounds.width + expansion * 2;
+      const bh = bounds.height + expansion * 2;
+
+      const step = 10;
+
+      switch (pattern) {
+        case "diagonal":
+          for (let i = bx - bh; i < bx + bw; i += step) {
+            patternPath.moveTo(i, by + bh);
+            patternPath.lineTo(i + bh, by);
+          }
+          break;
+        case "dashed-diagonal":
+          for (let i = bx - bh; i < bx + bw; i += step * 1.5) {
+            patternPath.moveTo(i, by + bh);
+            patternPath.lineTo(i + bh, by);
+          }
+          break;
+        case "dots":
+          for (let x = bx; x < bx + bw; x += step) {
+            for (let y = by; y < by + bh; y += step) {
+              patternPath.addCircle(x, y, 1.5);
+            }
+          }
+          break;
+        case "double-dots":
+          for (let x = bx; x < bx + bw; x += step) {
+            for (let y = by; y < by + bh; y += step) {
+              patternPath.addCircle(x, y, 1.5);
+              patternPath.addCircle(x + step / 2, y + step / 2, 1.5);
+            }
+          }
+          break;
+        case "grid":
+          for (let x = bx; x < bx + bw; x += step) {
+            patternPath.moveTo(x, by);
+            patternPath.lineTo(x, by + bh);
+          }
+          for (let y = by; y < by + bh; y += step) {
+            patternPath.moveTo(bx, y);
+            patternPath.lineTo(bx + bw, y);
+          }
+          break;
+        case "checkered":
+          for (let x = bx; x < bx + bw; x += step) {
+            patternPath.moveTo(x, by);
+            patternPath.lineTo(x, by + bh);
+          }
+          break;
+        default:
+          break;
+      }
+      return patternPath;
+    };
+
+    const patternPath = renderPattern();
+
+    return (
+      <Group key={s.id} layer>
+        {/* Base Tape Background - Acts as the mask for srcIn */}
+        <Path
+          path={path}
+          color={makeRGBA(baseColor, 0.5)}
+          style={mode === "rectangle" ? "fill" : "stroke"}
+          strokeWidth={mode === "rectangle" ? 0 : width}
+          strokeCap="butt"
+        />
+
+        {/* Pattern Overlay - Composited with srcIn to clip to base */}
+        <Path
+          path={patternPath}
+          color={makeRGBA("#FFF", 0.6)}
+          style="stroke"
+          strokeWidth={1}
+          blendMode="srcIn"
+        />
+
+        {/* Border/Outline - Drawn on top (no blend mode) */}
+        <Path
+          path={path}
+          color={makeRGBA(baseColor, 0.8)}
+          style="stroke"
+          strokeWidth={mode === "rectangle" ? 1 : width}
+          strokeCap="butt"
+          blendMode="srcOver"
+        />
+      </Group>
+    );
+  };
+
   const renderStroke = (s, index) => {
     if (!s) return null;
+
+    if (s.tool === "tape") {
+      return renderTape(s);
+    }
 
     // 📊 table
     if (s.tool === "table") {
@@ -565,29 +689,38 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         "arrow",
         "polygon",
         "star",
+        "shape", // ✅ Add shape tool
       ].includes(s.tool)
     ) {
       const path = Skia.Path.Make();
-      if (s.tool === "circle") {
+      // Determine shape type from tool or shape properties
+      const isRect = s.tool === "rect" || s.tool === "square" || (s.tool === "shape" && s.shape.w !== undefined && s.shape.h !== undefined && s.shape.x !== undefined);
+      const isCircle = s.tool === "circle" || (s.tool === "shape" && s.shape.r !== undefined && s.shape.cx !== undefined);
+      const isOval = s.tool === "oval" || (s.tool === "shape" && s.shape.rx !== undefined && s.shape.ry !== undefined);
+      const isTriangle = s.tool === "triangle" || (s.tool === "shape" && s.shape.x3 !== undefined);
+      const isPoly = s.tool === "polygon" || s.tool === "star" || (s.tool === "shape" && s.shape.points !== undefined);
+      const isLineOrArrow = s.tool === "line" || s.tool === "arrow" || (s.tool === "shape" && s.shape.x2 !== undefined && !s.shape.x3);
+
+      if (isCircle) {
         const { cx = 0, cy = 0, r = 0 } = s.shape;
         path.addCircle(cx, cy, r);
-      } else if (s.tool === "rect" || s.tool === "square") {
+      } else if (isRect) {
         const { x = 0, y = 0, w = 0, h = 0 } = s.shape;
         path.addRect({ x, y, width: w, height: h });
-      } else if (s.tool === "triangle") {
+      } else if (isTriangle) {
         const { x1 = 0, y1 = 0, x2 = 0, y2 = 0, x3 = 0, y3 = 0 } = s.shape;
         path.moveTo(x1, y1);
         path.lineTo(x2, y2);
         path.lineTo(x3, y3);
         path.close();
-      } else if (s.tool === "oval") {
+      } else if (isOval) {
         const { cx = 0, cy = 0, rx = 0, ry = 0 } = s.shape;
         path.addOval({ cx, cy, rx, ry });
-      } else if (s.tool === "line" || s.tool === "arrow") {
+      } else if (isLineOrArrow) {
         const { x1 = 0, y1 = 0, x2 = 0, y2 = 0 } = s.shape;
         path.moveTo(x1, y1);
         path.lineTo(x2, y2);
-      } else if (s.tool === "polygon" || s.tool === "star") {
+      } else if (isPoly) {
         const pts = s.shape.points || [];
         if (pts.length > 0) {
           path.moveTo(pts[0]?.x ?? 0, pts[0]?.y ?? 0);
@@ -597,22 +730,41 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         }
       }
 
-      const main = (
+      const elements = [];
+
+      // 1. Fill Layer
+      if (s.shapeSettings?.fill || s.fill) {
+        elements.push(
+          <Path
+            key={`${s.id}-fill`}
+            path={path}
+            color={s.fillColor || s.color || "#000000"}
+            style="fill"
+          />
+        );
+      }
+
+      // 2. Stroke Layer (Main Outline)
+      elements.push(
         <Path
-          key={`${s.id}-main`}
+          key={`${s.id}-stroke`}
           path={path}
           color={s.color || "#000000"}
           strokeWidth={s.width || 1}
           style="stroke"
           strokeCap="round"
-          strokeJoin="round"
+          strokeJoin="miter"
+          strokeMiter={50}
         />
       );
 
-      if (s.tool === "arrow") {
+      // Handle Arrows (including double arrow)
+      if (s.tool === "arrow" || (s.tool === "shape" && (s.shapeSettings?.shape === "arrow" || s.shapeSettings?.shape === "double_arrow" || s.shape.double))) {
         const { x1 = 0, y1 = 0, x2 = 0, y2 = 0 } = s.shape;
-        const angle = Math.atan2(y2 - y1, x2 - x1);
         const headLen = Math.max(10, (s.width || 1) * 2);
+
+        // End arrow
+        const angle = Math.atan2(y2 - y1, x2 - x1);
         const leftX = x2 - headLen * Math.cos(angle - Math.PI / 6);
         const leftY = y2 - headLen * Math.sin(angle - Math.PI / 6);
         const rightX = x2 - headLen * Math.cos(angle + Math.PI / 6);
@@ -622,22 +774,47 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         head.lineTo(leftX, leftY);
         head.moveTo(x2, y2);
         head.lineTo(rightX, rightY);
-        return (
-          <Group key={`${s.id}-arrow-group`}>
-            {main}
+
+        elements.push(
+          <Path
+            key={`${s.id}-arrow-head`}
+            path={head}
+            color={s.color || "#000000"}
+            strokeWidth={s.width || 1}
+            style="stroke"
+            strokeCap="round"
+            strokeJoin="round"
+            strokeMiter={50}
+          />
+        );
+
+        // Start arrow (for double arrow)
+        if (s.shape.double || s.shapeSettings?.shape === "double_arrow") {
+          const leftX2 = x1 + headLen * Math.cos(angle - Math.PI / 6);
+          const leftY2 = y1 + headLen * Math.sin(angle - Math.PI / 6);
+          const rightX2 = x1 + headLen * Math.cos(angle + Math.PI / 6);
+          const rightY2 = y1 + headLen * Math.sin(angle + Math.PI / 6);
+          const head2 = Skia.Path.Make();
+          head2.moveTo(x1, y1);
+          head2.lineTo(leftX2, leftY2);
+          head2.moveTo(x1, y1);
+          head2.lineTo(rightX2, rightY2);
+
+          elements.push(
             <Path
-              key={`${s.id}-arrow-head`}
-              path={head}
+              key={`${s.id}-arrow-head-start`}
+              path={head2}
               color={s.color || "#000000"}
               strokeWidth={s.width || 1}
               style="stroke"
               strokeCap="round"
               strokeJoin="round"
             />
-          </Group>
-        );
+          );
+        }
       }
-      return main;
+
+      return <Group key={`${s.id}-shape-group`}>{elements}</Group>;
     }
 
     // strokes (pen-like)
@@ -1044,16 +1221,29 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   "oval",
                   "polygon",
                   "star",
+                  "shape", // ✅ Add shape tool
+                  "pentagon",
+                  "hexagon",
+                  "octagon",
+                  "diamond",
+                  "right_triangle",
                 ].includes(s.tool)
               ) {
                 const path = Skia.Path.Make();
-                if (s.tool === "circle") {
+                // Determine shape type from tool or shape properties (Mirroring renderStroke logic)
+                const isRect = s.tool === "rect" || s.tool === "square" || (s.tool === "shape" && s.shape.w !== undefined && s.shape.h !== undefined && s.shape.x !== undefined);
+                const isCircle = s.tool === "circle" || (s.tool === "shape" && s.shape.r !== undefined && s.shape.cx !== undefined);
+                const isOval = s.tool === "oval" || (s.tool === "shape" && s.shape.rx !== undefined && s.shape.ry !== undefined);
+                const isTriangle = s.tool === "triangle" || (s.tool === "shape" && s.shape.x3 !== undefined);
+                const isPoly = s.tool === "polygon" || s.tool === "star" || s.tool === "pentagon" || s.tool === "hexagon" || s.tool === "octagon" || s.tool === "diamond" || s.tool === "right_triangle" || (s.tool === "shape" && s.shape.points !== undefined);
+
+                if (isCircle) {
                   const { cx = 0, cy = 0, r = 0 } = s.shape;
                   path.addCircle(cx, cy, r);
-                } else if (s.tool === "rect" || s.tool === "square") {
+                } else if (isRect) {
                   const { x = 0, y = 0, w = 0, h = 0 } = s.shape;
                   path.addRect({ x, y, width: w, height: h });
-                } else if (s.tool === "triangle") {
+                } else if (isTriangle) {
                   const {
                     x1 = 0,
                     y1 = 0,
@@ -1066,10 +1256,10 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                   path.lineTo(x2, y2);
                   path.lineTo(x3, y3);
                   path.close();
-                } else if (s.tool === "oval") {
+                } else if (isOval) {
                   const { cx = 0, cy = 0, rx = 0, ry = 0 } = s.shape;
                   path.addOval({ cx, cy, rx, ry });
-                } else if (s.tool === "polygon" || s.tool === "star") {
+                } else if (isPoly) {
                   const pts = s.shape.points || [];
                   if (pts.length > 0) {
                     path.moveTo(pts[0]?.x ?? 0, pts[0]?.y ?? 0);
@@ -1380,6 +1570,26 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         tool !== "eraser" &&
         eraserMode !== "object" &&
         (() => {
+          if (tool === "tape") {
+            const tempStroke = {
+              id: "preview-tape",
+              tool: "tape",
+              points: currentPoints,
+              tapeSettings: tapeSettings,
+            };
+            if (tapeSettings?.mode === "rectangle" && currentPoints.length > 1) {
+              const p1 = currentPoints[0];
+              const p2 = currentPoints[currentPoints.length - 1];
+              tempStroke.shape = {
+                x: Math.min(p1.x, p2.x),
+                y: Math.min(p1.y, p2.y),
+                w: Math.abs(p2.x - p1.x),
+                h: Math.abs(p2.y - p1.y)
+              };
+            }
+            return renderTape(tempStroke);
+          }
+
           let previewColor = color;
           let previewBlend = "srcOver";
           let previewOpacity = 1;

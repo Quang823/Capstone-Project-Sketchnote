@@ -88,7 +88,6 @@ export default function ChatWidget({ visible, onClose }) {
         const getAdminUsers = async () => {
             try {
                 const adminUsers = await authService.getUserRoleAdmin();
-                console.log(adminUsers)
                 setAdminUsers(adminUsers);
 
             } catch (error) {

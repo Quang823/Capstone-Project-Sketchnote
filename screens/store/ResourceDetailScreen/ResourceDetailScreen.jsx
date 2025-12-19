@@ -26,7 +26,7 @@ export default function ResourceDetailScreen() {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  const { resourceId } = route.params;
+  const { resourceId, owned } = route.params;
   const [resource, setResource] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -34,6 +34,11 @@ export default function ResourceDetailScreen() {
   const [selectedOption, setSelectedOption] = useState("Blindbox");
   const [galleryImages, setGalleryImages] = useState([]);
   const [feedback, setFeedback] = useState([]);
+
+  // Version management states
+  const [purchasedResourceData, setPurchasedResourceData] = useState(null);
+  const [selectedVersionId, setSelectedVersionId] = useState(null);
+  const [showVersions, setShowVersions] = useState(false);
 
   useEffect(() => {
     const fetchResource = async () => {
@@ -56,6 +61,24 @@ export default function ResourceDetailScreen() {
         );
 
         setFeedback(feedbackData || []);
+
+        // 🔥 NEW: Fetch version data if user owns this resource
+        if (owned) {
+          try {
+            const purchasedData = await resourceService.getResourceProjectByUserIdV2();
+            // Find the matching resource by resourceTemplateId
+            const matchedResource = purchasedData.find(
+              (item) => item.resourceTemplateId === resourceId
+            );
+
+            if (matchedResource) {
+              setPurchasedResourceData(matchedResource);
+              setSelectedVersionId(matchedResource.currentVersionId);
+            }
+          } catch (error) {
+            console.error("Failed to fetch version data:", error);
+          }
+        }
       } catch (error) {
         Toast.show({
           type: "error",
@@ -67,7 +90,7 @@ export default function ResourceDetailScreen() {
       }
     };
     fetchResource();
-  }, [resourceId]);
+  }, [resourceId, owned]);
 
 
 
@@ -438,9 +461,156 @@ export default function ResourceDetailScreen() {
                     </View>
                   </View> */}
                 </View>
+                {/* 🔥 Version Management Section - Only for Owned Resources */}
+                {owned && purchasedResourceData && purchasedResourceData.availableVersions && (
+                  <View style={[styles.sectionInner, styles.sectionInnerLast, isDark && styles.sectionInnerDark]}>
+                    <Pressable
+                      style={styles.versionHeaderRow}
+                      onPress={() => setShowVersions(!showVersions)}
+                    >
+                      <Text style={[styles.versionHeaderTitle, isDark && styles.versionHeaderTitleDark]}>
+                        Available Versions ({purchasedResourceData.availableVersions.length})
+                      </Text>
+                      <Icon
+                        name={showVersions ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+                        size={24}
+                        color={isDark ? "#94A3B8" : "#64748B"}
+                      />
+                    </Pressable>
+                    {/* Version Info Cards */}
+                    {showVersions && (
+                      <View style={styles.versionsContainer}>
+                        {/* Current Version Info */}
+                        <View style={[styles.versionInfoCard, isDark && styles.versionInfoCardDark]}>
+                          <View style={styles.versionInfoRow}>
+                            <Icon name="new-releases" size={18} color="#3B82F6" />
+                            <Text style={[styles.versionInfoLabel, isDark && styles.versionInfoLabelDark]}>
+                              Latest Version:
+                            </Text>
+                            <Text style={[styles.versionInfoValue, { color: "#3B82F6" }]}>
+                              v{purchasedResourceData.currentVersionNumber}
+                            </Text>
+                          </View>
+                          {purchasedResourceData.hasNewerVersion && (
+                            <View style={[styles.updateBadge, isDark && styles.updateBadgeDark]}>
+                              <Icon name="system-update" size={14} color="#F59E0B" />
+                              <Text style={styles.updateBadgeText}>Update Available</Text>
+                            </View>
+                          )}
+                        </View>
+                        {/* Version List */}
+                        <ScrollView
+                          style={styles.versionList}
+                          showsVerticalScrollIndicator={false}
+                        >
+                          {purchasedResourceData.availableVersions.map((version, index) => {
+                            const isCurrentVersion = version.versionId === purchasedResourceData.currentVersionId;
+                            const isPurchasedVersion = version.versionId === purchasedResourceData.purchasedVersionId;
+                            const isSelected = version.versionId === selectedVersionId;
+                            return (
+                              <Pressable
+                                key={version.versionId}
+                                style={[
+                                  styles.versionCard,
+                                  isDark && styles.versionCardDark,
+                                  isSelected && styles.versionCardSelected,
+                                ]}
+                                onPress={() => setSelectedVersionId(isSelected ? null : version.versionId)}
+                              >
+                                {/* Version Header */}
+                                <View style={styles.versionCardHeader}>
+                                  <View style={styles.versionTitleRow}>
+                                    <View style={[styles.versionNumberBadge, isDark && styles.versionNumberBadgeDark]}>
+                                      <Text style={[styles.versionNumber, isDark && styles.versionNumberDark]}>
+                                        v{version.versionNumber}
+                                      </Text>
+                                    </View>
+                                    <View style={styles.versionBadgesRow}>
+                                      {isCurrentVersion && (
+                                        <View style={styles.latestBadge}>
+                                          <Text style={styles.latestBadgeText}>LATEST</Text>
+                                        </View>
+                                      )}
+                                      {isPurchasedVersion && (
+                                        <View style={styles.purchasedBadge}>
+                                          <Icon name="verified" size={12} color="#10B981" />
+                                          <Text style={styles.purchasedBadgeText}>PURCHASED</Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                  </View>
+                                  <View style={styles.versionHeaderRight}>
+                                    <Text style={[styles.versionStatus, {
+                                      color: version.status === 'PUBLISHED' ? '#10B981' : '#94A3B8'
+                                    }]}>
+                                      {version.status}
+                                    </Text>
+                                  </View>
+                                </View>
+                                {/* Version Details - Show when selected */}
+                                {isSelected && (
+                                  <View style={styles.versionDetails}>
+                                    <Text style={[styles.versionName, isDark && styles.versionNameDark]}>
+                                      {version.name}
+                                    </Text>
+                                    <Text style={[styles.versionDescription, isDark && styles.versionDescriptionDark]}>
+                                      {version.description}
+                                    </Text>
+
+                                    <View style={styles.versionMetaRow}>
+                                      <View style={styles.versionMetaItem}>
+                                        <Icon name="event" size={14} color={isDark ? "#94A3B8" : "#64748B"} />
+                                        <Text style={[styles.versionMetaText, isDark && styles.versionMetaTextDark]}>
+                                          {new Date(version.releaseDate).toLocaleDateString("vi-VN")}
+                                        </Text>
+                                      </View>
+                                      <View style={styles.versionMetaItem}>
+                                        <Icon name="attach-money" size={14} color={isDark ? "#94A3B8" : "#64748B"} />
+                                        <Text style={[styles.versionMetaText, isDark && styles.versionMetaTextDark]}>
+                                          {version.price.toLocaleString()} ₫
+                                        </Text>
+                                      </View>
+                                    </View>
+                                    {/* Version Images */}
+                                    {version.images && version.images.length > 0 && (
+                                      <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        style={styles.versionImagesScroll}
+                                      >
+                                        {version.images.map((img, idx) => (
+                                          <Image
+                                            key={idx}
+                                            source={{ uri: img.imageUrl }}
+                                            style={styles.versionImage}
+                                            resizeMode="cover"
+                                          />
+                                        ))}
+                                      </ScrollView>
+                                    )}
+                                    {/* Version Items Count */}
+                                    {version.items && version.items.length > 0 && (
+                                      <View style={[styles.versionItemsInfo, isDark && styles.versionItemsInfoDark]}>
+                                        <Icon name="inventory-2" size={16} color="#3B82F6" />
+                                        <Text style={[styles.versionItemsText, isDark && styles.versionItemsTextDark]}>
+                                          {version.items.length} items included
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </View>
+                                )}
+                              </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
 
               <View style={styles.actionButtonsContainer}>
+
                 {resource.isOwner ? (
                   <View style={{ flex: 1, flexDirection: "row", gap: 12 }}>
                     <View

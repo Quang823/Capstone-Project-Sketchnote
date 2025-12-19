@@ -81,6 +81,15 @@ export default function CreditTransactionHistoryScreen() {
                 description: transaction.description || "Purchased credits",
                 category: "deposit"
             };
+        } else if (transaction.type === 'PACKAGE_PURCHASE') {
+            config = {
+                icon: "card-giftcard",
+                color: "#7C3AED",
+                sign: "+",
+                label: transaction.packageName || "Package Purchase",
+                description: transaction.description || "Purchased package",
+                category: "deposit"
+            };
         } else if (transaction.type === 'USAGE' || transaction.type === 'SPEND') {
             config = {
                 icon: "shopping-cart",
@@ -98,7 +107,7 @@ export default function CreditTransactionHistoryScreen() {
     const filteredData = transactions
         .filter((t) => {
             if (activeTab === "All") return true;
-            if (activeTab === "Deposits") return t.type === 'DEPOSIT' || t.type === 'TOPUP';
+            if (activeTab === "Deposits") return t.type === 'DEPOSIT' || t.type === 'TOPUP' || t.type === 'PACKAGE_PURCHASE';
             if (activeTab === "Usage") return t.type === 'USAGE' || t.type === 'SPEND';
             return true;
         })
@@ -131,14 +140,22 @@ export default function CreditTransactionHistoryScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                     <Text style={styles.cardTitle}>{config.label}</Text>
-                    <Text style={styles.cardDescription}>{config.description}</Text>
+                    <Text style={styles.cardDescription} numberOfLines={2}>{config.description}</Text>
                     <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
+                    {item.referenceId && (
+                        <Text style={styles.cardRef}>Ref: {item.referenceId}</Text>
+                    )}
                 </View>
                 <View style={{ alignItems: "flex-end" }}>
                     <Text style={[styles.amount, { color: config.color }]}>
                         {config.sign}
                         {formatCurrency(item.amount)}
                     </Text>
+                    {item.balanceAfter !== undefined && (
+                        <Text style={styles.balanceText}>
+                            Balance: {formatCurrency(item.balanceAfter)}
+                        </Text>
+                    )}
                 </View>
             </Pressable>
         );
@@ -254,6 +271,40 @@ export default function CreditTransactionHistoryScreen() {
                                                         {selectedTx.type}
                                                     </Text>
                                                 </View>
+
+                                                {selectedTx.packageName && (
+                                                    <View style={styles.detailRow}>
+                                                        <Text style={styles.detailLabel}>Package Name</Text>
+                                                        <Text style={styles.detailValue}>
+                                                            {selectedTx.packageName}
+                                                        </Text>
+                                                    </View>
+                                                )}
+
+                                                {selectedTx.referenceId && (
+                                                    <View style={styles.detailRow}>
+                                                        <Text style={styles.detailLabel}>Reference ID</Text>
+                                                        <Text style={styles.detailValue}>
+                                                            {selectedTx.referenceId}
+                                                        </Text>
+                                                    </View>
+                                                )}
+
+                                                <View style={styles.detailRow}>
+                                                    <Text style={styles.detailLabel}>Amount</Text>
+                                                    <Text style={[styles.detailValue, { color: config.color, fontWeight: '700' }]}>
+                                                        {config.sign}{formatCurrency(selectedTx.amount)} Credits
+                                                    </Text>
+                                                </View>
+
+                                                {selectedTx.balanceAfter !== undefined && (
+                                                    <View style={styles.detailRow}>
+                                                        <Text style={styles.detailLabel}>Balance After</Text>
+                                                        <Text style={[styles.detailValue, { fontWeight: '700' }]}>
+                                                            {formatCurrency(selectedTx.balanceAfter)} Credits
+                                                        </Text>
+                                                    </View>
+                                                )}
 
                                                 <View style={styles.detailRow}>
                                                     <Text style={styles.detailLabel}>Date & Time</Text>

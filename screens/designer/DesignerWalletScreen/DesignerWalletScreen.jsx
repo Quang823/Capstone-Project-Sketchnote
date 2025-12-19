@@ -517,11 +517,7 @@ export default function DesignerWalletScreen() {
             >
               <Pressable
                 style={[styles.oneActionItem, isPortrait && { width: "48%" }]}
-                onPress={() =>
-                  navigation.navigate("TransactionHistory", {
-                    transactions: walletData.transactions || [],
-                  })
-                }
+                onPress={() => navigation.navigate("TransactionHistory")}
               >
                 <View
                   style={[
@@ -600,11 +596,7 @@ export default function DesignerWalletScreen() {
             {walletData.transactions.length > 0 && (
               <Pressable
                 style={styles.viewAllButton}
-                onPress={() =>
-                  navigation.navigate("TransactionHistory", {
-                    transactions: walletData.transactions || [],
-                  })
-                }
+                onPress={() => navigation.navigate("TransactionHistory")}
               >
                 <Text style={styles.viewAllText}>View All</Text>
                 <Icon

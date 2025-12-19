@@ -172,6 +172,51 @@ export function buildShapeFromPoints(tool, points) {
       }
       return { shape: { points: pts } };
     }
+    case "right_triangle": {
+      return {
+        shape: {
+          x1: minX,
+          y1: minY,
+          x2: minX,
+          y2: maxY,
+          x3: maxX,
+          y3: maxY,
+        },
+      };
+    }
+    case "diamond": {
+      const cx = minX + w / 2;
+      const cy = minY + h / 2;
+      return {
+        shape: {
+          points: [
+            { x: cx, y: minY }, // Top
+            { x: maxX, y: cy }, // Right
+            { x: cx, y: maxY }, // Bottom
+            { x: minX, y: cy }, // Left
+          ],
+        },
+      };
+    }
+    case "pentagon":
+    case "hexagon":
+    case "octagon": {
+      const sides = tool === "pentagon" ? 5 : tool === "hexagon" ? 6 : 8;
+      const cx = minX + w / 2;
+      const cy = minY + h / 2;
+      const r = Math.max(w, h) / 2;
+      const pts = [];
+      for (let i = 0; i < sides; i++) {
+        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sides;
+        pts.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+      }
+      return { shape: { points: pts } };
+    }
+    case "double_arrow": {
+      const start = points[0];
+      const end = points[points.length - 1];
+      return { shape: { x1: start.x, y1: start.y, x2: end.x, y2: end.y, double: true } };
+    }
     default:
       return null;
   }
