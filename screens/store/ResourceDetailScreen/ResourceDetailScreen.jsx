@@ -16,7 +16,6 @@ import { styles } from "./ResourceDetailScreen.styles";
 import { feedbackService } from "../../../service/feedbackService";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
-import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useTheme } from "../../../context/ThemeContext";
 
 export default function ResourceDetailScreen() {
@@ -263,8 +262,25 @@ export default function ResourceDetailScreen() {
       {/* Header */}
       <View style={[styles.header, isDark && styles.headerDark]}>
         <View style={styles.headerLeft}>
-          <SidebarToggleButton iconSize={26} iconColor={isDark ? "#FFFFFF" : "#084F8C"} />
-          <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>Resource Detail</Text>
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={({ pressed }) => [
+              {
+                marginRight: 12,
+                opacity: pressed ? 0.7 : 1,
+                padding: 4,
+              },
+            ]}
+          >
+            <Icon
+              name="arrow-back"
+              size={26}
+              color={isDark ? "#FFFFFF" : "#084F8C"}
+            />
+          </Pressable>
+          <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>
+            Resource Detail
+          </Text>
         </View>
         <Pressable
           style={[styles.cartButton, isDark && styles.cartButtonDark]}
