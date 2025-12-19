@@ -7,6 +7,8 @@ import ToolButton from "./ToolButton";
 import ColorPalette from "./ColorPalette";
 import EyeDropperTool from "./EyeDropperTool";
 import TableDropdown from "../table/TableDropdown";
+import TapeDropdown from "../tape/TapeDropdown";
+import ShapeDropdown from "../shape/ShapeDropdown";
 import { DEFAULT_COLORS } from "./constants";
 
 const ICON_SIZE = 18;
@@ -42,6 +44,18 @@ export default function ToolbarContainer({
   pickedColors = [], // 👈 Nhận từ parent
   onColorPicked, // 👈 Nhận từ parent
   onInsertTable, // 👈 Callback khi insert table
+
+  // Tape Props
+  tapeSettings,
+  setTapeSettings,
+  onSelectTape,
+  onClearTapesOnPage,
+  onClearTapesOnAllPages,
+
+  // Shape Props
+  shapeSettings,
+  setShapeSettings,
+  onSelectShape,
 }) {
   // ===== COLOR STATE =====
   const [colors, setColors] = useState(DEFAULT_COLORS);
@@ -51,6 +65,14 @@ export default function ToolbarContainer({
   // ===== TABLE STATE =====
   const [tableDropdownVisible, setTableDropdownVisible] = useState(false);
   const tableButtonRef = useRef(null);
+
+  // ===== TAPE STATE =====
+  const [tapeDropdownVisible, setTapeDropdownVisible] = useState(false);
+  const tapeButtonRef = useRef(null);
+
+  // ===== SHAPE STATE =====
+  const [shapeDropdownVisible, setShapeDropdownVisible] = useState(false);
+  const shapeButtonRef = useRef(null);
 
   // Remember last selected pen sub-tool
   const PEN_TOOLS = [
@@ -143,614 +165,532 @@ export default function ToolbarContainer({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Undo / Redo / Clear */}
-        <ToolButton onPress={onUndo}>
-          <MaterialCommunityIcons
-            name="undo"
-            size={ICON_SIZE}
-            color={ICON_COLOR}
-          />
-        </ToolButton>
-        <ToolButton onPress={onRedo}>
-          <MaterialCommunityIcons
-            name="redo"
-            size={ICON_SIZE}
-            color={ICON_COLOR}
-          />
-        </ToolButton>
-        <ToolButton onPress={onClear}>
-          <MaterialCommunityIcons
-            name="delete-outline"
-            size={ICON_SIZE}
-            color={ICON_COLOR}
-          />
-        </ToolButton>
-
-        <View style={styles.divider} />
-
-        {/* Pen Group */}
-        <ToolGroup
-          label="Pens"
-          mainIcon={
+        {/* ═══════════════════════════════════════════════════════════════════
+            GROUP 1: HISTORY (Undo/Redo/Clear)
+        ═══════════════════════════════════════════════════════════════════ */}
+        <View style={styles.toolGroup}>
+          <ToolButton onPress={onUndo}>
             <MaterialCommunityIcons
-              name="draw"
+              name="undo"
               size={ICON_SIZE}
               color={ICON_COLOR}
             />
-          }
-          lastSelected={lastPenTool}
-          options={[
-            {
-              name: "pen",
-              label: "Pen",
-              icon: (
-                <MaterialCommunityIcons
-                  name="lead-pencil"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "pencil",
-              label: "Pencil",
-              icon: (
-                <MaterialCommunityIcons
-                  name="pencil-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "brush",
-              label: "Brush",
-              icon: (
-                <MaterialCommunityIcons
-                  name="brush-variant"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "calligraphy",
-              label: "Calligraphy",
-              icon: (
-                <MaterialCommunityIcons
-                  name="fountain-pen"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "highlighter",
-              label: "Highlighter",
-              icon: (
-                <MaterialCommunityIcons
-                  name="marker"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "marker",
-              label: "Marker",
-              icon: (
-                <MaterialCommunityIcons
-                  name="marker-check"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "airbrush",
-              label: "Airbrush",
-              icon: (
-                <MaterialCommunityIcons
-                  name="spray"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "crayon",
-              label: "Crayon",
-              icon: (
-                <MaterialCommunityIcons
-                  name="pencil"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-          ]}
-          tool={tool}
-          setTool={setTool}
-        />
+          </ToolButton>
+          <ToolButton onPress={onRedo}>
+            <MaterialCommunityIcons
+              name="redo"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
+          </ToolButton>
+          <ToolButton onPress={onClear}>
+            <MaterialCommunityIcons
+              name="delete-outline"
+              size={ICON_SIZE}
+              color={ICON_COLOR}
+            />
+          </ToolButton>
+        </View>
 
-        {/* Eraser */}
-        <View ref={eraserButtonRef}>
-          <TouchableOpacity
-            style={[
-              styles.eraserButton,
-              tool.includes("eraser") && styles.eraserButtonActive,
+        <View style={styles.divider} />
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            GROUP 2: DRAWING TOOLS (Pens, Eraser, Shapes, Fill)
+        ═══════════════════════════════════════════════════════════════════ */}
+        <View style={styles.toolGroup}>
+          {/* Pen Group */}
+          <ToolGroup
+            label="Pens"
+            mainIcon={
+              <MaterialCommunityIcons
+                name="draw"
+                size={ICON_SIZE}
+                color={ICON_COLOR}
+              />
+            }
+            lastSelected={lastPenTool}
+            options={[
+              {
+                name: "pen",
+                label: "Pen",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="lead-pencil"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "pencil",
+                label: "Pencil",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="pencil-outline"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "brush",
+                label: "Brush",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="brush-variant"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "calligraphy",
+                label: "Calligraphy",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="fountain-pen"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "highlighter",
+                label: "Highlighter",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="marker"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "marker",
+                label: "Marker",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="marker-check"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "airbrush",
+                label: "Airbrush",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="spray"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "crayon",
+                label: "Crayon",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="pencil"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
             ]}
-            onPress={() => {
-              if (tool.includes("eraser")) {
-                setEraserDropdownVisible(true);
-              } else {
-                setTool("eraser");
-                setEraserMode?.("pixel");
+            tool={tool}
+            setTool={setTool}
+          />
+
+          {/* Eraser */}
+          <View ref={eraserButtonRef}>
+            <TouchableOpacity
+              style={[
+                styles.eraserButton,
+                tool.includes("eraser") && styles.eraserButtonActive,
+              ]}
+              onPress={() => {
+                if (tool.includes("eraser")) {
+                  setEraserDropdownVisible(true);
+                } else {
+                  setTool("eraser");
+                  setEraserMode?.("pixel");
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <View style={{ alignItems: "center", justifyContent: "center" }}>
+                <MaterialCommunityIcons
+                  name="eraser"
+                  size={ICON_SIZE}
+                  color={tool.includes("eraser") ? "#fff" : ICON_COLOR}
+                />
+                {tool.includes("eraser") && (
+                  <MaterialCommunityIcons
+                    name="chevron-down"
+                    size={12}
+                    color="rgba(255,255,255,0.8)"
+                    style={{ position: "absolute", bottom: -10 }}
+                  />
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Tape Tool */}
+          <View ref={tapeButtonRef}>
+            <ToolButton
+              isActive={tool === "tape"}
+              onPress={() => {
+                if (tool === "tape") {
+                  setTapeDropdownVisible(true);
+                } else {
+                  setTool("tape");
+                }
+              }}
+              onLongPress={() => setTapeDropdownVisible(true)}
+            >
+              <MaterialCommunityIcons
+                name="tape-measure"
+                size={ICON_SIZE}
+                color={tool === "tape" ? "#3B82F6" : ICON_COLOR}
+              />
+            </ToolButton>
+          </View>
+
+          {/* Shapes */}
+          {/* Shapes */}
+          <View ref={shapeButtonRef}>
+            <ToolButton
+              isActive={tool === "shape"}
+              onPress={() => {
+                if (tool === "shape") {
+                  setShapeDropdownVisible(true);
+                } else {
+                  setTool("shape");
+                }
+              }}
+              onLongPress={() => setShapeDropdownVisible(true)}
+            >
+              <MaterialCommunityIcons
+                name="shape-outline"
+                size={ICON_SIZE}
+                color={tool === "shape" ? "#3B82F6" : ICON_COLOR}
+              />
+            </ToolButton>
+          </View>
+
+          {/* Fill Tool */}
+          <ToolButton
+            icon={
+              <MaterialCommunityIcons
+                name="format-color-fill"
+                size={ICON_SIZE}
+                color={ICON_COLOR}
+              />
+            }
+            active={tool === "fill"}
+            onPress={() => setTool("fill")}
+          />
+
+          {/* Eyedropper Tool */}
+          <EyeDropperTool
+            tool={tool}
+            setTool={setTool}
+            selectedColor={selectedColor}
+            pickedColors={pickedColors}
+            onColorSelected={handleSelectColor}
+            onColorPicked={onColorPicked}
+          />
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            GROUP 3: CONTENT TOOLS (Text, Media, Table)
+        ═══════════════════════════════════════════════════════════════════ */}
+        <View style={styles.toolGroup}>
+          {/* Text */}
+          <ToolGroup
+            label="Text"
+            mainIcon={
+              <MaterialCommunityIcons
+                name="format-text-variant"
+                size={ICON_SIZE}
+                color={ICON_COLOR}
+              />
+            }
+            options={[
+              {
+                name: "text",
+                label: "Text",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="format-text-variant"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "sticky",
+                label: "Sticky Note",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="note-outline"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "comment",
+                label: "Comment",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="comment-outline"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+            ]}
+            tool={tool}
+            setTool={setTool}
+          />
+
+          {/* Media */}
+          <ToolGroup
+            label="Media"
+            mainIcon={
+              <MaterialCommunityIcons
+                name="image-multiple-outline"
+                size={ICON_SIZE}
+                color={ICON_COLOR}
+              />
+            }
+            options={[
+              {
+                name: "image",
+                label: "Insert Image",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="image-multiple-outline"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "camera",
+                label: "Camera",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="camera-outline"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "sticker",
+                label: "Stickers",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="emoticon-outline"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+            ]}
+            tool={tool}
+            setTool={setTool}
+          />
+
+          {/* Table Tool */}
+          <View ref={tableButtonRef}>
+            <ToolButton
+              icon={
+                <MaterialCommunityIcons
+                  name="table"
+                  size={ICON_SIZE}
+                  color={ICON_COLOR}
+                />
               }
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={{ alignItems: "center", justifyContent: "center" }}>
-              <MaterialCommunityIcons
-                name="eraser"
-                size={ICON_SIZE}
-                color={tool.includes("eraser") ? "#fff" : ICON_COLOR}
-              />
-              {tool.includes("eraser") && (
-                <MaterialCommunityIcons
-                  name="chevron-down"
-                  size={12}
-                  color="rgba(255,255,255,0.8)"
-                  style={{ position: "absolute", bottom: -10 }}
-                />
-              )}
-            </View>
-          </TouchableOpacity>
+              onPress={() => {
+                setTimeout(() => {
+                  setTool("table");
+                  setTableDropdownVisible(true);
+                }, 0);
+              }}
+              active={tool === "table"}
+            />
+          </View>
         </View>
 
         <View style={styles.divider} />
 
-        {/* Shapes */}
-        <ToolGroup
-          label="Shapes"
-          mainIcon={
-            <MaterialCommunityIcons
-              name="shape-outline"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          lastSelected={lastShapeTool}
-          options={[
-            {
-              name: "line",
-              label: "Line",
-              icon: (
-                <MaterialCommunityIcons
-                  name="ray-start-end"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "arrow",
-              label: "Arrow",
-              icon: (
-                <MaterialCommunityIcons
-                  name="arrow-top-right-thin"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "rect",
-              label: "Rectangle",
-              icon: (
-                <MaterialCommunityIcons
-                  name="rectangle-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "circle",
-              label: "Circle",
-              icon: (
-                <MaterialCommunityIcons
-                  name="circle-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "triangle",
-              label: "Triangle",
-              icon: (
-                <MaterialCommunityIcons
-                  name="triangle-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "star",
-              label: "Star",
-              icon: (
-                <MaterialCommunityIcons
-                  name="star-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "polygon",
-              label: "Polygon",
-              icon: (
-                <MaterialCommunityIcons
-                  name="hexagon-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-          ]}
-          tool={tool}
-          setTool={setTool}
-        />
-
-        {/* Fill Tool */}
-        <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="format-color-fill"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          active={tool === "fill"}
-          onPress={() => setTool("fill")}
-        />
-
-        {/* Text */}
-        <ToolGroup
-          label="Text"
-          mainIcon={
-            <MaterialCommunityIcons
-              name="format-text-variant"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          options={[
-            {
-              name: "text",
-              label: "Text",
-              icon: (
-                <MaterialCommunityIcons
-                  name="format-text-variant"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "sticky",
-              label: "Sticky Note",
-              icon: (
-                <MaterialCommunityIcons
-                  name="note-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "comment",
-              label: "Comment",
-              icon: (
-                <MaterialCommunityIcons
-                  name="comment-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-          ]}
-          tool={tool}
-          setTool={setTool}
-        />
-
-        {/* Media */}
-        <ToolGroup
-          label="Media"
-          mainIcon={
-            <MaterialCommunityIcons
-              name="image-multiple-outline"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          options={[
-            {
-              name: "image",
-              label: "Insert Image",
-              icon: (
-                <MaterialCommunityIcons
-                  name="image-multiple-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "camera",
-              label: "Camera",
-              icon: (
-                <MaterialCommunityIcons
-                  name="camera-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "sticker",
-              label: "Stickers",
-              icon: (
-                <MaterialCommunityIcons
-                  name="emoticon-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-          ]}
-          tool={tool}
-          setTool={setTool}
-        />
-
-        {/* Pages */}
-        <ToolGroup
-          label="Pages"
-          mainIcon={
-            <MaterialCommunityIcons
-              name="file-document-outline"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          options={[
-            {
-              name: "add-page",
-              label: "Add Page",
-              icon: (
-                <MaterialCommunityIcons
-                  name="file-plus-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "duplicate-page",
-              label: "Duplicate",
-              icon: (
-                <MaterialCommunityIcons
-                  name="file-multiple-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "delete-page",
-              label: "Delete",
-              icon: (
-                <MaterialCommunityIcons
-                  name="file-remove-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-          ]}
-          tool={tool}
-          setTool={setTool}
-        />
-
-        {/* Navigation */}
-        <ToolGroup
-          label="Navigation"
-          mainIcon={
-            <MaterialCommunityIcons
-              name="gesture"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          options={[
-            {
-              name: "lasso",
-              label: "Lasso Select",
-              icon: (
-                <MaterialCommunityIcons
-                  name="selection-drag"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "zoom",
-              label: "Zoom",
-              icon: (
-                <MaterialCommunityIcons
-                  name="magnify-plus-outline"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "scroll",
-              label: "Scroll Only",
-              icon: (
-                <MaterialCommunityIcons
-                  name="gesture-swipe-vertical"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "move",
-              label: "Move Page",
-              icon: (
-                <MaterialCommunityIcons
-                  name="cursor-move"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "move-text",
-              label: "Move Text",
-              icon: (
-                <MaterialCommunityIcons
-                  name="cursor-text"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-            {
-              name: "rotate",
-              label: "Rotate",
-              icon: (
-                <MaterialCommunityIcons
-                  name="rotate-orbit"
-                  size={ICON_SIZE}
-                  color={ICON_COLOR}
-                />
-              ),
-            },
-          ]}
-          tool={tool}
-          setTool={setTool}
-        />
-
-        {/* Save Project (tự động lưu JSON lên cloud) */}
-        <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="content-save-outline"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          onPress={() => onSaveFile?.("json")} // Bấm phát là lưu luôn JSON
-        />
-
-        {/* Sync Button */}
-        {onSyncFile && (
-          <ToolButton
-            icon={
+        {/* ═══════════════════════════════════════════════════════════════════
+            GROUP 4: SELECTION & NAVIGATION
+        ═══════════════════════════════════════════════════════════════════ */}
+        <View style={styles.toolGroup}>
+          <ToolGroup
+            label="Navigation"
+            mainIcon={
               <MaterialCommunityIcons
-                name="cloud-sync-outline"
+                name="gesture"
                 size={ICON_SIZE}
                 color={ICON_COLOR}
               />
             }
-            onPress={onSyncFile}
+            options={[
+              {
+                name: "lasso",
+                label: "Lasso Select",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="selection-drag"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "zoom",
+                label: "Zoom",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="magnify-plus-outline"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "scroll",
+                label: "Scroll Only",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="gesture-swipe-vertical"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "move",
+                label: "Move Page",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="cursor-move"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "move-text",
+                label: "Move Text",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="cursor-text"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "rotate",
+                label: "Rotate",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="rotate-orbit"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+            ]}
+            tool={tool}
+            setTool={setTool}
           />
-        )}
 
-        <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="cloud-download-outline"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          onPress={onLoadCloudFile}
-        />
-
-        {/* <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="file-export-outline"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          onPress={onExportJSON}
-        />
-        <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="file-import-outline"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          onPress={onImportJSON}
-        /> */}
-
-        {/* Extra Tools */}
-        {/* <ToolButton
-          icon={
-            <MaterialCommunityIcons
-              name="grid"
-              size={ICON_SIZE}
-              color={ICON_COLOR}
-            />
-          }
-          onPress={() => setTool("grid")}
-          active={tool === "grid"}
-        /> */}
-
-        {/* Table Tool */}
-        <View ref={tableButtonRef}>
-          <ToolButton
-            icon={
+          {/* Pages */}
+          <ToolGroup
+            label="Pages"
+            mainIcon={
               <MaterialCommunityIcons
-                name="table"
+                name="file-document-outline"
                 size={ICON_SIZE}
                 color={ICON_COLOR}
               />
             }
-            onPress={() => {
-              // Wrap trong setTimeout để tránh setState trong render
-              setTimeout(() => {
-                setTool("table");
-                setTableDropdownVisible(true);
-              }, 0);
-            }}
-            active={tool === "table"}
+            options={[
+              {
+                name: "add-page",
+                label: "Add Page",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="file-plus-outline"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "duplicate-page",
+                label: "Duplicate",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="file-multiple-outline"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+              {
+                name: "delete-page",
+                label: "Delete",
+                icon: (
+                  <MaterialCommunityIcons
+                    name="file-remove-outline"
+                    size={ICON_SIZE}
+                    color={ICON_COLOR}
+                  />
+                ),
+              },
+            ]}
+            tool={tool}
+            setTool={setTool}
           />
         </View>
 
-        {/* Eyedropper Tool */}
-        <EyeDropperTool
-          tool={tool}
-          setTool={setTool}
-          selectedColor={selectedColor}
-          pickedColors={pickedColors}
-          onColorSelected={handleSelectColor}
-          onColorPicked={onColorPicked}
-        />
+        <View style={styles.divider} />
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            GROUP 5: SAVE & CLOUD
+        ═══════════════════════════════════════════════════════════════════ */}
+        <View style={styles.toolGroup}>
+          {/* Save Project */}
+          <ToolButton
+            icon={
+              <MaterialCommunityIcons
+                name="content-save-outline"
+                size={ICON_SIZE}
+                color={ICON_COLOR}
+              />
+            }
+            onPress={() => onSaveFile?.("json")}
+          />
+        </View>
 
         <View style={styles.divider} />
 
-        {/* Color Palette */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            COLOR PALETTE & SIZE SELECTOR
+        ═══════════════════════════════════════════════════════════════════ */}
         {[
           // pens
           "pen",
@@ -769,6 +709,7 @@ export default function ToolbarContainer({
           "triangle",
           "star",
           "polygon",
+          "shape", // ✅ Add shape tool
           // others
           "fill",
         ].includes(tool) && (
@@ -776,7 +717,13 @@ export default function ToolbarContainer({
               colors={colors}
               selectedColor={selectedColor}
               colorHistory={colorHistory}
-              onSelectColor={handleSelectColor}
+              onSelectColor={(c, i) => {
+                handleSelectColor(c, i);
+                // ✅ Sync color to shape settings if shape tool is active
+                if (tool === "shape") {
+                  setShapeSettings?.({ ...shapeSettings, color: c });
+                }
+              }}
               onSelectColorSet={handleSelectColorSet}
             />
           )}
@@ -838,6 +785,31 @@ export default function ToolbarContainer({
         </View>
       </ScrollView>
 
+      {/* Tape Dropdown */}
+      <TapeDropdown
+        visible={tapeDropdownVisible}
+        onClose={() => setTapeDropdownVisible(false)}
+        tapeSettings={tapeSettings}
+        setTapeSettings={setTapeSettings}
+        onSelectTape={onSelectTape}
+        onClearTapesOnPage={onClearTapesOnPage}
+        onClearTapesOnAllPages={onClearTapesOnAllPages}
+      />
+
+      {/* Shape Dropdown */}
+      <ShapeDropdown
+        visible={shapeDropdownVisible}
+        onClose={() => setShapeDropdownVisible(false)}
+        shapeSettings={shapeSettings}
+        setShapeSettings={(newSettings) => {
+          onSelectShape?.(newSettings);
+          // ✅ Sync color from dropdown to global toolbar
+          if (newSettings?.color && newSettings.color !== selectedColor) {
+            handleSelectColor(newSettings.color, undefined, true);
+          }
+        }}
+      />
+
       {/* Table Dropdown */}
       <TableDropdown
         visible={tableDropdownVisible}
@@ -868,14 +840,27 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 4,
-    gap: 6,
+    paddingHorizontal: 8,
+    gap: 4,
   },
+  // ✅ NEW: Tool group container for logically grouped tools
+  toolGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(226, 232, 240, 0.4)",
+    borderRadius: 10,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    gap: 2,
+  },
+  // ✅ Enhanced divider with better visibility
   divider: {
-    width: 1,
-    height: 22,
-    backgroundColor: "#CBD5E1",
-    marginHorizontal: 6,
+    width: 2,
+    height: 28,
+    backgroundColor: "#94A3B8",
+    marginHorizontal: 8,
+    borderRadius: 1,
+    opacity: 0.6,
   },
   eraserButton: {
     width: 40,
@@ -884,7 +869,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 4,
+    marginHorizontal: 2,
     borderWidth: 1,
     borderColor: "#d1d5db",
   },

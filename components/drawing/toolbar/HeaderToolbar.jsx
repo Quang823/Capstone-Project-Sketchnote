@@ -11,7 +11,7 @@ import {
   Image,
   ActivityIndicator,
 } from "react-native";
-import { Ionicons, MaterialIcons, Entypo } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, Entypo, MaterialCommunityIcons } from "@expo/vector-icons";
 import { projectService } from "../../../service/projectService";
 import { authService } from "../../../service/authService";
 import { creditService } from "../../../service/creditService";
@@ -30,6 +30,7 @@ export default function HeaderToolbar({
   onAIChat,
   onRefreshCredit,
   onHistory,
+
 }) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -144,6 +145,8 @@ export default function HeaderToolbar({
 
         {/* Right */}
         <View style={[styles.row, { gap: 12 }]}>
+
+
           {renderButton("share-outline", onExportPress, Ionicons)}
           {renderButton("time-outline", onHistory, Ionicons)}
           {renderButton("preview", onPreview, MaterialIcons)}
@@ -261,6 +264,8 @@ export default function HeaderToolbar({
           </View>
         </View>
       </Modal>
+
+
     </View>
   );
 }

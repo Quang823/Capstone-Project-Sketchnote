@@ -371,6 +371,19 @@ export default function DrawingScreen({ route }) {
         cancelAnimationFrame(realtimeRAFRef.current);
         realtimeRAFRef.current = null;
       }
+
+      // ✅ FIX: Clear inbound queue to release memory
+      if (inboundQueueRef.current) {
+        inboundQueueRef.current.clear();
+      }
+      inboundFlushScheduledRef.current = false;
+
+      // ✅ FIX: Clear page refs to release component references
+      if (pageRefs.current) {
+        Object.keys(pageRefs.current).forEach(key => {
+          pageRefs.current[key] = null;
+        });
+      }
     };
   }, []);
 
@@ -608,6 +621,68 @@ export default function DrawingScreen({ route }) {
     gridType: "square",
   });
   const [gridDropdownVisible, setGridDropdownVisible] = useState(false);
+
+  // 🩹 ===== TAPE TOOL =====
+  const [tapeSettings, setTapeSettings] = useState({
+    mode: "line", // "line" | "rectangle"
+    showAll: true,
+    pattern: "diagonal",
+    thickness: 4,
+    color: "#FDA4AF",
+  });
+
+  const handleSelectTape = useCallback((settings) => {
+    setTool("tape");
+    if (settings) {
+      setTapeSettings(prev => ({ ...prev, ...settings }));
+    }
+  }, []);
+
+  const handleClearTapesOnPage = useCallback(() => {
+    setPageLayers((prev) => {
+      const newLayers = { ...prev };
+      const currentLayers = newLayers[activePageId] || [];
+
+      // Filter out strokes that are tapes
+      const updatedLayers = currentLayers.map(layer => ({
+        ...layer,
+        strokes: layer.strokes.filter(stroke => stroke.tool !== "tape")
+      }));
+
+      newLayers[activePageId] = updatedLayers;
+      return newLayers;
+    });
+    toast.show({ type: "success", text1: "Cleared tapes on current page" });
+  }, [activePageId, toast]);
+
+  const handleClearTapesOnAllPages = useCallback(() => {
+    setPageLayers((prev) => {
+      const newLayers = { ...prev };
+      Object.keys(newLayers).forEach(pageId => {
+        newLayers[pageId] = newLayers[pageId].map(layer => ({
+          ...layer,
+          strokes: layer.strokes.filter(stroke => stroke.tool !== "tape")
+        }));
+      });
+      return newLayers;
+    });
+    toast.show({ type: "success", text1: "Cleared tapes on all pages" });
+  }, [toast]);
+
+  // 📐 ===== SHAPE TOOL =====
+  const [shapeSettings, setShapeSettings] = useState({
+    shape: "rect",
+    thickness: 2,
+    color: "#000000",
+    fill: false,
+  });
+
+  const handleSelectShape = useCallback((settings) => {
+    setTool("shape");
+    if (settings) {
+      setShapeSettings(prev => ({ ...prev, ...settings }));
+    }
+  }, []);
 
   // ✏️ ===== WIDTH & OPACITY =====
   const [strokeWidth, setStrokeWidth] = useState(2);
@@ -2654,6 +2729,18 @@ export default function DrawingScreen({ route }) {
     }
   }, []);
 
+  // 📊 ===== TABLE TOOL =====
+  const handleInsertTable = useCallback((rows, cols) => {
+    // Use the exposed insertTable method from MultiPageCanvas
+    multiPageCanvasRef.current?.insertTable?.(rows, cols);
+
+    toast({
+      title: "Table Inserted",
+      description: `${rows}x${cols} table added to canvas`,
+      variant: "success",
+    });
+  }, []);
+
   // 🧱 ===== RENDER =====
   // ✅ Early return if noteConfig is missing
   if (!noteConfig) {
@@ -2878,19 +2965,26 @@ export default function DrawingScreen({ route }) {
           onSaveFile={handleSaveFile}
           onSyncFile={() => projectService.syncPendingPages()} // Pass the sync function
           onExportPDF={() => handleExportFile("pdf")} // Thêm nút export PDF
+          onInsertTable={handleInsertTable} // ✅ Pass table insert callback
+
+          // ✅ Pass EyeDropper props
+          pickedColors={pickedColors}
+          onColorPicked={handleColorPicked}
+
           eraserMode={eraserMode}
           setEraserMode={setEraserMode}
-          eraserSize={eraserSize}
-          setEraserSize={setEraserSize}
           eraserDropdownVisible={eraserDropdownVisible}
           setEraserDropdownVisible={setEraserDropdownVisible}
           eraserButtonRef={eraserButtonRef}
-          pickedColors={pickedColors}
-          onColorPicked={handleColorPicked}
-          onInsertTable={(rows, cols) => {
-            // Insert table vào canvas
-            multiPageCanvasRef.current?.insertTable?.(rows, cols);
-          }}
+          tapeSettings={tapeSettings}
+          setTapeSettings={setTapeSettings}
+          onSelectTape={handleSelectTape}
+          onClearTapesOnPage={handleClearTapesOnPage}
+          onClearTapesOnAllPages={handleClearTapesOnAllPages}
+          // Shape props
+          shapeSettings={shapeSettings}
+          setShapeSettings={setShapeSettings}
+          onSelectShape={handleSelectShape}
         />
       )}
       {/* 🧽 Eraser Dropdown */}
@@ -2967,6 +3061,8 @@ export default function DrawingScreen({ route }) {
           registerPageRef={registerPageRef}
           onActivePageChange={setActivePageId}
           onColorPicked={handleColorPicked}
+          tapeSettings={tapeSettings} // ✅ Pass tape settings
+          shapeSettings={shapeSettings} // ✅ Pass shape settings
           onRequestTextInput={(x, y) => {
             if (tool === "text") {
               setTimeout(() => setEditingText({ x, y, text: "" }), 0);
