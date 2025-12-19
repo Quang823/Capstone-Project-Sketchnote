@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import loadingAnimation from "../../../assets/loading.json";
 import { LinearGradient } from "expo-linear-gradient";
 import { useTheme } from "../../../context/ThemeContext";
 import NotificationButton from "../../../components/common/NotificationButton";
+import { AuthContext } from "../../../context/AuthContext";
 
 // Course Categories
 const courseCategories = [
@@ -36,6 +37,7 @@ export default function CoursesScreen() {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { user } = useContext(AuthContext);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [enrolledCourses, setEnrolledCourses] = useState([]);
@@ -92,6 +94,38 @@ export default function CoursesScreen() {
     try {
       setLoading(true);
       setError(null);
+
+      if (!user) {
+        const allDataRaw = await courseService.getAllCourse();
+        const allData = allDataRaw.result || allDataRaw || [];
+        const transformedAll = allData.map((course) => ({
+          id: course.courseId.toString(),
+          title: course.title,
+          subtitle: course.subtitle,
+          description: course.description,
+          instructor: "Instructor",
+          imageUrl:
+            course.imageUrl && course.imageUrl.trim() !== "​"
+              ? course.imageUrl
+              : null,
+          price: course.price,
+          rating: course.avgRating || 0,
+          ratingCount: course.ratingCount || 0,
+          students: course.studentCount || 0,
+          totalDuration: course.totalDuration || 0,
+          lessonsCount: course.lessons?.length || 0,
+          level: course.lessons?.length > 5 ? "Advanced" : "Beginner",
+          category: course.category || "all",
+          isNew: Math.random() > 0.7,
+          isEnrolled: false,
+        }));
+
+        setEnrolledCourses([]);
+        setNotEnrolledCourses(transformedAll);
+        setFilteredEnrolledCourses([]);
+        setFilteredNotEnrolledCourses(transformedAll);
+        return;
+      }
 
       // Fetch enrolled courses
       const enrolledData = await courseService.getAllCourseEnrollments();

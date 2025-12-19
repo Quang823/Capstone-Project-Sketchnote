@@ -212,7 +212,7 @@ const GestureHandler = forwardRef(({
     if (pts.length < 2 || !Array.isArray(eraserPts) || eraserPts.length < 2)
       return [stroke];
 
-    // Thresh dùng để xác định một chunk "quá ngắn" (sẽ bị loại)
+    // Thresh d�ng d? x�c d?nh m?t chunk "qu� ng?n" (s? b? lo?i)
     const minChunkLen = Math.max(6, (stroke.width || 6) * 0.6, radius * 0.6);
 
     // build eraser segments
@@ -242,6 +242,7 @@ const GestureHandler = forwardRef(({
         tN,
         tD = sD;
       if (sD < EPS) {
+        // lines almost parallel
         sN = 0.0;
         sD = 1.0;
         tN = e;
@@ -286,21 +287,36 @@ const GestureHandler = forwardRef(({
 
     // determine which segment edges are "cut"
     const cutEdge = new Array(pts.length - 1).fill(false);
+
+    // Pre-calculate eraser segment bounding boxes for faster intersection tests
+    const eSegBounds = eSegs.map(seg => ({
+      minX: Math.min(seg[0], seg[2]) - radius,
+      maxX: Math.max(seg[0], seg[2]) + radius,
+      minY: Math.min(seg[1], seg[3]) - radius,
+      maxY: Math.max(seg[1], seg[3]) + radius
+    }));
+
+    const strokeHalfWidth = (stroke.width || 6) * 0.5;
+
     for (let i = 0; i < pts.length - 1; i++) {
-      const p1 = pts[i],
-        p2 = pts[i + 1];
+      const p1 = pts[i], p2 = pts[i + 1];
+      const sMinX = Math.min(p1.x, p2.x) - strokeHalfWidth;
+      const sMaxX = Math.max(p1.x, p2.x) + strokeHalfWidth;
+      const sMinY = Math.min(p1.y, p2.y) - strokeHalfWidth;
+      const sMaxY = Math.max(p1.y, p2.y) + strokeHalfWidth;
+
       for (let s = 0; s < eSegs.length; s++) {
+        const eb = eSegBounds[s];
+        // Quick bounding box overlap check
+        if (sMaxX < eb.minX || sMinX > eb.maxX || sMaxY < eb.minY || sMinY > eb.maxY) {
+          continue;
+        }
+
         const d = distSegmentToSegmentLocal(
-          p1.x,
-          p1.y,
-          p2.x,
-          p2.y,
-          eSegs[s][0],
-          eSegs[s][1],
-          eSegs[s][2],
-          eSegs[s][3]
+          p1.x, p1.y, p2.x, p2.y,
+          eSegs[s][0], eSegs[s][1], eSegs[s][2], eSegs[s][3]
         );
-        if (d <= radius + (stroke.width || 6) * 0.5) {
+        if (d <= radius + strokeHalfWidth) {
           cutEdge[i] = true;
           break;
         }
@@ -333,8 +349,6 @@ const GestureHandler = forwardRef(({
       }
       if (len >= minChunkLen) {
         chunks.push(chunk);
-      } else {
-        // small chunk — likely the "dot" artifact — skip it
       }
     }
 

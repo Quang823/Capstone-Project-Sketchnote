@@ -192,13 +192,13 @@ export default function HeaderToolbar({
                     } catch (err) {
                       setFoundUser(null);
                       setSelectedUserId(null);
-                      Toast.show({ type: "error", text1: "Không tìm thấy", text2: err.message });
+                      Toast.show({ type: "error", text1: "Cannot find user", text2: err.message });
                     } finally {
                       setSearching(false);
                     }
                   }}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "600" }}>Tìm</Text>
+                  <Text style={{ color: "#fff", fontWeight: "600" }}>Find</Text>
                 </TouchableOpacity>
               </View>
             </View>

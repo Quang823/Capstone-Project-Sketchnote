@@ -1,5 +1,5 @@
 // ResourceStoreScreen.js - FULL VERSION HOÀN CHỈNH
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import { useTheme } from "../../../context/ThemeContext";
 import NotificationButton from "../../../components/common/NotificationButton";
+import { AuthContext } from "../../../context/AuthContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DEFAULT_RESOURCE_IMAGE =
@@ -125,7 +126,11 @@ const AnimatedResourceCard = ({
               source={{ uri: imageUri }}
               style={resourceStoreStyles.resourceImage}
               resizeMode="cover"
-              onError={() => setImageUri(DEFAULT_RESOURCE_IMAGE)}
+              onError={() => {
+                requestAnimationFrame(() => {
+                  setImageUri(DEFAULT_RESOURCE_IMAGE);
+                });
+              }}
             />
 
             {/* Badge loại */}
@@ -424,6 +429,7 @@ export default function ResourceStoreScreen() {
   const [isFilteringByType, setIsFilteringByType] = useState(false);
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { user } = useContext(AuthContext);
 
   // Pagination states
   const [pages, setPages] = useState({
@@ -490,11 +496,13 @@ export default function ResourceStoreScreen() {
 
       let ownedAccumulator = [];
 
-      try {
-        const resUser = await resourceService.getResourceProjectByUserId(0, 20);
-        setUserResources(Array.isArray(resUser.content) ? resUser.content : []);
-      } catch (e) {
-        console.error(e);
+      if (user) {
+        try {
+          const resUser = await resourceService.getResourceProjectByUserId(0, 20);
+          setUserResources(Array.isArray(resUser.content) ? resUser.content : []);
+        } catch (e) {
+          console.error(e);
+        }
       }
 
       try {
@@ -609,6 +617,14 @@ export default function ResourceStoreScreen() {
   }, []);
 
   const handleAddToCart = (resource, goToCart = false) => {
+    if (!user) {
+      return Toast.show({
+        type: "info",
+        text1: "Please login",
+        text2: "You need to login to buy resources",
+      });
+    }
+
     if (resource?.isOwner)
       return Toast.show({ type: "info", text1: "This is your resource" });
 

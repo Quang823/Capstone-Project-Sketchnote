@@ -1,5 +1,5 @@
 // App.js
-import React, { useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useContext } from "react";
 import { View, TouchableOpacity } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
@@ -14,7 +14,7 @@ import GlobalSidebar from "./components/navigation/GlobalSidebar";
 import * as SplashScreen from "expo-splash-screen";
 import { BackgroundJsonParser } from "./utils/jsonUtils";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, AuthContext } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import ChatWidget from "./components/ChatWidget";
 import LottieView from "lottie-react-native";
@@ -50,10 +50,57 @@ if (typeof global !== "undefined") {
   };
 }
 
+const ChatContainer = ({ currentRoute }) => {
+  const { user } = useContext(AuthContext);
+  const [chatVisible, setChatVisible] = React.useState(false);
+
+  const excludedRoutes = [
+    "Login",
+    "Register",
+    "VerifyEmail",
+    "GuestHome",
+    "ForgetPassword",
+    "ResetPassword",
+    "DrawingScreen",
+  ];
+
+  const shouldShowChat = user && !excludedRoutes.includes(currentRoute);
+
+  if (!shouldShowChat) return null;
+
+  return (
+    <>
+      <TouchableOpacity
+        onPress={() => setChatVisible(true)}
+        activeOpacity={0.8}
+        style={{
+          position: "absolute",
+          right: 20,
+          bottom: 40,
+          zIndex: 50,
+        }}
+      >
+        <LottieView
+          source={require("./assets/chatbox.json")}
+          autoPlay
+          loop
+          style={{
+            width: 80,
+            height: 80,
+          }}
+        />
+      </TouchableOpacity>
+      <ChatWidget
+        visible={chatVisible}
+        onClose={() => setChatVisible(false)}
+      />
+    </>
+  );
+};
+
 export default function App() {
   const fontsLoaded = useLoadFonts();
   const [currentRoute, setCurrentRoute] = React.useState("GuestHome");
-  const [chatVisible, setChatVisible] = React.useState(false);
 
   // Callback này gọi khi layout đã render => ẩn splash
   const onLayoutRootView = useCallback(async () => {
@@ -66,18 +113,6 @@ export default function App() {
   if (!fontsLoaded) {
     return null;
   }
-
-  const excludedRoutes = [
-    "Login",
-    "Register",
-    "VerifyEmail",
-    "GuestHome",
-    "ForgetPassword",
-    "ResetPassword",
-    "DrawingScreen",
-  ];
-
-  const shouldShowChat = !excludedRoutes.includes(currentRoute);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -102,34 +137,7 @@ export default function App() {
                       >
                         <AppNavigator />
                         <GlobalSidebar />
-                        {shouldShowChat && (
-                          <>
-                            <TouchableOpacity
-                              onPress={() => setChatVisible(true)}
-                              activeOpacity={0.8}
-                              style={{
-                                position: "absolute",
-                                right: 20,
-                                bottom: 40,
-                                zIndex: 50,
-                              }}
-                            >
-                              <LottieView
-                                source={require("./assets/chatbox.json")}
-                                autoPlay
-                                loop
-                                style={{
-                                  width: 80,
-                                  height: 80,
-                                }}
-                              />
-                            </TouchableOpacity>
-                            <ChatWidget
-                              visible={chatVisible}
-                              onClose={() => setChatVisible(false)}
-                            />
-                          </>
-                        )}
+                        <ChatContainer currentRoute={currentRoute} />
                       </NavigationContainer>
                     </NavigationProvider>
                   </ToastProvider>

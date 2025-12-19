@@ -391,22 +391,6 @@ export default function CartScreen() {
             </View>
           </View>
 
-          <View style={styles.couponSection}>
-            <Text style={styles.couponTitle}>Coupon Code</Text>
-            <View style={styles.couponRow}>
-              <TextInput
-                placeholder="Enter code..."
-                style={styles.couponInput}
-                value={coupon}
-                onChangeText={setCoupon}
-                placeholderTextColor={isDark ? "#64748B" : "#9CA3AF"}
-              />
-              <Pressable style={styles.applyBtn} onPress={applyCoupon}>
-                <Text style={styles.applyText}>Apply</Text>
-              </Pressable>
-            </View>
-          </View>
-
           <Pressable
             style={styles.checkoutBtn}
             onPress={createOrder}

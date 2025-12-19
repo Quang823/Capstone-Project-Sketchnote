@@ -2,21 +2,21 @@ import { privateApi, publicApi } from "./axiosInstance";
 
 export const resourceController = {
   getAllResource: async (page, size) => {
-    return await privateApi.get(
+    return await publicApi.get(
       `/api/orders/template?page=${page}&size=${size}`
     );
   },
 
   getAllResourcePopular: async (limit) => {
-    return await privateApi.get(`/api/orders/template/popular?limit=${limit}`);
+    return await publicApi.get(`/api/orders/template/popular?limit=${limit}`);
   },
 
   getAllResourceLatest: async (limit) => {
-    return await privateApi.get(`/api/orders/template/latest?limit=${limit}`);
+    return await publicApi.get(`/api/orders/template/latest?limit=${limit}`);
   },
 
   getResourceById: async (id) => {
-    return await privateApi.get(`/api/orders/template/${id}`);
+    return await publicApi.get(`/api/orders/template/${id}`);
   },
 
   uploadResource: async (data) => {
@@ -53,23 +53,23 @@ export const resourceController = {
 
 
   ///////////////////////////////////////////////////
-  
+
   createResourceVersion: async (resourceId, data) => {
     return await privateApi.post(
       `/api/orders//designer/products/${resourceId}/versions`,
       data
     );
   },
-  
+
   getAllProductBuyDesigner: async (page, size, sortBy, sortDir, search, isArchived) => {
     // Build query params conditionally to avoid sending "null" as string
     let url = `/api/orders/designer/products?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}&search=${encodeURIComponent(search || "")}`;
-    
+
     // Only add isArchived parameter if it's not null
     if (isArchived !== null && isArchived !== undefined) {
       url += `&isArchived=${isArchived}`;
     }
-    
+
     return await privateApi.get(url);
   },
   republishResourceVersionWhenStaffNotConfirm: async (versionId) => {

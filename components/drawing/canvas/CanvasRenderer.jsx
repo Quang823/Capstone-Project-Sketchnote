@@ -454,7 +454,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         />
 
         {/* Pattern Overlay - Composited with srcIn to clip to base */}
-        <Path
+        < Path
           path={patternPath}
           color={makeRGBA("#FFF", 0.6)}
           style="stroke"
@@ -463,15 +463,16 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         />
 
         {/* Border/Outline - Drawn on top (no blend mode) */}
-        <Path
+        < Path
           path={path}
           color={makeRGBA(baseColor, 0.8)}
           style="stroke"
-          strokeWidth={mode === "rectangle" ? 1 : width}
+          strokeWidth={mode === "rectangle" ? 1 : width
+          }
           strokeCap="butt"
           blendMode="srcOver"
         />
-      </Group>
+      </Group >
     );
   };
 
@@ -1840,8 +1841,9 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               strokeWidth={1.2}
             />
           </Group>
-        )}
-    </Canvas>
+        )
+      }
+    </Canvas >
   );
 });
 

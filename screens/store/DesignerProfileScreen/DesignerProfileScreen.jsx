@@ -61,9 +61,11 @@ const ProductCard = ({ item, onPress, onAddToCart, onBuyNow, index = 0, styles }
                     source={{ uri: imageUri }}
                     style={styles.productImage}
                     resizeMode="cover"
-                    onError={() =>
-                        setImageUri(FALLBACK_IMAGES[index % FALLBACK_IMAGES.length])
-                    }
+                    onError={() => {
+                        requestAnimationFrame(() => {
+                            setImageUri(FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]);
+                        });
+                    }}
                 />
 
                 {/* Type Badge */}
