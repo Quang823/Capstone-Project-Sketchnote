@@ -94,6 +94,7 @@ export default function DesignerWalletScreen() {
   const [selectedBank, setSelectedBank] = useState(null);
   const [selectedSavedAccount, setSelectedSavedAccount] = useState(null);
   const [bankSearchQuery, setBankSearchQuery] = useState("");
+  const [saveBankAccount, setSaveBankAccount] = useState(false);
 
   // Show alert modal helper
   const showAlert = (type, title, message) => {
@@ -201,6 +202,7 @@ export default function DesignerWalletScreen() {
     setShowBankSelector(false);
     setShowSavedAccounts(false);
     setBankSearchQuery("");
+    setSaveBankAccount(false);
   };
 
   // Handle withdraw request
@@ -238,6 +240,31 @@ export default function DesignerWalletScreen() {
     }
 
     try {
+      // 1. Save bank account if checkbox is checked
+      if (saveBankAccount && selectedBank) {
+        try {
+          const accountData = {
+            bankName: selectedBank.name,
+            accountNumber: bankInfo.accountNumber.trim(),
+            accountHolderName: bankInfo.accountName.trim(),
+            branch: selectedBank.shortName,
+            logoUrl: selectedBank.logo,
+            isDefault: savedBankAccounts.length === 0,
+          };
+          await bankAccountService.createBankAccount(accountData);
+
+          // Refresh saved accounts list immediately
+          const accounts = await bankAccountService.getBankAccounts();
+          setSavedBankAccounts(accounts);
+
+          console.log("Bank account saved successfully");
+        } catch (saveError) {
+          console.error("Failed to save bank account:", saveError);
+          // Continue with withdrawal even if save fails
+        }
+      }
+
+      // 2. Proceed with withdrawal request
       const payload = {
         amount: amount,
         bankName: bankInfo.bankName,
@@ -490,11 +517,7 @@ export default function DesignerWalletScreen() {
             >
               <Pressable
                 style={[styles.oneActionItem, isPortrait && { width: "48%" }]}
-                onPress={() =>
-                  navigation.navigate("TransactionHistory", {
-                    transactions: walletData.transactions || [],
-                  })
-                }
+                onPress={() => navigation.navigate("TransactionHistory")}
               >
                 <View
                   style={[
@@ -573,11 +596,7 @@ export default function DesignerWalletScreen() {
             {walletData.transactions.length > 0 && (
               <Pressable
                 style={styles.viewAllButton}
-                onPress={() =>
-                  navigation.navigate("TransactionHistory", {
-                    transactions: walletData.transactions || [],
-                  })
-                }
+                onPress={() => navigation.navigate("TransactionHistory")}
               >
                 <Text style={styles.viewAllText}>View All</Text>
                 <Icon
@@ -965,6 +984,29 @@ export default function DesignerWalletScreen() {
                     setBankInfo({ ...bankInfo, accountName: text })
                   }
                 />
+              </View>
+
+              {/* Save Bank Account Checkbox */}
+              <View style={styles.saveAccountOption}>
+                <TouchableOpacity
+                  style={styles.checkboxContainer}
+                  onPress={() => setSaveBankAccount(!saveBankAccount)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      saveBankAccount && styles.checkboxChecked,
+                    ]}
+                  >
+                    {saveBankAccount && (
+                      <Icon name="check" size={16} color="#FFFFFF" />
+                    )}
+                  </View>
+                  <Text style={styles.checkboxLabel}>
+                    Save this bank account for future use
+                  </Text>
+                </TouchableOpacity>
               </View>
             </ScrollView>
 

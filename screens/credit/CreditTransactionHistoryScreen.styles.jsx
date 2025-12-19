@@ -172,7 +172,9 @@ export const getStyles = (theme = "light") => {
         },
         cardDescription: { fontSize: 13, color: colors.cardDescription, marginBottom: 2 },
         cardDate: { fontSize: 12, color: colors.cardDate },
+        cardRef: { fontSize: 11, color: colors.cardDate, marginTop: 2, fontStyle: 'italic' },
         amount: { fontSize: 15, fontWeight: "700" },
+        balanceText: { fontSize: 11, color: colors.cardDate, marginTop: 4, fontWeight: '500' },
         emptyBox: {
             alignItems: "center",
             justifyContent: "center",

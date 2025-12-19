@@ -13,4 +13,11 @@ export const paymentApiController = {
   getWithdrawHistory: async (page,size,sortBy,sortDirection) => {
     return await privateApi.get(`/api/withdraw/my-history?page=${page}&size=${size}&sortBy=${sortBy}&sortDirection=${sortDirection}`);
   },
+  getAllWalletTransaction: async (page,size,type,sortBy,sortDirection) => {
+    let url = `/api/wallet/transactions/history?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDirection}`;
+    if (type) {
+      url += `&type=${type}`;
+    }
+    return await privateApi.get(url);
+  },
 };
