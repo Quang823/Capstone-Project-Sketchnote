@@ -1,22 +1,26 @@
 import { privateApi, publicApi } from "./axiosInstance";
 
 export const resourceController = {
-  getAllResource: async (page, size) => {
-    return await publicApi.get(
+  getAllResource: async (page, size, isAuth = false) => {
+    const api = isAuth ? privateApi : publicApi;
+    return await api.get(
       `/api/orders/template?page=${page}&size=${size}`
     );
   },
 
-  getAllResourcePopular: async (limit) => {
-    return await publicApi.get(`/api/orders/template/popular?limit=${limit}`);
+  getAllResourcePopular: async (limit, isAuth = false) => {
+    const api = isAuth ? privateApi : publicApi;
+    return await api.get(`/api/orders/template/popular?limit=${limit}`);
   },
 
-  getAllResourceLatest: async (limit) => {
-    return await publicApi.get(`/api/orders/template/latest?limit=${limit}`);
+  getAllResourceLatest: async (limit, isAuth = false) => {
+    const api = isAuth ? privateApi : publicApi;
+    return await api.get(`/api/orders/template/latest?limit=${limit}`);
   },
 
-  getResourceById: async (id) => {
-    return await publicApi.get(`/api/orders/template/${id}`);
+  getResourceById: async (id, isAuth = false) => {
+    const api = isAuth ? privateApi : publicApi;
+    return await api.get(`/api/orders/template/${id}`);
   },
 
   uploadResource: async (data) => {

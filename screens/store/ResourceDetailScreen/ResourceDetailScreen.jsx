@@ -44,7 +44,7 @@ export default function ResourceDetailScreen() {
   useEffect(() => {
     const fetchResource = async () => {
       try {
-        const data = await resourceService.getResourceById(resourceId);
+        const data = await resourceService.getResourceById(resourceId, !!user);
         setResource(data);
 
         // 🖼 Combine images and items for gallery
@@ -96,7 +96,7 @@ export default function ResourceDetailScreen() {
       }
     };
     fetchResource();
-  }, [resourceId, owned]);
+  }, [resourceId, owned, user]);
 
 
 

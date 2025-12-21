@@ -13,9 +13,9 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true); // true during initial auth check
 
   // Lấy user từ token khi app load
-  const fetchUser = async () => {
+  const fetchUser = async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) setIsLoading(true);
       const token = await AsyncStorage.getItem("accessToken");
 
       // No token means user is not logged in (expected scenario)

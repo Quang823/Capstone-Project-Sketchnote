@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useContext } from "react";
 import {
     View,
     Text,
@@ -17,6 +17,7 @@ import * as offlineStorage from "../../utils/offlineStorage";
 import { useToast } from "../../hooks/use-toast";
 import { getStyles } from "./TemplateSelectionScreen.styles";
 import { useTheme } from "../../context/ThemeContext";
+import { AuthContext } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 
@@ -116,6 +117,7 @@ export default function TemplateSelectionScreen({ navigation }) {
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const { toast } = useToast();
+    const { fetchUser } = useContext(AuthContext);
 
     useEffect(() => {
         fetchPurchasedTemplates();
@@ -234,6 +236,8 @@ export default function TemplateSelectionScreen({ navigation }) {
                     projectDetails: created,
                 };
 
+                // Refresh user profile to update project count
+                if (fetchUser) fetchUser(false);
                 navigation.replace("DrawingScreen", { noteConfig });
             } catch (error) {
                 console.error("Create from template error:", error);

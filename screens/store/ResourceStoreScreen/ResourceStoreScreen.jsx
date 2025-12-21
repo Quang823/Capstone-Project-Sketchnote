@@ -506,7 +506,7 @@ export default function ResourceStoreScreen() {
       }
 
       try {
-        const resAll = await resourceService.getAllResource(0, PAGE_SIZE);
+        const resAll = await resourceService.getAllResource(0, PAGE_SIZE, !!user);
         const allRaw = resAll?.content || resAll || [];
         const items = Array.isArray(allRaw) ? allRaw : [];
         const owned = items.filter((r) => r?.isOwner);
@@ -533,10 +533,10 @@ export default function ResourceStoreScreen() {
       }
 
       try {
-        const res = await resourceService.getAllResourcePopular(PAGE_SIZE);
+        const res = await resourceService.getAllResourcePopular(PAGE_SIZE, !!user);
         const data = res?.result || res?.content || res || [];
         const items = Array.isArray(data) ? data : [];
-        const notOwned = items.filter((r) => !r?.isOwner);
+        const notOwned = items.filter((r) => r?.isOwner);
         setPopularResources(notOwned);
         ownedAccumulator.push(...items.filter((r) => r?.isOwner));
         setHasMore(prev => ({ ...prev, popular: items.length === PAGE_SIZE }));
@@ -545,10 +545,10 @@ export default function ResourceStoreScreen() {
       }
 
       try {
-        const res = await resourceService.getAllResourceLatest(PAGE_SIZE);
+        const res = await resourceService.getAllResourceLatest(PAGE_SIZE, !!user);
         const data = res?.result || res?.content || res || [];
         const items = Array.isArray(data) ? data : [];
-        const notOwned = items.filter((r) => !r?.isOwner);
+        const notOwned = items.filter((r) => r?.isOwner);
         setLatestResources(notOwned);
         ownedAccumulator.push(...items.filter((r) => r?.isOwner));
         setHasMore(prev => ({ ...prev, latest: items.length === PAGE_SIZE }));
@@ -582,19 +582,19 @@ export default function ResourceStoreScreen() {
     try {
       let items = [];
       if (section === 'all') {
-        const res = await resourceService.getAllResource(nextPage, PAGE_SIZE);
+        const res = await resourceService.getAllResource(nextPage, PAGE_SIZE, !!user);
         items = res?.content || res || [];
         const notOwned = items.filter((r) => !r?.isOwner);
         setAllResources(prev => [...prev, ...notOwned]);
       } else if (section === 'popular') {
         // Note: Popular and Latest might not support page-based pagination in current API
         // but we'll try to use the same logic if they support it or just limit
-        const res = await resourceService.getAllResourcePopular(PAGE_SIZE * (nextPage + 1));
+        const res = await resourceService.getAllResourcePopular(PAGE_SIZE * (nextPage + 1), !!user);
         items = res?.result || res?.content || res || [];
         const notOwned = items.filter((r) => !r?.isOwner);
         setPopularResources(notOwned); // Replace for limit-based
       } else if (section === 'latest') {
-        const res = await resourceService.getAllResourceLatest(PAGE_SIZE * (nextPage + 1));
+        const res = await resourceService.getAllResourceLatest(PAGE_SIZE * (nextPage + 1), !!user);
         items = res?.result || res?.content || res || [];
         const notOwned = items.filter((r) => !r?.isOwner);
         setLatestResources(notOwned); // Replace for limit-based

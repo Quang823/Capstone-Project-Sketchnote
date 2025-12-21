@@ -1,186 +1,175 @@
 import { resourceController } from "../api/resourceController";
 
 export const resourceService = {
-    getAllResource : async (page,size)=>{
-    try {
-        const response = await resourceController.getAllResource(page,size);
-        return response.data.result;
-    } catch (error) {
-        const message =
-        error.response?.data?.message || error.message || "Get resource failed.";
-      throw new Error(message);
-    }
-    },
-    getAllResourcePopular : async (limit)=>{
+    getAllResource: async (page, size, isAuth = false) => {
         try {
-            const response = await resourceController.getAllResourcePopular(limit);
+            const response = await resourceController.getAllResource(page, size, isAuth);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Get popular resource failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Get resource failed.";
+            throw new Error(message);
         }
     },
-    getAllResourceLatest : async (limit)=>{
+    getAllResourcePopular: async (limit, isAuth = false) => {
         try {
-            const response = await resourceController.getAllResourceLatest(limit);
+            const response = await resourceController.getAllResourcePopular(limit, isAuth);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Get latest resource failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Get popular resource failed.";
+            throw new Error(message);
         }
     },
-    getResourceById : async (id)=>{
+    getAllResourceLatest: async (limit, isAuth = false) => {
         try {
-            const response = await resourceController.getResourceById(id);
+            const response = await resourceController.getAllResourceLatest(limit, isAuth);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Get resource by id failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Get latest resource failed.";
+            throw new Error(message);
         }
     },
-    uploadResource : async (data)=>{
+    getResourceById: async (id, isAuth = false) => {
+        try {
+            const response = await resourceController.getResourceById(id, isAuth);
+            return response.data.result;
+        } catch (error) {
+            const message =
+                error.response?.data?.message || error.message || "Get resource by id failed.";
+            throw new Error(message);
+        }
+    },
+    uploadResource: async (data) => {
         try {
             const response = await resourceController.uploadResource(data);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Upload resource failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Upload resource failed.";
+            throw new Error(message);
         }
     },
-    getResourceByUserId : async (page,size)=>{
+    getResourceByUserId: async (page, size) => {
         try {
-            const response = await resourceController.getResourceByUserId(page,size);
+            const response = await resourceController.getResourceByUserId(page, size);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Get resource by user id failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Get resource by user id failed.";
+            throw new Error(message);
         }
     },
-    getProjectByUserId : async ()=>{
+    getProjectByUserId: async () => {
         try {
             const response = await resourceController.getProjectByUserId();
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Get project by user id failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Get project by user id failed.";
+            throw new Error(message);
         }
     },
-    uploadTemplate: async (projectId,data)=>{
+    uploadTemplate: async (projectId, data) => {
         try {
-            const response = await resourceController.uploadTemplate(projectId,data);
+            const response = await resourceController.uploadTemplate(projectId, data);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Upload template failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Upload template failed.";
+            throw new Error(message);
         }
     },
-    getResourceProjectByUserId : async (page,size)=>{
+    getResourceProjectByUserId: async (page, size) => {
         try {
-            const response = await resourceController.getResourceProjectByUserId(page,size);
+            const response = await resourceController.getResourceProjectByUserId(page, size);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.message || error.message || "Get resource project by user id failed.";
-          throw new Error(message);
+                error.response?.message || error.message || "Get resource project by user id failed.";
+            throw new Error(message);
         }
     },
-    getResourceProjectByUserIdV2 : async ()=>{
+    getResourceProjectByUserIdV2: async () => {
         try {
             const response = await resourceController.getResourceProjectByUserIdV2();
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Get resource project by user id v2 failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Get resource project by user id v2 failed.";
+            throw new Error(message);
         }
     },
     /////////////////////////////////////////////////////////
-    createResourceVersion : async (resourceId,data)=>{
+    createResourceVersion: async (resourceId, data) => {
         try {
-            const response = await resourceController.createResourceVersion(resourceId,data);
+            const response = await resourceController.createResourceVersion(resourceId, data);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Create resource version failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Create resource version failed.";
+            throw new Error(message);
         }
     },
-    getAllProductBuyDesigner : async (page,size,sortBy,sortDir,search,isArchived)=>{
+    getAllProductBuyDesigner: async (page, size, sortBy, sortDir, search, isArchived) => {
         try {
-            const response = await resourceController.getAllProductBuyDesigner(page,size,sortBy,sortDir,search,isArchived);
+            const response = await resourceController.getAllProductBuyDesigner(page, size, sortBy, sortDir, search, isArchived);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Get all product buy designer failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Get all product buy designer failed.";
+            throw new Error(message);
         }
     },
-    republishResourceVersionWhenStaffNotConfirm : async (versionId)=>{
+    republishResourceVersionWhenStaffNotConfirm: async (versionId) => {
         try {
             const response = await resourceController.republishResourceVersionWhenStaffNotConfirm(versionId);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Republish resource version when staff not confirm failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Republish resource version when staff not confirm failed.";
+            throw new Error(message);
         }
     },
-    archiveResourceTemplate : async (resourceTemplateId)=>{
-        try {
-            const response = await resourceController.archiveResourceTemplate(resourceTemplateId);
-            return response.data.result;
-        } catch (error) {
-            const message =
-            error.response?.data?.message || error.message || "Archive resource template failed.";
-          throw new Error(message);
-        }
-    },
-    unarchiveResourceVersion : async (resourceTemplateId)=>{
-        try {
-            const response = await resourceController.unarchiveResourceVersion(resourceTemplateId);
-            return response.data.result;
-        } catch (error) {
-            const message =
-            error.response?.data?.message || error.message || "Unarchive resource version failed.";
-          throw new Error(message);
-        }
-    },
-    deleteResourceVersion : async (versionId)=>{
-        try {
-            const response = await resourceController.deleteResourceVersion(versionId);
-            return response.data.result;
-        } catch (error) {
-            const message =
-            error.response?.data?.message || error.message || "Delete resource version failed.";
-          throw new Error(message);
-        }
-    },
-    pubicResourceVersion : async (versionId)=>{
-        try {
-            const response = await resourceController.pubicResourceVersion(versionId);
-            return response.data.result;
-        } catch (error) {
-            const message =
-            error.response?.data?.message || error.message || "Public resource version failed.";
-          throw new Error(message);
-        }
-    },
-
     archiveResourceTemplate: async (resourceTemplateId) => {
         try {
             const response = await resourceController.archiveResourceTemplate(resourceTemplateId);
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Archive resource template failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Archive resource template failed.";
+            throw new Error(message);
+        }
+    },
+    unarchiveResourceVersion: async (resourceTemplateId) => {
+        try {
+            const response = await resourceController.unarchiveResourceVersion(resourceTemplateId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+                error.response?.data?.message || error.message || "Unarchive resource version failed.";
+            throw new Error(message);
+        }
+    },
+    deleteResourceVersion: async (versionId) => {
+        try {
+            const response = await resourceController.deleteResourceVersion(versionId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+                error.response?.data?.message || error.message || "Delete resource version failed.";
+            throw new Error(message);
+        }
+    },
+    pubicResourceVersion: async (versionId) => {
+        try {
+            const response = await resourceController.pubicResourceVersion(versionId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+                error.response?.data?.message || error.message || "Public resource version failed.";
+            throw new Error(message);
         }
     },
 
@@ -190,8 +179,8 @@ export const resourceService = {
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Unarchive resource template failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Unarchive resource template failed.";
+            throw new Error(message);
         }
     },
     updateResourceVersion: async (versionId, data) => {
@@ -200,8 +189,8 @@ export const resourceService = {
             return response.data.result;
         } catch (error) {
             const message =
-            error.response?.data?.message || error.message || "Update resource version failed.";
-          throw new Error(message);
+                error.response?.data?.message || error.message || "Update resource version failed.";
+            throw new Error(message);
         }
     },
 }
