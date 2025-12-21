@@ -55,9 +55,6 @@ export const resourceController = {
     );
   },
 
-
-  ///////////////////////////////////////////////////
-
   createResourceVersion: async (resourceId, data) => {
     return await privateApi.post(
       `/api/orders//designer/products/${resourceId}/versions`,
