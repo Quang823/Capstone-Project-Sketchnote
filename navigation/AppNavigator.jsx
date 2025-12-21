@@ -31,6 +31,7 @@ import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
 import OrderSuccessScreen from "../screens/store/ResourceStoreScreen/Payment/OrderSuccessScreen";
 import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen";
 import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/DesignerProductsScreen";
+import DesignerProductDetailScreen from "../screens/designer/DesignerProductDetailScreen/DesignerProductDetailScreen";
 import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
 import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
 import CreateVersionScreen from "../screens/designer/CreateVersionScreen/CreateVersionScreen";
@@ -129,6 +130,10 @@ export default function AppNavigator() {
       <Stack.Screen
         name="DesignerProducts"
         component={DesignerProductsScreen}
+      />
+      <Stack.Screen
+        name="DesignerProductDetail"
+        component={DesignerProductDetailScreen}
       />
       <Stack.Screen
         name="DesignerAnalytics"

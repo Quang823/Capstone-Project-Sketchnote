@@ -130,7 +130,12 @@ export const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   headerTitleDark: {
-    color: "#F8FAFC",
+    color: "#FFFFFF",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
 
   cartButton: {
@@ -245,16 +250,23 @@ export const styles = StyleSheet.create({
     gap: 10,
     flexWrap: "wrap",
   },
+  priceTypeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+    flexWrap: "wrap",
+  },
   resourceName: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#1E293B",
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#084F8C",
     marginBottom: 8,
-    lineHeight: 32,
+    lineHeight: 36,
     letterSpacing: -0.5,
   },
   resourceNameDark: {
-    color: "#F8FAFC",
+    color: "#FFFFFF",
   },
   ratingRow: {
     flexDirection: "row",
@@ -286,16 +298,21 @@ export const styles = StyleSheet.create({
   authorContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F1F5F9",
-    padding: 14,
-    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 16,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   authorContainerDark: {
-    backgroundColor: "#334155",
-    borderColor: "#475569",
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
   },
   authorAvatar: {
     width: 44,
@@ -337,14 +354,27 @@ export const styles = StyleSheet.create({
   },
 
   // Price Section
-  price: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#1E293B",
-    marginBottom: 16,
+  priceTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#084F8C",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    alignSelf: "flex-start",
+    gap: 8,
+    shadowColor: "#084F8C",
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  priceText: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
   priceDark: {
-    color: "#F8FAFC",
+    color: "#FFFFFF",
   },
 
   // Options
@@ -450,22 +480,34 @@ export const styles = StyleSheet.create({
     paddingBottom: 0,
     borderBottomWidth: 0,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#1E293B",
-    marginBottom: 10,
   },
   sectionTitleDark: {
-    color: "#F8FAFC",
+    color: "#FFFFFF",
   },
   descriptionText: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#475569",
-    lineHeight: 22,
+    lineHeight: 24,
+    backgroundColor: "#F8FAFC",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
   descriptionTextDark: {
     color: "#CBD5E1",
+    backgroundColor: "#334155",
+    borderColor: "#475569",
   },
 
   // Info Grid
@@ -475,15 +517,20 @@ export const styles = StyleSheet.create({
   infoItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#FFFFFF",
     padding: 14,
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E2E8F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   infoItemDark: {
-    backgroundColor: "#334155",
-    borderColor: "#475569",
+    backgroundColor: "#1E293B",
+    borderColor: "#334155",
   },
   infoTextContainer: {
     flex: 1,
