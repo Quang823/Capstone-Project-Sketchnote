@@ -22,7 +22,7 @@ import { getStyles } from "./CustomNoteSetupScreen.styles";
 import { useTheme } from "../../context/ThemeContext";
 
 export default function CustomNoteSetupScreen({ navigation }) {
-    const { user } = useContext(AuthContext);
+    const { user, fetchUser } = useContext(AuthContext);
     const { toast } = useToast();
     const { theme } = useTheme();
     const styles = useMemo(() => getStyles(theme), [theme]);
@@ -158,6 +158,8 @@ export default function CustomNoteSetupScreen({ navigation }) {
                 projectDetails: created,
             };
 
+            // Refresh user profile to update project count (in background, no full-screen loading)
+            if (fetchUser) fetchUser(false);
             navigation.replace("DrawingScreen", { noteConfig });
         } catch (error) {
             console.error("Create custom note error:", error);

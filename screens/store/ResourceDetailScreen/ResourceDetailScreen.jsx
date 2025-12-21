@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { feedbackService } from "../../../service/feedbackService";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import { useTheme } from "../../../context/ThemeContext";
+import { AuthContext } from "../../../context/AuthContext";
 
 export default function ResourceDetailScreen() {
   const navigation = useNavigation();
@@ -24,6 +25,7 @@ export default function ResourceDetailScreen() {
   const { addToCart, cart } = useCart();
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { user } = useContext(AuthContext);
 
   const { resourceId, owned } = route.params;
   const [resource, setResource] = useState(null);
@@ -42,7 +44,7 @@ export default function ResourceDetailScreen() {
   useEffect(() => {
     const fetchResource = async () => {
       try {
-        const data = await resourceService.getResourceById(resourceId);
+        const data = await resourceService.getResourceById(resourceId, !!user);
         setResource(data);
 
         // 🖼 Combine images and items for gallery
@@ -55,14 +57,19 @@ export default function ResourceDetailScreen() {
 
         setGalleryImages([...mainImages, ...itemImages]);
 
-        const feedbackData = await feedbackService.getAllFeedbackResource(
-          resourceId
-        );
-
-        setFeedback(feedbackData || []);
+        if (user) {
+          try {
+            const feedbackData = await feedbackService.getAllFeedbackResource(
+              resourceId
+            );
+            setFeedback(feedbackData || []);
+          } catch (fbError) {
+            console.warn("Failed to fetch feedback:", fbError.message);
+          }
+        }
 
         // 🔥 NEW: Fetch version data if user owns this resource
-        if (owned) {
+        if (user && owned) {
           try {
             const purchasedData = await resourceService.getResourceProjectByUserIdV2();
             // Find the matching resource by resourceTemplateId
@@ -89,12 +96,19 @@ export default function ResourceDetailScreen() {
       }
     };
     fetchResource();
-  }, [resourceId, owned]);
+  }, [resourceId, owned, user]);
 
 
 
   // ✅ Thêm vào giỏ hàng
   const handleAddToCart = () => {
+    if (!user) {
+      return Toast.show({
+        type: "info",
+        text1: "Please login",
+        text2: "You need to login to buy resources",
+      });
+    }
     if (!resource) return;
 
     if (resource.isOwner) {
@@ -146,6 +160,13 @@ export default function ResourceDetailScreen() {
 
   // 🟡 Mua ngay - Add to cart and navigate to cart screen
   const handleBuyNow = () => {
+    if (!user) {
+      return Toast.show({
+        type: "info",
+        text1: "Please login",
+        text2: "You need to login to buy resources",
+      });
+    }
     // Check if user already owns the resource
     if (resource.isOwner) {
       Toast.show({

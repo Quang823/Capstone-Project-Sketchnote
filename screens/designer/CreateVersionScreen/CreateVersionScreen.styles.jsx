@@ -25,8 +25,9 @@ const lightColors = {
     projectCardActiveBg: "#E0F2FE",
     emptyIconColor: "#CBD5E1",
     placeholderText: "#94A3B8",
-    headerTitleColor: "#0F172A",
+    headerTitleColor: "#084F8C",
     headerIconColor: "#084F8C",
+    backButtonBg: "#F8FAFC",
 };
 
 // Dark theme colors
@@ -54,6 +55,7 @@ const darkColors = {
     placeholderText: "#64748B",
     headerTitleColor: "#FFFFFF",
     headerIconColor: "#FFFFFF",
+    backButtonBg: "#334155",
 };
 
 const getStyles = (theme = "light") => {
@@ -108,9 +110,18 @@ const getStyles = (theme = "light") => {
             elevation: 3,
         },
         headerTitle: {
-            fontSize: 20,
-            fontWeight: "700",
+            fontSize: 23,
+            fontFamily: "Pacifico-Regular",
             color: colors.headerTitleColor,
+        },
+        backButton: {
+            padding: 10,
+            borderRadius: 30,
+            backgroundColor: colors.backButtonBg,
+            shadowColor: colors.shadowColor,
+            shadowOpacity: theme === "dark" ? 0.3 : 0.05,
+            shadowRadius: 6,
+            elevation: 3,
         },
         submitText: {
             fontSize: 16,
@@ -338,6 +349,11 @@ const getStyles = (theme = "light") => {
         },
         sourceButtonTextActive: {
             color: "#FFFFFF",
+        },
+        sourceButtonDisabled: {
+            opacity: 0.5,
+            backgroundColor: colors.typeButtonBg,
+            borderColor: colors.typeButtonBorder,
         },
         sourceContent: {
             marginTop: 0,

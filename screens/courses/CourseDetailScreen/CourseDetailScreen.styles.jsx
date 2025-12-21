@@ -256,7 +256,7 @@ export const getStyles = (theme = "light") => {
       alignSelf: "center",
       width: "100%",
       justifyContent: "space-between",
-      marginTop: -40, // Overlap hero section
+      marginTop: -10, // Overlap hero section
     },
 
     // CỘT TRÁI

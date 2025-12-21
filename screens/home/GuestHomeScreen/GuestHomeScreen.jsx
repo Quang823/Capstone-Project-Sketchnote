@@ -27,6 +27,7 @@ import LazyImage from "../../../common/LazyImage";
 import * as offlineStorage from "../../../utils/offlineStorage";
 import { useToast } from "../../../hooks/use-toast";
 import { AuthContext } from "../../../context/AuthContext";
+import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 
 const { width } = Dimensions.get("window");
 
@@ -230,6 +231,7 @@ export default function GuestHomeScreen({ navigation }) {
                     {/* HEADER */}
                     <View style={styles.header}>
                         <View style={styles.headerLeft}>
+                            <SidebarToggleButton iconSize={26} iconColor="#1E40AF" />
                             <Text style={styles.headerTitle}>Guest Mode</Text>
                             <LottieView
                                 source={require("../../../assets/cat.json")}

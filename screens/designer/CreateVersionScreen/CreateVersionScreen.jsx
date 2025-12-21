@@ -231,7 +231,7 @@ export default function CreateVersionScreen() {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Pressable onPress={() => navigation.goBack()}>
+                <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Icon name="arrow-back" size={24} color={styles.headerIconColor} />
                 </Pressable>
                 <View style={{ flex: 1, marginLeft: 12 }}>
@@ -295,7 +295,10 @@ export default function CreateVersionScreen() {
                             <Text style={styles.label}>Type</Text>
                             <View style={styles.typeToggle}>
                                 <Pressable
-                                    onPress={() => setType("TEMPLATES")}
+                                    onPress={() => {
+                                        setType("TEMPLATES");
+                                        setItemSource("project");
+                                    }}
                                     style={[
                                         styles.typeButton,
                                         type === "TEMPLATES" && styles.typeButtonActive,
@@ -316,7 +319,10 @@ export default function CreateVersionScreen() {
                                     </Text>
                                 </Pressable>
                                 <Pressable
-                                    onPress={() => setType("ICONS")}
+                                    onPress={() => {
+                                        setType("ICONS");
+                                        setItemSource("upload");
+                                    }}
                                     style={[
                                         styles.typeButton,
                                         type === "ICONS" && styles.typeButtonActive,
@@ -404,80 +410,86 @@ export default function CreateVersionScreen() {
                     </View>
                 </View>
 
-                {/* Images */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Icon name="image" size={20} color={styles.primaryBlue} />
-                        <Text style={styles.sectionTitle}>Images</Text>
-                    </View>
-
-                    {/* Banner Images - Full Width */}
-                    <View style={styles.sectionHeader}>
-                        <Icon name="image" size={18} color={styles.primaryBlue} />
-                        <Text style={styles.sectionTitle}>Banner Images</Text>
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{images.length}</Text>
+                <View style={styles.rowSection}>
+                    {/* Images */}
+                    <View style={[styles.section, styles.halfSection]}>
+                        <View style={styles.sectionHeader}>
+                            <Icon name="image" size={20} color={styles.primaryBlue} />
+                            <Text style={styles.sectionTitle}>Images</Text>
                         </View>
-                    </View>
-                    <MultipleImageUploader
-                        onImageUploaded={handleImageUploaded}
-                        maxImages={10}
-                    />
-                </View>
 
-                {/* Item Source */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Icon name="inventory" size={20} color={styles.primaryBlue} />
-                        <Text style={styles.sectionTitle}>Item Source</Text>
+                        {/* Banner Images - Full Width */}
+                        <View style={styles.sectionHeader}>
+                            <Icon name="image" size={18} color={styles.primaryBlue} />
+                            <Text style={styles.sectionTitle}>Banner Images</Text>
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{images.length}</Text>
+                            </View>
+                        </View>
+                        <MultipleImageUploader
+                            onImageUploaded={handleImageUploaded}
+                            maxImages={10}
+                        />
                     </View>
 
-                    <View style={[styles.halfInput, styles.sourceToggle]}>
-                        <Pressable
-                            onPress={() => setItemSource("upload")}
-                            style={[
-                                styles.sourceButton,
-                                itemSource === "upload" && styles.sourceButtonActive,
-                                itemSource === "upload" && styles.sourceButtonSelected,
-                            ]}
-                        >
-                            <Icon
-                                name="upload-file"
-                                size={18}
-                                color={itemSource === "upload" ? "#FFFFFF" : styles.textMuted}
-                            />
-                            <Text
+                    {/* Item Source */}
+                    <View style={[styles.section, styles.halfSection]}>
+                        <View style={styles.sectionHeader}>
+                            <Icon name="inventory" size={20} color={styles.primaryBlue} />
+                            <Text style={styles.sectionTitle}>Item Source</Text>
+                        </View>
+
+                        <View style={[styles.halfInput, styles.sourceToggle]}>
+                            <Pressable
+                                onPress={() => setItemSource("upload")}
+                                disabled={type === "TEMPLATES"}
                                 style={[
-                                    styles.sourceButtonText,
-                                    itemSource === "upload" && styles.sourceButtonTextActive,
+                                    styles.sourceButton,
+                                    itemSource === "upload" && styles.sourceButtonActive,
+                                    itemSource === "upload" && styles.sourceButtonSelected,
+                                    type === "TEMPLATES" && styles.sourceButtonDisabled,
                                 ]}
                             >
-                                Upload
-                            </Text>
-                        </Pressable>
+                                <Icon
+                                    name="upload-file"
+                                    size={18}
+                                    color={itemSource === "upload" ? "#FFFFFF" : styles.textMuted}
+                                />
+                                <Text
+                                    style={[
+                                        styles.sourceButtonText,
+                                        itemSource === "upload" && styles.sourceButtonTextActive,
+                                    ]}
+                                >
+                                    Upload
+                                </Text>
+                            </Pressable>
 
-                        <Pressable
-                            onPress={() => setItemSource("project")}
-                            style={[
-                                styles.sourceButton,
-                                itemSource === "project" && styles.sourceButtonActive,
-                                itemSource === "project" && styles.sourceButtonSelected,
-                            ]}
-                        >
-                            <Icon
-                                name="folder"
-                                size={18}
-                                color={itemSource === "project" ? "#FFFFFF" : styles.textMuted}
-                            />
-                            <Text
+                            <Pressable
+                                onPress={() => setItemSource("project")}
+                                disabled={type === "ICONS"}
                                 style={[
-                                    styles.sourceButtonText,
-                                    itemSource === "project" && styles.sourceButtonTextActive,
+                                    styles.sourceButton,
+                                    itemSource === "project" && styles.sourceButtonActive,
+                                    itemSource === "project" && styles.sourceButtonSelected,
+                                    type === "ICONS" && styles.sourceButtonDisabled,
                                 ]}
                             >
-                                Project
-                            </Text>
-                        </Pressable>
+                                <Icon
+                                    name="folder"
+                                    size={18}
+                                    color={itemSource === "project" ? "#FFFFFF" : styles.textMuted}
+                                />
+                                <Text
+                                    style={[
+                                        styles.sourceButtonText,
+                                        itemSource === "project" && styles.sourceButtonTextActive,
+                                    ]}
+                                >
+                                    Project
+                                </Text>
+                            </Pressable>
+                        </View>
                     </View>
                 </View>
 

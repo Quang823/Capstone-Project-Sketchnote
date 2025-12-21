@@ -29,15 +29,21 @@ export default function GlobalSidebar() {
     sidebarAnimation,
     overlayAnimation,
   } = useNavigation();
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, roles } = useContext(AuthContext);
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const navigation = useReactNavigation();
-  const isDesigner = String(user?.role || "").toUpperCase() === "DESIGNER";
+  const isDesigner = roles.includes("DESIGNER");
+  const isGuest = !user;
 
   const handleLogout = async () => {
+    if (isGuest) {
+      toggleSidebar(false);
+      navigation.navigate("Login");
+      return;
+    }
     await logout();
     toggleSidebar(false);
     navigation.dispatch(
@@ -591,6 +597,20 @@ export default function GlobalSidebar() {
                 .filter((i) => i.id !== "profile")
                 .map(renderNavItem)}
             </>
+          ) : isGuest ? (
+            <>
+              {renderSectionTitle("MAIN")}
+              {mainItems.filter(i => i.id === "courses").map(renderNavItem)}
+
+              {renderSectionTitle("STORE")}
+              {storeItems.filter(i => i.id === "store").map(renderNavItem)}
+
+              {renderSectionTitle("BLOG")}
+              {blogItems.filter(i => i.id === "blogAll").map(renderNavItem)}
+
+              {renderSectionTitle("SETTINGS")}
+              {accountNavItems.map(renderNavItem)}
+            </>
           ) : (
             <>
               {renderSectionTitle("MAIN")}
@@ -629,24 +649,24 @@ export default function GlobalSidebar() {
                 paddingVertical: 12,
                 paddingHorizontal: 20,
                 borderRadius: 12,
-                backgroundColor: isDark ? "#450a0a" : "#FEE2E2",
+                backgroundColor: isGuest ? (isDark ? "#1e3a8a" : "#DBEAFE") : (isDark ? "#450a0a" : "#FEE2E2"),
                 borderWidth: 1,
-                borderColor: isDark ? "#7f1d1d" : "#FCA5A5",
+                borderColor: isGuest ? (isDark ? "#3b82f6" : "#93C5FD") : (isDark ? "#7f1d1d" : "#FCA5A5"),
               },
               pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] },
             ]}
             onPress={handleLogout}
           >
-            <Icon name="logout" size={20} color={isDark ? "#fca5a5" : "#DC2626"} />
+            <Icon name={isGuest ? "login" : "logout"} size={20} color={isGuest ? (isDark ? "#93c5fd" : "#1E40AF") : (isDark ? "#fca5a5" : "#DC2626")} />
             <Text
               style={{
                 marginLeft: 8,
                 fontSize: 15,
                 fontWeight: "600",
-                color: isDark ? "#fca5a5" : "#DC2626",
+                color: isGuest ? (isDark ? "#93c5fd" : "#1E40AF") : (isDark ? "#fca5a5" : "#DC2626"),
               }}
             >
-              Sign Out
+              {isGuest ? "Sign In" : "Sign Out"}
             </Text>
           </Pressable>
           <Text

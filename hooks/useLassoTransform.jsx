@@ -20,25 +20,32 @@ export default function useLassoTransform({
     (dx, dy) => {
       if (dx === 0 && dy === 0) return;
 
-      // Filter by selection AND layer (important!)
-      const sel = strokes.filter(
-        (s) =>
-          lassoSelection.includes(s.id) &&
-          (!activeLayerId || s.layerId === activeLayerId)
-      );
+      // Filter by selection (layer filtering is already handled during selection)
+      const sel = strokes.filter((s) => lassoSelection.includes(s.id));
       if (!sel.length) return;
+
+      // Sanity check for dx, dy
+      if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
+        console.warn("useLassoTransform: Invalid dx or dy", { dx, dy });
+        return;
+      }
 
       const updates = sel
         .map((s) => {
           const i = strokes.findIndex((st) => st.id === s.id);
           if (i === -1) return null;
 
+          const safeAdd = (val, delta) => {
+            const result = (val ?? 0) + delta;
+            return Number.isFinite(result) ? result : val;
+          };
+
           // For strokes with points (pen, pencil, brush, etc.)
           if (Array.isArray(s.points) && s.points.length && !s.shape) {
             const newPoints = s.points.map((p) => ({
               ...p, // Keep other point properties like pressure
-              x: (p.x ?? 0) + dx,
-              y: (p.y ?? 0) + dy,
+              x: safeAdd(p.x, dx),
+              y: safeAdd(p.y, dy),
             }));
             return { id: s.id, index: i, changes: { points: newPoints } };
           }
@@ -48,49 +55,47 @@ export default function useLassoTransform({
             const sh = s.shape;
             let newShape = { ...sh };
 
-            // Circle and oval: update center
-            if (s.tool === "circle" || s.tool === "oval") {
-              const safe = (n, fb = 0) => (Number.isFinite(n) ? n : fb);
-              newShape.cx = safe((sh.cx ?? 0) + dx, sh.cx ?? 0);
-              newShape.cy = safe((sh.cy ?? 0) + dy, sh.cy ?? 0);
-            }
-            // Rectangle and square: update position
-            else if (s.tool === "rect" || s.tool === "square") {
-              const safe = (n, fb = 0) => (Number.isFinite(n) ? n : fb);
-              newShape.x = safe((sh.x ?? 0) + dx, sh.x ?? 0);
-              newShape.y = safe((sh.y ?? 0) + dy, sh.y ?? 0);
-            }
-            // Triangle: update all three points
-            else if (s.tool === "triangle") {
-              const safe = (n, fb = 0) => (Number.isFinite(n) ? n : fb);
-              newShape.x1 = safe((sh.x1 ?? 0) + dx, sh.x1 ?? 0);
-              newShape.y1 = safe((sh.y1 ?? 0) + dy, sh.y1 ?? 0);
-              newShape.x2 = safe((sh.x2 ?? 0) + dx, sh.x2 ?? 0);
-              newShape.y2 = safe((sh.y2 ?? 0) + dy, sh.y2 ?? 0);
-              newShape.x3 = safe((sh.x3 ?? 0) + dx, sh.x3 ?? 0);
-              newShape.y3 = safe((sh.y3 ?? 0) + dy, sh.y3 ?? 0);
-            }
-            // Line and arrow: update endpoints
-            else if (s.tool === "line" || s.tool === "arrow") {
-              const safe = (n, fb = 0) => (Number.isFinite(n) ? n : fb);
-              newShape.x1 = safe((sh.x1 ?? 0) + dx, sh.x1 ?? 0);
-              newShape.y1 = safe((sh.y1 ?? 0) + dy, sh.y1 ?? 0);
-              newShape.x2 = safe((sh.x2 ?? 0) + dx, sh.x2 ?? 0);
-              newShape.y2 = safe((sh.y2 ?? 0) + dy, sh.y2 ?? 0);
-            }
-            // Polygon and star: update all points
-            else if (s.tool === "polygon" || s.tool === "star") {
-              if (Array.isArray(sh.points)) {
-                const safe = (n, fb = 0) => (Number.isFinite(n) ? n : fb);
-                newShape.points = sh.points.map((p) => ({
-                  ...p,
-                  x: safe((p.x ?? 0) + dx, p.x ?? 0),
-                  y: safe((p.y ?? 0) + dy, p.y ?? 0),
-                }));
-              }
+            // Update center coordinates (circle, oval)
+            if (typeof sh.cx === "number") newShape.cx = safeAdd(sh.cx, dx);
+            if (typeof sh.cy === "number") newShape.cy = safeAdd(sh.cy, dy);
+
+            // Update position coordinates (rect, square)
+            if (typeof sh.x === "number") newShape.x = safeAdd(sh.x, dx);
+            if (typeof sh.y === "number") newShape.y = safeAdd(sh.y, dy);
+
+            // Update point-based coordinates (triangle, line, arrow)
+            if (typeof sh.x1 === "number") newShape.x1 = safeAdd(sh.x1, dx);
+            if (typeof sh.y1 === "number") newShape.y1 = safeAdd(sh.y1, dy);
+            if (typeof sh.x2 === "number") newShape.x2 = safeAdd(sh.x2, dx);
+            if (typeof sh.y2 === "number") newShape.y2 = safeAdd(sh.y2, dy);
+            if (typeof sh.x3 === "number") newShape.x3 = safeAdd(sh.x3, dx);
+            if (typeof sh.y3 === "number") newShape.y3 = safeAdd(sh.y3, dy);
+
+            // Update array-based points (polygon, star, diamond, etc.)
+            if (Array.isArray(sh.points)) {
+              newShape.points = sh.points.map((p) => ({
+                ...p,
+                x: safeAdd(p.x, dx),
+                y: safeAdd(p.y, dy),
+              }));
             }
 
-            return { id: s.id, index: i, changes: { shape: newShape } };
+            const changes = { shape: newShape };
+
+            // Also update top-level x, y if they exist
+            if (typeof s.x === "number") changes.x = safeAdd(s.x, dx);
+            if (typeof s.y === "number") changes.y = safeAdd(s.y, dy);
+
+            // Also update points if they exist (important for some rendering/hit-test paths)
+            if (Array.isArray(s.points) && s.points.length) {
+              changes.points = s.points.map((p) => ({
+                ...p,
+                x: safeAdd(p.x, dx),
+                y: safeAdd(p.y, dy),
+              }));
+            }
+
+            return { id: s.id, index: i, changes };
           }
 
           // For text, image, sticker, emoji, sticky, comment - update x,y position
@@ -108,7 +113,7 @@ export default function useLassoTransform({
             return {
               id: s.id,
               index: i,
-              changes: { x: (s.x ?? 0) + dx, y: (s.y ?? 0) + dy },
+              changes: { x: safeAdd(s.x, dx), y: safeAdd(s.y, dy) },
             };
           }
 
@@ -117,7 +122,7 @@ export default function useLassoTransform({
             return {
               id: s.id,
               index: i,
-              changes: { x: s.x + dx, y: s.y + dy },
+              changes: { x: safeAdd(s.x, dx), y: safeAdd(s.y, dy) },
             };
           }
 

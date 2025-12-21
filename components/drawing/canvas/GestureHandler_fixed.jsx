@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   useEffect,
   useMemo,
   useRef,
@@ -212,7 +212,7 @@ const GestureHandler = forwardRef(({
     if (pts.length < 2 || !Array.isArray(eraserPts) || eraserPts.length < 2)
       return [stroke];
 
-    // Thresh d�ng d? x�c d?nh m?t chunk "qu� ng?n" (s? b? lo?i)
+    // Thresh dùng d? xác d?nh m?t chunk "quá ng?n" (s? b? lo?i)
     const minChunkLen = Math.max(6, (stroke.width || 6) * 0.6, radius * 0.6);
 
     // build eraser segments
@@ -607,9 +607,9 @@ const GestureHandler = forwardRef(({
     origin: null,
   });
 
-  // Nếu bạn có prop onLiveUpdateStroke (từ CanvasContainer), nó sẽ được gọi nhiều lần để update live (Skia).
-  // Nếu không có, chúng ta vẫn dùng liveTransformRef để accumulate và commit on end.
-  // Khi selectedStroke thay đổi (chọn 1 image mới) -> reset origin
+  // Náº¿u báº¡n cÃ³ prop onLiveUpdateStroke (tá»« CanvasContainer), nÃ³ sáº½ Ä‘Æ°á»£c gá»i nhiá»u láº§n Ä‘á»ƒ update live (Skia).
+  // Náº¿u khÃ´ng cÃ³, chÃºng ta váº«n dÃ¹ng liveTransformRef Ä‘á»ƒ accumulate vÃ  commit on end.
+  // Khi selectedStroke thay Ä‘á»•i (chá»n 1 image má»›i) -> reset origin
   useEffect(() => {
     if (
       selectedStroke &&
@@ -889,7 +889,7 @@ const GestureHandler = forwardRef(({
     .runOnJS(true)
     .onStart((e) => {
       if (tool === "scroll" || tool === "zoom") return;
-      // Nếu đang dùng các tool vẽ tự do, tạo chấm ngay tại vị trí tap
+      // Náº¿u Ä‘ang dÃ¹ng cÃ¡c tool váº½ tá»± do, táº¡o cháº¥m ngay táº¡i vá»‹ trÃ­ tap
       const isFreehandTool = [
         "pen",
         "pencil",
@@ -942,7 +942,7 @@ const GestureHandler = forwardRef(({
         return;
       }
 
-      // 🎨 Eyedropper tool - pick color from stroke
+      // ðŸŽ¨ Eyedropper tool - pick color from stroke
       if (tool === "eyedropper") {
         // Try to find a stroke at tap position across ALL visible strokes
         const visible = Array.isArray(allVisibleStrokes)
@@ -951,7 +951,7 @@ const GestureHandler = forwardRef(({
         const hit =
           hitTestText(e.x, e.y, visible) || hitTestImage(e.x, e.y, visible);
         if (hit && hit.color) {
-          // Set màu và lưu vào picked colors
+          // Set mÃ u vÃ  lÆ°u vÃ o picked colors
           setColor?.(hit.color);
           onColorPicked?.(hit.color);
         } else {
@@ -961,7 +961,7 @@ const GestureHandler = forwardRef(({
             const s = activeStrokes[i];
             if (!s.points) continue;
 
-            // Kiểm tra xem có phải shape với fill không
+            // Kiá»ƒm tra xem cÃ³ pháº£i shape vá»›i fill khÃ´ng
             const isShape =
               s.tool &&
               ["rect", "rectangle", "circle", "triangle", "star", "polygon"].includes(
@@ -970,7 +970,7 @@ const GestureHandler = forwardRef(({
             const hasFill = s.fill && s.fillColor;
 
             if (isShape && hasFill) {
-              // Kiểm tra xem tap có nằm trong shape không
+              // Kiá»ƒm tra xem tap cÃ³ náº±m trong shape khÃ´ng
               const bbox = getBoundingBoxForStroke(s);
               if (
                 bbox &&
@@ -979,11 +979,11 @@ const GestureHandler = forwardRef(({
                 e.y >= bbox.minY &&
                 e.y <= bbox.maxY
               ) {
-                // Nằm trong bounding box, kiểm tra chi tiết hơn
+                // Náº±m trong bounding box, kiá»ƒm tra chi tiáº¿t hÆ¡n
                 let isInside = false;
 
                 if (s.tool === "circle") {
-                  // Kiểm tra trong hình tròn
+                  // Kiá»ƒm tra trong hÃ¬nh trÃ²n
                   const centerX = (bbox.minX + bbox.maxX) / 2;
                   const centerY = (bbox.minY + bbox.maxY) / 2;
                   const radiusX = (bbox.maxX - bbox.minX) / 2;
@@ -992,20 +992,20 @@ const GestureHandler = forwardRef(({
                   const dy = (e.y - centerY) / radiusY;
                   isInside = dx * dx + dy * dy <= 1;
                 } else if (s.tool === "rect" || s.tool === "rectangle") {
-                  // Rectangle luôn trong bbox
+                  // Rectangle luÃ´n trong bbox
                   isInside = true;
                 } else if (
                   s.tool === "triangle" ||
                   s.tool === "star" ||
                   s.tool === "polygon"
                 ) {
-                  // Dùng pointInPolygon
+                  // DÃ¹ng pointInPolygon
                   const pts = s.points || s.shape?.points;
                   isInside = pointInPolygon(pts, e.x, e.y);
                 }
 
                 if (isInside) {
-                  // Tap vào bên trong shape có fill → lấy fillColor
+                  // Tap vÃ o bÃªn trong shape cÃ³ fill â†’ láº¥y fillColor
                   setColor?.(s.fillColor);
                   onColorPicked?.(s.fillColor);
                   return;
@@ -1013,7 +1013,7 @@ const GestureHandler = forwardRef(({
               }
             }
 
-            // Kiểm tra gần viền (cho cả shape và stroke thường)
+            // Kiá»ƒm tra gáº§n viá»n (cho cáº£ shape vÃ  stroke thÆ°á»ng)
             if (s.color) {
               const isNear = s.points.some((p) => {
                 const dx = p.x - e.x;
@@ -1021,7 +1021,7 @@ const GestureHandler = forwardRef(({
                 return Math.sqrt(dx * dx + dy * dy) <= (s.width || 6) + 10;
               });
               if (isNear) {
-                // Gần viền → lấy màu viền
+                // Gáº§n viá»n â†’ láº¥y mÃ u viá»n
                 setColor?.(s.color);
                 onColorPicked?.(s.color);
                 return;
@@ -1032,7 +1032,7 @@ const GestureHandler = forwardRef(({
         return;
       }
 
-      // 🧩 Nếu tap ra ngoài và đang có lasso selection → hủy chọn
+      // ðŸ§© Náº¿u tap ra ngoÃ i vÃ  Ä‘ang cÃ³ lasso selection â†’ há»§y chá»n
       if (lassoSelection.length > 0) {
         // Commit pending moves before deselecting
         if (
@@ -1051,7 +1051,7 @@ const GestureHandler = forwardRef(({
         return;
       }
 
-      // 🖼️ Check if tapping on an image/table - should always show transform box
+      // ðŸ–¼ï¸ Check if tapping on an image/table - should always show transform box
       const hitImage = hitTestImage(e.x, e.y, strokes);
       if (hitImage) {
         const newBox = {
@@ -1069,10 +1069,10 @@ const GestureHandler = forwardRef(({
       }
 
 
-      // 📝 Check if tapping on text
+      // ðŸ“ Check if tapping on text
       const hit = hitTestText(e.x, e.y, strokes);
       if (!hit) {
-        // ✅ Tap on empty canvas: immediately clear selection
+        // âœ… Tap on empty canvas: immediately clear selection
         setSelectedId(null);
         setSelectedBox(null);
         onSelectStroke?.(null);
@@ -1158,24 +1158,24 @@ const GestureHandler = forwardRef(({
     });
 
   const pan = Gesture.Pan()
-    .averageTouches(false) // ✅ Disable averaging for precision
+    .averageTouches(false) // âœ… Disable averaging for precision
     .minDistance(1)
     .minPointers(1)
-    .maxPointers(1) // ✅ Only accept single finger - two-finger gestures handled by MultiPageCanvas
-    .shouldCancelWhenOutside(false) // ✅ Prevent accidental cancellation
+    .maxPointers(1) // âœ… Only accept single finger - two-finger gestures handled by MultiPageCanvas
+    .shouldCancelWhenOutside(false) // âœ… Prevent accidental cancellation
     .runOnJS(true)
     .onStart((e) => {
-      // ✅ Early return cho scroll và zoom tools - không vẽ gì cả
+      // âœ… Early return cho scroll vÃ  zoom tools - khÃ´ng váº½ gÃ¬ cáº£
       if (tool === "scroll" || tool === "zoom") {
         return;
       }
 
-      // local copy of pointer coords — avoid mutating event directly
+      // local copy of pointer coords â€” avoid mutating event directly
       let px = e.x;
       let py = e.y;
       const pressure = e.pressure ?? 0.5;
 
-      // 🎨 Eyedropper tool - pick color from stroke (trong pan gesture)
+      // ðŸŽ¨ Eyedropper tool - pick color from stroke (trong pan gesture)
       if (tool === "eyedropper") {
         const visible = Array.isArray(allVisibleStrokes)
           ? allVisibleStrokes.filter((s) => s?.visible !== false)
@@ -1252,11 +1252,11 @@ const GestureHandler = forwardRef(({
         return;
       }
 
-      // tiếp tục các kiểm tra ban đầu khác (tool loại trừ, page bounds, lasso start...)
+      // tiáº¿p tá»¥c cÃ¡c kiá»ƒm tra ban Ä‘áº§u khÃ¡c (tool loáº¡i trá»«, page bounds, lasso start...)
       if (["image", "sticker", "camera", "table"].includes(tool)) return;
       if (!isInsidePage(px, py, page)) return;
 
-      // LASSO logic (giữ như cũ)...
+      // LASSO logic (giá»¯ nhÆ° cÅ©)...
       if (tool === "lasso" && lassoSelection.length > 0) {
         const hit = lassoOrigin?.some((stInfo) => {
           const s = strokes.find((st) => st.id === stInfo.id);
@@ -1289,7 +1289,7 @@ const GestureHandler = forwardRef(({
         return;
       }
 
-      // Các logic text/drag init (giữ nguyên) - nhưng dùng px/py thay vì e.x/e.y
+      // CÃ¡c logic text/drag init (giá»¯ nguyÃªn) - nhÆ°ng dÃ¹ng px/py thay vÃ¬ e.x/e.y
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
           (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
@@ -1401,7 +1401,7 @@ const GestureHandler = forwardRef(({
         return;
       }
 
-      // --- Nếu đang vẽ vùng lasso mới ---
+      // --- Náº¿u Ä‘ang váº½ vÃ¹ng lasso má»›i ---
       if (tool === "lasso" && !isMovingLasso) {
         setLassoPoints((prev) => [...prev, { x: e.x, y: e.y }]);
         if (!rafScheduled.current) {
@@ -1415,7 +1415,7 @@ const GestureHandler = forwardRef(({
         return;
       }
 
-      // Các xử lý khác giữ nguyên (text dragging, eraser, normal drawing...)
+      // CÃ¡c xá»­ lÃ½ khÃ¡c giá»¯ nguyÃªn (text dragging, eraser, normal drawing...)
       const validStrokes = Array.isArray(strokes)
         ? strokes.filter(
           (s) => s && s.layerId === activeLayerId && (s.visible ?? true)
@@ -1728,7 +1728,7 @@ const GestureHandler = forwardRef(({
         return;
       }
 
-      // --- Khi thả tay sau khi move vùng chọn ---
+      // --- Khi tháº£ tay sau khi move vÃ¹ng chá»n ---
       if (tool === "lasso" && isMovingLasso && lassoOrigin) {
         const dx = e.x - lassoMoveStart.x;
         const dy = e.y - lassoMoveStart.y;
@@ -1913,7 +1913,7 @@ const GestureHandler = forwardRef(({
         stabilization: 0.2,
       };
 
-      // 🛠️ Giảm số điểm để tránh lag khi stroke quá dài
+      // ðŸ› ï¸ Giáº£m sá»‘ Ä‘iá»ƒm Ä‘á»ƒ trÃ¡nh lag khi stroke quÃ¡ dÃ i
       const shouldDecimate = [
         "pen",
         "pencil",
@@ -2094,11 +2094,11 @@ const GestureHandler = forwardRef(({
     if (lassoBaseBox) {
       const pdx = lassoPendingDelta.current?.dx || 0;
       const pdy = lassoPendingDelta.current?.dy || 0;
-      
-      
+      const vdx = lassoVisualOffset?.dx || 0;
+      const vdy = lassoVisualOffset?.dy || 0;
       return {
-        x: lassoBaseBox.x + pdx,
-        y: lassoBaseBox.y + pdy,
+        x: lassoBaseBox.x + pdx + vdx,
+        y: lassoBaseBox.y + pdy + vdy,
         width: lassoBaseBox.width,
         height: lassoBaseBox.height,
       };
@@ -2130,7 +2130,7 @@ const GestureHandler = forwardRef(({
     };
   }, [lassoBaseBox, lassoVisualOffset, lassoSelection, strokes]);
 
-  // ✅ Only enable GestureHandler's gestures when in drawing mode
+  // âœ… Only enable GestureHandler's gestures when in drawing mode
   // This prevents conflicts with navigation gestures (scroll/zoom)
   // Note: image/sticker tools need tap gestures enabled to select/deselect images
   const isDrawingMode = useMemo(() => {
@@ -2149,7 +2149,7 @@ const GestureHandler = forwardRef(({
     const activePan = pan.enabled(isDrawingMode);
 
     if (isDrawingMode) {
-      // ✅ Simplify gesture when drawing to avoid conflicts/crashes
+      // âœ… Simplify gesture when drawing to avoid conflicts/crashes
       // Remove doubleTap and Race overhead when drawing
       return Gesture.Simultaneous(activeTap, activePan);
     }
@@ -2232,7 +2232,7 @@ const GestureHandler = forwardRef(({
                   .slice(2)}`,
                 x: (s.x ?? 0) + 20,
                 y: (s.y ?? 0) + 20,
-                // Offset points nếu có (cho pen, pencil, shapes, etc.)
+                // Offset points náº¿u cÃ³ (cho pen, pencil, shapes, etc.)
                 points: s.points
                   ? s.points.map((p) => ({
                     ...p,
@@ -2249,7 +2249,7 @@ const GestureHandler = forwardRef(({
             const indices = strokes
               .map((s, i) => (lassoSelection.includes(s.id) ? i : -1))
               .filter((i) => i !== -1)
-              .sort((a, b) => b - a); // Sort descending để xóa từ cuối lên
+              .sort((a, b) => b - a); // Sort descending Ä‘á»ƒ xÃ³a tá»« cuá»‘i lÃªn
             indices.forEach((i) => onDeleteStroke?.(i));
             setLassoSelection([]);
           }}
@@ -2257,7 +2257,7 @@ const GestureHandler = forwardRef(({
             const indices = strokes
               .map((s, i) => (lassoSelection.includes(s.id) ? i : -1))
               .filter((i) => i !== -1)
-              .sort((a, b) => b - a); // Sort descending để xóa từ cuối lên
+              .sort((a, b) => b - a); // Sort descending Ä‘á»ƒ xÃ³a tá»« cuá»‘i lÃªn
             indices.forEach((i) => onDeleteStroke?.(i));
             setLassoSelection([]);
           }}
@@ -2292,7 +2292,7 @@ const GestureHandler = forwardRef(({
               };
             }}
             onMoveStart={() => {
-              // ✅ FIX: Capture origin position when move starts
+              // âœ… FIX: Capture origin position when move starts
               const s = strokes.find((st) => st.id === selectedId);
               if (s) {
                 dragOriginRef.current = {
@@ -2317,7 +2317,7 @@ const GestureHandler = forwardRef(({
               }
             }}
             onMoveEnd={(totalDx, totalDy) => {
-              // ✅ FIX: Commit final position to stroke when move ends
+              // âœ… FIX: Commit final position to stroke when move ends
               const index = strokes.findIndex((s) => s.id === selectedId);
               if (index !== -1 && typeof onModifyStroke === "function") {
                 const origin = dragOriginRef.current;
