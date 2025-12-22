@@ -31,7 +31,7 @@ import { useTheme } from "../../../context/ThemeContext";
 
 const ITEMS_PER_PAGE = 10;
 const screenWidth = Dimensions.get("window").width;
-const TABS = ["All", "Pending", "Completed", "Cancelled"];
+const TABS = ["All", "Completed", "Cancelled"];
 
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
@@ -91,17 +91,13 @@ export default function OrderHistoryScreen() {
     setActiveTab(tab);
     setCurrentPage(1);
     Animated.spring(translateX, {
-      toValue: ((screenWidth - 40) / 4) * index,
+      toValue: ((screenWidth - 40) / 3) * index,
       useNativeDriver: true,
     }).start();
   };
 
   const getFilteredOrders = () => {
     if (activeTab === "All") return allOrders;
-    if (activeTab === "Pending")
-      return allOrders.filter(
-        (o) => o.orderStatus === "PENDING" || o.paymentStatus === "PENDING"
-      );
     if (activeTab === "Completed")
       return allOrders.filter(
         (o) => o.orderStatus === "COMPLETED" || o.orderStatus === "SUCCESS"
@@ -535,16 +531,16 @@ export default function OrderHistoryScreen() {
                               ? "#064E3B"
                               : "#ECFDF5"
                             : isDark
-                            ? "#334155"
-                            : "#F1F5F9",
+                              ? "#334155"
+                              : "#F1F5F9",
                         borderColor:
                           order.paymentStatus === "PAID"
                             ? isDark
                               ? "#10B981"
                               : "#A7F3D0"
                             : isDark
-                            ? "#475569"
-                            : "#E2E8F0",
+                              ? "#475569"
+                              : "#E2E8F0",
                         borderWidth: 1,
                       },
                     ]}
@@ -554,16 +550,16 @@ export default function OrderHistoryScreen() {
                         order.paymentStatus === "PENDING"
                           ? "payment"
                           : order.paymentStatus === "FAILED"
-                          ? "error"
-                          : "check-circle"
+                            ? "error"
+                            : "check-circle"
                       }
                       size={14}
                       color={
                         order.paymentStatus === "PAID"
                           ? "#10B981"
                           : isDark
-                          ? "#94A3B8"
-                          : "#64748B"
+                            ? "#94A3B8"
+                            : "#64748B"
                       }
                     />
                     <Text
@@ -574,8 +570,8 @@ export default function OrderHistoryScreen() {
                             order.paymentStatus === "PAID"
                               ? "#10B981"
                               : isDark
-                              ? "#94A3B8"
-                              : "#64748B",
+                                ? "#94A3B8"
+                                : "#64748B",
                         },
                       ]}
                     >
@@ -654,8 +650,8 @@ export default function OrderHistoryScreen() {
                       ? "#475569"
                       : "#BDC3C7"
                     : isDark
-                    ? "#60A5FA"
-                    : "#084F8C"
+                      ? "#60A5FA"
+                      : "#084F8C"
                 }
               />
             </Pressable>
@@ -701,8 +697,8 @@ export default function OrderHistoryScreen() {
                       ? "#475569"
                       : "#BDC3C7"
                     : isDark
-                    ? "#60A5FA"
-                    : "#084F8C"
+                      ? "#60A5FA"
+                      : "#084F8C"
                 }
               />
             </Pressable>
@@ -789,7 +785,7 @@ export default function OrderHistoryScreen() {
                 style={[
                   styles.submitButton,
                   (submittingFeedback || rating === 0 || !comment.trim()) &&
-                    styles.submitButtonDisabled,
+                  styles.submitButtonDisabled,
                 ]}
                 onPress={createFeedback}
                 disabled={submittingFeedback || rating === 0 || !comment.trim()}
