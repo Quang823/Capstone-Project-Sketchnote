@@ -22,7 +22,7 @@ import NetInfo from "@react-native-community/netinfo";
 import SidebarToggleButton from "../../components/navigation/SidebarToggleButton";
 import { getStyles } from "./NoteSetupScreenFinal.styles";
 import { useTheme } from "../../context/ThemeContext";
-
+import { useToast } from "../../hooks/use-toast";
 
 const PAPER_SIZES = [
   { id: "A3", label: "A3" },
@@ -53,9 +53,9 @@ export default function NoteSetupScreen({ navigation, route }) {
   const [orientation, setOrientation] = useState("portrait");
   const [paperSize, setPaperSize] = useState("A4");
   const [showFormatDropdown, setShowFormatDropdown] = useState(false);
-
+  const { toast } = useToast();
   // 🔥 Add AuthContext at component level (not inside handleCreate)
-  const { isGuest, user } = useContext(AuthContext);
+  const { isGuest, user, fetchUser } = useContext(AuthContext);
   const [titleModalVisible, setTitleModalVisible] = useState(false);
 
   // API-fetched templates
@@ -198,17 +198,12 @@ export default function NoteSetupScreen({ navigation, route }) {
 
         if (!canCreate) {
           setIsCreating(false);
-          Alert.alert(
-            "Project Limit Reached",
-            `Guest mode only allows ${limit} projects. You currently have ${currentCount} projects.\n\nPlease login to create unlimited projects.`,
-            [
-              { text: "OK", style: "cancel" },
-              {
-                text: "Login Now",
-                onPress: () => navigation.navigate("Login")
-              }
-            ]
-          );
+
+          toast({
+            type: "error",
+            text1: "Project Limit Reached",
+            text2: `Guest mode only allows ${limit} projects. You currently have ${currentCount} projects.\n\nPlease login to create unlimited projects.`,
+          });
           return;
         }
 
@@ -291,6 +286,8 @@ export default function NoteSetupScreen({ navigation, route }) {
       });
 
       setIsCreating(false);
+      // Refresh user profile to update project count (in background, no full-screen loading)
+      if (fetchUser) fetchUser(false);
       navigation.navigate("DrawingScreen", { noteConfig });
     } catch (error) {
       setIsCreating(false);

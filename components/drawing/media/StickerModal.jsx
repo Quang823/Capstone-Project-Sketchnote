@@ -6,12 +6,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
-  Alert,
 } from "react-native";
 import { EMOJIS } from "./emojiList";
 import { STATIC_STICKERS } from "./stickerList";
-
+import { useToast } from "../../../hooks/use-toast";
 export default function StickerModal({ visible, onClose, onSelect }) {
+  const { toast } = useToast();
   const [tab, setTab] = useState("emoji"); // ✅ default emoji tab
 
   const handleSelect = (value, type) => {
@@ -40,7 +40,11 @@ export default function StickerModal({ visible, onClose, onSelect }) {
           : Image.resolveAssetSource(value)?.uri;
 
       if (!uri || typeof uri !== "string") {
-        Alert.alert("Sticker error", "Invalid static sticker URI");
+        toast({
+          title: "Sticker error",
+          description: "Invalid static sticker URI",
+          status: "error",
+        });
         return;
       }
 
@@ -188,9 +192,15 @@ export default function StickerModal({ visible, onClose, onSelect }) {
                       source={{ uri }}
                       style={{ width: 55, height: 55 }}
                       resizeMode="contain"
-                      onError={() =>
-                        Alert.alert("Error", `Failed to load: ${uri}`)
-                      }
+                      onError={() => {
+                        requestAnimationFrame(() => {
+                          toast({
+                            title: "Error",
+                            description: `Failed to load: ${uri}`,
+                            status: "error",
+                          });
+                        });
+                      }}
                     />
                   </TouchableOpacity>
                 ))}

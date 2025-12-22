@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import loadingAnimation from "../../assets/loading.json";
 import { LinearGradient } from 'expo-linear-gradient';
 import { styles } from "./BlogDetailScreen.styles";
 import { useTheme } from "../../context/ThemeContext";
+import { AuthContext } from "../../context/AuthContext";
 
 const { width } = Dimensions.get("window");
 
@@ -33,6 +34,7 @@ export default function BlogDetailScreen() {
   const { blogId } = route.params;
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { user } = useContext(AuthContext);
 
   const [blog, setBlog] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -284,6 +286,13 @@ export default function BlogDetailScreen() {
   };
 
   const handleSubmitComment = async () => {
+    if (!user) {
+      return Toast.show({
+        type: "info",
+        text1: "Please login",
+        text2: "You need to login to comment",
+      });
+    }
     const success = await createCommentsBlog(commentInput);
     if (success) {
       setCommentInput("");
@@ -303,6 +312,13 @@ export default function BlogDetailScreen() {
   };
 
   const handleSubmitReply = async (commentId) => {
+    if (!user) {
+      return Toast.show({
+        type: "info",
+        text1: "Please login",
+        text2: "You need to login to reply",
+      });
+    }
     const content = replyInputs[commentId] || "";
     const success = await createCommentsBlog(content, commentId);
     if (success) {
@@ -317,19 +333,12 @@ export default function BlogDetailScreen() {
   }, [blogId]);
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const user = await getUserFromToken();
-        if (user) {
-          setCurrentUser(user);
-        }
-      } catch (error) {
-        console.warn("Unable to load current user", error);
-      }
-    };
-
-    fetchUser();
-  }, []);
+    if (user) {
+      setCurrentUser(user);
+    } else {
+      setCurrentUser(null);
+    }
+  }, [user]);
 
   const canManageComment = (authorId) => {
     if (!currentUser) return false;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useContext } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import { feedbackService } from "../../../service/feedbackService";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import { useTheme } from "../../../context/ThemeContext";
+import { AuthContext } from "../../../context/AuthContext";
 
 const ReanimatedView = Reanimated.createAnimatedComponent(View);
 const { width } = Dimensions.get("window");
@@ -55,6 +56,7 @@ export default function CourseDetailScreen() {
   const { courseId } = route.params || { courseId: 1 };
   const { theme } = useTheme();
   const styles = useMemo(() => getStyles(theme), [theme]);
+  const { user } = useContext(AuthContext);
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -75,8 +77,10 @@ export default function CourseDetailScreen() {
     translateY.value = withTiming(0, { duration: 800, easing: Easing.ease });
 
     fetchCourseDetail(courseId);
-    fetchFeedback(courseId);
-  }, [courseId]);
+    if (user) {
+      fetchFeedback(courseId);
+    }
+  }, [courseId, user]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -105,6 +109,13 @@ export default function CourseDetailScreen() {
   };
 
   const handleBuyCourse = async () => {
+    if (!user) {
+      return Toast.show({
+        type: "info",
+        text1: "Please login",
+        text2: "You need to login to buy courses",
+      });
+    }
     // 1. CHẶN DOUBLE CLICK
     if (isProcessing.current) {
       return;
@@ -157,6 +168,13 @@ export default function CourseDetailScreen() {
   };
 
   const handleOpenPurchaseModal = () => {
+    if (!user) {
+      return Toast.show({
+        type: "info",
+        text1: "Please login",
+        text2: "You need to login to buy courses",
+      });
+    }
     setShowPurchaseModal(true);
   };
 
@@ -177,7 +195,7 @@ export default function CourseDetailScreen() {
 
       setFeedbackData(data);
     } catch (error) {
-      console.error("Error fetching feedback:", error.message);
+      console.warn("Error fetching feedback:", error.message);
     }
   };
 
@@ -187,15 +205,18 @@ export default function CourseDetailScreen() {
       setError(null);
 
       const response = await courseService.getCourseById(courseId);
-      const enrolledRes = await courseService.getAllCourseEnrollments2();
+      let isEnrolled = false;
+
+      if (user) {
+        const enrolledRes = await courseService.getAllCourseEnrollments2();
+        const enrolledCourses = enrolledRes.result || [];
+        isEnrolled = enrolledCourses.some(
+          (item) => item.courseId === response.result?.courseId
+        );
+      }
 
       if (response && response.result) {
         const data = response.result;
-
-        const enrolledCourses = enrolledRes.result || [];
-        const isEnrolled = enrolledCourses.some(
-          (item) => item.courseId === data.courseId
-        );
 
         const transformedCourse = {
           id: data.courseId,

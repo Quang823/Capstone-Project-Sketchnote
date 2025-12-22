@@ -334,6 +334,11 @@ const getStyles = (theme = "light") => {
     sourceButtonTextActive: {
       color: "#FFFFFF",
     },
+    sourceButtonDisabled: {
+      opacity: 0.5,
+      backgroundColor: colors.typeButtonBg,
+      borderColor: colors.typeButtonBorder,
+    },
     sourceContent: {
       marginTop: 0,
     },

@@ -1,8 +1,8 @@
-import { privateApi } from "./axiosInstance";
+import { privateApi, publicApi } from "./axiosInstance";
 
 export const blogApiController = {
   getBlogs: async (pageNo, pageSize) => {
-    return await privateApi.get(`/api/blogs`, {
+    return await publicApi.get(`/api/blogs`, {
       params: { pageNo, pageSize }
     });
   },
@@ -24,7 +24,7 @@ export const blogApiController = {
   },
 
   getBlogById: async (id) => {
-    return await privateApi.get(`/api/blogs/${id}`);
+    return await publicApi.get(`/api/blogs/${id}`);
   },
 
   updateContent: async (id, content) => {
@@ -38,7 +38,7 @@ export const blogApiController = {
   deleteContent: async (id) => {
     return await privateApi.delete(`/api/contents/${id}`);
   },
-  getCommentsBlog: async (blogId,page,size) => {
+  getCommentsBlog: async (blogId, page, size) => {
     return await privateApi.get(`/api/blogs/${blogId}/comments`, {
       params: { page, size }
     });
@@ -46,18 +46,18 @@ export const blogApiController = {
   createCommentsBlog: async (blogId, comment) => {
     return await privateApi.post(`/api/blogs/${blogId}/comments`, comment);
   },
-  updateCommentsBlog: async ( commentId, comment) => {
+  updateCommentsBlog: async (commentId, comment) => {
     return await privateApi.put(`/api/blogs/comments/${commentId}`, comment);
   },
   deleteCommentsBlog: async (commentId) => {
     return await privateApi.delete(`/api/blogs/comments/${commentId}`);
   },
-  getReplyCommentsBlog: async (commentId,page,size) => {
+  getReplyCommentsBlog: async (commentId, page, size) => {
     return await privateApi.get(`/api/blogs/comments/${commentId}/replies`, {
       params: { page, size }
     });
   },
-  changeBlogStatus: async (id,status) => {
+  changeBlogStatus: async (id, status) => {
     return await privateApi.put(`/api/blogs/${id}/publish`, { status });
   },
 };

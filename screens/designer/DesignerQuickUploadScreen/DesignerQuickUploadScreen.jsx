@@ -279,7 +279,10 @@ export default function DesignerQuickUploadScreen() {
               <Text style={styles.label}>Type</Text>
               <View style={styles.typeToggle}>
                 <Pressable
-                  onPress={() => setType("TEMPLATES")}
+                  onPress={() => {
+                    setType("TEMPLATES");
+                    setItemSource("project");
+                  }}
                   style={[
                     styles.typeButton,
                     type === "TEMPLATES" && styles.typeButtonActive,
@@ -302,7 +305,10 @@ export default function DesignerQuickUploadScreen() {
                   </Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => setType("ICONS")}
+                  onPress={() => {
+                    setType("ICONS");
+                    setItemSource("upload");
+                  }}
                   style={[
                     styles.typeButton,
                     type === "ICONS" && styles.typeButtonActive,
@@ -430,10 +436,12 @@ export default function DesignerQuickUploadScreen() {
             <View style={[styles.halfInput, styles.sourceToggle]}>
               <Pressable
                 onPress={() => setItemSource("upload")}
+                disabled={type === "TEMPLATES"}
                 style={[
                   styles.sourceButton,
                   itemSource === "upload" && styles.sourceButtonActive,
                   itemSource === "upload" && styles.sourceButtonSelected,
+                  type === "TEMPLATES" && styles.sourceButtonDisabled,
                 ]}
               >
                 <Icon
@@ -455,10 +463,12 @@ export default function DesignerQuickUploadScreen() {
 
               <Pressable
                 onPress={() => setItemSource("project")}
+                disabled={type === "ICONS"}
                 style={[
                   styles.sourceButton,
                   itemSource === "project" && styles.sourceButtonActive,
                   itemSource === "project" && styles.sourceButtonSelected,
+                  type === "ICONS" && styles.sourceButtonDisabled,
                 ]}
               >
                 <Icon
@@ -513,7 +523,7 @@ export default function DesignerQuickUploadScreen() {
                     style={[
                       styles.projectCard,
                       selectedProjectId === proj.projectId &&
-                        styles.projectCardActive,
+                      styles.projectCardActive,
                     ]}
                   >
                     <Image

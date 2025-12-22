@@ -526,6 +526,7 @@ const getStyles = (theme = "light") => {
       shadowOpacity: theme === "dark" ? 0.5 : 0.18,
       shadowRadius: 18,
       elevation: 14,
+      width: "100%",
     },
 
     dragHandle: {
@@ -550,6 +551,11 @@ const getStyles = (theme = "light") => {
     },
 
     detailModalBody: {
+      flexShrink: 1,
+      flexGrow: 0,
+    },
+
+    detailModalContentContainer: {
       paddingHorizontal: 20,
       paddingTop: 20,
       paddingBottom: 30,

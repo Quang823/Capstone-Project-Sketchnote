@@ -205,7 +205,7 @@ export default function HomeScreen({ navigation }) {
 
 
   const { toast } = useToast();
-  const { user } = useContext(AuthContext);
+  const { user, fetchUser } = useContext(AuthContext);
   const { theme } = useTheme();
   const isDark = theme === "dark";
   const fade = useSharedValue(0);
@@ -226,14 +226,17 @@ export default function HomeScreen({ navigation }) {
   // }));
 
   // Fetch data with pagination
-  const fetchProjects = useCallback(async (page = currentPage) => {
+  const fetchProjects = useCallback(async (page) => {
     try {
       setLoading(true);
       setError(null);
 
+      // If page is not a number (e.g. event object), default to 0
+      const targetPage = typeof page === "number" ? page : 0;
+
       // Load cloud projects with pagination, and local projects in parallel
       const results = await Promise.allSettled([
-        projectService.getUserProjectsPaged(page, pageSize),
+        projectService.getUserProjectsPaged(targetPage, pageSize),
         projectService.getSharedProjects(),
         offlineStorage.getAllGuestProjects(),
       ]);
@@ -249,7 +252,7 @@ export default function HomeScreen({ navigation }) {
 
       setProjects(myPaged.content || []);
       setTotalPages(myPaged.totalPages || 0);
-      setCurrentPage(page);
+      setCurrentPage(targetPage);
       setSharedProjects(shared || []);
       setLocalProjects(local || []);
     } catch (err) {
@@ -257,7 +260,7 @@ export default function HomeScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize]);
+  }, [pageSize]);
 
   useFocusEffect(
     useCallback(() => {
@@ -547,6 +550,9 @@ export default function HomeScreen({ navigation }) {
           projectDetails: created,
         };
 
+        // Refresh user profile to update project count (in background, no full-screen loading)
+        fetchUser(false);
+
         navigation.navigate("DrawingScreen", { noteConfig });
       } catch (error) {
         toast({
@@ -726,6 +732,9 @@ export default function HomeScreen({ navigation }) {
         projectDetails: created,
       };
 
+      // Refresh user profile to update project count (in background, no full-screen loading)
+      fetchUser(false);
+
       navigation.navigate("DrawingScreen", { noteConfig });
     } catch (error) {
       console.error("Import JSON error:", error);
@@ -821,6 +830,8 @@ export default function HomeScreen({ navigation }) {
         description: "Project deleted successfully!",
         variant: "success",
       });
+      // Refresh user profile to update project count (in background, no full-screen loading)
+      fetchUser(false);
     } catch {
       toast({
         title: "Error",
@@ -1072,6 +1083,22 @@ export default function HomeScreen({ navigation }) {
             onClose={() => setPopoverVisible(false)}
             onSelect={(type) => {
               setPopoverVisible(false);
+
+              // 🚀 Check project limits for logged-in users without active subscription
+              if (user && !user.hasActiveSubscription) {
+                const current = user.currentProjects || 0;
+                const max = user.maxProjects || 3;
+
+                if (current >= max) {
+                  toast({
+                    type: "error",
+                    text1: "Project Limit Reached",
+                    text2: `You have reached the limit of ${max} projects for the Free plan. Please upgrade to a Premium plan to create more projects.`,
+                  });
+                  return;
+                }
+              }
+
               if (type === "sketchnote") navigation.navigate("NoteSetupScreen");
               if (type === "custom_note") navigation.navigate("CustomNoteSetupScreen");
               if (type === "quick_note") setQuickNoteModalVisible(true);
@@ -1163,7 +1190,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={[styles.errorText, isDark && styles.errorTextDark]}>{error}</Text>
               <TouchableOpacity
                 style={styles.retryButton}
-                onPress={fetchProjects}
+                onPress={() => fetchProjects(currentPage)}
               >
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>

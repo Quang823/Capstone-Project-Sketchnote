@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,8 @@ import { feedbackService } from "../../../service/feedbackService";
 import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import { useTheme } from "../../../context/ThemeContext";
+import { AuthContext } from "../../../context/AuthContext";
+import NotificationButton from "../../../components/common/NotificationButton";
 
 export default function ResourceDetailScreen() {
   const navigation = useNavigation();
@@ -24,6 +26,7 @@ export default function ResourceDetailScreen() {
   const { addToCart, cart } = useCart();
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { user } = useContext(AuthContext);
 
   const { resourceId, owned } = route.params;
   const [resource, setResource] = useState(null);
@@ -42,7 +45,7 @@ export default function ResourceDetailScreen() {
   useEffect(() => {
     const fetchResource = async () => {
       try {
-        const data = await resourceService.getResourceById(resourceId);
+        const data = await resourceService.getResourceById(resourceId, !!user);
         setResource(data);
 
         // 🖼 Combine images and items for gallery
@@ -55,14 +58,19 @@ export default function ResourceDetailScreen() {
 
         setGalleryImages([...mainImages, ...itemImages]);
 
-        const feedbackData = await feedbackService.getAllFeedbackResource(
-          resourceId
-        );
-
-        setFeedback(feedbackData || []);
+        if (user) {
+          try {
+            const feedbackData = await feedbackService.getAllFeedbackResource(
+              resourceId
+            );
+            setFeedback(feedbackData || []);
+          } catch (fbError) {
+            console.warn("Failed to fetch feedback:", fbError.message);
+          }
+        }
 
         // 🔥 NEW: Fetch version data if user owns this resource
-        if (owned) {
+        if (user && owned) {
           try {
             const purchasedData = await resourceService.getResourceProjectByUserIdV2();
             // Find the matching resource by resourceTemplateId
@@ -89,12 +97,19 @@ export default function ResourceDetailScreen() {
       }
     };
     fetchResource();
-  }, [resourceId, owned]);
+  }, [resourceId, owned, user]);
 
 
 
   // ✅ Thêm vào giỏ hàng
   const handleAddToCart = () => {
+    if (!user) {
+      return Toast.show({
+        type: "info",
+        text1: "Please login",
+        text2: "You need to login to buy resources",
+      });
+    }
     if (!resource) return;
 
     if (resource.isOwner) {
@@ -146,6 +161,13 @@ export default function ResourceDetailScreen() {
 
   // 🟡 Mua ngay - Add to cart and navigate to cart screen
   const handleBuyNow = () => {
+    if (!user) {
+      return Toast.show({
+        type: "info",
+        text1: "Please login",
+        text2: "You need to login to buy resources",
+      });
+    }
     // Check if user already owns the resource
     if (resource.isOwner) {
       Toast.show({
@@ -282,12 +304,15 @@ export default function ResourceDetailScreen() {
             Resource Detail
           </Text>
         </View>
-        <Pressable
-          style={[styles.cartButton, isDark && styles.cartButtonDark]}
-          onPress={() => navigation.navigate("Cart")}
-        >
-          <Icon name="shopping-cart" size={24} color={isDark ? "#FFFFFF" : "#084F8C"} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <NotificationButton />
+          <Pressable
+            style={[styles.cartButton, isDark && styles.cartButtonDark]}
+            onPress={() => navigation.navigate("Cart")}
+          >
+            <Icon name="shopping-cart" size={24} color={isDark ? "#FFFFFF" : "#084F8C"} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Scrollable Content */}
@@ -392,8 +417,11 @@ export default function ResourceDetailScreen() {
           {/* Right Side: Details */}
           <View style={styles.rightColumn}>
             <View style={[styles.rightColumnContainer, isDark && styles.rightColumnContainerDark]}>
-              <View style={styles.resourceHeaderRow}>
+              <View style={styles.titleSection}>
                 <Text style={[styles.resourceName, isDark && styles.resourceNameDark]}>{resource.name?.toUpperCase()}</Text>
+              </View>
+
+              <View style={styles.priceTypeRow}>
                 {resource.type && (
                   <View style={[
                     styles.typeBadge,
@@ -402,10 +430,14 @@ export default function ResourceDetailScreen() {
                     <Text style={styles.typeBadgeText}>{resource.type}</Text>
                   </View>
                 )}
+
+                <View style={styles.priceTag}>
+                  <Icon name="payments" size={20} color="#FFFFFF" />
+                  <Text style={[styles.priceText, isDark && styles.priceDark]}>
+                    {resource.price.toLocaleString()} đ
+                  </Text>
+                </View>
               </View>
-              <Text style={[styles.price, isDark && styles.priceDark]}>
-                {resource.price.toLocaleString()} đ
-              </Text>
 
               {/* Title & Rating */}
               <View style={styles.titleSection}>
@@ -418,7 +450,10 @@ export default function ResourceDetailScreen() {
 
               {/* Description */}
               <View style={[styles.sectionInner, isDark && styles.sectionInnerDark]}>
-                <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>Description</Text>
+                <View style={styles.sectionHeader}>
+                  <Icon name="description" size={20} color="#084F8C" />
+                  <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>Description</Text>
+                </View>
                 <Text style={[styles.descriptionText, isDark && styles.descriptionTextDark]}>
                   {resource.description}
                 </Text>
@@ -426,7 +461,10 @@ export default function ResourceDetailScreen() {
 
               {/* Product Info */}
               <View style={[styles.sectionInner, styles.sectionInnerLast, isDark && styles.sectionInnerDark]}>
-                <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>Product Info</Text>
+                <View style={styles.sectionHeader}>
+                  <Icon name="info" size={20} color="#084F8C" />
+                  <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>Product Info</Text>
+                </View>
 
                 <View style={styles.infoGrid}>
                   {/* Expired Time */}
@@ -650,19 +688,14 @@ export default function ResourceDetailScreen() {
                       style={[
                         styles.actionButton,
                         {
-                          backgroundColor: "#3B82F6",
+                          backgroundColor: "#084F8C",
                           flex: 1,
                           flexDirection: "row",
                           gap: 8,
                         },
                       ]}
                       onPress={() => {
-                        // Handle open resource
-                        Toast.show({
-                          type: "info",
-                          text1: "Coming Soon",
-                          text2: "Open resource feature is under development",
-                        });
+                        navigation.navigate("Gallery");
                       }}
                     >
                       <Icon name="folder-open" size={18} color="#FFFFFF" />

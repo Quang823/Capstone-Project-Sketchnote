@@ -1,5 +1,5 @@
 // ResourceStoreScreen.js - FULL VERSION HOÀN CHỈNH
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import LottieView from "lottie-react-native";
 import loadingAnimation from "../../../assets/loading.json";
 import { useTheme } from "../../../context/ThemeContext";
 import NotificationButton from "../../../components/common/NotificationButton";
+import { AuthContext } from "../../../context/AuthContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DEFAULT_RESOURCE_IMAGE =
@@ -125,7 +126,11 @@ const AnimatedResourceCard = ({
               source={{ uri: imageUri }}
               style={resourceStoreStyles.resourceImage}
               resizeMode="cover"
-              onError={() => setImageUri(DEFAULT_RESOURCE_IMAGE)}
+              onError={() => {
+                requestAnimationFrame(() => {
+                  setImageUri(DEFAULT_RESOURCE_IMAGE);
+                });
+              }}
             />
 
             {/* Badge loại */}
@@ -424,6 +429,7 @@ export default function ResourceStoreScreen() {
   const [isFilteringByType, setIsFilteringByType] = useState(false);
   const { theme } = useTheme();
   const isDark = theme === "dark";
+  const { user } = useContext(AuthContext);
 
   // Pagination states
   const [pages, setPages] = useState({
@@ -490,15 +496,17 @@ export default function ResourceStoreScreen() {
 
       let ownedAccumulator = [];
 
-      try {
-        const resUser = await resourceService.getResourceProjectByUserId(0, 20);
-        setUserResources(Array.isArray(resUser.content) ? resUser.content : []);
-      } catch (e) {
-        console.error(e);
+      if (user) {
+        try {
+          const resUser = await resourceService.getResourceProjectByUserId(0, 20);
+          setUserResources(Array.isArray(resUser.content) ? resUser.content : []);
+        } catch (e) {
+          console.error(e);
+        }
       }
 
       try {
-        const resAll = await resourceService.getAllResource(0, PAGE_SIZE);
+        const resAll = await resourceService.getAllResource(0, PAGE_SIZE, !!user);
         const allRaw = resAll?.content || resAll || [];
         const items = Array.isArray(allRaw) ? allRaw : [];
         const owned = items.filter((r) => r?.isOwner);
@@ -525,10 +533,10 @@ export default function ResourceStoreScreen() {
       }
 
       try {
-        const res = await resourceService.getAllResourcePopular(PAGE_SIZE);
+        const res = await resourceService.getAllResourcePopular(PAGE_SIZE, !!user);
         const data = res?.result || res?.content || res || [];
         const items = Array.isArray(data) ? data : [];
-        const notOwned = items.filter((r) => !r?.isOwner);
+        const notOwned = items.filter((r) => r?.isOwner);
         setPopularResources(notOwned);
         ownedAccumulator.push(...items.filter((r) => r?.isOwner));
         setHasMore(prev => ({ ...prev, popular: items.length === PAGE_SIZE }));
@@ -537,10 +545,10 @@ export default function ResourceStoreScreen() {
       }
 
       try {
-        const res = await resourceService.getAllResourceLatest(PAGE_SIZE);
+        const res = await resourceService.getAllResourceLatest(PAGE_SIZE, !!user);
         const data = res?.result || res?.content || res || [];
         const items = Array.isArray(data) ? data : [];
-        const notOwned = items.filter((r) => !r?.isOwner);
+        const notOwned = items.filter((r) => r?.isOwner);
         setLatestResources(notOwned);
         ownedAccumulator.push(...items.filter((r) => r?.isOwner));
         setHasMore(prev => ({ ...prev, latest: items.length === PAGE_SIZE }));
@@ -574,19 +582,19 @@ export default function ResourceStoreScreen() {
     try {
       let items = [];
       if (section === 'all') {
-        const res = await resourceService.getAllResource(nextPage, PAGE_SIZE);
+        const res = await resourceService.getAllResource(nextPage, PAGE_SIZE, !!user);
         items = res?.content || res || [];
         const notOwned = items.filter((r) => !r?.isOwner);
         setAllResources(prev => [...prev, ...notOwned]);
       } else if (section === 'popular') {
         // Note: Popular and Latest might not support page-based pagination in current API
         // but we'll try to use the same logic if they support it or just limit
-        const res = await resourceService.getAllResourcePopular(PAGE_SIZE * (nextPage + 1));
+        const res = await resourceService.getAllResourcePopular(PAGE_SIZE * (nextPage + 1), !!user);
         items = res?.result || res?.content || res || [];
         const notOwned = items.filter((r) => !r?.isOwner);
         setPopularResources(notOwned); // Replace for limit-based
       } else if (section === 'latest') {
-        const res = await resourceService.getAllResourceLatest(PAGE_SIZE * (nextPage + 1));
+        const res = await resourceService.getAllResourceLatest(PAGE_SIZE * (nextPage + 1), !!user);
         items = res?.result || res?.content || res || [];
         const notOwned = items.filter((r) => !r?.isOwner);
         setLatestResources(notOwned); // Replace for limit-based
@@ -609,6 +617,14 @@ export default function ResourceStoreScreen() {
   }, []);
 
   const handleAddToCart = (resource, goToCart = false) => {
+    if (!user) {
+      return Toast.show({
+        type: "info",
+        text1: "Please login",
+        text2: "You need to login to buy resources",
+      });
+    }
+
     if (resource?.isOwner)
       return Toast.show({ type: "info", text1: "This is your resource" });
 

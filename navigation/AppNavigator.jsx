@@ -1,3 +1,5 @@
+import React, { useContext } from "react";
+import { View, ActivityIndicator } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import DrawingScreen from "../screens/drawing/DrawingScreen/DrawingScreen";
 import LoginScreen from "../screens/auth/LoginScreen/LoginScreen";
@@ -29,6 +31,7 @@ import OrderHistoryScreen from "../screens/store/Order/OrderHistoryScreen";
 import OrderSuccessScreen from "../screens/store/ResourceStoreScreen/Payment/OrderSuccessScreen";
 import DesignerHomeScreen from "../screens/designer/DesignerHomeScreen/DesignerHomeScreen";
 import DesignerProductsScreen from "../screens/designer/DesignerProductsScreen/DesignerProductsScreen";
+import DesignerProductDetailScreen from "../screens/designer/DesignerProductDetailScreen/DesignerProductDetailScreen";
 import DesignerAnalyticsScreen from "../screens/designer/DesignerAnalyticsScreen/DesignerAnalyticsScreen";
 import DesignerQuickUploadScreen from "../screens/designer/DesignerQuickUploadScreen/DesignerQuickUploadScreen";
 import CreateVersionScreen from "../screens/designer/CreateVersionScreen/CreateVersionScreen";
@@ -43,14 +46,31 @@ import WithdrawalHistoryScreen from "../screens/designer/WithdrawalHistoryScreen
 import SketchNotePolicy from "../screens/policy/SketchNotePolicy";
 import DesignerProfileScreen from "../screens/store/DesignerProfileScreen/DesignerProfileScreen";
 import SettingScreen from "../screens/settings/SettingScreen";
+import { AuthContext } from "../context/AuthContext";
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
+  const { user, roles, isLoading } = useContext(AuthContext);
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#F8FAFC" }}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
+
+  const getInitialRoute = () => {
+    if (!user) return "GuestHome";
+    if (roles.includes("DESIGNER")) return "DesignerDashboard";
+    return "Home";
+  };
+
   return (
     <Stack.Navigator
       screenOptions={{ headerShown: false }}
-      initialRouteName="GuestHome"
+      initialRouteName={getInitialRoute()}
     >
       <Stack.Screen name="GuestHome" component={GuestHomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
@@ -110,6 +130,10 @@ export default function AppNavigator() {
       <Stack.Screen
         name="DesignerProducts"
         component={DesignerProductsScreen}
+      />
+      <Stack.Screen
+        name="DesignerProductDetail"
+        component={DesignerProductDetailScreen}
       />
       <Stack.Screen
         name="DesignerAnalytics"

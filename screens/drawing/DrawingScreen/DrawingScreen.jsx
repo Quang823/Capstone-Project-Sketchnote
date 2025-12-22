@@ -3030,6 +3030,7 @@ export default function DrawingScreen({ route }) {
         collapsable={false}
       >
         <MultiPageCanvas
+          key={safeNoteConfig?.projectId}
           ref={multiPageCanvasRef}
           noteConfig={safeNoteConfig}
           projectId={safeNoteConfig?.projectId}
