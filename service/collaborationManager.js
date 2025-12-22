@@ -62,6 +62,7 @@ class CollaborationManager {
     this.serverVersion = 0;           // Server's document version
     this.lastProcessedSeq = 0;        // Last processed sequence number
     this.localSeq = 0;                // Local sequence counter for outgoing messages
+    this.seqInitialized = false;      // 🔥 Track if seq has been initialized from server
     
     // *** CRITICAL: Message ordering ***
     this.outOfOrderBuffer = new Map(); // seq -> message (for reordering)
@@ -163,6 +164,7 @@ class CollaborationManager {
     this.serverVersion = 0;
     this.lastProcessedSeq = 0;
     this.localSeq = 0;
+    this.seqInitialized = false;  // 🔥 Reset seq initialization flag
     this.outOfOrderBuffer.clear();
     this.elementLocks.clear();
     this.activeStrokes.clear();
@@ -255,7 +257,13 @@ class CollaborationManager {
     const isServerResponse = ['SYNC_RESPONSE', 'SYNC_RESPONSE_START', 'SYNC_RESPONSE_CHUNK', 
                               'SYNC_RESPONSE_END', 'LOCK_GRANTED', 'LOCK_RELEASED', 
                               'SERVER_REJECT', 'ACK'].includes(message.type);
-    if (message.userId && Number(message.userId) === Number(this.userId) && !isServerResponse) {
+    
+    // 🔥 Compare as strings to handle type mismatch (number vs string)
+    const messageUserId = String(message.userId || '');
+    const myUserId = String(this.userId || '');
+    
+    if (messageUserId && myUserId && messageUserId === myUserId && !isServerResponse) {
+      // Skip own message - already applied optimistically
       return;
     }
     
@@ -269,29 +277,36 @@ class CollaborationManager {
     
     // *** CRITICAL: Sequence ordering ***
     if (message.seq !== undefined && message.seq !== null) {
-      // Check for sequence gap
-      if (message.seq > this.lastProcessedSeq + 1) {
-        // Gap detected - buffer this message
-        if (message.seq - this.lastProcessedSeq > CONFIG.SEQUENCE_GAP_THRESHOLD) {
-          // Gap too large - request resync
-          console.warn('[CollabManager] Sequence gap too large, requesting resync');
-          this._requestSync(this.serverVersion);
+      // 🔥 First message after connect: initialize seq from server
+      if (!this.seqInitialized) {
+        this.lastProcessedSeq = message.seq;
+        this.seqInitialized = true;
+        console.log('[CollabManager] Initialized seq from server:', message.seq);
+      } else {
+        // Check for sequence gap
+        if (message.seq > this.lastProcessedSeq + 1) {
+          // Gap detected - buffer this message
+          if (message.seq - this.lastProcessedSeq > CONFIG.SEQUENCE_GAP_THRESHOLD) {
+            // Gap too large - request resync
+            console.warn('[CollabManager] Sequence gap too large, requesting resync. Expected:', this.lastProcessedSeq + 1, 'Got:', message.seq);
+            this._requestSync(this.serverVersion);
+            return;
+          }
+          
+          // Buffer for later processing
+          if (this.outOfOrderBuffer.size < CONFIG.MAX_OUT_OF_ORDER_BUFFER) {
+            this.outOfOrderBuffer.set(message.seq, message);
+            return;
+          }
+        } else if (message.seq <= this.lastProcessedSeq) {
+          // Already processed - skip
+          console.log('[CollabManager] Skipping already processed seq:', message.seq);
           return;
         }
         
-        // Buffer for later processing
-        if (this.outOfOrderBuffer.size < CONFIG.MAX_OUT_OF_ORDER_BUFFER) {
-          this.outOfOrderBuffer.set(message.seq, message);
-          return;
-        }
-      } else if (message.seq <= this.lastProcessedSeq) {
-        // Already processed - skip
-        console.log('[CollabManager] Skipping already processed seq:', message.seq);
-        return;
+        // Process in order
+        this.lastProcessedSeq = message.seq;
       }
-      
-      // Process in order
-      this.lastProcessedSeq = message.seq;
     }
     
     // *** CRITICAL: Update server version ***
@@ -435,9 +450,15 @@ class CollaborationManager {
     const { pageId, element } = message.payload || {};
     if (!element) return;
     
+    // 🔥 Decompress points if they were compressed
+    const decompressedElement = { ...element };
+    if (element.points && element.points.length > 0) {
+      decompressedElement.points = this._decompressPoints(element.points);
+    }
+    
     this.onElementCreate?.({
       pageId,
-      element,
+      element: decompressedElement,
       userId: message.userId,
       timestamp: message.timestamp,
     });
@@ -707,6 +728,7 @@ class CollaborationManager {
     this.syncInProgress = false;
     this.serverVersion = version || this.serverVersion;
     this.lastProcessedSeq = seq || 0;
+    this.seqInitialized = true;  // 🔥 Mark seq as initialized after sync
     
     // Apply accumulated chunks to build document state
     const document = this._buildDocumentFromChunks(this.syncChunks);
@@ -1456,6 +1478,14 @@ class CollaborationManager {
     if (element.shape) clean.shape = element.shape;
     if (element.fill) clean.fill = element.fill;
     if (element.fillColor) clean.fillColor = element.fillColor;
+    
+    // 🔥 Additional shape-related properties
+    if (element.shapeSettings) clean.shapeSettings = element.shapeSettings;
+    if (element.tapeSettings) clean.tapeSettings = element.tapeSettings;
+    if (element.sides) clean.sides = element.sides;
+    if (element.pressure != null) clean.pressure = element.pressure;
+    if (element.thickness != null) clean.thickness = element.thickness;
+    if (element.stabilization != null) clean.stabilization = element.stabilization;
     
     // Compress points if present
     if (element.points && element.points.length > 0) {

@@ -266,6 +266,16 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     onColorPicked,
     tapeSettings, // ✅ Tape settings
     shapeSettings, // ✅ Shape settings
+    // 🔄 REALTIME COLLABORATION props
+    collabEnabled,
+    collabConnected,
+    onCollabElementUpdate,
+    onCollabElementCreate,
+    onCollabElementDelete,
+    onCollabRequestLock,
+    onCollabReleaseLock,
+    onCollabIsElementLocked,
+    onCollabPageCreate,
   },
   ref
 ) {
@@ -1411,6 +1421,59 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         console.error("[MultiPageCanvas] loadProjectData error:", e);
       }
     },
+
+    // 🔄 REALTIME COLLABORATION: Update a stroke by ID on a specific page
+    updateStrokeById: (pageId, strokeId, changes, options = {}) => {
+      if (!pageId || !strokeId || !changes) return;
+      const pageRef = pageRefs.current[pageId];
+      if (pageRef && typeof pageRef.updateStrokeById === "function") {
+        pageRef.updateStrokeById(strokeId, changes, options);
+      } else {
+        console.warn(`[MultiPageCanvas] updateStrokeById not available for pageId: ${pageId}`);
+      }
+    },
+
+    // 🔄 REALTIME COLLABORATION: Delete a stroke by ID on a specific page
+    deleteStrokeById: (pageId, strokeId, options = {}) => {
+      if (!pageId || !strokeId) return;
+      const pageRef = pageRefs.current[pageId];
+      if (pageRef && typeof pageRef.deleteStrokeById === "function") {
+        pageRef.deleteStrokeById(strokeId, options);
+      } else {
+        console.warn(`[MultiPageCanvas] deleteStrokeById not available for pageId: ${pageId}`);
+      }
+    },
+
+    // 🔄 REALTIME COLLABORATION: Add page from remote user
+    addPageFromRemote: (page, insertAt) => {
+      if (!page || !page.id) return;
+      setPages((prev) => {
+        // Check if page already exists
+        if (prev.some(p => p.id === page.id)) return prev;
+        
+        const newPage = {
+          id: page.id,
+          type: page.type || "paper",
+          backgroundColor: page.backgroundColor || noteConfig?.paper?.color || "#FFFFFF",
+          template: page.template || noteConfig?.paper?.template || "blank",
+          imageUrl: page.imageUrl || null,
+          snapshotUrl: page.snapshotUrl || null,
+        };
+        
+        // Initialize layers for new page
+        setPageLayers?.((prev) => ({
+          ...prev,
+          [page.id]: [{ id: "layer1", name: "Layer 1", visible: true, strokes: [] }],
+        }));
+        
+        if (typeof insertAt === "number" && insertAt >= 0 && insertAt < prev.length) {
+          const next = [...prev];
+          next.splice(insertAt, 0, newPage);
+          return next;
+        }
+        return [...prev, newPage];
+      });
+    },
   }));
 
   const extractTemplateData = (json) => {
@@ -2076,6 +2139,16 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                         onSelectionChange: (strokeId, box) => {
                           handleSelectionChange(p.id, strokeId, box);
                         },
+                        // 🔄 REALTIME COLLABORATION props
+                        collabEnabled,
+                        collabConnected,
+                        onCollabElementUpdate,
+                        onCollabElementCreate,
+                        onCollabElementDelete,
+                        onCollabRequestLock,
+                        onCollabReleaseLock,
+                        onCollabIsElementLocked,
+                        onCollabPageCreate,
                       }}
                       pageId={p?.id != null ? p.id : `page-${i}`}
                       onChangeStrokes={(strokes) => {

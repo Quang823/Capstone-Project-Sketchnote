@@ -18,9 +18,11 @@ import {
   Circle,
   Image as SkiaImage,
   useImage,
+  DashPathEffect,
 } from "@shopify/react-native-skia";
 import { Dimensions } from "react-native";
 import CanvasImage from "../image/CanvasImage";
+import CanvasTable from "../table/CanvasTable";
 import PaperGuides from "./PaperGuidesNew";
 import { applyPencilAlpha, makePathFromPoints } from "./utils";
 import {
@@ -138,6 +140,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     zoomSnapshot,
     scrollOffsetY = 0,
     isCover = false,
+    lassoPoints = [],
+    lassoSelection = [],
   },
   ref
 ) {
@@ -147,7 +151,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   useEffect(() => {
     try {
       pathCacheRef.current.clear();
-    } catch { }
+    } catch {}
   }, [activeLayerId]);
   const canvasRef = useCanvasRef();
 
@@ -155,7 +159,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     return () => {
       try {
         pathCacheRef.current.clear();
-      } catch { }
+      } catch {}
     };
   }, []);
 
@@ -173,7 +177,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         if (backgroundImage && typeof backgroundImage.dispose === "function") {
           backgroundImage.dispose();
         }
-      } catch { }
+      } catch {}
     };
   }, [backgroundImage]);
 
@@ -454,7 +458,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         />
 
         {/* Pattern Overlay - Composited with srcIn to clip to base */}
-        < Path
+        <Path
           path={patternPath}
           color={makeRGBA("#FFF", 0.6)}
           style="stroke"
@@ -463,16 +467,15 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         />
 
         {/* Border/Outline - Drawn on top (no blend mode) */}
-        < Path
+        <Path
           path={path}
           color={makeRGBA(baseColor, 0.8)}
           style="stroke"
-          strokeWidth={mode === "rectangle" ? 1 : width
-          }
+          strokeWidth={mode === "rectangle" ? 1 : width}
           strokeCap="butt"
           blendMode="srcOver"
         />
-      </Group >
+      </Group>
     );
   };
 
@@ -485,18 +488,23 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
     // 📊 table
     if (s.tool === "table") {
-      const CanvasTable = require("../table/CanvasTable").default;
+      const vo = visualOffsets?.[s.id];
+
       return (
         <CanvasTable
           key={s.id}
-          ref={(ref) => {
-            if (imageRefs && typeof imageRefs === "object") {
-              if (ref) imageRefs.current.set(s.id, ref);
-              else imageRefs.current.delete(s.id);
+          ref={(r) => {
+            if (imageRefs?.current) {
+              if (r) {
+                imageRefs.current.set(s.id, r);
+              } else {
+                imageRefs.current.delete(s.id);
+              }
             }
           }}
           stroke={s}
           selectedId={selectedId}
+          visualOffset={vo} // ✅ Thêm prop này
         />
       );
     }
@@ -695,12 +703,34 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     ) {
       const path = Skia.Path.Make();
       // Determine shape type from tool or shape properties
-      const isRect = s.tool === "rect" || s.tool === "square" || (s.tool === "shape" && s.shape.w !== undefined && s.shape.h !== undefined && s.shape.x !== undefined);
-      const isCircle = s.tool === "circle" || (s.tool === "shape" && s.shape.r !== undefined && s.shape.cx !== undefined);
-      const isOval = s.tool === "oval" || (s.tool === "shape" && s.shape.rx !== undefined && s.shape.ry !== undefined);
-      const isTriangle = s.tool === "triangle" || (s.tool === "shape" && s.shape.x3 !== undefined);
-      const isPoly = s.tool === "polygon" || s.tool === "star" || (s.tool === "shape" && s.shape.points !== undefined);
-      const isLineOrArrow = s.tool === "line" || s.tool === "arrow" || (s.tool === "shape" && s.shape.x2 !== undefined && !s.shape.x3);
+      const isRect =
+        s.tool === "rect" ||
+        s.tool === "square" ||
+        (s.tool === "shape" &&
+          s.shape.w !== undefined &&
+          s.shape.h !== undefined &&
+          s.shape.x !== undefined);
+      const isCircle =
+        s.tool === "circle" ||
+        (s.tool === "shape" &&
+          s.shape.r !== undefined &&
+          s.shape.cx !== undefined);
+      const isOval =
+        s.tool === "oval" ||
+        (s.tool === "shape" &&
+          s.shape.rx !== undefined &&
+          s.shape.ry !== undefined);
+      const isTriangle =
+        s.tool === "triangle" ||
+        (s.tool === "shape" && s.shape.x3 !== undefined);
+      const isPoly =
+        s.tool === "polygon" ||
+        s.tool === "star" ||
+        (s.tool === "shape" && s.shape.points !== undefined);
+      const isLineOrArrow =
+        s.tool === "line" ||
+        s.tool === "arrow" ||
+        (s.tool === "shape" && s.shape.x2 !== undefined && !s.shape.x3);
 
       if (isCircle) {
         const { cx = 0, cy = 0, r = 0 } = s.shape;
@@ -760,7 +790,13 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       );
 
       // Handle Arrows (including double arrow)
-      if (s.tool === "arrow" || (s.tool === "shape" && (s.shapeSettings?.shape === "arrow" || s.shapeSettings?.shape === "double_arrow" || s.shape.double))) {
+      if (
+        s.tool === "arrow" ||
+        (s.tool === "shape" &&
+          (s.shapeSettings?.shape === "arrow" ||
+            s.shapeSettings?.shape === "double_arrow" ||
+            s.shape.double))
+      ) {
         const { x1 = 0, y1 = 0, x2 = 0, y2 = 0 } = s.shape;
         const headLen = Math.max(10, (s.width || 1) * 2);
 
@@ -890,8 +926,9 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       const last = s.points?.[s.points.length - 1];
       const ax = Math.round(((first?.x || 0) + (last?.x || 0)) * 10) / 10;
       const ay = Math.round(((first?.y || 0) + (last?.y || 0)) * 10) / 10;
-      const cacheKey = `${s.id}:${s.points?.length || 0}:${s.width || strokeWidth || 0
-        }:${s.tool || "pen"}:${ax}:${ay}`;
+      const cacheKey = `${s.id}:${s.points?.length || 0}:${
+        s.width || strokeWidth || 0
+      }:${s.tool || "pen"}:${ax}:${ay}`;
       let path = pathCacheRef.current.get(cacheKey);
       if (!path) {
         path = makePathFromPoints(s.points);
@@ -899,14 +936,17 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         const MAX_PATH_CACHE_SIZE = 250;
         if (pathCacheRef.current.size >= MAX_PATH_CACHE_SIZE) {
           // Remove oldest entries (first 100)
-          const keysToDelete = Array.from(pathCacheRef.current.keys()).slice(0, 100);
-          keysToDelete.forEach(k => {
+          const keysToDelete = Array.from(pathCacheRef.current.keys()).slice(
+            0,
+            100
+          );
+          keysToDelete.forEach((k) => {
             try {
               const oldPath = pathCacheRef.current.get(k);
               if (oldPath && typeof oldPath.delete === "function") {
                 oldPath.delete(); // Dispose Skia Path object
               }
-            } catch { }
+            } catch {}
             pathCacheRef.current.delete(k);
           });
         }
@@ -1232,11 +1272,35 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               ) {
                 const path = Skia.Path.Make();
                 // Determine shape type from tool or shape properties (Mirroring renderStroke logic)
-                const isRect = s.tool === "rect" || s.tool === "square" || (s.tool === "shape" && s.shape.w !== undefined && s.shape.h !== undefined && s.shape.x !== undefined);
-                const isCircle = s.tool === "circle" || (s.tool === "shape" && s.shape.r !== undefined && s.shape.cx !== undefined);
-                const isOval = s.tool === "oval" || (s.tool === "shape" && s.shape.rx !== undefined && s.shape.ry !== undefined);
-                const isTriangle = s.tool === "triangle" || (s.tool === "shape" && s.shape.x3 !== undefined);
-                const isPoly = s.tool === "polygon" || s.tool === "star" || s.tool === "pentagon" || s.tool === "hexagon" || s.tool === "octagon" || s.tool === "diamond" || s.tool === "right_triangle" || (s.tool === "shape" && s.shape.points !== undefined);
+                const isRect =
+                  s.tool === "rect" ||
+                  s.tool === "square" ||
+                  (s.tool === "shape" &&
+                    s.shape.w !== undefined &&
+                    s.shape.h !== undefined &&
+                    s.shape.x !== undefined);
+                const isCircle =
+                  s.tool === "circle" ||
+                  (s.tool === "shape" &&
+                    s.shape.r !== undefined &&
+                    s.shape.cx !== undefined);
+                const isOval =
+                  s.tool === "oval" ||
+                  (s.tool === "shape" &&
+                    s.shape.rx !== undefined &&
+                    s.shape.ry !== undefined);
+                const isTriangle =
+                  s.tool === "triangle" ||
+                  (s.tool === "shape" && s.shape.x3 !== undefined);
+                const isPoly =
+                  s.tool === "polygon" ||
+                  s.tool === "star" ||
+                  s.tool === "pentagon" ||
+                  s.tool === "hexagon" ||
+                  s.tool === "octagon" ||
+                  s.tool === "diamond" ||
+                  s.tool === "right_triangle" ||
+                  (s.tool === "shape" && s.shape.points !== undefined);
 
                 if (isCircle) {
                   const { cx = 0, cy = 0, r = 0 } = s.shape;
@@ -1286,7 +1350,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 const path = makePathFromPoints(s.points);
                 try {
                   path.close();
-                } catch { }
+                } catch {}
                 fillNode = (
                   <Path
                     key={`${layer.id}-${s.id}-fill`}
@@ -1302,8 +1366,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               // --- Part 2: Get Stroke Node ---
               const strokeNode =
                 realtimeText?.id &&
-                  s.id === realtimeText.id &&
-                  ["sticky", "comment", "text"].includes(s.tool)
+                s.id === realtimeText.id &&
+                ["sticky", "comment", "text"].includes(s.tool)
                   ? null
                   : renderStroke(s, index);
 
@@ -1316,6 +1380,21 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               const dx = (vo?.dx ?? s?.tempOffset?.dx) || 0;
               const dy = (vo?.dy ?? s?.tempOffset?.dy) || 0;
 
+              if (
+                s.tool === "image" ||
+                s.tool === "sticker" ||
+                s.tool === "table"
+              ) {
+                return (
+                  <Group key={s.id}>
+                    {fillNode}
+                    {React.cloneElement(strokeNode, {
+                      // ✅ Pass visualOffset to CanvasImage
+                      visualOffset: vo,
+                    })}
+                  </Group>
+                );
+              }
               return (
                 <Group
                   key={s.id}
@@ -1502,69 +1581,52 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
 
       {/* lasso, previews, eraser previews etc. reuse original logic (kept) */}
       {tool === "lasso" &&
-        Array.isArray(currentPoints) &&
-        currentPoints.length > 1 &&
-        (() => {
-          const pts = currentPoints;
-          const dashLength = 6;
-          const gapLength = 4;
-          const paths = [];
+        Array.isArray(lassoPoints) &&
+        lassoPoints.length > 1 &&
+        lassoSelection.length === 0 && (
+          <>
+            {/* Fill background với màu xanh nhạt */}
+            {lassoPoints.length > 2 && (
+              <Path
+                path={(() => {
+                  const path = Skia.Path.Make();
+                  path.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+                  for (let i = 1; i < lassoPoints.length; i++) {
+                    path.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+                  }
+                  path.close();
+                  return path;
+                })()}
+                style="fill"
+                color="rgba(37, 99, 235, 0.1)"
+              />
+            )}
 
-          for (let i = 0; i < pts.length - 1; i++) {
-            const p1 = pts[i];
-            const p2 = pts[i + 1];
-            const dx = p2.x - p1.x;
-            const dy = p2.y - p1.y;
-            const segLen = Math.sqrt(dx * dx + dy * dy);
-            let offset = 0;
-            while (offset < segLen) {
-              const start = offset;
-              const end = Math.min(offset + dashLength, segLen);
-              const t1 = start / segLen;
-              const t2 = end / segLen;
-              const x1 = p1.x + dx * t1;
-              const y1 = p1.y + dy * t1;
-              const x2 = p1.x + dx * t2;
-              const y2 = p1.y + dy * t2;
-
-              const path = Skia.Path.Make();
-              path.moveTo(x1, y1);
-              path.lineTo(x2, y2);
-              paths.push(
-                <Path
-                  key={`lasso-${i}-${offset}`}
-                  path={path}
-                  color="#00BCD4"
-                  strokeWidth={1.4}
-                  style="stroke"
-                  strokeCap="round"
-                />
-              );
-
-              offset += dashLength + gapLength;
-            }
-          }
-
-          const polyPath = Skia.Path.Make();
-          if (pts.length > 0) {
-            polyPath.moveTo(pts[0].x, pts[0].y);
-            for (let i = 1; i < pts.length; i++)
-              polyPath.lineTo(pts[i].x, pts[i].y);
-            try {
-              polyPath.close();
-            } catch { }
-          }
-          paths.push(
+            {/* Dashed stroke - nét đứt */}
             <Path
-              key="lasso-fill"
-              path={polyPath}
-              color="rgba(0,188,212,0.08)"
-              style="fill"
-            />
-          );
-
-          return paths;
-        })()}
+              path={(() => {
+                const path = Skia.Path.Make();
+                if (lassoPoints.length > 0) {
+                  path.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+                  for (let i = 1; i < lassoPoints.length; i++) {
+                    path.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+                  }
+                  if (lassoPoints.length > 2) {
+                    path.close();
+                  }
+                }
+                return path;
+              })()}
+              style="stroke"
+              strokeWidth={2}
+              color="#2563EB"
+              strokeCap="round"
+              strokeJoin="round"
+            >
+              <DashPathEffect intervals={[8, 6]} />
+            </Path>
+          </>
+        )}
 
       {/* Preview drawing logic (kept but adapted for new tools) */}
       {currentPoints?.length > 0 &&
@@ -1578,14 +1640,17 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               points: currentPoints,
               tapeSettings: tapeSettings,
             };
-            if (tapeSettings?.mode === "rectangle" && currentPoints.length > 1) {
+            if (
+              tapeSettings?.mode === "rectangle" &&
+              currentPoints.length > 1
+            ) {
               const p1 = currentPoints[0];
               const p2 = currentPoints[currentPoints.length - 1];
               tempStroke.shape = {
                 x: Math.min(p1.x, p2.x),
                 y: Math.min(p1.y, p2.y),
                 w: Math.abs(p2.x - p1.x),
-                h: Math.abs(p2.y - p1.y)
+                h: Math.abs(p2.y - p1.y),
               };
             }
             return renderTape(tempStroke);
@@ -1841,9 +1906,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               strokeWidth={1.2}
             />
           </Group>
-        )
-      }
-    </Canvas >
+        )}
+    </Canvas>
   );
 });
 

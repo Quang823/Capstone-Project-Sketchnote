@@ -1,4 +1,3 @@
-// file: components/drawing/lasso/LassoSelectionBox.jsx
 import React, { useEffect, useRef, useMemo } from "react";
 import {
   View,
@@ -16,10 +15,9 @@ export default function LassoSelectionBox({
   onDelete,
   onMove,
   onMoveEnd,
-  onClear, // 🟦 tap rỗng -> clear lasso selection
+  onClear,
 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const pan = useRef(new Animated.ValueXY()).current;
   const onMoveRef = useRef(onMove);
   const onMoveEndRef = useRef(onMoveEnd);
 
@@ -36,27 +34,24 @@ export default function LassoSelectionBox({
     }).start();
   }, []);
 
-  // Reset local pan when box changes (e.g. after move commit)
-  useEffect(() => {
-    pan.setValue({ x: 0, y: 0 });
-  }, [box?.x, box?.y]);
-
-  // --- MOVE (drag whole box)
   const moveResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          // Không cần làm gì - parent sẽ handle offset
+        },
         onPanResponderMove: (_, g) => {
-          pan.setValue({ x: g.dx, y: g.dy });
+          // ✅ Chỉ gọi callback - parent sẽ update lassoVisualOffset
+          // Không update localOffset nữa
           onMoveRef.current?.(g.dx, g.dy);
         },
         onPanResponderRelease: (_, g) => {
-          // Use g.dx/g.dy directly to avoid issues with g.moveX being 0
           onMoveEndRef.current?.(g.dx, g.dy);
         },
         onPanResponderTerminate: () => {
-          pan.setValue({ x: 0, y: 0 });
+          onMoveEndRef.current?.(0, 0);
         },
       }),
     []
@@ -66,6 +61,7 @@ export default function LassoSelectionBox({
   const { x, y, width, height } = box;
   const menuWidth = Math.max(180, width);
 
+  // ✅ Sử dụng box position trực tiếp - đã bao gồm offset từ parent
   return (
     <>
       {/* Transparent overlay to tap outside to clear selection */}
@@ -86,7 +82,6 @@ export default function LassoSelectionBox({
             width,
             height,
             opacity: fadeAnim,
-            transform: pan.getTranslateTransform(),
           },
         ]}
       >
@@ -102,7 +97,6 @@ export default function LassoSelectionBox({
             top: y - 70,
             width: menuWidth,
             opacity: fadeAnim,
-            transform: pan.getTranslateTransform(),
           },
         ]}
       >

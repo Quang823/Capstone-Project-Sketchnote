@@ -52,6 +52,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import * as MediaLibrary from "expo-media-library";
 import { encodeProjectData, decodeProjectData, isEncodedData } from "../../../utils/dataEncoder";
+import { useCollaboration } from "../../../hooks/useCollaboration";
 // Hàm helper để lấy kích thước hình ảnh
 const getImageSize = (uri, abortSignal = null) => {
   return new Promise((resolve, reject) => {
@@ -181,6 +182,103 @@ export default function DrawingScreen({ route }) {
     const projectId = safeNoteConfig?.projectId;
     return projectService.isLocalProject(projectId) || safeNoteConfig?.isLocal === true;
   }, [safeNoteConfig]);
+
+  // 🔄 REALTIME COLLABORATION - useCollaboration hook
+  const enableCollaboration = !!safeNoteConfig?.projectDetails?.hasCollaboration && !isLocalProject;
+  
+  const {
+    isConnected: isCollabConnected,
+    updateElement: collabUpdateElement,
+    createElement: collabCreateElement,
+    deleteElement: collabDeleteElement,
+    requestLock: collabRequestLock,
+    releaseLock: collabReleaseLock,
+    isElementLocked: collabIsElementLocked,
+    createPage: collabCreatePage,
+  } = useCollaboration({
+    projectId: safeNoteConfig?.projectId,
+    userId: user?.id,
+    userName: user?.fullName || user?.email || `User ${user?.id}`,
+    avatarUrl: user?.avatarUrl,
+    enabled: enableCollaboration,
+    // Handle remote element updates (from other users)
+    onElementUpdate: useCallback((data) => {
+      if (!multiPageCanvasRef.current) return;
+      const { pageId, elementId, changes, transient, userId: remoteUserId } = data;
+      
+      // Skip own updates (already applied optimistically)
+      if (String(remoteUserId) === String(user?.id)) return;
+      
+      console.log('[Collab] Remote ELEMENT_UPDATE:', elementId, changes);
+      
+      // 🔥 Use requestAnimationFrame to avoid setState during render
+      requestAnimationFrame(() => {
+        try {
+          multiPageCanvasRef.current?.updateStrokeById?.(pageId, elementId, changes, { 
+            fromRemote: true,
+            transient 
+          });
+        } catch (err) {
+          console.error('[Collab] Error applying remote update:', err);
+        }
+      });
+    }, [user?.id]),
+    // Handle remote element creation
+    onElementCreate: useCallback((data) => {
+      if (!multiPageCanvasRef.current) return;
+      const { pageId, element, userId: remoteUserId } = data;
+      
+      if (String(remoteUserId) === String(user?.id)) return;
+      
+      console.log('[Collab] Remote ELEMENT_CREATE:', element?.id);
+      
+      // 🔥 Use requestAnimationFrame to avoid setState during render
+      requestAnimationFrame(() => {
+        try {
+          multiPageCanvasRef.current?.appendStrokesToPage?.(pageId, [element]);
+        } catch (err) {
+          console.error('[Collab] Error applying remote create:', err);
+        }
+      });
+    }, [user?.id]),
+    // Handle remote element deletion
+    onElementDelete: useCallback((data) => {
+      if (!multiPageCanvasRef.current) return;
+      const { pageId, elementId, userId: remoteUserId } = data;
+      
+      if (String(remoteUserId) === String(user?.id)) return;
+      
+      console.log('[Collab] Remote ELEMENT_DELETE:', elementId);
+      
+      // 🔥 Use requestAnimationFrame to avoid setState during render
+      requestAnimationFrame(() => {
+        try {
+          multiPageCanvasRef.current?.deleteStrokeById?.(pageId, elementId, { fromRemote: true });
+        } catch (err) {
+          console.error('[Collab] Error applying remote delete:', err);
+        }
+      });
+    }, [user?.id]),
+    // Handle remote page creation
+    onPageCreate: useCallback((data) => {
+      if (!multiPageCanvasRef.current) return;
+      const { page, insertAt, userId: remoteUserId } = data;
+      
+      if (String(remoteUserId) === String(user?.id)) return;
+      
+      console.log('[Collab] Remote PAGE_CREATE:', page?.id);
+      
+      // 🔥 Use requestAnimationFrame to avoid setState during render
+      requestAnimationFrame(() => {
+        try {
+          multiPageCanvasRef.current?.addPageFromRemote?.(page, insertAt);
+        } catch (err) {
+          console.error('[Collab] Error applying remote page create:', err);
+        }
+      });
+    }, [user?.id]),
+  });
+
   const multiPageCanvasContainerRef = useRef(null);
   // ✅ Validate noteConfig to prevent crash
   useEffect(() => {
@@ -3064,6 +3162,16 @@ export default function DrawingScreen({ route }) {
           onColorPicked={handleColorPicked}
           tapeSettings={tapeSettings} // ✅ Pass tape settings
           shapeSettings={shapeSettings} // ✅ Pass shape settings
+          // 🔄 REALTIME COLLABORATION props
+          collabEnabled={enableCollaboration}
+          collabConnected={isCollabConnected}
+          onCollabElementUpdate={collabUpdateElement}
+          onCollabElementCreate={collabCreateElement}
+          onCollabElementDelete={collabDeleteElement}
+          onCollabRequestLock={collabRequestLock}
+          onCollabReleaseLock={collabReleaseLock}
+          onCollabIsElementLocked={collabIsElementLocked}
+          onCollabPageCreate={collabCreatePage}
           onRequestTextInput={(x, y) => {
             if (tool === "text") {
               setTimeout(() => setEditingText({ x, y, text: "" }), 0);

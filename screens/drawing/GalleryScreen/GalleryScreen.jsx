@@ -8,8 +8,11 @@ import {
   Dimensions,
   StatusBar,
   Animated,
+  Modal,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import Toast from "react-native-toast-message";
 import LazyImage from "../../../common/LazyImage";
 import { orderService } from "../../../service/orderService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
@@ -32,6 +35,7 @@ const FILTERS = [
 ];
 
 export default function GalleryScreen() {
+  const navigation = useNavigation();
   const { theme } = useTheme();
 
   // Get styles based on theme
@@ -52,6 +56,8 @@ export default function GalleryScreen() {
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [activeFilter, setActiveFilter] = useState("ALL");
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
@@ -103,11 +109,13 @@ export default function GalleryScreen() {
   };
 
   const getImageUrl = (item) => {
+    if (!item) return "https://via.placeholder.com/400x300";
+    if (item.bannerUrl) return item.bannerUrl;
     if (item.images && item.images.length > 0) {
       const thumbnail = item.images.find((img) => img.isThumbnail);
       return thumbnail?.imageUrl || item.images[0]?.imageUrl;
     }
-    return item.imageUrl || item.thumbnailUrl;
+    return item.imageUrl || item.thumbnailUrl || "https://via.placeholder.com/400x300";
   };
 
   const renderCard = (item, index) => {
@@ -143,25 +151,30 @@ export default function GalleryScreen() {
           <Text style={styles.cardSubtitle} numberOfLines={1}>
             {item.description || "No description"}
           </Text>
-          <View style={styles.cardFooter}>
-            <Text style={styles.cardDate}>
-              {formatDate(item.purchaseDate || item.createdAt)}
-            </Text>
-            <View style={styles.cardBadge}>
-              <Text style={styles.cardBadgeText}>
-                {item.type === "ICONS" ? "Icon" : "Template"}
-              </Text>
-            </View>
-          </View>
+
           <View style={styles.cardActions}>
-            <Pressable style={styles.cardActionButton}>
-              <Icon name="visibility" size={14} color={colors.textSecondary} />
+            <Pressable
+              style={styles.cardActionButton}
+              onPress={() => {
+                setSelectedItem(item);
+                setModalVisible(true);
+              }}
+            >
+              <Icon name="visibility" size={12} color={colors.textSecondary} />
               <Text style={styles.cardActionText}>View</Text>
             </Pressable>
             <Pressable
               style={[styles.cardActionButton, styles.cardActionButtonPrimary]}
+              onPress={() => {
+                navigation.navigate("Home");
+                Toast.show({
+                  type: "success",
+                  text1: "Template Selected",
+                  text2: "Please enter a project to use this resource.",
+                });
+              }}
             >
-              <Icon name="edit" size={14} color="#FFFFFF" />
+              <Icon name="edit" size={12} color="#FFFFFF" />
               <Text
                 style={[styles.cardActionText, styles.cardActionTextPrimary]}
               >
@@ -173,6 +186,117 @@ export default function GalleryScreen() {
       </Animated.View>
     );
   };
+
+  const DetailModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={modalVisible}
+      onRequestClose={() => setModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Item Details</Text>
+            <Pressable
+              onPress={() => setModalVisible(false)}
+              style={styles.closeButton}
+            >
+              <Icon name="close" size={24} color={colors.textPrimary} />
+            </Pressable>
+          </View>
+
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <LazyImage
+              source={{ uri: getImageUrl(selectedItem) }}
+              style={styles.modalImage}
+              resizeMode="cover"
+            />
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalTitle}>{selectedItem?.name}</Text>
+              <View style={[styles.cardBadge, { alignSelf: 'flex-start', marginTop: 8 }]}>
+                <Text style={styles.cardBadgeText}>
+                  {selectedItem?.type === "ICONS" ? "Icon Collection" : "Template"}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>Description</Text>
+              <Text style={styles.modalDescription}>
+                {selectedItem?.description || "No description available for this item."}
+              </Text>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={styles.modalSectionTitle}>Information</Text>
+              <View style={styles.modalInfoGrid}>
+                <View style={styles.modalInfoItem}>
+                  <Icon name="payments" size={16} color={colors.primaryBlue} />
+                  <Text style={styles.modalInfoText}>
+                    {selectedItem?.price?.toLocaleString()} đ
+                  </Text>
+                </View>
+                <View style={styles.modalInfoItem}>
+                  <Icon name="event" size={16} color={colors.primaryBlue} />
+                  <Text style={styles.modalInfoText}>
+                    Purchased: {formatDate(selectedItem?.purchaseDate || selectedItem?.createdAt)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {selectedItem?.items && selectedItem.items.length > 0 && (
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Included Items ({selectedItem.items.length})</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.itemsScroll}
+                >
+                  {selectedItem.items.map((item, idx) => (
+                    <LazyImage
+                      key={idx}
+                      source={{ uri: item.imageUrl || item.itemUrl }}
+                      style={styles.itemThumbnail}
+                      resizeMode="contain"
+                    />
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <Pressable
+              style={styles.modalButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>Close</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.modalButton, styles.modalButtonPrimary]}
+              onPress={() => {
+                setModalVisible(false);
+                navigation.navigate("Home");
+                Toast.show({
+                  type: "success",
+                  text1: "Template Selected",
+                  text2: "Please enter a project to use this resource.",
+                });
+              }}
+            >
+              <Icon name="edit" size={18} color="#FFFFFF" />
+              <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>
+                Use Now
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <View style={styles.container}>
@@ -284,6 +408,8 @@ export default function GalleryScreen() {
           </View>
         </ScrollView>
       )}
+
+      <DetailModal />
     </View>
   );
 }
