@@ -119,6 +119,8 @@ export default function DesignerProductDetailScreen() {
                 text1: "Version Deleted",
                 text2: `Version ${selectedVersion.versionNumber} has been deleted successfully`,
             });
+            // Go back to refresh the product list
+            setTimeout(() => navigation.goBack(), 1000);
         } catch (error) {
             Toast.show({
                 type: "error",
@@ -357,30 +359,9 @@ export default function DesignerProductDetailScreen() {
                                 </View>
                             </View>
 
-                            {product.avgResourceRating !== undefined && (
-                                <View style={{ marginTop: 10, padding: 12, backgroundColor: styles.cardBackground, borderRadius: 10, borderWidth: 1, borderColor: styles.borderColor }}>
-                                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                                        <Text style={{ fontSize: 12, fontWeight: "600", color: styles.textSecondary }}>Avg Resource Rating</Text>
-                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                                            <Icon name="star-half" size={16} color="#F59E0B" />
-                                            <Text style={{ fontSize: 14, fontWeight: "700", color: styles.textPrimary }}>
-                                                {product.avgResourceRating ?? 0}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                </View>
-                            )}
 
-                            <View style={[styles.detailRow, { marginTop: 20 }]}>
-                                <View style={styles.detailCol}>
-                                    <Text style={styles.detailLabel}>Created At</Text>
-                                    <Text style={styles.detailValue}>{formatDate(product.createdAt)}</Text>
-                                </View>
-                                <View style={styles.detailCol}>
-                                    <Text style={styles.detailLabel}>Updated At</Text>
-                                    <Text style={styles.detailValue}>{formatDate(product.updatedAt)}</Text>
-                                </View>
-                            </View>
+
+
 
                             <View style={styles.detailSection}>
                                 <Text style={styles.detailLabel}>Status</Text>
@@ -482,7 +463,7 @@ export default function DesignerProductDetailScreen() {
                                             </Text>
 
                                             {/* Metrics Row */}
-                                            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 8 }}>
+                                            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
                                                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: styles.cardBackground, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
                                                     <Icon name="attach-money" size={14} color="#10B981" />
                                                     <Text style={{ fontSize: 11, color: styles.textPrimary, fontWeight: "600" }}>

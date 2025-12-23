@@ -16,6 +16,9 @@ export const orderController = {
   getPurchasedTemplates: async () => {
     return await privateApi.get(`api/orders/user_resources/user/me/templates`);
   },
+   getPurchasedTemplatesV2: async () => {
+    return await privateApi.get(`api/orders/user_resources/user/me/templates/v2`);
+  },
   createOrderRetry: async (orderId) => {
     return await privateApi.post(`api/orders/${orderId}/payment/retry`);
   },

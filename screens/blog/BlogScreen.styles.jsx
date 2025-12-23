@@ -50,6 +50,56 @@ export const blogStyles = StyleSheet.create({
     color: "#F8FAFC",
   },
 
+  // Tab Navigation
+  tabContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    gap: 12,
+  },
+  tabContainerDark: {
+    backgroundColor: "#1E293B",
+    borderBottomColor: "#334155",
+  },
+
+  tabButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "#F1F5F9",
+    gap: 8,
+  },
+  tabButtonDark: {
+    backgroundColor: "#334155",
+  },
+  tabButtonActive: {
+    backgroundColor: "#136bb8ff",
+  },
+  tabButtonActiveDark: {
+    backgroundColor: "#3B82F6",
+  },
+
+  tabButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  tabButtonTextDark: {
+    color: "#94A3B8",
+  },
+  tabButtonTextActive: {
+    color: "#FFFFFF",
+  },
+  tabButtonTextActiveDark: {
+    color: "#FFFFFF",
+  },
+
+
   centerContainer: {
     flex: 1,
     justifyContent: "center",

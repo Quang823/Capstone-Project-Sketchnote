@@ -13,7 +13,6 @@ import MultipleImageUploader from "../../../common/MultipleImageUploader";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useEffect, useState, useMemo } from "react";
 import { useTheme } from "../../../context/ThemeContext";
 import getStyles from "./CreateVersionScreen.styles";
@@ -33,11 +32,9 @@ export default function CreateVersionScreen() {
     const [description, setDescription] = useState("");
     const [type, setType] = useState(currentType || "TEMPLATES");
     const [price, setPrice] = useState("");
-    const [expiredTime, setExpiredTime] = useState("");
-    const [showExpiredPicker, setShowExpiredPicker] = useState(false);
     const [images, setImages] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
-    const [itemSource, setItemSource] = useState("upload");
+    const [itemSource, setItemSource] = useState(currentType === "TEMPLATES" ? "project" : "upload");
     const [localItems, setLocalItems] = useState([]);
     const [projects, setProjects] = useState([]);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
@@ -71,7 +68,6 @@ export default function CreateVersionScreen() {
             setDescription(versionData.description || "");
             setType(versionData.type || currentType || "TEMPLATES");
             setPrice(String((versionData.price || 0) / 1000));
-            setExpiredTime(versionData.expiredTime || "");
             setReleaseDate(versionData.releaseDate || getTodayDateOnly());
 
             if (versionData.images && versionData.images.length > 0) {
@@ -103,8 +99,7 @@ export default function CreateVersionScreen() {
             !name.trim() ||
             !description.trim() ||
             !type.trim() ||
-            !price ||
-            !expiredTime
+            !price
         ) {
             Toast.show({
                 type: "error",
@@ -159,11 +154,11 @@ export default function CreateVersionScreen() {
                     type: formattedType,
                     price: Number(String(price).replace(/\D/g, "")) * 1000,
                     releaseDate,
-                    expiredTime,
                     images: formattedImages,
                     items: localItems.map((url, idx) => ({
                         itemIndex: idx + 1,
                         itemUrl: url,
+                        imageUrl: url,
                     })),
                 };
             } else if (itemSource === "project") {
@@ -177,7 +172,6 @@ export default function CreateVersionScreen() {
                     description,
                     type: formattedType,
                     price: Number(String(price).replace(/\D/g, "")) * 1000,
-                    expiredTime,
                     releaseDate,
                     images: [
                         {
@@ -295,13 +289,11 @@ export default function CreateVersionScreen() {
                             <Text style={styles.label}>Type</Text>
                             <View style={styles.typeToggle}>
                                 <Pressable
-                                    onPress={() => {
-                                        setType("TEMPLATES");
-                                        setItemSource("project");
-                                    }}
+                                    disabled={true}
                                     style={[
                                         styles.typeButton,
                                         type === "TEMPLATES" && styles.typeButtonActive,
+                                        { opacity: type === "TEMPLATES" ? 1 : 0.5 },
                                     ]}
                                 >
                                     <Icon
@@ -319,13 +311,11 @@ export default function CreateVersionScreen() {
                                     </Text>
                                 </Pressable>
                                 <Pressable
-                                    onPress={() => {
-                                        setType("ICONS");
-                                        setItemSource("upload");
-                                    }}
+                                    disabled={true}
                                     style={[
                                         styles.typeButton,
                                         type === "ICONS" && styles.typeButtonActive,
+                                        { opacity: type === "ICONS" ? 1 : 0.5 },
                                     ]}
                                 >
                                     <Icon
@@ -375,122 +365,23 @@ export default function CreateVersionScreen() {
                                 placeholderTextColor={styles.placeholderText}
                             />
                         </View>
-
-                        <View style={styles.halfInput}>
-                            <Text style={styles.label}>Expired Date</Text>
-                            <Pressable
-                                onPress={() => setShowExpiredPicker(true)}
-                                style={styles.dateButton}
-                            >
-                                <Text style={styles.dateText}>
-                                    {expiredTime || "Select date"}
-                                </Text>
-                                <Icon name="calendar-today" size={18} color={styles.textSecondary} />
-                            </Pressable>
-                            {showExpiredPicker && (
-                                <DateTimePicker
-                                    value={expiredTime ? new Date(expiredTime) : new Date()}
-                                    mode="date"
-                                    display="default"
-                                    onChange={(event, selectedDate) => {
-                                        setShowExpiredPicker(false);
-                                        if (selectedDate) {
-                                            const y = selectedDate.getFullYear();
-                                            const m = String(selectedDate.getMonth() + 1).padStart(
-                                                2,
-                                                "0"
-                                            );
-                                            const d = String(selectedDate.getDate()).padStart(2, "0");
-                                            setExpiredTime(`${y}-${m}-${d}`);
-                                        }
-                                    }}
-                                />
-                            )}
-                        </View>
                     </View>
                 </View>
 
-                <View style={styles.rowSection}>
-                    {/* Images */}
-                    <View style={[styles.section, styles.halfSection]}>
-                        <View style={styles.sectionHeader}>
-                            <Icon name="image" size={20} color={styles.primaryBlue} />
-                            <Text style={styles.sectionTitle}>Images</Text>
-                        </View>
-
-                        {/* Banner Images - Full Width */}
-                        <View style={styles.sectionHeader}>
-                            <Icon name="image" size={18} color={styles.primaryBlue} />
-                            <Text style={styles.sectionTitle}>Banner Images</Text>
-                            <View style={styles.badge}>
-                                <Text style={styles.badgeText}>{images.length}</Text>
-                            </View>
-                        </View>
-                        <MultipleImageUploader
-                            onImageUploaded={handleImageUploaded}
-                            maxImages={10}
-                        />
-                    </View>
-
-                    {/* Item Source */}
-                    <View style={[styles.section, styles.halfSection]}>
-                        <View style={styles.sectionHeader}>
-                            <Icon name="inventory" size={20} color={styles.primaryBlue} />
-                            <Text style={styles.sectionTitle}>Item Source</Text>
-                        </View>
-
-                        <View style={[styles.halfInput, styles.sourceToggle]}>
-                            <Pressable
-                                onPress={() => setItemSource("upload")}
-                                disabled={type === "TEMPLATES"}
-                                style={[
-                                    styles.sourceButton,
-                                    itemSource === "upload" && styles.sourceButtonActive,
-                                    itemSource === "upload" && styles.sourceButtonSelected,
-                                    type === "TEMPLATES" && styles.sourceButtonDisabled,
-                                ]}
-                            >
-                                <Icon
-                                    name="upload-file"
-                                    size={18}
-                                    color={itemSource === "upload" ? "#FFFFFF" : styles.textMuted}
-                                />
-                                <Text
-                                    style={[
-                                        styles.sourceButtonText,
-                                        itemSource === "upload" && styles.sourceButtonTextActive,
-                                    ]}
-                                >
-                                    Upload
-                                </Text>
-                            </Pressable>
-
-                            <Pressable
-                                onPress={() => setItemSource("project")}
-                                disabled={type === "ICONS"}
-                                style={[
-                                    styles.sourceButton,
-                                    itemSource === "project" && styles.sourceButtonActive,
-                                    itemSource === "project" && styles.sourceButtonSelected,
-                                    type === "ICONS" && styles.sourceButtonDisabled,
-                                ]}
-                            >
-                                <Icon
-                                    name="folder"
-                                    size={18}
-                                    color={itemSource === "project" ? "#FFFFFF" : styles.textMuted}
-                                />
-                                <Text
-                                    style={[
-                                        styles.sourceButtonText,
-                                        itemSource === "project" && styles.sourceButtonTextActive,
-                                    ]}
-                                >
-                                    Project
-                                </Text>
-                            </Pressable>
+                {/* Banner Images */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Icon name="image" size={20} color={styles.primaryBlue} />
+                        <Text style={styles.sectionTitle}>Banner Images</Text>
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{images.length}</Text>
                         </View>
                     </View>
+                    <MultipleImageUploader
+                        onImageUploaded={handleImageUploaded}
+                        maxImages={10}
+                        initialImages={images}
+                    />
                 </View>
 
                 {/* Available Projects - Only show if project mode */}
@@ -565,6 +456,7 @@ export default function CreateVersionScreen() {
                                 setLocalItems((prev) => [...prev, url])
                             }
                             maxImages={10}
+                            initialImages={localItems}
                         />
                     </View>
                 )}

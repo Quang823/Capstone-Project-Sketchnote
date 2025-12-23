@@ -150,5 +150,15 @@ export const blogService = {
           error.response?.data?.message || error.message || "Change blog status failed.";
         throw new Error(message);
       }
+    },
+    getBlogWithStatusPending : async (pageNo,pageSize,status) =>{
+      try {
+        const res = await blogApiController.getBlogWithStatusPending(pageNo,pageSize,status);
+        return res.data.result;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Get blog with status pending failed.";
+        throw new Error(message);
+      }
     }
 }
