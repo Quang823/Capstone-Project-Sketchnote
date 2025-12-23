@@ -49,6 +49,20 @@ export const orderService = {
       throw new Error(message);
     }
   },
+  getPurchasedTemplatesV2: async () => {
+    try {
+      const res = await orderController.getPurchasedTemplatesV2();
+      return res.data.result;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Get purchased templates failed.";
+      throw new Error(message);
+    }
+  },
+
+  
   createOrderRetry: async (orderId) => {
     try {
       const res = await orderController.createOrderRetry(orderId);
@@ -82,6 +96,18 @@ export const orderService = {
         error.response?.data?.message ||
         error.message ||
         "Get templates by designer failed.";
+      throw new Error(message);
+    }
+  },
+  upgradeTemplateVersionLatest: async (resourceTemplateId ) => {
+    try {
+      const res = await orderController.upgradeTemplateVersionLatest(resourceTemplateId);
+      return res.data.result;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Upgrade template version latest failed.";
       throw new Error(message);
     }
   },

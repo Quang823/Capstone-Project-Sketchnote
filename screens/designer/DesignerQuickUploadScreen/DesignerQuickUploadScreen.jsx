@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -24,29 +24,30 @@ import { useTheme } from "../../../context/ThemeContext";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerQuickUploadScreen() {
+  console.log("RENDER UPLOAD SCREEN");
   const navigation = useNavigation();
-  const { setActiveNavItem } = useNavContext();
-  const { theme } = useTheme();
 
-  // Get styles based on theme
-  const styles = getStyles(theme);
+  const { theme } = useTheme();
+  const { activeNavItem, setActiveNavItem } = useNavContext();
+  // Get styles based on theme - memoized to prevent infinite loops
+  const styles = useMemo(() => getStyles(theme), [theme]);
 
   // Theme colors for inline styles
   const isDark = theme === "dark";
-  const colors = {
+  const colors = React.useMemo(() => ({
     primaryBlue: isDark ? "#60A5FA" : "#084F8C",
     primaryWhite: isDark ? "#FFFFFF" : "#084F8C",
     textMuted: isDark ? "#64748B" : "#94A3B8",
     textSecondary: isDark ? "#94A3B8" : "#64748B",
     emptyIconColor: isDark ? "#475569" : "#CBD5E1",
     typeButtonText: isDark ? "#94A3B8" : "#64748B",
-  };
+  }), [isDark]);
 
-  const [activeNavItemLocal, setActiveNavItemLocal] = useState("quickUpload");
+  // Lấy thêm activeNavItem từ context để kiểm tra
+
 
   useEffect(() => {
     setActiveNavItem("quickUpload");
-    setActiveNavItemLocal("quickUpload");
   }, [setActiveNavItem]);
 
   // State
@@ -54,8 +55,6 @@ export default function DesignerQuickUploadScreen() {
   const [description, setDescription] = useState("");
   const [type, setType] = useState("TEMPLATES");
   const [price, setPrice] = useState("");
-  const [expiredTime, setExpiredTime] = useState("");
-  const [showExpiredPicker, setShowExpiredPicker] = useState(false);
   const [images, setImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [itemSource, setItemSource] = useState("upload");
@@ -76,6 +75,16 @@ export default function DesignerQuickUploadScreen() {
     new Date().toISOString()
   );
 
+  const getProjectByUserId = useCallback(async () => {
+    try {
+      const response = await resourceService.getProjectByUserId();
+      setProjects(response?.content || []);
+    } catch (error) {
+      console.error("Error fetching project by user ID:", error);
+      setProjects([]);
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { status } =
@@ -89,21 +98,15 @@ export default function DesignerQuickUploadScreen() {
       }
     })();
     getProjectByUserId();
+  }, [getProjectByUserId]);
+
+  const handleImageUploaded = useCallback((url) => {
+    setImages((prev) => [...prev, url]);
   }, []);
 
-  const handleImageUploaded = (url) => {
-    setImages((prev) => [...prev, url]);
-  };
-
-  const getProjectByUserId = async () => {
-    try {
-      const response = await resourceService.getProjectByUserId();
-      setProjects(response?.content || []);
-    } catch (error) {
-      console.error("Error fetching project by user ID:", error);
-      setProjects([]);
-    }
-  };
+  const handleItemImageUploaded = useCallback((url) => {
+    setLocalItems((prev) => [...prev, url]);
+  }, []);
 
   const formatPriceDisplay = (raw) => {
     const digits = String(raw || "").replace(/\D/g, "");
@@ -116,8 +119,7 @@ export default function DesignerQuickUploadScreen() {
       !name.trim() ||
       !description.trim() ||
       !type.trim() ||
-      !price ||
-      !expiredTime
+      !price
     ) {
       Toast.show({
         type: "error",
@@ -169,11 +171,11 @@ export default function DesignerQuickUploadScreen() {
           type: formattedType,
           price: Number(String(price).replace(/\D/g, "")) * 1000,
           releaseDate,
-          expiredTime,
           images: formattedImages,
           items: localItems.map((url, idx) => ({
             itemIndex: idx + 1,
             itemUrl: url,
+            imageUrl: url,
           })),
         };
         await resourceService.uploadResource(template);
@@ -186,7 +188,6 @@ export default function DesignerQuickUploadScreen() {
           description,
           type: formattedType,
           price: Number(String(price).replace(/\D/g, "")) * 1000,
-          expiredTime: new Date(expiredTime).toISOString(),
           images: [
             {
               imageUrl: selectedProject?.imageUrl,
@@ -365,130 +366,22 @@ export default function DesignerQuickUploadScreen() {
                 placeholderTextColor={colors.textMuted}
               />
             </View>
-
-            <View style={styles.halfInput}>
-              <Text style={styles.label}>Expired Date</Text>
-              <Pressable
-                onPress={() => setShowExpiredPicker(true)}
-                style={styles.dateButton}
-              >
-                <Text style={styles.dateText}>
-                  {expiredTime || "Select date"}
-                </Text>
-                <Icon
-                  name="calendar-today"
-                  size={18}
-                  color={colors.textSecondary}
-                />
-              </Pressable>
-              {showExpiredPicker && (
-                <DateTimePicker
-                  value={expiredTime ? new Date(expiredTime) : new Date()}
-                  mode="date"
-                  display="default"
-                  onChange={(event, selectedDate) => {
-                    setShowExpiredPicker(false);
-                    if (selectedDate) {
-                      const y = selectedDate.getFullYear();
-                      const m = String(selectedDate.getMonth() + 1).padStart(
-                        2,
-                        "0"
-                      );
-                      const d = String(selectedDate.getDate()).padStart(2, "0");
-                      setExpiredTime(`${y}-${m}-${d}`);
-                    }
-                  }}
-                />
-              )}
-            </View>
           </View>
         </View>
 
-        <View style={styles.rowSection}>
-          {/* Images */}
-          <View style={[styles.section, styles.halfSection]}>
-            <View style={styles.sectionHeader}>
-              <Icon name="image" size={20} color={colors.primaryBlue} />
-              <Text style={styles.sectionTitle}>Images</Text>
-            </View>
-
-            {/* Banner Images - Full Width */}
-            <View style={styles.sectionHeader}>
-              <Icon name="image" size={18} color={colors.primaryBlue} />
-              <Text style={styles.sectionTitle}>Banner Images</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{images.length}</Text>
-              </View>
-            </View>
-            <MultipleImageUploader
-              onImageUploaded={handleImageUploaded}
-              maxImages={10}
-            />
-          </View>
-
-          {/* Item Source */}
-          <View style={[styles.section, styles.halfSection]}>
-            <View style={styles.sectionHeader}>
-              <Icon name="inventory" size={20} color={colors.primaryBlue} />
-              <Text style={styles.sectionTitle}>Item Source</Text>
-            </View>
-
-            <View style={[styles.halfInput, styles.sourceToggle]}>
-              <Pressable
-                onPress={() => setItemSource("upload")}
-                disabled={type === "TEMPLATES"}
-                style={[
-                  styles.sourceButton,
-                  itemSource === "upload" && styles.sourceButtonActive,
-                  itemSource === "upload" && styles.sourceButtonSelected,
-                  type === "TEMPLATES" && styles.sourceButtonDisabled,
-                ]}
-              >
-                <Icon
-                  name="upload-file"
-                  size={18}
-                  color={
-                    itemSource === "upload" ? "#FFFFFF" : colors.typeButtonText
-                  }
-                />
-                <Text
-                  style={[
-                    styles.sourceButtonText,
-                    itemSource === "upload" && styles.sourceButtonTextActive,
-                  ]}
-                >
-                  Upload
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => setItemSource("project")}
-                disabled={type === "ICONS"}
-                style={[
-                  styles.sourceButton,
-                  itemSource === "project" && styles.sourceButtonActive,
-                  itemSource === "project" && styles.sourceButtonSelected,
-                  type === "ICONS" && styles.sourceButtonDisabled,
-                ]}
-              >
-                <Icon
-                  name="folder"
-                  size={18}
-                  color={
-                    itemSource === "project" ? "#FFFFFF" : colors.typeButtonText
-                  }
-                />
-                <Text
-                  style={[
-                    styles.sourceButtonText,
-                    itemSource === "project" && styles.sourceButtonTextActive,
-                  ]}
-                >
-                  Project
-                </Text>
-              </Pressable>
+        {/* Banner Images */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Icon name="image" size={20} color={colors.primaryBlue} />
+            <Text style={styles.sectionTitle}>Banner Images</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{images.length}</Text>
             </View>
           </View>
+          <MultipleImageUploader
+            onImageUploaded={handleImageUploaded}
+            maxImages={10}
+          />
         </View>
 
         {/* Available Projects - Only show if project mode */}
@@ -563,7 +456,7 @@ export default function DesignerQuickUploadScreen() {
               </View>
             </View>
             <MultipleImageUploader
-              onImageUploaded={(url) => setLocalItems((prev) => [...prev, url])}
+              onImageUploaded={handleItemImageUploaded}
               maxImages={10}
             />
           </View>

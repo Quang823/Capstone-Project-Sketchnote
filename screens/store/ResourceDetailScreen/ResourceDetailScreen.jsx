@@ -12,6 +12,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import Toast from "react-native-toast-message";
 import { useCart } from "../../../context/CartContext";
 import { resourceService } from "../../../service/resourceService";
+import { orderService } from "../../../service/orderService";
 import { styles } from "./ResourceDetailScreen.styles";
 import { feedbackService } from "../../../service/feedbackService";
 import LottieView from "lottie-react-native";
@@ -72,15 +73,31 @@ export default function ResourceDetailScreen() {
         // 🔥 NEW: Fetch version data if user owns this resource
         if (user && owned) {
           try {
-            const purchasedData = await resourceService.getResourceProjectByUserIdV2();
+            const purchasedRes = await orderService.getPurchasedTemplatesV2();
+            const purchasedData = purchasedRes?.content || purchasedRes || [];
             // Find the matching resource by resourceTemplateId
-            const matchedResource = purchasedData.find(
+            const matchedResource = (Array.isArray(purchasedData) ? purchasedData : []).find(
               (item) => item.resourceTemplateId === resourceId
             );
 
             if (matchedResource) {
               setPurchasedResourceData(matchedResource);
               setSelectedVersionId(matchedResource.currentVersionId);
+
+              // 🖼 Update gallery images with current version images/items
+              const currentVersion = matchedResource.availableVersions?.find(
+                (v) => v.versionId === matchedResource.currentVersionId
+              );
+
+              if (currentVersion) {
+                const versionImages = currentVersion.images || [];
+                const versionItems = currentVersion.items
+                  ? currentVersion.items
+                    .filter((item) => item.imageUrl)
+                    .map((item) => ({ imageUrl: item.imageUrl }))
+                  : [];
+                setGalleryImages([...versionImages, ...versionItems]);
+              }
             }
           } catch (error) {
             console.error("Failed to fetch version data:", error);
@@ -417,29 +434,65 @@ export default function ResourceDetailScreen() {
           {/* Right Side: Details */}
           <View style={styles.rightColumn}>
             <View style={[styles.rightColumnContainer, isDark && styles.rightColumnContainerDark]}>
+              {/* Title */}
               <View style={styles.titleSection}>
                 <Text style={[styles.resourceName, isDark && styles.resourceNameDark]}>{resource.name?.toUpperCase()}</Text>
               </View>
 
-              <View style={styles.priceTypeRow}>
+              {/* Badges Row: Type + Price + Version (if owned) */}
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                {/* Type Badge */}
                 {resource.type && (
-                  <View style={[
-                    styles.typeBadge,
-                    resource.type === 'TEMPLATES' && styles.typeBadgeBlue
-                  ]}>
-                    <Text style={styles.typeBadgeText}>{resource.type}</Text>
+                  <View style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: resource.type === 'TEMPLATES' ? "#3B82F6" : "#10B981",
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    gap: 6,
+                  }}>
+                    <Icon name={resource.type === 'TEMPLATES' ? "dashboard" : "category"} size={16} color="#FFFFFF" />
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#FFFFFF" }}>{resource.type}</Text>
                   </View>
                 )}
 
-                <View style={styles.priceTag}>
-                  <Icon name="payments" size={20} color="#FFFFFF" />
-                  <Text style={[styles.priceText, isDark && styles.priceDark]}>
-                    {resource.price.toLocaleString()} đ
+                {/* Price Badge */}
+                <View style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  backgroundColor: "#084F8C",
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 8,
+                  gap: 6,
+                }}>
+                  <Icon name="payments" size={16} color="#FFFFFF" />
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: "#FFFFFF" }}>
+                    {resource.price?.toLocaleString()} đ
                   </Text>
                 </View>
+
+                {/* Version Badge (if owned) */}
+                {owned && purchasedResourceData && (
+                  <View style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: "#059669",
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    gap: 6,
+                  }}>
+                    <Icon name="check-circle" size={16} color="#FFFFFF" />
+                    <Text style={{ fontSize: 13, fontWeight: "700", color: "#FFFFFF" }}>
+                      v{purchasedResourceData.currentVersionNumber}
+                    </Text>
+                  </View>
+                )}
               </View>
 
-              {/* Title & Rating */}
+              {/* Rating */}
               <View style={styles.titleSection}>
                 <View style={styles.ratingRow}>
                   <View style={styles.starsContainer}>{renderStars(resource.averageRating || 0)}</View>
@@ -515,150 +568,54 @@ export default function ResourceDetailScreen() {
                     </View>
                   </View> */}
                 </View>
-                {/* 🔥 Version Management Section - Only for Owned Resources */}
-                {owned && purchasedResourceData && purchasedResourceData.availableVersions && (
+                {/* 🔥 Version Upgrade Section - Only show if newer version available */}
+                {owned && purchasedResourceData && purchasedResourceData.hasNewerVersion && purchasedResourceData.latestVersionNumber && (
                   <View style={[styles.sectionInner, styles.sectionInnerLast, isDark && styles.sectionInnerDark]}>
-                    <Pressable
-                      style={styles.versionHeaderRow}
-                      onPress={() => setShowVersions(!showVersions)}
-                    >
-                      <Text style={[styles.versionHeaderTitle, isDark && styles.versionHeaderTitleDark]}>
-                        Available Versions ({purchasedResourceData.availableVersions.length})
-                      </Text>
-                      <Icon
-                        name={showVersions ? "keyboard-arrow-up" : "keyboard-arrow-down"}
-                        size={24}
-                        color={isDark ? "#94A3B8" : "#64748B"}
-                      />
-                    </Pressable>
-                    {/* Version Info Cards */}
-                    {showVersions && (
-                      <View style={styles.versionsContainer}>
-                        {/* Current Version Info */}
-                        <View style={[styles.versionInfoCard, isDark && styles.versionInfoCardDark]}>
-                          <View style={styles.versionInfoRow}>
-                            <Icon name="new-releases" size={18} color="#3B82F6" />
-                            <Text style={[styles.versionInfoLabel, isDark && styles.versionInfoLabelDark]}>
-                              Latest Version:
-                            </Text>
-                            <Text style={[styles.versionInfoValue, { color: "#3B82F6" }]}>
-                              v{purchasedResourceData.currentVersionNumber}
-                            </Text>
-                          </View>
-                          {purchasedResourceData.hasNewerVersion && (
-                            <View style={[styles.updateBadge, isDark && styles.updateBadgeDark]}>
-                              <Icon name="system-update" size={14} color="#F59E0B" />
-                              <Text style={styles.updateBadgeText}>Update Available</Text>
-                            </View>
-                          )}
+                    {/* New Version Available */}
+                    <View style={{ backgroundColor: "#FEF3C7", borderRadius: 12, padding: 16 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+                        <Icon name="new-releases" size={22} color="#F59E0B" />
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: "#B45309", marginLeft: 8, flex: 1 }}>
+                          New Version Available!
+                        </Text>
+                        <View style={{ backgroundColor: "#10B981", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                          <Text style={{ fontSize: 12, fontWeight: "700", color: "#FFFFFF" }}>
+                            v{purchasedResourceData.latestVersionNumber}
+                          </Text>
                         </View>
-                        {/* Version List */}
-                        <ScrollView
-                          style={styles.versionList}
-                          showsVerticalScrollIndicator={false}
-                        >
-                          {purchasedResourceData.availableVersions.map((version, index) => {
-                            const isCurrentVersion = version.versionId === purchasedResourceData.currentVersionId;
-                            const isPurchasedVersion = version.versionId === purchasedResourceData.purchasedVersionId;
-                            const isSelected = version.versionId === selectedVersionId;
-                            return (
-                              <Pressable
-                                key={version.versionId}
-                                style={[
-                                  styles.versionCard,
-                                  isDark && styles.versionCardDark,
-                                  isSelected && styles.versionCardSelected,
-                                ]}
-                                onPress={() => setSelectedVersionId(isSelected ? null : version.versionId)}
-                              >
-                                {/* Version Header */}
-                                <View style={styles.versionCardHeader}>
-                                  <View style={styles.versionTitleRow}>
-                                    <View style={[styles.versionNumberBadge, isDark && styles.versionNumberBadgeDark]}>
-                                      <Text style={[styles.versionNumber, isDark && styles.versionNumberDark]}>
-                                        v{version.versionNumber}
-                                      </Text>
-                                    </View>
-                                    <View style={styles.versionBadgesRow}>
-                                      {isCurrentVersion && (
-                                        <View style={styles.latestBadge}>
-                                          <Text style={styles.latestBadgeText}>LATEST</Text>
-                                        </View>
-                                      )}
-                                      {isPurchasedVersion && (
-                                        <View style={styles.purchasedBadge}>
-                                          <Icon name="verified" size={12} color="#10B981" />
-                                          <Text style={styles.purchasedBadgeText}>PURCHASED</Text>
-                                        </View>
-                                      )}
-                                    </View>
-                                  </View>
-                                  <View style={styles.versionHeaderRight}>
-                                    <Text style={[styles.versionStatus, {
-                                      color: version.status === 'PUBLISHED' ? '#10B981' : '#94A3B8'
-                                    }]}>
-                                      {version.status}
-                                    </Text>
-                                  </View>
-                                </View>
-                                {/* Version Details - Show when selected */}
-                                {isSelected && (
-                                  <View style={styles.versionDetails}>
-                                    <Text style={[styles.versionName, isDark && styles.versionNameDark]}>
-                                      {version.name}
-                                    </Text>
-                                    <Text style={[styles.versionDescription, isDark && styles.versionDescriptionDark]}>
-                                      {version.description}
-                                    </Text>
-
-                                    <View style={styles.versionMetaRow}>
-                                      <View style={styles.versionMetaItem}>
-                                        <Icon name="event" size={14} color={isDark ? "#94A3B8" : "#64748B"} />
-                                        <Text style={[styles.versionMetaText, isDark && styles.versionMetaTextDark]}>
-                                          {new Date(version.releaseDate).toLocaleDateString("vi-VN")}
-                                        </Text>
-                                      </View>
-                                      <View style={styles.versionMetaItem}>
-                                        <Icon name="attach-money" size={14} color={isDark ? "#94A3B8" : "#64748B"} />
-                                        <Text style={[styles.versionMetaText, isDark && styles.versionMetaTextDark]}>
-                                          {version.price.toLocaleString()} ₫
-                                        </Text>
-                                      </View>
-                                    </View>
-                                    {/* Version Images */}
-                                    {version.images && version.images.length > 0 && (
-                                      <ScrollView
-                                        horizontal
-                                        showsHorizontalScrollIndicator={false}
-                                        style={styles.versionImagesScroll}
-                                      >
-                                        {version.images.map((img, idx) => (
-                                          <Image
-                                            key={idx}
-                                            source={{ uri: img.imageUrl }}
-                                            style={styles.versionImage}
-                                            resizeMode="cover"
-                                          />
-                                        ))}
-                                      </ScrollView>
-                                    )}
-                                    {/* Version Items Count */}
-                                    {version.items && version.items.length > 0 && (
-                                      <View style={[styles.versionItemsInfo, isDark && styles.versionItemsInfoDark]}>
-                                        <Icon name="inventory-2" size={16} color="#3B82F6" />
-                                        <Text style={[styles.versionItemsText, isDark && styles.versionItemsTextDark]}>
-                                          {version.items.length} items included
-                                        </Text>
-                                      </View>
-                                    )}
-                                  </View>
-                                )}
-                              </Pressable>
-                            );
-                          })}
-                        </ScrollView>
                       </View>
-                    )}
+
+                      <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", marginBottom: 10 }}>
+                        <View style={{ backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, alignItems: "center" }}>
+                          <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: "500" }}>Current</Text>
+                          <Text style={{ fontSize: 16, fontWeight: "700", color: "#374151" }}>v{purchasedResourceData.currentVersionNumber}</Text>
+                        </View>
+                        <Icon name="arrow-forward" size={18} color="#D97706" style={{ marginHorizontal: 10 }} />
+                        <View style={{ backgroundColor: "#10B981", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, alignItems: "center" }}>
+                          <Text style={{ fontSize: 10, color: "#FFFFFF", fontWeight: "500" }}>Latest</Text>
+                          <Text style={{ fontSize: 16, fontWeight: "700", color: "#FFFFFF" }}>v{purchasedResourceData.latestVersionNumber}</Text>
+                        </View>
+                      </View>
+
+                      <Text style={{ fontSize: 13, color: "#92400E", textAlign: "center", lineHeight: 18, marginBottom: 12 }}>
+                        Upgrade to get the latest features and improvements. This upgrade is FREE!
+                      </Text>
+
+                      <Pressable
+                        style={{ backgroundColor: "#10B981", paddingVertical: 10, borderRadius: 8, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
+                        onPress={() => {
+                          navigation.navigate("Gallery");
+                          Toast.show({
+                            type: "info",
+                            text1: "Upgrade Available",
+                            text2: "Find and upgrade your resource in Gallery",
+                          });
+                        }}
+                      >
+                        <Icon name="upgrade" size={18} color="#FFFFFF" />
+                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#FFFFFF" }}>Upgrade Now</Text>
+                      </Pressable>
+                    </View>
                   </View>
                 )}
               </View>

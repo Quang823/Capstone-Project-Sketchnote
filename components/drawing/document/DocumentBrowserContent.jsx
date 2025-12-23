@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   StyleSheet,
   Dimensions,
+  Modal,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { MotiView } from "moti";
@@ -34,6 +36,11 @@ const DocumentBrowserContent = ({
   const [purchasedTemplates, setPurchasedTemplates] = useState([]);
   const [isLoadingResources, setIsLoadingResources] = useState(false);
 
+  // Upgrade modal state
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+  const [selectedUpgradeTemplate, setSelectedUpgradeTemplate] = useState(null);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
   // AI Image history state
   const [aiImages, setAiImages] = useState([]);
   const [isLoadingAIImages, setIsLoadingAIImages] = useState(false);
@@ -60,8 +67,31 @@ const DocumentBrowserContent = ({
       const fetchTemplates = async () => {
         setIsLoadingResources(true);
         try {
-          const templates = await orderService.getPurchasedTemplates();
-          setPurchasedTemplates(templates);
+          const templates = await orderService.getPurchasedTemplatesV2();
+
+          // Map templates to use current version's items and images
+          const mappedTemplates = templates.map((template) => {
+            // Find the CURRENT version user is using (after upgrade, this is the latest)
+            // Use currentVersionId, not purchasedVersionId
+            const currentVersion = template.availableVersions?.find(
+              (v) => v.versionId === template.currentVersionId
+            );
+
+            // Use current version's items and images if found, otherwise fallback to template's items/images
+            return {
+              ...template,
+              // Use current version's name and description
+              name: currentVersion?.name || template.name,
+              description: currentVersion?.description || template.description,
+              items: currentVersion?.items || template.items || [],
+              images: currentVersion?.images || template.images || [],
+              // Add version info for display - use currentVersionNumber
+              versionNumber: template.currentVersionNumber || currentVersion?.versionNumber,
+              hasNewerVersion: template.hasNewerVersion,
+            };
+          });
+
+          setPurchasedTemplates(mappedTemplates);
         } catch (error) {
           console.error("Failed to fetch purchased templates:", error);
         } finally {
@@ -137,6 +167,56 @@ const DocumentBrowserContent = ({
     } else {
       // Sidebar behavior
       onPageSelect?.(pageId);
+    }
+  };
+
+  // Handle upgrade to latest version
+  const handleUpgradePress = (template) => {
+    setSelectedUpgradeTemplate(template);
+    setUpgradeModalVisible(true);
+  };
+
+  const handleUpgradeConfirm = async () => {
+    if (!selectedUpgradeTemplate) return;
+
+    setIsUpgrading(true);
+    try {
+      await orderService.upgradeTemplateVersionLatest(selectedUpgradeTemplate.resourceTemplateId);
+      Alert.alert(
+        "Upgrade Successful! 🎉",
+        `Your "${selectedUpgradeTemplate.name}" has been upgraded to the latest version.`,
+        [{ text: "OK" }]
+      );
+      setUpgradeModalVisible(false);
+      setSelectedUpgradeTemplate(null);
+
+      // Refresh templates to get updated data
+      const templates = await orderService.getPurchasedTemplatesV2();
+      const mappedTemplates = templates.map((template) => {
+        // Use currentVersionId - the version user is actually using now
+        const currentVersion = template.availableVersions?.find(
+          (v) => v.versionId === template.currentVersionId
+        );
+        return {
+          ...template,
+          name: currentVersion?.name || template.name,
+          description: currentVersion?.description || template.description,
+          items: currentVersion?.items || template.items || [],
+          images: currentVersion?.images || template.images || [],
+          versionNumber: template.currentVersionNumber || currentVersion?.versionNumber,
+          hasNewerVersion: template.hasNewerVersion,
+        };
+      });
+      setPurchasedTemplates(mappedTemplates);
+    } catch (error) {
+      console.error("Failed to upgrade template:", error);
+      Alert.alert(
+        "Upgrade Failed",
+        error.message || "Failed to upgrade to the latest version. Please try again.",
+        [{ text: "OK" }]
+      );
+    } finally {
+      setIsUpgrading(false);
     }
   };
 
@@ -275,7 +355,26 @@ const DocumentBrowserContent = ({
                   key={template.resourceTemplateId}
                   style={styles.templateSection}
                 >
-                  <Text style={styles.templateName}>{template.name}</Text>
+                  {/* Template Header with name, version and upgrade button */}
+                  <View style={styles.templateHeader}>
+                    <View style={styles.templateTitleRow}>
+                      <Text style={styles.templateName}>{template.name}</Text>
+                      {template.versionNumber && (
+                        <View style={styles.versionBadge}>
+                          <Text style={styles.versionBadgeText}>v{template.versionNumber}</Text>
+                        </View>
+                      )}
+                    </View>
+                    {template.hasNewerVersion && (
+                      <Pressable
+                        style={styles.upgradeButton}
+                        onPress={() => handleUpgradePress(template)}
+                      >
+                        <Icon name="upgrade" size={14} color="#FFFFFF" />
+                        <Text style={styles.upgradeButtonText}>Upgrade</Text>
+                      </Pressable>
+                    )}
+                  </View>
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -478,6 +577,76 @@ const DocumentBrowserContent = ({
         ))}
       </View>
       {renderTabContent()}
+
+      {/* Upgrade Modal */}
+      <Modal
+        visible={upgradeModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setUpgradeModalVisible(false)}
+      >
+        <View style={styles.upgradeModalOverlay}>
+          <View style={styles.upgradeModalContent}>
+            <View style={styles.upgradeModalHeader}>
+              <Icon name="upgrade" size={32} color="#3B82F6" />
+              <Text style={styles.upgradeModalTitle}>New Version Available!</Text>
+            </View>
+
+            {selectedUpgradeTemplate && (
+              <View style={styles.upgradeModalBody}>
+                <Text style={styles.upgradeTemplateName}>
+                  {selectedUpgradeTemplate.name}
+                </Text>
+
+                <View style={styles.versionCompare}>
+                  <View style={styles.versionBox}>
+                    <Text style={styles.versionLabel}>Current</Text>
+                    <Text style={styles.versionValue}>v{selectedUpgradeTemplate.currentVersionNumber}</Text>
+                  </View>
+                  <View style={styles.arrowContainer}>
+                    <Icon name="arrow-forward" size={20} color="#9CA3AF" />
+                  </View>
+                  <View style={[styles.versionBox, styles.versionBoxNew]}>
+                    <Text style={styles.versionLabel}>Latest</Text>
+                    <Text style={[styles.versionValue, styles.versionValueNew]}>v{selectedUpgradeTemplate.latestVersionNumber}</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.upgradeDescription}>
+                  Upgrade to get the latest features and improvements for this resource.
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.upgradeModalButtons}>
+              <Pressable
+                style={styles.upgradeCancelButton}
+                onPress={() => {
+                  setUpgradeModalVisible(false);
+                  setSelectedUpgradeTemplate(null);
+                }}
+                disabled={isUpgrading}
+              >
+                <Text style={styles.upgradeCancelButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.upgradeConfirmButton, isUpgrading && styles.upgradeButtonDisabled]}
+                onPress={handleUpgradeConfirm}
+                disabled={isUpgrading}
+              >
+                {isUpgrading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Icon name="upgrade" size={18} color="#FFFFFF" />
+                    <Text style={styles.upgradeConfirmButtonText}>Upgrade Now</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 };
@@ -896,6 +1065,170 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "600",
     textAlign: "center",
+  },
+
+  // Template Header Styles
+  templateHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  templateTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  versionBadge: {
+    backgroundColor: "#E0E7FF",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  versionBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#4338CA",
+  },
+  upgradeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#10B981",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  upgradeButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+
+  // Upgrade Modal Styles
+  upgradeModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  upgradeModalContent: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+  },
+  upgradeModalHeader: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  upgradeModalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1F2937",
+    marginTop: 12,
+    textAlign: "center",
+  },
+  upgradeModalBody: {
+    marginBottom: 24,
+  },
+  upgradeTemplateName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  versionCompare: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingHorizontal: 12,
+  },
+  arrowContainer: {
+    paddingHorizontal: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  versionBox: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 90,
+    flex: 1,
+    maxWidth: 120,
+  },
+  versionBoxNew: {
+    backgroundColor: "#ECFDF5",
+    borderWidth: 2,
+    borderColor: "#10B981",
+  },
+  versionLabel: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  versionValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#374151",
+  },
+  versionValueNew: {
+    color: "#059669",
+  },
+  upgradeDescription: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  upgradeModalButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  upgradeCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  upgradeCancelButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  upgradeConfirmButton: {
+    flex: 1,
+    flexDirection: "row",
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: "#3B82F6",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  upgradeConfirmButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  upgradeButtonDisabled: {
+    opacity: 0.6,
   },
 });
 

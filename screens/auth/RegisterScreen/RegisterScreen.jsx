@@ -108,12 +108,14 @@ export default function RegisterScreen({ onBack }) {
 
       const res = await authService.register(payload);
 
-      // Backend có thể trả về { message, result, ... } → ta check message
+      // Backend tự động gửi email verify lần đầu
       toast({
         title: res?.message || "Account created successfully!",
+        description: "Please check your email to verify your account",
         variant: "success",
       });
 
+      // Navigate đến VerifyEmail để user có thể resend nếu cần
       navigation.navigate("VerifyEmail", { email });
     } catch (error) {
       toast({
@@ -389,7 +391,7 @@ export default function RegisterScreen({ onBack }) {
                     style={[
                       registerStyles.inputContainer,
                       confirmPasswordFocused &&
-                        registerStyles.inputContainerFocused,
+                      registerStyles.inputContainerFocused,
                     ]}
                   >
                     <TextInput

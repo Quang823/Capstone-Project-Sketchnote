@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Image,
@@ -16,9 +16,17 @@ import Toast from "react-native-toast-message";
 export default function MultipleImageUploader({
   onImageUploaded,
   maxImages = 10,
+  initialImages = [],
 }) {
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState(initialImages);
   const [uploading, setUploading] = useState(false);
+
+  // Sync with initialImages only when it has actual content
+  useEffect(() => {
+    if (initialImages && initialImages.length > 0) {
+      setImages(initialImages);
+    }
+  }, [initialImages]);
 
   const pickImage = async () => {
     try {

@@ -207,7 +207,7 @@ const getStyles = (theme = "light") => {
       borderTopLeftRadius: 32,
       borderTopRightRadius: 32,
       padding: 24,
-      maxHeight: "85%",
+      maxHeight: "90%",
       shadowColor: colors.primaryBlue,
       shadowOpacity: 0.15,
       shadowRadius: 25,

@@ -374,19 +374,32 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleReadSingleNoti = async (item) => {
-    if (item.read) return;
-    try {
-      await notiService.readNotiByNotiId(item.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
-      );
-      setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to mark notification as read",
-        variant: "destructive",
-      });
+    // Mark as read if not already read
+    if (!item.read) {
+      try {
+        await notiService.readNotiByNotiId(item.id);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
+        );
+        setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to mark notification as read",
+          variant: "destructive",
+        });
+      }
+    }
+
+    // Navigate based on notification type
+    setNotiOpen(false); // Close dropdown first
+
+    if (item.type === "VERSION_AVAILABLE") {
+      // Navigate to Drawing screen to view/upgrade resources
+      navigation.navigate("Gallery");
+    } else if (item.type === "PURCHASE_CONFIRM" && item.orderId) {
+      // Navigate to order history
+      navigation.navigate("OrderHistory");
     }
   };
 
@@ -1525,52 +1538,107 @@ export default function HomeScreen({ navigation }) {
               data={notifications}
               keyExtractor={(item) => item.id?.toString()}
               style={{ maxHeight: 300 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => handleReadSingleNoti(item)}
-                  activeOpacity={0.8}
-                  style={{
-                    paddingVertical: 8,
-                    paddingHorizontal: 8,
-                    borderRadius: 10,
-                    backgroundColor: item.read ? "#F9FAFB" : "#DBEAFE",
-                    marginBottom: 4,
-                  }}
-                >
-                  <Text
+              renderItem={({ item }) => {
+                // Get icon based on notification type
+                const getNotificationIcon = (type) => {
+                  switch (type) {
+                    case "VERSION_AVAILABLE":
+                      return { name: "upgrade", color: "#10B981", bg: "#ECFDF5" };
+                    case "PURCHASE_CONFIRM":
+                      return { name: "shopping-cart", color: "#3B82F6", bg: "#EFF6FF" };
+                    default:
+                      return { name: "notifications", color: "#6B7280", bg: "#F3F4F6" };
+                  }
+                };
+                const iconInfo = getNotificationIcon(item.type);
+
+                return (
+                  <TouchableOpacity
+                    onPress={() => handleReadSingleNoti(item)}
+                    activeOpacity={0.8}
                     style={{
-                      fontSize: 14,
-                      fontWeight: "700",
-                      color: "#111827",
-                      marginBottom: 2,
+                      paddingVertical: 10,
+                      paddingHorizontal: 10,
+                      borderRadius: 12,
+                      backgroundColor: item.read ? "#F9FAFB" : "#DBEAFE",
+                      marginBottom: 6,
                     }}
-                    numberOfLines={1}
                   >
-                    {item.title || "Notification"}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      color: "#4B5563",
-                      marginBottom: 2,
-                    }}
-                    numberOfLines={2}
-                  >
-                    {item.message}
-                  </Text>
-                  {item.createdAt && (
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        color: "#6B7280",
-                        marginTop: 2,
-                      }}
-                    >
-                      {new Date(item.createdAt).toLocaleString("vi-VN")}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              )}
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      {/* Icon */}
+                      <View
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 10,
+                          backgroundColor: iconInfo.bg,
+                          justifyContent: "center",
+                          alignItems: "center",
+                          marginRight: 10,
+                        }}
+                      >
+                        <Icon name={iconInfo.name} size={18} color={iconInfo.color} />
+                      </View>
+
+                      {/* Content */}
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              fontWeight: "700",
+                              color: "#111827",
+                              flex: 1,
+                            }}
+                            numberOfLines={1}
+                          >
+                            {item.title || "Notification"}
+                          </Text>
+                          {item.type === "VERSION_AVAILABLE" && (
+                            <View
+                              style={{
+                                backgroundColor: "#10B981",
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                              }}
+                            >
+                              <Text style={{ fontSize: 10, fontWeight: "600", color: "#FFFFFF" }}>
+                                Upgrade
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            color: "#4B5563",
+                            marginBottom: 2,
+                            lineHeight: 16,
+                          }}
+                          numberOfLines={2}
+                        >
+                          {item.message}
+                        </Text>
+                        {item.createdAt && (
+                          <Text
+                            style={{
+                              fontSize: 11,
+                              color: "#9CA3AF",
+                              marginTop: 2,
+                            }}
+                          >
+                            {new Date(item.createdAt).toLocaleString("vi-VN")}
+                          </Text>
+                        )}
+                      </View>
+
+                      {/* Arrow */}
+                      <Icon name="chevron-right" size={18} color="#9CA3AF" />
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
             />
           )}
         </View>

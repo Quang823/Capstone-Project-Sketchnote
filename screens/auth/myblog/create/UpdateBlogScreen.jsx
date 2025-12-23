@@ -219,7 +219,7 @@ export default function UpdateBlogScreen({ route, navigation }) {
       await Promise.all(updatePromises);
 
       // Change status to DRAFT after update
-      await blogService.changeBlogStatus(blog.id, 'DRAFT');
+      await blogService.changeBlogStatus(blog.id, 'PENDING_REVIEW');
 
       Toast.show({
         type: "success",

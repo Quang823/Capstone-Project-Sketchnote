@@ -1,12 +1,17 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useSharedValue, withTiming } from 'react-native-reanimated';
 
 const NavigationContext = createContext();
 
 export const NavigationProvider = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeNavItem, setActiveNavItem] = useState('home');
-  
+  const [activeNavItem, setActiveNavItemState] = useState('home');
+
+  // Memoize setActiveNavItem to prevent infinite loops
+  const setActiveNavItem = useCallback((item) => {
+    setActiveNavItemState(item);
+  }, []);
+
   // Animation values for sidebar
   const sidebarAnimation = useSharedValue(-320); // -DRAWER_WIDTH
   const overlayAnimation = useSharedValue(0);
@@ -14,7 +19,7 @@ export const NavigationProvider = ({ children }) => {
   const toggleSidebar = () => {
     const newState = !sidebarOpen;
     setSidebarOpen(newState);
-    
+
     // Animate sidebar
     sidebarAnimation.value = withTiming(newState ? 0 : -320, { duration: 300 });
     overlayAnimation.value = withTiming(newState ? 0.5 : 0, { duration: 300 });
