@@ -237,7 +237,7 @@ export default function DesignerProductDetailScreen() {
                         </View>
 
                         {/* Banner Image Card */}
-                        {product.bannerImageUrl && (
+                        {/* {product.bannerImageUrl && (
                             <View style={styles.leftPaneCard}>
                                 <Text style={{ fontSize: 12, fontWeight: "600", color: styles.textPrimary, marginBottom: 8 }}>
                                     Banner Image
@@ -247,7 +247,7 @@ export default function DesignerProductDetailScreen() {
                                     style={styles.bannerImage}
                                 />
                             </View>
-                        )}
+                        )} */}
 
                         {/* Included Items Gallery */}
                         {currentVersion?.items && currentVersion.items.length > 0 && (

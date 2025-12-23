@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { resourceService } from "../../../service/resourceService";
+import { projectService } from "../../../service/projectService";
 import MultipleImageUploader from "../../../common/MultipleImageUploader";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -38,6 +39,7 @@ export default function CreateVersionScreen() {
     const [localItems, setLocalItems] = useState([]);
     const [projects, setProjects] = useState([]);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
+    const [projectPages, setProjectPages] = useState([]); // Store pages from selected project
 
     const getTodayDateOnly = () => {
         const today = new Date();
@@ -91,6 +93,26 @@ export default function CreateVersionScreen() {
         } catch (error) {
             console.error("Error fetching project by user ID:", error);
             setProjects([]);
+        }
+    };
+
+    // Fetch project details when selecting a project
+    const handleSelectProject = async (projectId) => {
+        setSelectedProjectId(projectId);
+        setProjectPages([]); // Reset pages
+
+        try {
+            const projectDetails = await projectService.getProjectById(projectId);
+            if (projectDetails?.pages && projectDetails.pages.length > 0) {
+                setProjectPages(projectDetails.pages);
+            }
+        } catch (error) {
+            console.error("Error fetching project details:", error);
+            Toast.show({
+                type: "error",
+                text1: "Error",
+                text2: "Failed to fetch project details.",
+            });
         }
     };
 
@@ -165,6 +187,14 @@ export default function CreateVersionScreen() {
                 const selectedProject = projects.find(
                     (p) => p.projectId === selectedProjectId
                 );
+
+                // Map project pages to items
+                const itemsFromPages = projectPages.map((page) => ({
+                    itemIndex: page.pageNumber,
+                    itemUrl: page.strokeUrl,
+                    imageUrl: page.snapshotUrl,
+                }));
+
                 versionPayload = {
                     sourceType: formattedType,
                     projectId: selectedProjectId,
@@ -179,6 +209,7 @@ export default function CreateVersionScreen() {
                             isThumbnail: true,
                         },
                     ],
+                    items: itemsFromPages, // Include items from project pages
                 };
             }
 
@@ -408,7 +439,7 @@ export default function CreateVersionScreen() {
                                 {projects?.map((proj) => (
                                     <Pressable
                                         key={proj.projectId}
-                                        onPress={() => setSelectedProjectId(proj.projectId)}
+                                        onPress={() => handleSelectProject(proj.projectId)}
                                         style={[
                                             styles.projectCard,
                                             selectedProjectId === proj.projectId &&
@@ -426,6 +457,11 @@ export default function CreateVersionScreen() {
                                             <Text style={styles.projectDesc} numberOfLines={2}>
                                                 {proj.description}
                                             </Text>
+                                            {selectedProjectId === proj.projectId && projectPages.length > 0 && (
+                                                <Text style={{ fontSize: 11, color: "#10B981", marginTop: 4 }}>
+                                                    {projectPages.length} pages will be added as items
+                                                </Text>
+                                            )}
                                         </View>
                                         {selectedProjectId === proj.projectId && (
                                             <Icon

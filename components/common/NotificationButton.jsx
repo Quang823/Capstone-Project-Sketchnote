@@ -15,11 +15,13 @@ import { useTheme } from "../../context/ThemeContext";
 import { notiService } from "../../service/notiService";
 import { useToast } from "../../hooks/use-toast";
 import loadingAnimation from "../../assets/loading.json";
+import { useNavigation } from "@react-navigation/native";
 
 export default function NotificationButton() {
     const { theme } = useTheme();
     const isDark = theme === "dark";
     const { toast } = useToast();
+    const navigation = useNavigation();
     const buttonRef = useRef(null);
 
     const [notiCount, setNotiCount] = useState(0);
@@ -84,20 +86,34 @@ export default function NotificationButton() {
     };
 
     const handleReadSingleNoti = async (item) => {
-        if (item.read) return;
-        try {
-            await notiService.readNotiByNotiId(item.id);
-            setNotifications((prev) =>
-                prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
-            );
-            setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to mark notification as read",
-                variant: "destructive",
-            });
+        // Mark as read if not already read
+        if (!item.read) {
+            try {
+                await notiService.readNotiByNotiId(item.id);
+                setNotifications((prev) =>
+                    prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
+                );
+                setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
+            } catch (error) {
+                toast({
+                    title: "Error",
+                    description: error.message || "Failed to mark notification as read",
+                    variant: "destructive",
+                });
+            }
         }
+
+        // Navigate based on notification type
+        setNotiOpen(false); // Close dropdown first
+
+        if (item.type === "VERSION_AVAILABLE") {
+            // Navigate to Drawing screen to view/upgrade resources
+            navigation.navigate("Drawing");
+        } else if (item.type === "PURCHASE_CONFIRM" && item.orderId) {
+            // Navigate to order history or detail
+            navigation.navigate("OrderHistory");
+        }
+        // Add more types as needed
     };
 
     const screenWidth = Dimensions.get("window").width;
@@ -189,34 +205,64 @@ export default function NotificationButton() {
                                 data={notifications}
                                 keyExtractor={(item) => item.id?.toString()}
                                 style={{ maxHeight: 300 }}
-                                renderItem={({ item }) => (
-                                    <TouchableOpacity
-                                        onPress={() => handleReadSingleNoti(item)}
-                                        activeOpacity={0.8}
-                                        style={[
-                                            styles.notificationItem,
-                                            { backgroundColor: item.read ? (isDark ? "#1E293B" : "#F9FAFB") : (isDark ? "#334155" : "#DBEAFE") }
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[styles.notificationTitle, isDark && styles.notificationTitleDark]}
-                                            numberOfLines={1}
+                                renderItem={({ item }) => {
+                                    // Get icon based on notification type
+                                    const getNotificationIcon = (type) => {
+                                        switch (type) {
+                                            case "VERSION_AVAILABLE":
+                                                return { name: "upgrade", color: "#10B981" };
+                                            case "PURCHASE_CONFIRM":
+                                                return { name: "shopping-cart", color: "#3B82F6" };
+                                            default:
+                                                return { name: "notifications", color: "#6B7280" };
+                                        }
+                                    };
+                                    const iconInfo = getNotificationIcon(item.type);
+
+                                    return (
+                                        <TouchableOpacity
+                                            onPress={() => handleReadSingleNoti(item)}
+                                            activeOpacity={0.8}
+                                            style={[
+                                                styles.notificationItem,
+                                                { backgroundColor: item.read ? (isDark ? "#1E293B" : "#F9FAFB") : (isDark ? "#334155" : "#DBEAFE") }
+                                            ]}
                                         >
-                                            {item.title || "Notification"}
-                                        </Text>
-                                        <Text
-                                            style={[styles.notificationMessage, isDark && styles.notificationMessageDark]}
-                                            numberOfLines={2}
-                                        >
-                                            {item.message}
-                                        </Text>
-                                        {item.createdAt && (
-                                            <Text style={styles.notificationTime}>
-                                                {new Date(item.createdAt).toLocaleString("vi-VN")}
-                                            </Text>
-                                        )}
-                                    </TouchableOpacity>
-                                )}
+                                            <View style={styles.notificationRow}>
+                                                <View style={[styles.notificationIcon, { backgroundColor: iconInfo.color + "20" }]}>
+                                                    <Icon name={iconInfo.name} size={18} color={iconInfo.color} />
+                                                </View>
+                                                <View style={styles.notificationContent}>
+                                                    <View style={styles.notificationTitleRow}>
+                                                        <Text
+                                                            style={[styles.notificationTitle, isDark && styles.notificationTitleDark]}
+                                                            numberOfLines={1}
+                                                        >
+                                                            {item.title || "Notification"}
+                                                        </Text>
+                                                        {item.type === "VERSION_AVAILABLE" && (
+                                                            <View style={styles.upgradeTag}>
+                                                                <Text style={styles.upgradeTagText}>Upgrade</Text>
+                                                            </View>
+                                                        )}
+                                                    </View>
+                                                    <Text
+                                                        style={[styles.notificationMessage, isDark && styles.notificationMessageDark]}
+                                                        numberOfLines={2}
+                                                    >
+                                                        {item.message}
+                                                    </Text>
+                                                    {item.createdAt && (
+                                                        <Text style={styles.notificationTime}>
+                                                            {new Date(item.createdAt).toLocaleString("vi-VN")}
+                                                        </Text>
+                                                    )}
+                                                </View>
+                                                <Icon name="chevron-right" size={18} color="#9CA3AF" />
+                                            </View>
+                                        </TouchableOpacity>
+                                    );
+                                }}
                             />
                         )}
                     </View>
@@ -355,31 +401,64 @@ const styles = StyleSheet.create({
         fontSize: 13,
     },
     notificationItem: {
-        paddingVertical: 8,
-        paddingHorizontal: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 10,
         borderRadius: 10,
-        marginBottom: 4,
+        marginBottom: 6,
+    },
+    notificationRow: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    notificationIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        justifyContent: "center",
+        alignItems: "center",
+        marginRight: 10,
+    },
+    notificationContent: {
+        flex: 1,
+    },
+    notificationTitleRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        marginBottom: 2,
     },
     notificationTitle: {
         fontSize: 14,
         fontWeight: "700",
         color: "#111827",
-        marginBottom: 2,
+        flex: 1,
     },
     notificationTitleDark: {
         color: "#F1F5F9",
     },
+    upgradeTag: {
+        backgroundColor: "#10B981",
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    upgradeTagText: {
+        fontSize: 10,
+        fontWeight: "600",
+        color: "#FFFFFF",
+    },
     notificationMessage: {
-        fontSize: 13,
+        fontSize: 12,
         color: "#4B5563",
         marginBottom: 2,
+        lineHeight: 16,
     },
     notificationMessageDark: {
         color: "#94A3B8",
     },
     notificationTime: {
         fontSize: 11,
-        color: "#6B7280",
+        color: "#9CA3AF",
         marginTop: 2,
     },
 });

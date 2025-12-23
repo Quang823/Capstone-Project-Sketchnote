@@ -34,4 +34,7 @@ export const orderController = {
       params: { page, size },
     });
   },
+  upgradeTemplateVersionLatest: async (resourceTemplateId ) => {
+    return await privateApi.post(`api/orders/user_resources/user/me/resource/${resourceTemplateId}/upgrade`);
+  },
 };

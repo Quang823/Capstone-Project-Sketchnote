@@ -99,4 +99,16 @@ export const orderService = {
       throw new Error(message);
     }
   },
+  upgradeTemplateVersionLatest: async (resourceTemplateId ) => {
+    try {
+      const res = await orderController.upgradeTemplateVersionLatest(resourceTemplateId);
+      return res.data.result;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Upgrade template version latest failed.";
+      throw new Error(message);
+    }
+  },
 };
