@@ -155,14 +155,15 @@ const getStyles = (theme = "light") => {
     gridContainer: {
       flexDirection: "row",
       flexWrap: "wrap",
-      justifyContent: "space-between",
+      justifyContent: "flex-start",
+      gap: 12,
     },
 
     // Card
     card: {
-      width: (SCREEN_WIDTH - 48) / 2,
+      width: (SCREEN_WIDTH - 80) / 4,
       backgroundColor: colors.cardBackground,
-      borderRadius: 16,
+      borderRadius: 12,
       marginBottom: 16,
       overflow: "hidden",
       borderWidth: 1,
@@ -175,22 +176,22 @@ const getStyles = (theme = "light") => {
     },
     cardImage: {
       width: "100%",
-      height: 140,
+      height: 180,
       backgroundColor: colors.borderColor,
     },
     cardContent: {
       padding: 12,
     },
     cardTitle: {
-      fontSize: 14,
+      fontSize: 12,
       fontWeight: "700",
       color: colors.textPrimary,
-      marginBottom: 4,
+      marginBottom: 2,
     },
     cardSubtitle: {
-      fontSize: 12,
+      fontSize: 10,
       color: colors.textSecondary,
-      marginBottom: 8,
+      marginBottom: 6,
     },
     cardFooter: {
       flexDirection: "row",
@@ -214,17 +215,17 @@ const getStyles = (theme = "light") => {
     },
     cardActions: {
       flexDirection: "row",
-      gap: 8,
-      marginTop: 8,
+      gap: 4,
+      marginTop: 6,
     },
     cardActionButton: {
       flex: 1,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      gap: 4,
-      paddingVertical: 8,
-      borderRadius: 8,
+      gap: 2,
+      paddingVertical: 6,
+      borderRadius: 6,
       backgroundColor: colors.filterButtonBg,
       borderWidth: 1,
       borderColor: colors.borderColor,
@@ -234,7 +235,7 @@ const getStyles = (theme = "light") => {
       borderColor: colors.primaryBlue,
     },
     cardActionText: {
-      fontSize: 12,
+      fontSize: 10,
       fontWeight: "600",
       color: colors.textSecondary,
     },
@@ -310,6 +311,125 @@ const getStyles = (theme = "light") => {
     primaryBlue: colors.primaryBlue,
     textMuted: colors.textMuted,
     textSecondary: colors.textSecondary,
+
+    // Modal Styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    modalContainer: {
+      width: "90%",
+      maxWidth: 700,
+      maxHeight: "85%",
+      backgroundColor: colors.cardBackground,
+      borderRadius: 24,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      elevation: 10,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderColor,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.textPrimary,
+    },
+    closeButton: {
+      padding: 4,
+    },
+    modalContent: {
+      padding: 20,
+    },
+    modalImage: {
+      width: "100%",
+      height: 160,
+      borderRadius: 16,
+      marginBottom: 20,
+      backgroundColor: colors.borderColor,
+    },
+    modalSection: {
+      marginBottom: 20,
+    },
+    modalSectionTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 8,
+    },
+    modalDescription: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 22,
+    },
+    modalInfoGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+    },
+    modalInfoItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: colors.filterButtonBg,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+    modalInfoText: {
+      fontSize: 13,
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
+    modalFooter: {
+      flexDirection: "row",
+      gap: 12,
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderColor,
+    },
+    modalButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 12,
+      backgroundColor: colors.filterButtonBg,
+    },
+    modalButtonPrimary: {
+      backgroundColor: colors.primaryBlue,
+    },
+    modalButtonText: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.textSecondary,
+    },
+    modalButtonTextPrimary: {
+      color: "#FFFFFF",
+    },
+    itemsScroll: {
+      marginTop: 12,
+    },
+    itemThumbnail: {
+      width: 60,
+      height: 60,
+      borderRadius: 8,
+      marginRight: 10,
+      backgroundColor: colors.borderColor,
+    },
   });
 };
 

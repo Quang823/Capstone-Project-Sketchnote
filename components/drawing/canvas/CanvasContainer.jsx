@@ -73,6 +73,16 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     shapeSettings,
     tapeSettings,
     scrollRef, // 👈 Receive scrollRef
+    // 🔄 REALTIME COLLABORATION props
+    collabEnabled,
+    collabConnected,
+    onCollabElementUpdate,
+    onCollabElementCreate,
+    onCollabElementDelete,
+    onCollabRequestLock,
+    onCollabReleaseLock,
+    onCollabIsElementLocked,
+    onCollabPageCreate,
   },
   ref
 ) {
@@ -82,7 +92,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   useEffect(() => {
     if (!Array.isArray(layers)) return;
     setInternalLayers((prev) => {
-      const prevMap = new Map((Array.isArray(prev) ? prev : []).map((l) => [l.id, { ...l }]));
+      const prevMap = new Map(
+        (Array.isArray(prev) ? prev : []).map((l) => [l.id, { ...l }])
+      );
       const next = layers.map((inLayer) => {
         const ex = prevMap.get(inLayer.id);
         if (ex) {
@@ -118,9 +130,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     // Collect all current stroke IDs
     const currentStrokeIds = new Set();
-    internalLayers.forEach(layer => {
+    internalLayers.forEach((layer) => {
       if (Array.isArray(layer?.strokes)) {
-        layer.strokes.forEach(s => {
+        layer.strokes.forEach((s) => {
           if (s?.id) currentStrokeIds.add(s.id);
         });
       }
@@ -134,7 +146,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       }
     });
 
-    refsToDelete.forEach(id => {
+    refsToDelete.forEach((id) => {
       try {
         imageRefs.current.delete(id);
       } catch { }
@@ -265,9 +277,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     const updater = (prevLayers) => {
       if (!Array.isArray(prevLayers)) return prevLayers;
 
-      const layerMap = new Map(
-        prevLayers.map((l) => [l.id, { ...l, strokes: [...(l.strokes || [])] }])
-      );
+      // ✅ FIX: Deep clone layers to ensure React detects changes
+      const newLayers = prevLayers.map((l) => ({
+        ...l,
+        strokes: [...(l.strokes || [])],
+      }));
+
       let hasChanges = false;
 
       updates.forEach((u) => {
@@ -275,38 +290,72 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         if (!changes) return;
 
         if (id) {
-          for (const layer of layerMap.values()) {
-            const strokeIndex = layer.strokes.findIndex((s) => s.id === id);
+          // Find stroke by ID across all layers
+          for (const layer of newLayers) {
+            const strokeIndex = layer.strokes.findIndex(
+              (s) => s && s.id === id
+            );
             if (strokeIndex !== -1) {
               const base = layer.strokes[strokeIndex] || {};
               const merged = { ...base };
+
               Object.keys(changes).forEach((k) => {
                 if (k === "shape") {
                   const sh = changes.shape;
                   if (sh && typeof sh === "object") {
-                    const finite = Object.values(sh).every(
-                      (v) => typeof v !== "number" || Number.isFinite(v)
+                    // ✅ FIX: Deep clone shape object to ensure React detects changes
+                    const newShape = { ...sh };
+                    // Also clone points array if present
+                    if (Array.isArray(sh.points)) {
+                      newShape.points = sh.points.map((p) => ({ ...p }));
+                    }
+                    const finite = Object.entries(newShape).every(
+                      ([key, v]) =>
+                        key === "points" ||
+                        typeof v !== "number" ||
+                        Number.isFinite(v)
                     );
-                    merged.shape = finite ? sh : base.shape;
+                    merged.shape = finite ? newShape : base.shape;
                   } else if (changes.shape == null) {
                     merged.shape = base.shape;
                   }
+                } else if (k === "points" && Array.isArray(changes.points)) {
+                  // ✅ FIX: Deep clone points array
+                  merged.points = changes.points.map((p) => ({ ...p }));
                 } else if (changes[k] !== undefined) {
                   merged[k] = changes[k];
                 }
               });
+
               layer.strokes[strokeIndex] = merged;
               hasChanges = true;
               break;
             }
           }
         } else if (typeof index === "number" && activeLayerId) {
-          const layer = layerMap.get(activeLayerId);
+          const layer = newLayers.find((l) => l.id === activeLayerId);
           if (layer && index >= 0 && index < layer.strokes.length) {
-            layer.strokes[index] = {
-              ...layer.strokes[index],
-              ...changes,
-            };
+            const base = layer.strokes[index] || {};
+            const merged = { ...base };
+
+            Object.keys(changes).forEach((k) => {
+              if (k === "shape") {
+                const sh = changes.shape;
+                if (sh && typeof sh === "object") {
+                  const newShape = { ...sh };
+                  if (Array.isArray(sh.points)) {
+                    newShape.points = sh.points.map((p) => ({ ...p }));
+                  }
+                  merged.shape = newShape;
+                }
+              } else if (k === "points" && Array.isArray(changes.points)) {
+                merged.points = changes.points.map((p) => ({ ...p }));
+              } else if (changes[k] !== undefined) {
+                merged[k] = changes[k];
+              }
+            });
+
+            layer.strokes[index] = merged;
             hasChanges = true;
           }
         }
@@ -316,16 +365,18 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         return prevLayers;
       }
 
-      return Array.from(layerMap.values());
+      return newLayers;
     };
 
-    if (typeof setLayers === "function") {
-      requestAnimationFrame(() => {
-        setLayers(updater);
-      });
-    }
-
+    // ✅ FIX: Update both states synchronously to prevent visual flicker
     setInternalLayers(updater);
+
+    if (typeof setLayers === "function") {
+      // ✅ FIX: Use setTimeout instead of requestAnimationFrame for more reliable timing
+      setTimeout(() => {
+        setLayers(updater);
+      }, 0);
+    }
   };
 
   const page = {
@@ -373,7 +424,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
       // ✅ CRITICAL FIX: Sync to both internal AND parent state
       setInternalLayers(updater);
-      if (typeof setLayers === 'function') {
+      if (typeof setLayers === "function") {
         // ✅ FIX: Defer parent update to avoid "update while rendering" error
         requestAnimationFrame(() => {
           setLayers(updater);
@@ -397,7 +448,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     // ✅ CRITICAL FIX: Sync to both internal AND parent state
     setInternalLayers(updater);
-    if (typeof setLayers === 'function') {
+    if (typeof setLayers === "function") {
       // ✅ FIX: Defer parent update to avoid "update while rendering" error
       requestAnimationFrame(() => {
         setLayers(updater);
@@ -581,7 +632,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             userId,
             pageId,
             stroke,
-            pageInfo,
+            pageInfo
           );
         }
       } catch { }
@@ -752,9 +803,14 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       } catch { }
 
       let width = typeof opts.width === "number" ? opts.width : naturalW ?? 400;
-      let height = typeof opts.height === "number" ? opts.height : naturalH ?? 400;
+      let height =
+        typeof opts.height === "number" ? opts.height : naturalH ?? 400;
 
-      if (naturalW && naturalH && (typeof opts.width !== "number" || typeof opts.height !== "number")) {
+      if (
+        naturalW &&
+        naturalH &&
+        (typeof opts.width !== "number" || typeof opts.height !== "number")
+      ) {
         const ratio = naturalW / naturalH;
         const maxW = Math.max(40, page.w * 0.8);
         const maxH = Math.max(40, page.h * 0.8);
@@ -1238,7 +1294,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     },
 
     // [NEW] Append strokes incrementally without clearing existing ones
-    appendStrokes: (strokesToAppend = []) => {
+    appendStrokes: (strokesToAppend = [], options = {}) => {
       if (!Array.isArray(strokesToAppend) || strokesToAppend.length === 0) {
         return;
       }
@@ -1280,20 +1336,39 @@ const CanvasContainer = forwardRef(function CanvasContainer(
                 if (s?.id) existingIds.add(s.id);
               });
             });
-            const uniqueStrokes = newStrokes.map((s) => {
-              let id = s?.id;
-              if (!id || existingIds.has(id)) {
-                id = nextId();
-              }
-              existingIds.add(id);
-              return { ...s, id, layerId };
-            });
+
+            // 🔥 Filter out duplicates for remote strokes (don't regenerate their IDs)
+            const uniqueStrokes = newStrokes
+              .filter((s) => {
+                // Skip if this ID already exists (avoid duplicates)
+                if (s?.id && existingIds.has(s.id)) {
+                  console.log(
+                    "[CanvasContainer] Skipping duplicate stroke:",
+                    s.id
+                  );
+                  return false;
+                }
+                return true;
+              })
+              .map((s) => {
+                let id = s?.id;
+                // Only generate new ID if stroke doesn't have one
+                if (!id) {
+                  id = nextId();
+                }
+                existingIds.add(id);
+                return { ...s, id, layerId };
+              });
+
             const hasTemplate = uniqueStrokes.some((s) => s?.__templateSource);
 
             if (layerMap.has(layerId)) {
               const existingLayer = layerMap.get(layerId);
               if (hasTemplate) {
-                existingLayer.strokes = [...uniqueStrokes, ...(existingLayer.strokes || [])];
+                existingLayer.strokes = [
+                  ...uniqueStrokes,
+                  ...(existingLayer.strokes || []),
+                ];
               } else {
                 existingLayer.strokes.push(...uniqueStrokes);
               }
@@ -1315,10 +1390,51 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             setLayers(updater);
           });
         }
-
       } catch (e) {
         console.error("[CanvasContainer] appendStrokes error:", e);
       }
+    },
+
+    // 🔥 REALTIME: Update a stroke by its ID (for collaboration)
+    updateStrokeById: (strokeId, changes) => {
+      if (!strokeId || !changes) return;
+
+      const updater = (prevLayers) => {
+        return prevLayers.map((layer) => ({
+          ...layer,
+          strokes: layer.strokes.map((stroke) =>
+            stroke.id === strokeId ? { ...stroke, ...changes } : stroke
+          ),
+        }));
+      };
+
+      // 🔥 Use requestAnimationFrame to avoid setState during render
+      requestAnimationFrame(() => {
+        setInternalLayers(updater);
+        if (typeof setLayers === "function") {
+          setLayers(updater);
+        }
+      });
+    },
+
+    // 🔥 REALTIME: Delete a stroke by its ID (for collaboration)
+    deleteStrokeById: (strokeId) => {
+      if (!strokeId) return;
+
+      const updater = (prevLayers) => {
+        return prevLayers.map((layer) => ({
+          ...layer,
+          strokes: layer.strokes.filter((stroke) => stroke.id !== strokeId),
+        }));
+      };
+
+      // 🔥 Use requestAnimationFrame to avoid setState during render
+      requestAnimationFrame(() => {
+        setInternalLayers(updater);
+        if (typeof setLayers === "function") {
+          setLayers(updater);
+        }
+      });
     },
   }));
 
@@ -1398,6 +1514,17 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             getNearestFont={getNearestFont}
             shapeSettings={shapeSettings}
             tapeSettings={tapeSettings}
+            imageRefs={imageRefs}
+            // 🔄 REALTIME COLLABORATION props
+            pageId={pageId}
+            collabEnabled={collabEnabled}
+            collabConnected={collabConnected}
+            onCollabElementUpdate={onCollabElementUpdate}
+            onCollabElementCreate={onCollabElementCreate}
+            onCollabElementDelete={onCollabElementDelete}
+            onCollabRequestLock={onCollabRequestLock}
+            onCollabReleaseLock={onCollabReleaseLock}
+            onCollabIsElementLocked={onCollabIsElementLocked}
           >
             <CanvasRenderer
               ref={rendererRef}
