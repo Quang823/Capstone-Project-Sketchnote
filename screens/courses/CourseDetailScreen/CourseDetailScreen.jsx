@@ -142,7 +142,6 @@ export default function CourseDetailScreen() {
 
       // Xử lý lỗi không đủ tiền
       if (error.message && error.message.includes("Insufficient balance")) {
-        console.log("Insufficient balance, showing confirm modal");
         setShowConfirmModal(true);
       } else {
         Toast.show({

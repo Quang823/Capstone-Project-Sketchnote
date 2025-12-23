@@ -95,19 +95,29 @@ export const projectService = {
         return await projectService.getProjectFile(url, options);
       } catch (error) {
         // Check if error is 403 (Access Denied)
-        const is403 = error.message?.includes("403") || error.message?.includes("Access Denied");
+        const is403 =
+          error.message?.includes("403") ||
+          error.message?.includes("Access Denied");
 
         if (is403 && url) {
           try {
             // Extract filename from URL (assuming it's the last part of the path)
             // Example: .../projectId_page_1_timestamp.json?...
-            const fileName = decodeURIComponent(url.split("?")[0].split("/").pop());
+            const fileName = decodeURIComponent(
+              url.split("?")[0].split("/").pop()
+            );
 
             if (fileName) {
-              const presignData = await projectService.getPresign(fileName, "JSON");
+              const presignData = await projectService.getPresign(
+                fileName,
+                "JSON"
+              );
               if (presignData?.strokeUrl) {
                 // Retry with new URL
-                return await projectService.getProjectFile(presignData.strokeUrl, options);
+                return await projectService.getProjectFile(
+                  presignData.strokeUrl,
+                  options
+                );
               }
             }
           } catch (refreshError) {
@@ -123,7 +133,11 @@ export const projectService = {
         const remoteData = await fetchWithRetry(remoteUrl);
         if (remoteData) {
           try {
-            await offlineStorage.saveProjectPageLocally(projectId, pageNumber, remoteData);
+            await offlineStorage.saveProjectPageLocally(
+              projectId,
+              pageNumber,
+              remoteData
+            );
           } catch { }
         }
         return remoteData;
@@ -138,7 +152,10 @@ export const projectService = {
     }
 
     if (!skipLocal) {
-      const localData = await offlineStorage.loadProjectPageLocally(projectId, pageNumber);
+      const localData = await offlineStorage.loadProjectPageLocally(
+        projectId,
+        pageNumber
+      );
       if (localData) {
         return localData;
       }
@@ -148,7 +165,11 @@ export const projectService = {
       const remoteData = await fetchWithRetry(remoteUrl);
       if (remoteData) {
         try {
-          await offlineStorage.saveProjectPageLocally(projectId, pageNumber, remoteData);
+          await offlineStorage.saveProjectPageLocally(
+            projectId,
+            pageNumber,
+            remoteData
+          );
         } catch { }
       }
       return remoteData;
@@ -209,7 +230,10 @@ export const projectService = {
           for (const key of batchKeys) {
             try {
               const pageNumber = parseInt(key.split("_")[2], 10);
-              const pageData = await offlineStorage.loadProjectPageLocally(projectId, pageNumber);
+              const pageData = await offlineStorage.loadProjectPageLocally(
+                projectId,
+                pageNumber
+              );
               if (pageData && !isNaN(pageNumber)) {
                 localPagesData.push({ pageNumber, dataObject: pageData });
               }
@@ -237,8 +261,11 @@ export const projectService = {
               });
             });
           } catch (uploadErr) {
-            console.error(`Failed to upload batch for project ${projectId}`, uploadErr);
-            // Continue to next batch? Or stop? 
+            console.error(
+              `Failed to upload batch for project ${projectId}`,
+              uploadErr
+            );
+            // Continue to next batch? Or stop?
             // If upload fails, we shouldn't update remotePagesMap for these pages.
           }
 
@@ -283,7 +310,10 @@ export const projectService = {
   },
   getUserProjectsPaged: async (pageNo = 0, pageSize = 8) => {
     try {
-      const response = await projectAPIController.getUserProjectsPaged(pageNo, pageSize);
+      const response = await projectAPIController.getUserProjectsPaged(
+        pageNo,
+        pageSize
+      );
       const r = response?.data?.result ?? response?.data ?? {};
       const content = Array.isArray(r?.projects)
         ? r.projects
@@ -291,11 +321,24 @@ export const projectService = {
           ? r.content
           : [];
       const totalElements =
-        r?.totalElements ?? r?.page?.totalElements ?? r?.pagination?.total ?? content.length;
+        r?.totalElements ??
+        r?.page?.totalElements ??
+        r?.pagination?.total ??
+        content.length;
       const totalPages =
-        r?.totalPages ?? r?.page?.totalPages ?? r?.pagination?.totalPages ?? Math.max(1, Math.ceil(totalElements / pageSize));
-      const currentPage = r?.pageNo ?? r?.pageNumber ?? r?.page?.number ?? pageNo;
-      return { content, totalElements, totalPages, pageNo: currentPage, pageSize };
+        r?.totalPages ??
+        r?.page?.totalPages ??
+        r?.pagination?.totalPages ??
+        Math.max(1, Math.ceil(totalElements / pageSize));
+      const currentPage =
+        r?.pageNo ?? r?.pageNumber ?? r?.page?.number ?? pageNo;
+      return {
+        content,
+        totalElements,
+        totalPages,
+        pageNo: currentPage,
+        pageSize,
+      };
     } catch (error) {
       console.error("Error in getUserProjectsPaged:", error);
       throw error;
@@ -520,9 +563,7 @@ export const projectService = {
             return new WebSocket(wsUrl);
           },
 
-          debug: (str) => {
-
-          },
+          debug: (str) => { },
 
           reconnectDelay: 5000,
           heartbeatIncoming: 4000,
@@ -538,11 +579,9 @@ export const projectService = {
             }
             : undefined,
 
-          beforeConnect: () => {
-          },
+          beforeConnect: () => { },
 
           onConnect: (frame) => {
-
             isConnected = true;
 
             // *** ROUTE SEPARATED: Subscribe to stroke topic only ***
@@ -563,10 +602,8 @@ export const projectService = {
               }
             });
 
-
             // Flush pending queue
             if (pendingQueue.length > 0) {
-
               pendingQueue.forEach((f) => {
                 try {
                   const parsed = parseFrame(f);
@@ -611,7 +648,6 @@ export const projectService = {
 
     const disconnect = () => {
       try {
-
         // ✅ FIXED: Unsubscribe before deactivating
         if (activeSubscription) {
           try {
@@ -708,10 +744,10 @@ export const projectService = {
       if (points.length < 10) {
         return {
           compressed: false,
-          data: points.map(p => [
+          data: points.map((p) => [
             Math.round((p?.x || 0) * 100) / 100,
-            Math.round((p?.y || 0) * 100) / 100
-          ])
+            Math.round((p?.y || 0) * 100) / 100,
+          ]),
         };
       }
 
@@ -738,7 +774,7 @@ export const projectService = {
       return {
         compressed: true,
         base: [baseX, baseY],
-        deltas: deltas // Flat array of [dx1, dy1, dx2, dy2, ...]
+        deltas: deltas, // Flat array of [dx1, dy1, dx2, dy2, ...]
       };
     };
 
@@ -753,25 +789,24 @@ export const projectService = {
       stroke = {},
       pagePayload
     ) => {
-      // Only extract essential stroke properties (no duplicate)
-      const hasPoints = Array.isArray(stroke.points) && stroke.points.length > 0;
-
-      // Compress points for tools that have them
+      const hasPoints =
+        Array.isArray(stroke.points) && stroke.points.length > 0;
       const compressedPoints = hasPoints ? compressPoints(stroke.points) : null;
 
-      // Build minimal stroke object - only include non-null values
       const minimalStroke = {
         id: stroke.id,
         tool: stroke.tool || "pen",
       };
 
-      // Only add properties if they have meaningful values
+      // Existing properties
       if (stroke.x != null) minimalStroke.x = stroke.x;
       if (stroke.y != null) minimalStroke.y = stroke.y;
       if (stroke.width != null) minimalStroke.width = stroke.width;
       if (stroke.height != null) minimalStroke.height = stroke.height;
-      if (stroke.rotation != null && stroke.rotation !== 0) minimalStroke.rotation = stroke.rotation;
-      if (stroke.opacity != null && stroke.opacity !== 1) minimalStroke.opacity = stroke.opacity;
+      if (stroke.rotation != null && stroke.rotation !== 0)
+        minimalStroke.rotation = stroke.rotation;
+      if (stroke.opacity != null && stroke.opacity !== 1)
+        minimalStroke.opacity = stroke.opacity;
       if (stroke.color) minimalStroke.color = stroke.color;
       if (stroke.layerId) minimalStroke.layerId = stroke.layerId;
       if (stroke.text) minimalStroke.text = stroke.text;
@@ -781,18 +816,32 @@ export const projectService = {
       if (stroke.rows) minimalStroke.rows = stroke.rows;
       if (stroke.cols) minimalStroke.cols = stroke.cols;
 
-      // Build optimized payload - NO DUPLICATES
+      // ✅ ADD: Shape-specific properties for fill
+      if (stroke.fill != null) minimalStroke.fill = stroke.fill;
+      if (stroke.fillColor) minimalStroke.fillColor = stroke.fillColor;
+      if (stroke.shapeSettings) {
+        minimalStroke.shapeSettings = {
+          shape: stroke.shapeSettings.shape,
+          fill: stroke.shapeSettings.fill,
+          fillColor: stroke.shapeSettings.fillColor,
+          thickness: stroke.shapeSettings.thickness,
+        };
+      }
+      if (stroke.shape) {
+        // Send shape geometry
+        minimalStroke.shape = stroke.shape;
+      }
+
+      // Build payload
       const payload = {
         pageId,
         stroke: minimalStroke,
       };
 
-      // Add compressed points separately (not inside stroke to avoid duplication)
       if (compressedPoints) {
         payload.points = compressedPoints;
       }
 
-      // Only include minimal page info if needed (NOT full page with strokes)
       if (pagePayload && typeof pagePayload === "object") {
         payload.pageInfo = {
           id: pagePayload.id,
@@ -819,7 +868,9 @@ export const projectService = {
    */
   createProjectLocally: async (projectData) => {
     try {
-      const localId = `local_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const localId = `local_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
 
       const localProject = {
         projectId: localId,
@@ -865,7 +916,9 @@ export const projectService = {
   uploadLocalProject: async (localProjectId) => {
     try {
       // Load local project
-      const localProject = await offlineStorage.loadGuestProject(localProjectId);
+      const localProject = await offlineStorage.loadGuestProject(
+        localProjectId
+      );
       if (!localProject) {
         throw new Error("Local project not found");
       }
@@ -902,7 +955,7 @@ export const projectService = {
         if (uploadedPages.length > 0) {
           const payload = {
             projectId: cloudProjectId,
-            pages: uploadedPages.map(p => ({
+            pages: uploadedPages.map((p) => ({
               pageNumber: p.pageNumber,
               strokeUrl: p.url,
             })),

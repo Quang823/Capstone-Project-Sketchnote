@@ -1450,7 +1450,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       setPages((prev) => {
         // Check if page already exists
         if (prev.some(p => p.id === page.id)) return prev;
-        
+
         const newPage = {
           id: page.id,
           type: page.type || "paper",
@@ -1459,13 +1459,13 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           imageUrl: page.imageUrl || null,
           snapshotUrl: page.snapshotUrl || null,
         };
-        
+
         // Initialize layers for new page
         setPageLayers?.((prev) => ({
           ...prev,
           [page.id]: [{ id: "layer1", name: "Layer 1", visible: true, strokes: [] }],
         }));
-        
+
         if (typeof insertAt === "number" && insertAt >= 0 && insertAt < prev.length) {
           const next = [...prev];
           next.splice(insertAt, 0, newPage);

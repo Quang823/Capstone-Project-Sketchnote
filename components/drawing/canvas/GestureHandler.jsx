@@ -1989,7 +1989,18 @@ const GestureHandler = forwardRef(
               tapY <= bbox.maxY
             ) {
               try {
-                onModifyStroke?.(i, { fill: true, fillColor: color });
+                const fillChanges = { fill: true, fillColor: color };
+                onModifyStroke?.(i, fillChanges);
+
+                // 🔄 REALTIME COLLABORATION: Send fill update to other users
+                if (
+                  collabEnabled &&
+                  collabConnected &&
+                  typeof onCollabElementUpdate === "function" &&
+                  s?.id
+                ) {
+                  onCollabElementUpdate(pageId, s.id, fillChanges);
+                }
               } catch (err) {
                 console.error("Error modifying fill:", err);
               }
@@ -2150,11 +2161,6 @@ const GestureHandler = forwardRef(
               collabConnected &&
               typeof onCollabElementCreate === "function"
             ) {
-              console.log(
-                "[Collab] Sending ELEMENT_CREATE (stroke/shape):",
-                newStroke.id,
-                newStroke.tool
-              );
               onCollabElementCreate(pageId, newStroke);
             }
           } catch (err) {
@@ -2570,10 +2576,6 @@ const GestureHandler = forwardRef(
                 typeof onCollabElementDelete === "function"
               ) {
                 toDelete.forEach((item) => {
-                  console.log(
-                    "[Collab] Sending ELEMENT_DELETE (lasso cut):",
-                    item.id
-                  );
                   onCollabElementDelete(pageId, item.id);
                 });
               }
@@ -2600,10 +2602,6 @@ const GestureHandler = forwardRef(
                 typeof onCollabElementDelete === "function"
               ) {
                 toDelete.forEach((item) => {
-                  console.log(
-                    "[Collab] Sending ELEMENT_DELETE (lasso):",
-                    item.id
-                  );
                   onCollabElementDelete(pageId, item.id);
                 });
               }
@@ -2681,11 +2679,6 @@ const GestureHandler = forwardRef(
                       collabConnected &&
                       typeof onCollabElementUpdate === "function"
                     ) {
-                      console.log(
-                        "[Collab] Sending ELEMENT_UPDATE (text move):",
-                        selectedId,
-                        { x: newX, y: newY }
-                      );
                       onCollabElementUpdate(
                         pageId,
                         selectedId,
@@ -2795,11 +2788,6 @@ const GestureHandler = forwardRef(
                     collabConnected &&
                     typeof onCollabElementUpdate === "function"
                   ) {
-                    console.log(
-                      "[Collab] Sending ELEMENT_UPDATE (text resize):",
-                      selectedId,
-                      changes
-                    );
                     onCollabElementUpdate(pageId, selectedId, changes, {
                       transient: false,
                     });
@@ -2836,10 +2824,6 @@ const GestureHandler = forwardRef(
                   typeof onCollabElementDelete === "function" &&
                   deletedId
                 ) {
-                  console.log(
-                    "[Collab] Sending ELEMENT_DELETE (text cut):",
-                    deletedId
-                  );
                   onCollabElementDelete(pageId, deletedId);
                 }
 
@@ -2859,10 +2843,6 @@ const GestureHandler = forwardRef(
                   typeof onCollabElementDelete === "function" &&
                   deletedId
                 ) {
-                  console.log(
-                    "[Collab] Sending ELEMENT_DELETE (text):",
-                    deletedId
-                  );
                   onCollabElementDelete(pageId, deletedId);
                 }
 
@@ -3053,11 +3033,6 @@ const GestureHandler = forwardRef(
                       if (liveTransformRef.current.drot !== 0) {
                         changes.rotation = final.rotation;
                       }
-                      console.log(
-                        "[Collab] Sending ELEMENT_UPDATE (move):",
-                        selectedId,
-                        changes
-                      );
                       onCollabElementUpdate(pageId, selectedId, changes, {
                         transient: false,
                       });
@@ -3190,11 +3165,6 @@ const GestureHandler = forwardRef(
                         width: final.width,
                         height: final.height,
                       };
-                      console.log(
-                        "[Collab] Sending ELEMENT_UPDATE (resize):",
-                        selectedId,
-                        changes
-                      );
                       onCollabElementUpdate(pageId, selectedId, changes, {
                         transient: false,
                       });
@@ -3245,11 +3215,6 @@ const GestureHandler = forwardRef(
                       typeof onCollabElementUpdate === "function"
                     ) {
                       const changes = { rotation: finalRot };
-                      console.log(
-                        "[Collab] Sending ELEMENT_UPDATE (rotate):",
-                        selectedId,
-                        changes
-                      );
                       onCollabElementUpdate(pageId, selectedId, changes, {
                         transient: false,
                       });
@@ -3291,10 +3256,6 @@ const GestureHandler = forwardRef(
                     typeof onCollabElementDelete === "function" &&
                     deletedId
                   ) {
-                    console.log(
-                      "[Collab] Sending ELEMENT_DELETE (image cut):",
-                      deletedId
-                    );
                     onCollabElementDelete(pageId, deletedId);
                   }
 
@@ -3315,10 +3276,6 @@ const GestureHandler = forwardRef(
                     typeof onCollabElementDelete === "function" &&
                     deletedId
                   ) {
-                    console.log(
-                      "[Collab] Sending ELEMENT_DELETE (image):",
-                      deletedId
-                    );
                     onCollabElementDelete(pageId, deletedId);
                   }
 
