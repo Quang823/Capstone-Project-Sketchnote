@@ -315,28 +315,29 @@ export default function DesignerProductDetailScreen() {
                                     Sales Performance
                                 </Text>
                                 <View style={{ flexDirection: "row", gap: 10 }}>
+                                    {/* Version - First */}
+                                    <View style={{ flex: 1, backgroundColor: isDark ? "#312E81" : "#E0E7FF", padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: "#6366F1" }}>
+                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                            <Icon name="layers" size={16} color="#6366F1" />
+                                            <Text style={{ fontSize: 11, color: isDark ? "#A5B4FC" : "#3730A3", fontWeight: "600" }}>Version</Text>
+                                        </View>
+                                        <Text style={{ fontSize: 20, fontWeight: "700", color: isDark ? "#A5B4FC" : "#3730A3" }}>
+                                            v{product.currentVersionNumber ?? "N/A"}
+                                        </Text>
+                                    </View>
+
+                                    {/* Purchases */}
                                     <View style={{ flex: 1, backgroundColor: isDark ? "#1E3A5F" : "#DBEAFE", padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: "#3B82F6" }}>
                                         <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
                                             <Icon name="shopping-cart" size={16} color="#3B82F6" />
                                             <Text style={{ fontSize: 11, color: isDark ? "#60A5FA" : "#1E40AF", fontWeight: "600" }}>Purchases</Text>
                                         </View>
                                         <Text style={{ fontSize: 20, fontWeight: "700", color: isDark ? "#60A5FA" : "#1E3A8A" }}>
-                                            {product.totalPurchases ?? 0}
+                                            {product.purchaseCount ?? 0}
                                         </Text>
                                     </View>
 
-                                    <View style={{ flex: 1, backgroundColor: isDark ? "#064E3B" : "#D1FAE5", padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: "#10B981" }}>
-                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                                            <Icon name="attach-money" size={16} color="#10B981" />
-                                            <Text style={{ fontSize: 11, color: isDark ? "#34D399" : "#065F46", fontWeight: "600" }}>Revenue</Text>
-                                        </View>
-                                        <Text style={{ fontSize: 16, fontWeight: "700", color: isDark ? "#34D399" : "#065F46" }}>
-                                            {formatCurrency(product.totalRevenue ?? 0)}
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+                                    {/* Rating */}
                                     <View style={{ flex: 1, backgroundColor: isDark ? "#451A03" : "#FEF3C7", padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: "#F59E0B" }}>
                                         <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
                                             <Icon name="star" size={16} color="#F59E0B" />
@@ -344,16 +345,6 @@ export default function DesignerProductDetailScreen() {
                                         </View>
                                         <Text style={{ fontSize: 20, fontWeight: "700", color: isDark ? "#FCD34D" : "#92400E" }}>
                                             {(product.averageRating ?? currentVersion?.averageRating ?? 0).toFixed(1)} ⭐
-                                        </Text>
-                                    </View>
-
-                                    <View style={{ flex: 1, backgroundColor: isDark ? "#312E81" : "#E0E7FF", padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: "#6366F1" }}>
-                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                                            <Icon name="layers" size={16} color="#6366F1" />
-                                            <Text style={{ fontSize: 11, color: isDark ? "#A5B4FC" : "#3730A3", fontWeight: "600" }}>Version</Text>
-                                        </View>
-                                        <Text style={{ fontSize: 20, fontWeight: "700", color: isDark ? "#A5B4FC" : "#3730A3" }}>
-                                            {product.currentVersionNumber ?? "N/A"}
                                         </Text>
                                     </View>
                                 </View>
@@ -387,158 +378,99 @@ export default function DesignerProductDetailScreen() {
                                             key={version.versionId}
                                             style={{
                                                 backgroundColor: version.status === "PUBLISHED" ? (isDark ? "#064E3B" : "#F0FDF4") : styles.cardBackground,
-                                                padding: 14,
+                                                padding: 12,
                                                 borderRadius: 10,
                                                 marginTop: 10,
                                                 borderLeftWidth: 4,
                                                 borderLeftColor: version.status === "PUBLISHED" ? "#10B981" : version.status === "PENDING_REVIEW" ? "#3B82F6" : "#6B7280",
-                                                shadowColor: styles.shadowColor,
-                                                shadowOffset: { width: 0, height: 1 },
-                                                shadowOpacity: isDark ? 0.3 : 0.05,
-                                                shadowRadius: 2,
-                                                elevation: 1,
                                             }}
                                         >
-                                            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-                                                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}>
-                                                    {/* Version Thumbnail */}
+                                            {/* Main Row: Content + Buttons */}
+                                            <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                                                {/* Left: Thumbnail + Info */}
+                                                <View style={{ flex: 1, flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+                                                    {/* Thumbnail */}
                                                     {(() => {
                                                         const thumbnail = version.images?.find(img => img.isThumbnail) || version.images?.[0];
                                                         if (thumbnail && thumbnail.imageUrl && thumbnail.imageUrl !== "string") {
                                                             return (
                                                                 <Image
                                                                     source={{ uri: thumbnail.imageUrl }}
-                                                                    style={{
-                                                                        width: 50,
-                                                                        height: 50,
-                                                                        borderRadius: 8,
-                                                                        backgroundColor: styles.inputBackground,
-                                                                    }}
+                                                                    style={{ width: 60, height: 60, borderRadius: 8, backgroundColor: styles.inputBackground }}
                                                                 />
                                                             );
                                                         }
                                                         return (
-                                                            <View
-                                                                style={{
-                                                                    width: 50,
-                                                                    height: 50,
-                                                                    borderRadius: 8,
-                                                                    backgroundColor: styles.inputBackground,
-                                                                    alignItems: "center",
-                                                                    justifyContent: "center",
-                                                                }}
-                                                            >
+                                                            <View style={{ width: 60, height: 60, borderRadius: 8, backgroundColor: styles.inputBackground, alignItems: "center", justifyContent: "center" }}>
                                                                 <Icon name="image" size={24} color={isDark ? "#64748B" : "#9CA3AF"} />
                                                             </View>
                                                         );
                                                     })()}
+
+                                                    {/* Info */}
                                                     <View style={{ flex: 1 }}>
-                                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                                                            <View style={{ backgroundColor: styles.cardBackground, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: styles.borderColor }}>
-                                                                <Text style={{ fontSize: 13, fontWeight: "700", color: styles.textPrimary }}>
-                                                                    v{version.versionNumber}
-                                                                </Text>
+                                                        {/* Header: Version + Status */}
+                                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                                            <View style={{ backgroundColor: isDark ? "#1E3A5F" : "#DBEAFE", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5, borderWidth: 1, borderColor: "#3B82F6" }}>
+                                                                <Text style={{ fontSize: 12, fontWeight: "700", color: isDark ? "#60A5FA" : "#1E40AF" }}>v{version.versionNumber}</Text>
                                                             </View>
-                                                            <View
-                                                                style={{
-                                                                    backgroundColor: getStatusColor(version.status),
-                                                                    paddingHorizontal: 8,
-                                                                    paddingVertical: 4,
-                                                                    borderRadius: 6,
-                                                                }}
-                                                            >
-                                                                <Text style={{ color: "#FFF", fontSize: 10, fontWeight: "600" }}>
-                                                                    {getStatusText(version.status)}
-                                                                </Text>
+                                                            <View style={{ backgroundColor: getStatusColor(version.status), paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5 }}>
+                                                                <Text style={{ color: "#FFF", fontSize: 10, fontWeight: "600" }}>{getStatusText(version.status)}</Text>
                                                             </View>
                                                         </View>
-                                                        <Text style={{ fontSize: 14, color: styles.textPrimary, fontWeight: "600", marginTop: 4 }} numberOfLines={1}>
-                                                            {version.name}
-                                                        </Text>
+
+                                                        {/* Name */}
+                                                        <Text style={{ fontSize: 14, color: styles.textPrimary, fontWeight: "600" }} numberOfLines={1}>{version.name}</Text>
+
+                                                        {/* Description */}
+                                                        <Text style={{ fontSize: 11, color: styles.textSecondary, marginTop: 2 }} numberOfLines={1}>{version.description}</Text>
+
+                                                        {/* Metrics */}
+                                                        <View style={{ flexDirection: "row", gap: 12, marginTop: 6 }}>
+                                                            <Text style={{ fontSize: 11 }}>
+                                                                <Text style={{ color: "#10B981", fontWeight: "700" }}>PRICE: </Text>
+                                                                <Text style={{ color: styles.textPrimary, fontWeight: "600" }}>{formatCurrency(version.price)}</Text>
+                                                            </Text>
+                                                            <Text style={{ fontSize: 11 }}>
+                                                                <Text style={{ color: "#3B82F6", fontWeight: "700" }}>SALES: </Text>
+                                                                <Text style={{ color: styles.textPrimary, fontWeight: "600" }}>{version.purchaseCount ?? 0}</Text>
+                                                            </Text>
+                                                            <Text style={{ fontSize: 11 }}>
+                                                                <Text style={{ color: "#FBBF24", fontWeight: "700" }}>RATING: </Text>
+                                                                <Text style={{ color: styles.textPrimary, fontWeight: "600" }}>{(version.averageRating ?? 0).toFixed(1)} ★</Text>
+                                                            </Text>
+                                                        </View>
                                                     </View>
                                                 </View>
-                                            </View>
-                                            <Text style={{ fontSize: 12, color: styles.textSecondary, marginBottom: 10, lineHeight: 16 }}>
-                                                {version.description}
-                                            </Text>
 
-                                            {/* Metrics Row */}
-                                            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-                                                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: styles.cardBackground, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                                                    <Icon name="attach-money" size={14} color="#10B981" />
-                                                    <Text style={{ fontSize: 11, color: styles.textPrimary, fontWeight: "600" }}>
-                                                        {formatCurrency(version.price)}
-                                                    </Text>
-                                                </View>
-                                                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: styles.cardBackground, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                                                    <Icon name="shopping-cart" size={14} color="#3B82F6" />
-                                                    <Text style={{ fontSize: 11, color: styles.textPrimary }}>
-                                                        {version.purchaseCount} sales
-                                                    </Text>
-                                                </View>
-                                                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: styles.cardBackground, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                                                    <Icon name="star" size={14} color="#FBBF24" />
-                                                    <Text style={{ fontSize: 11, color: styles.textPrimary }}>
-                                                        {(version.averageRating ?? 0).toFixed(1)}
-                                                    </Text>
-                                                </View>
-                                            </View>
-
-                                            {/* Action Buttons */}
-                                            {version.status === "PUBLISHED" && version.versionId !== product.currentPublishedVersionId ? (
-                                                <View style={{ flexDirection: "row", gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: styles.borderColor }}>
-                                                    <Pressable
-                                                        style={{
-                                                            flex: 1,
-                                                            backgroundColor: "#10B981",
-                                                            paddingVertical: 8,
-                                                            paddingHorizontal: 12,
-                                                            borderRadius: 8,
-                                                            flexDirection: "row",
-                                                            alignItems: "center",
-                                                            justifyContent: "center",
-                                                            gap: 6,
-                                                        }}
-                                                        onPress={() => handlePublishVersion(version)}
-                                                    >
-                                                        <Icon name="publish" size={16} color="#FFFFFF" />
-                                                        <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>
-                                                            Set as Current
-                                                        </Text>
-                                                    </Pressable>
-                                                </View>
-                                            ) : version.status !== "PUBLISHED" ? (
-                                                <View style={{ flexDirection: "row", gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: styles.borderColor }}>
-                                                    {version.status === "PENDING_REVIEW" && (
+                                                {/* Right: Action Buttons */}
+                                                <View style={{ flexDirection: "column", gap: 6, marginLeft: 10 }}>
+                                                    {version.status === "PUBLISHED" && version.versionId !== product.currentPublishedVersionId && (
                                                         <Pressable
-                                                            style={{
-                                                                flex: 1,
-                                                                backgroundColor: "#3B82F6",
-                                                                paddingVertical: 8,
-                                                                paddingHorizontal: 12,
-                                                                borderRadius: 8,
-                                                                flexDirection: "row",
-                                                                alignItems: "center",
-                                                                justifyContent: "center",
-                                                                gap: 6,
-                                                            }}
-                                                            onPress={() => handleUpdateVersion(version)}
+                                                            style={{ backgroundColor: "#10B981", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6, alignItems: "center" }}
+                                                            onPress={() => handlePublishVersion(version)}
                                                         >
-                                                            <Icon name="edit" size={16} color="#FFFFFF" />
-                                                            <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>
-                                                                Update
-                                                            </Text>
+                                                            <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "600" }}>Set Current</Text>
                                                         </Pressable>
                                                     )}
-                                                    <Pressable
-                                                        style={{ flex: 1, backgroundColor: "#EF4444", paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}
-                                                        onPress={() => handleDeleteVersion(version)}
-                                                    >
-                                                        <Icon name="delete" size={16} color="#FFFFFF" />
-                                                        <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "600" }}>Delete</Text>
-                                                    </Pressable>
+                                                    {version.status === "PENDING_REVIEW" && (
+                                                        <Pressable
+                                                            style={{ backgroundColor: "#3B82F6", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6, alignItems: "center" }}
+                                                            onPress={() => handleUpdateVersion(version)}
+                                                        >
+                                                            <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "600" }}>Update</Text>
+                                                        </Pressable>
+                                                    )}
+                                                    {version.status !== "PUBLISHED" && (
+                                                        <Pressable
+                                                            style={{ backgroundColor: "#EF4444", paddingVertical: 8, paddingHorizontal: 14, borderRadius: 6, alignItems: "center" }}
+                                                            onPress={() => handleDeleteVersion(version)}
+                                                        >
+                                                            <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "600" }}>Delete</Text>
+                                                        </Pressable>
+                                                    )}
                                                 </View>
-                                            ) : null}
+                                            </View>
                                         </View>
                                     ))}
                                 </View>

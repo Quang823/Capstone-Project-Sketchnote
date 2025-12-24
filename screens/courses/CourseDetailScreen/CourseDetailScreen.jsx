@@ -138,7 +138,7 @@ export default function CourseDetailScreen() {
       await fetchCourseDetail(courseId);
       handleStartLearning();
     } catch (error) {
-      console.error("Error in handleBuyCourse:", error);
+      console.warn("Error in handleBuyCourse:", error);
 
       // Xử lý lỗi không đủ tiền
       if (error.message && error.message.includes("Insufficient balance")) {
@@ -243,7 +243,7 @@ export default function CourseDetailScreen() {
         setCourse(transformedCourse);
       }
     } catch (error) {
-      console.error("Error fetching course detail:", error.message);
+      console.warn("Error fetching course detail:", error.message);
       setError("Error fetching course detail");
     } finally {
       setLoading(false);

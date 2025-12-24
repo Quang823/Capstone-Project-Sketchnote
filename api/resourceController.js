@@ -104,4 +104,7 @@ export const resourceController = {
       data
     );
   },
+  getDesignerPublicTemplate : async () => {
+    return await privateApi.get(`/api/orders/user_resources/user/me/published-templates`);
+  },
 };

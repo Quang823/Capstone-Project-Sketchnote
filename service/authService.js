@@ -151,14 +151,14 @@ export const authService = {
           // Return consistent structure with login
           return { accessToken, refreshToken, roles };
         } catch (decodeError) {
-          console.error("Error decoding token during Google login:", decodeError);
+          console.warn("Error decoding token during Google login:", decodeError);
           // Still return tokens even if decoding fails, but roles will be missing
           return { accessToken, refreshToken, roles: [] };
         }
       }
       throw new Error("Login failed. Token not received.");
     } catch (err) {
-      console.error("Google Login Error:", err);
+      console.warn("Google Login Error:", err);
       const message =
         err.response?.data?.message || err.message || "Login failed.";
       throw new Error(message);

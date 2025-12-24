@@ -225,7 +225,7 @@ export default function DrawingScreen({ route }) {
             transient
           });
         } catch (err) {
-          console.error('[Collab] Error applying remote update:', err);
+          console.warn('[Collab] Error applying remote update:', err);
         }
       });
     }, [user?.id]),
@@ -240,7 +240,7 @@ export default function DrawingScreen({ route }) {
         try {
           multiPageCanvasRef.current?.appendStrokesToPage?.(pageId, [element], { fromRemote: true });
         } catch (err) {
-          console.error('[Collab] Error applying remote create:', err);
+          console.warn('[Collab] Error applying remote create:', err);
         }
       });
     }, [user?.id]),
@@ -255,7 +255,7 @@ export default function DrawingScreen({ route }) {
         try {
           multiPageCanvasRef.current?.deleteStrokeById?.(pageId, elementId, { fromRemote: true });
         } catch (err) {
-          console.error('[Collab] Error applying remote delete:', err);
+          console.warn('[Collab] Error applying remote delete:', err);
         }
       });
     }, [user?.id]),
@@ -271,7 +271,7 @@ export default function DrawingScreen({ route }) {
         try {
           multiPageCanvasRef.current?.addPageFromRemote?.(page, insertAt);
         } catch (err) {
-          console.error('[Collab] Error applying remote page create:', err);
+          console.warn('[Collab] Error applying remote page create:', err);
         }
       });
     }, [user?.id]),
@@ -1056,7 +1056,7 @@ export default function DrawingScreen({ route }) {
             try {
               multiPageCanvasRef.current.appendStrokesToPage(pageId, batch);
             } catch (err) {
-              console.error("[DrawingScreen] Error appending strokes:", err);
+              console.warn("[DrawingScreen] Error appending strokes:", err);
             }
           }
 
@@ -1106,7 +1106,7 @@ export default function DrawingScreen({ route }) {
               }
             }
           } catch (localError) {
-            console.error('❌ Failed to load from FileSystem:', localError);
+            console.warn('❌ Failed to load from FileSystem:', localError);
           }
           return;
         }
@@ -1208,7 +1208,7 @@ export default function DrawingScreen({ route }) {
             }
           } catch (e) {
             if (e.name !== "AbortError") {
-              console.error(
+              console.warn(
                 `❌ Load page ${p.pageNumber} failed:`,
                 e?.message || e
               );
@@ -1217,7 +1217,7 @@ export default function DrawingScreen({ route }) {
         }
       } catch (e) {
         if (e.name !== "AbortError") {
-          console.error("[DrawingScreen] Auto-load error:", e);
+          console.warn("[DrawingScreen] Auto-load error:", e);
           if (!controller.signal.aborted) {
             Alert.alert(
               "Lỗi",

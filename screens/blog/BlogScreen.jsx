@@ -78,7 +78,7 @@ export default function BlogScreen() {
       setBlogs(allBlogs);
       setFilteredBlogs(allBlogs);
     } catch (error) {
-      console.error("Error fetching blogs:", error);
+      console.warn("Error fetching blogs:", error);
       // Toast.show({
       //   type: "error",
       //   text1: "Error",

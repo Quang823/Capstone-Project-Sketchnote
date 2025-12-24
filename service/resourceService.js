@@ -193,4 +193,14 @@ export const resourceService = {
             throw new Error(message);
         }
     },
+    getDesignerPublicTemplate: async () => {
+        try {
+            const response = await resourceController.getDesignerPublicTemplate();
+            return response.data.result;
+        } catch (error) {
+            const message =
+                error.response?.data?.message || error.message || "Get designer public template failed.";
+            throw new Error(message);
+        }
+    },
 }

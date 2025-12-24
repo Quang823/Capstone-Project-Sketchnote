@@ -103,7 +103,7 @@ export default function LessonScreen() {
         );
       }
     } catch (err) {
-      console.error("Error fetching course data:", err);
+      console.warn("Error fetching course data:", err);
       setError(err.message || "Failed to load course data");
     } finally {
       setLoading(false);
@@ -224,7 +224,7 @@ export default function LessonScreen() {
           }
           // If all lessons completed, just stay on current screen (don't navigate)
         } catch (err) {
-          console.error("Error saving lesson progress:", err);
+          console.warn("Error saving lesson progress:", err);
           Toast.show({
             type: "error",
             position: "top",
@@ -284,7 +284,21 @@ export default function LessonScreen() {
             progressData
           );
         } catch (err) {
-          console.error("Error auto-saving progress:", err);
+          // Silently handle errors (especially duplicate key constraint violations)
+          // Only log to console for debugging, don't show errors to users
+          const errorMessage = err.message || err.toString();
+          if (errorMessage.includes('duplicate key') ||
+            errorMessage.includes('ukqtk0f3koh1fjn49jfeu9mdcy0') ||
+            errorMessage.includes('already exists')) {
+            console.log('[Auto-save] Progress already saved for this lesson (duplicate key)', {
+              courseId,
+              lessonId: currentLesson.lessonId,
+              position: currentPosition
+            });
+          } else {
+            console.warn('[Auto-save] Error saving progress:', err);
+          }
+          // Continue playback without interrupting user experience
         }
       }
 
@@ -311,7 +325,7 @@ export default function LessonScreen() {
             currentLesson.lastPosition * 1000
           );
         } catch (err) {
-          console.error("Error seeking to last position:", err);
+          console.warn("Error seeking to last position:", err);
         }
       }, 500);
     }
@@ -388,7 +402,7 @@ export default function LessonScreen() {
       }
       // If all lessons completed, just stay on current screen (don't navigate)
     } catch (err) {
-      console.error("Error saving lesson progress:", err);
+      console.warn("Error saving lesson progress:", err);
       Toast.show({
         type: "error",
         position: "top",
@@ -713,9 +727,8 @@ export default function LessonScreen() {
             numberOfLines={1}
           >
             {isTablet
-              ? `Lesson ${currentLessonIndex + 1}: ${
-                  currentLesson?.title || ""
-                }`
+              ? `Lesson ${currentLessonIndex + 1}: ${currentLesson?.title || ""
+              }`
               : currentLesson?.title || ""}
           </Text>
           <View style={styles.headerActions}>
@@ -886,36 +899,7 @@ export default function LessonScreen() {
                   {currentLesson?.description || "No description available."}
                 </Text>
                 <View style={{ marginTop: 16 }}>
-                  {/* <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginBottom: 8,
-                    }}
-                  >
-                    <Icon
-                      name="schedule"
-                      size={18}
-                      color={styles.sidebarMetaIcon}
-                    />
-                    <Text style={[styles.contentText, { marginLeft: 8 }]}>
-                      Duration: {formatDuration(currentLesson?.duration)}
-                    </Text>
-                  </View> */}
-                  {currentLesson?.timeSpent > 0 && (
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <Icon
-                        name="timer"
-                        size={18}
-                        color={styles.sidebarMetaIcon}
-                      />
-                      <Text style={[styles.contentText, { marginLeft: 8 }]}>
-                        Time spent: {formatDuration(currentLesson?.timeSpent)}
-                      </Text>
-                    </View>
-                  )}
+                  {/* Duration and Time Spent removed per user request */}
                 </View>
               </View>
             )}
@@ -988,7 +972,7 @@ export default function LessonScreen() {
                   styles.completeButton,
                   (currentLessonIndex === lessons.length - 1 ||
                     !isLessonUnlocked(currentLessonIndex + 1)) &&
-                    styles.navButtonDisabled,
+                  styles.navButtonDisabled,
                   !isTablet && { width: "100%", justifyContent: "center" },
                 ]}
                 onPress={handleNextLesson}

@@ -101,7 +101,7 @@ export default function NoteSetupScreen({ navigation, route }) {
           }
         }
       } catch (error) {
-        console.error("Error fetching templates:", error);
+        console.warn("Error fetching templates:", error);
         // Show empty templates on error
         setCoverTemplates({});
         setPaperTemplates({});
@@ -291,7 +291,7 @@ export default function NoteSetupScreen({ navigation, route }) {
       navigation.navigate("DrawingScreen", { noteConfig });
     } catch (error) {
       setIsCreating(false);
-      console.error("❌ Failed to create project:", error);
+      console.warn("❌ Failed to create project:", error);
       Alert.alert(
         "Error",
         "Failed to create project. Please try again.\n" +

@@ -75,7 +75,7 @@ export default function OrderHistoryScreen() {
       setAllOrders(sortedOrders);
       setCurrentPage(1);
     } catch (error) {
-      console.error("Error fetching orders:", error);
+      console.warn("Error fetching orders:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -183,7 +183,7 @@ export default function OrderHistoryScreen() {
 
       closeFeedbackModal();
     } catch (error) {
-      console.error("Error creating feedback:", error.message);
+      console.warn("Error creating feedback:", error.message);
       toast({
         type: "error",
         text1: "Error",
@@ -259,27 +259,7 @@ export default function OrderHistoryScreen() {
     }
   };
 
-  const renderStars = () => {
-    return (
-      <View style={styles.starsContainer}>
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Pressable
-            key={star}
-            onPress={() => setRating(star)}
-            style={styles.starButton}
-          >
-            <Icon
-              name={star <= rating ? "star" : "star-border"}
-              size={40}
-              color={
-                star <= rating ? "#FFB300" : isDark ? "#64748B" : "#BDC3C7"
-              }
-            />
-          </Pressable>
-        ))}
-      </View>
-    );
-  };
+
 
   if (loading) {
     return (
@@ -316,7 +296,7 @@ export default function OrderHistoryScreen() {
       </View>
 
       {/* Summary Box */}
-      <View style={styles.summaryBox}>
+      {/* <View style={styles.summaryBox}>
         <View style={styles.summaryItem}>
           <Icon
             name="shopping-bag"
@@ -360,7 +340,7 @@ export default function OrderHistoryScreen() {
             {pendingCount}
           </Text>
         </View>
-      </View>
+      </View> */}
 
       {/* Tabs */}
       <View style={styles.tabBar}>
@@ -724,44 +704,66 @@ export default function OrderHistoryScreen() {
             onPress={closeFeedbackModal}
           />
           <View style={styles.modalContent}>
-            {/* Header */}
+            {/* Modal Header */}
             <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Write a Review</Text>
-                <Text style={styles.modalSubtitle}>
-                  {selectedItem?.templateName}
-                </Text>
+              <View style={styles.modalIconContainer}>
+                <View style={styles.modalIcon}>
+                  <Icon name="rate-review" size={20} color={isDark ? "#60A5FA" : "#084F8C"} />
+                </View>
               </View>
-              <Pressable onPress={closeFeedbackModal}>
-                <Icon
-                  name="close"
-                  size={24}
-                  color={isDark ? "#94A3B8" : "#64748B"}
-                />
+              <Text style={styles.modalTitle}>Share Your Experience</Text>
+              <Text style={styles.modalSubtitle} numberOfLines={2}>
+                {selectedItem?.templateName}
+              </Text>
+              <Pressable onPress={closeFeedbackModal} style={styles.closeButton}>
+                <Icon name="close" size={20} color={isDark ? "#94A3B8" : "#94A3B8"} />
               </Pressable>
             </View>
 
-            {/* Rating */}
+            {/* Rating Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Your Rating</Text>
-              {renderStars()}
+              <Text style={styles.sectionLabel}>Your Rating</Text>
+              <View style={styles.starsContainer}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Pressable
+                    key={star}
+                    onPress={() => setRating(star)}
+                    style={styles.starButton}
+                  >
+                    <Icon
+                      name={star <= rating ? "star" : "star-border"}
+                      size={32}
+                      color={star <= rating ? "#FFB300" : (isDark ? "#334155" : "#E2E8F0")}
+                    />
+                  </Pressable>
+                ))}
+              </View>
               {rating > 0 && (
-                <Text style={styles.ratingText}>
-                  {rating === 1 && "Poor"}
-                  {rating === 2 && "Fair"}
-                  {rating === 3 && "Good"}
-                  {rating === 4 && "Very Good"}
-                  {rating === 5 && "Excellent"}
-                </Text>
+                <View style={styles.ratingBadge}>
+                  <Text style={styles.ratingEmoji}>
+                    {rating === 1 && "😞"}
+                    {rating === 2 && "😐"}
+                    {rating === 3 && "🙂"}
+                    {rating === 4 && "😊"}
+                    {rating === 5 && "🤩"}
+                  </Text>
+                  <Text style={styles.ratingText}>
+                    {rating === 1 && "Poor"}
+                    {rating === 2 && "Fair"}
+                    {rating === 3 && "Good"}
+                    {rating === 4 && "Very Good"}
+                    {rating === 5 && "Excellent"}
+                  </Text>
+                </View>
               )}
             </View>
 
-            {/* Comment */}
+            {/* Comment Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Your Comment</Text>
+              <Text style={styles.sectionLabel}>Your Feedback</Text>
               <TextInput
                 style={styles.commentInput}
-                placeholder="Share your experience with this resource..."
+                placeholder="Share what you loved or how we can improve..."
                 placeholderTextColor={isDark ? "#64748B" : "#94A3B8"}
                 multiline
                 numberOfLines={5}
@@ -769,18 +771,14 @@ export default function OrderHistoryScreen() {
                 onChangeText={setComment}
                 textAlignVertical="top"
               />
-              <Text style={styles.charCount}>{comment.length} characters</Text>
+              <Text style={styles.charCount}>{comment.length}/500</Text>
             </View>
 
             {/* Action Buttons */}
             <View style={styles.buttonRow}>
-              <Pressable
-                style={styles.cancelButton}
-                onPress={closeFeedbackModal}
-              >
+              <Pressable style={styles.cancelButton} onPress={closeFeedbackModal}>
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </Pressable>
-
               <Pressable
                 style={[
                   styles.submitButton,
@@ -794,8 +792,8 @@ export default function OrderHistoryScreen() {
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
-                    <Icon name="send" size={18} color="#FFFFFF" />
                     <Text style={styles.submitButtonText}>Submit Review</Text>
+                    <Icon name="send" size={16} color="#FFFFFF" />
                   </>
                 )}
               </Pressable>

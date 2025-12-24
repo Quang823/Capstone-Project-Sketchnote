@@ -375,7 +375,7 @@ export default function DesignerProductsScreen() {
       </View>
 
       {/* Stats Cards */}
-      <View style={styles.statsContainer}>
+      {/* <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{totalElements}</Text>
           <Text style={styles.statLabel}>Total products</Text>
@@ -388,7 +388,7 @@ export default function DesignerProductsScreen() {
           <Text style={styles.statNumber}>{totalPages}</Text>
           <Text style={styles.statLabel}>Total Pages</Text>
         </View>
-      </View>
+      </View> */}
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
@@ -484,7 +484,7 @@ export default function DesignerProductsScreen() {
                     <View style={styles.productThumbnailPlaceholder}>
                       <Icon
                         name="image"
-                        size={32}
+                        size={40}
                         color={isDark ? "#64748B" : "#9CA3AF"}
                       />
                     </View>
@@ -497,15 +497,25 @@ export default function DesignerProductsScreen() {
                       <Text style={styles.productTitleText} numberOfLines={1}>
                         {product.name}
                       </Text>
-                      <View
-                        style={[
-                          styles.statusBadgeContainer,
-                          { backgroundColor: getStatusColor(product.status) },
-                        ]}
-                      >
-                        <Text style={styles.statusBadgeText}>
-                          {getStatusText(product.status)}
-                        </Text>
+                      <View style={styles.productHeaderBadges}>
+                        <View style={[styles.metricItem, styles.metricItemVersion]}>
+                          <Text style={styles.metricLabelVersion}>v{product.currentVersionNumber || "?"}</Text>
+                        </View>
+                        <View style={styles.typeBadge}>
+                          <Text style={styles.typeBadgeText}>
+                            {product.type}
+                          </Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.statusBadgeContainer,
+                            { backgroundColor: getStatusColor(product.status) },
+                          ]}
+                        >
+                          <Text style={styles.statusBadgeText}>
+                            {getStatusText(product.status)}
+                          </Text>
+                        </View>
                       </View>
                     </View>
 
@@ -520,31 +530,31 @@ export default function DesignerProductsScreen() {
                     {/* Metrics Grid */}
                     <View style={styles.metricsContainer}>
                       <View style={styles.metricItem}>
-                        <Icon name="attach-money" size={14} color="#10B981" />
+                        <Text style={styles.metricLabel}>Price:</Text>
                         <Text style={styles.metricText}>
                           {formatCurrency(product.price)}
                         </Text>
                       </View>
 
                       <View style={styles.metricItem}>
-                        <Icon name="shopping-cart" size={14} color="#3B82F6" />
+                        <Text style={styles.metricLabelSecondary}>Sales:</Text>
                         <Text style={styles.metricTextSecondary}>
-                          {product.totalPurchases ?? 0} sales
+                          {product.purchaseCount ?? 0}
                         </Text>
                       </View>
 
                       <View style={styles.metricItem}>
-                        <Icon name="trending-up" size={14} color="#F59E0B" />
+                        <Text style={styles.metricLabelSecondary}>Created:</Text>
                         <Text style={styles.metricTextSecondary}>
-                          {formatCurrency(product.totalRevenue ?? 0)}
+                          {formatDate(product.createdAt)}
                         </Text>
                       </View>
 
                       {product.averageRating && (
                         <View style={styles.metricItem}>
-                          <Icon name="star" size={14} color="#FBBF24" />
+                          <Text style={styles.metricLabelSecondary}>Rating:</Text>
                           <Text style={styles.metricTextSecondary}>
-                            {product.averageRating.toFixed(1)}
+                            {product.averageRating.toFixed(1)} ★
                           </Text>
                         </View>
                       )}
@@ -552,15 +562,6 @@ export default function DesignerProductsScreen() {
 
                     {/* Bottom Row */}
                     <View style={styles.bottomRow}>
-                      <View style={styles.typeContainer}>
-                        <Icon
-                          name="category"
-                          size={12}
-                          color={isDark ? "#64748B" : "#9CA3AF"}
-                        />
-                        <Text style={styles.typeText}>{product.type}</Text>
-                      </View>
-
                       <View style={styles.actionButtonsRow}>
                         <Pressable
                           style={styles.actionButtonContainer}
