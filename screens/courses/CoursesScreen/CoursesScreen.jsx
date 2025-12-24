@@ -22,6 +22,7 @@ import { useTheme } from "../../../context/ThemeContext";
 import NotificationButton from "../../../components/common/NotificationButton";
 import { AuthContext } from "../../../context/AuthContext";
 
+
 // Course Categories
 const courseCategories = [
   { id: "all", name: "All", icon: "apps" },

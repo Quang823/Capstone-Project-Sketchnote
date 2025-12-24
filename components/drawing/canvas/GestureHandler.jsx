@@ -1362,11 +1362,13 @@ const GestureHandler = forwardRef(
               }
 
               if (s.color) {
-                const isNear = s.points.some((p) => {
-                  const dx = p.x - px;
-                  const dy = p.y - py;
-                  return Math.sqrt(dx * dx + dy * dy) <= (s.width || 6) + 10;
-                });
+                const isNear =
+                  Array.isArray(s.points) &&
+                  s.points.some((p) => {
+                    const dx = p.x - px;
+                    const dy = p.y - py;
+                    return Math.sqrt(dx * dx + dy * dy) <= (s.width || 6) + 10;
+                  });
                 if (isNear) {
                   setColor?.(s.color);
                   onColorPicked?.(s.color);
@@ -1603,7 +1605,16 @@ const GestureHandler = forwardRef(
               const id = requestAnimationFrame(() => {
                 rafScheduled.current = false;
                 validStrokes.forEach((s, i) => {
-                  if (!s.points) return;
+                  // ✅ RESTRICT ERASER: Skip images, text, stickers, tables
+                  if (
+                    ["image", "text", "sticker", "table", "emoji"].includes(
+                      s.tool
+                    )
+                  ) {
+                    return;
+                  }
+
+                  if (!Array.isArray(s.points)) return;
                   const hit = s.points.some((p) => {
                     const dx = p.x - e.x;
                     const dy = p.y - e.y;
@@ -1906,6 +1917,13 @@ const GestureHandler = forwardRef(
           const poly = finalPoints;
           for (let i = validStrokes.length - 1; i >= 0; i--) {
             const s = validStrokes[i];
+            // ✅ RESTRICT ERASER: Skip images, text, stickers, tables
+            if (
+              ["image", "text", "sticker", "table", "emoji"].includes(s.tool)
+            ) {
+              continue;
+            }
+
             const bbox = getBoundingBoxForStroke(s);
             if (!bbox) continue;
             const cx = (bbox.minX + bbox.maxX) / 2;
@@ -1934,6 +1952,13 @@ const GestureHandler = forwardRef(
           const mutations = [];
           for (let i = 0; i < validStrokes.length; i++) {
             const s = validStrokes[i];
+            // ✅ RESTRICT ERASER: Skip images, text, stickers, tables
+            if (
+              ["image", "text", "sticker", "table", "emoji"].includes(s.tool)
+            ) {
+              continue;
+            }
+
             if (!s || !Array.isArray(s.points) || s.points.length < 2) continue;
             const pieces = splitStrokeByEraser(s, finalPoints, eraserRadius);
             if (pieces.length === 1 && pieces[0] === s) continue; // unchanged
@@ -1956,7 +1981,13 @@ const GestureHandler = forwardRef(
             pieces.forEach((ns) => onAddStroke?.({ ...ns, layerId }));
           });
 
-          // 2) Always persist a composite eraser stroke to subtract fill areas
+          // 2) ❌ DISABLE composite eraser stroke to prevent erasing images/text visually
+          // The user requested that images and text should NOT be erased.
+          // The composite eraser stroke uses destination-out which erases everything.
+          // By removing this, we convert "Pixel Eraser" into a "Vector Split Eraser"
+          // which only affects line-based strokes via the split logic above.
+
+          /*
           const toolConfig = configByTool["eraser"] || {
             pressure: 0.5,
             thickness: 1,
@@ -1972,6 +2003,7 @@ const GestureHandler = forwardRef(
             layerId: activeLayerId,
           };
           onAddStroke?.(eraserStroke);
+          */
           return;
         }
 
@@ -2155,14 +2187,10 @@ const GestureHandler = forwardRef(
           try {
             onAddStroke(newStroke);
 
-            // 🔄 REALTIME COLLABORATION: Send element create event
-            if (
-              collabEnabled &&
-              collabConnected &&
-              typeof onCollabElementCreate === "function"
-            ) {
-              onCollabElementCreate(pageId, newStroke);
-            }
+            // 🔄 REALTIME COLLABORATION: 
+            // ❌ REMOVED duplicate onCollabElementCreate call here.
+            // CanvasContainer.jsx's addStrokeInternal ALREADY calls projectService.realtime.sendStroke.
+            // Calling it here caused double-strokes (ghosts) on other clients.
           } catch (err) {
             console.error("Error adding stroke:", err);
           }

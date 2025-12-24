@@ -29,7 +29,6 @@ import { File } from "expo-file-system";
 import { projectService } from "../../../service/projectService";
 import { ImageFormat } from "@shopify/react-native-skia";
 import { Dimensions, Image } from "react-native";
-import { detectShape, buildShape } from "./ShapeDetector";
 
 const PAGE_MARGIN_H = 24;
 const PAGE_MARGIN_TOP = 20;
@@ -74,7 +73,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     shapeSettings,
     tapeSettings,
     scrollRef, // 👈 Receive scrollRef
-    // 🔄 REALTIME COLLABORATION props
     collabEnabled,
     collabConnected,
     onCollabElementUpdate,
@@ -88,10 +86,21 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   ref
 ) {
   const imageRefs = useRef(new Map());
-  const [internalLayers, setInternalLayers] = useState(layers);
+  const lastParentLayersRef = useRef(null);
+  const [internalLayers, setInternalLayers] = useState(() => {
+    lastParentLayersRef.current = layers;
+    return Array.isArray(layers) ? layers : [];
+  });
 
   useEffect(() => {
     if (!Array.isArray(layers)) return;
+
+    // ✅ OPTIMIZATION: If the parent layers haven't changed since our last sync,
+    // don't trigger a merge. This prevents "old" parent state from overwriting
+    // "new" internal state during active local interactions (like dragging).
+    if (lastParentLayersRef.current === layers) return;
+    lastParentLayersRef.current = layers;
+
     setInternalLayers((prev) => {
       const prevMap = new Map(
         (Array.isArray(prev) ? prev : []).map((l) => [l.id, { ...l }])
@@ -99,13 +108,18 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       const next = layers.map((inLayer) => {
         const ex = prevMap.get(inLayer.id);
         if (ex) {
+          // Check if strokes actually changed in the parent
+          const strokesChanged = inLayer.strokes !== ex.strokes;
+
           return {
             ...ex,
             name: inLayer.name ?? ex.name,
             visible: inLayer.visible ?? ex.visible,
             locked: inLayer.locked ?? ex.locked,
+            // Only update strokes if they actually changed in the parent
+            // OR if we don't have internal strokes yet.
             strokes:
-              Array.isArray(inLayer.strokes) && inLayer.strokes.length > 0
+              strokesChanged && Array.isArray(inLayer.strokes)
                 ? inLayer.strokes
                 : ex.strokes || [],
           };
@@ -121,7 +135,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     return () => {
       try {
         imageRefs.current.clear();
-      } catch { }
+      } catch {}
     };
   }, []);
 
@@ -150,15 +164,17 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     refsToDelete.forEach((id) => {
       try {
         imageRefs.current.delete(id);
-      } catch { }
+      } catch {}
     });
   }, [internalLayers]);
+
   const liveUpdateStroke = (strokeId, partial) => {
     const ref = imageRefs.current.get(strokeId);
     if (ref && typeof ref.setLiveTransform === "function") {
       ref.setLiveTransform(partial);
     }
   };
+
   const { width, height } = useWindowDimensions();
   // Use provided dimensions from noteConfig, or fallback to default
   const PAGE_WIDTH = pageWidth ?? width - PAGE_MARGIN_H * 2;
@@ -229,7 +245,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           cancelAnimationFrame(snapshotUpdateLockRef.rafId);
           snapshotUpdateLockRef.rafId = null;
         }
-      } catch { }
+      } catch {}
     };
   }, []);
 
@@ -369,14 +385,13 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       return newLayers;
     };
 
-    // ✅ FIX: Defer both setState calls to prevent "update while rendering" error
-    // Update internal state first (faster)
+    // ✅ FIX: Update both states asynchronously to prevent "update while rendering" error
     queueMicrotask(() => {
       setInternalLayers(updater);
     });
 
-    // Update parent state (slightly delayed for better batching)
     if (typeof setLayers === "function") {
+      // ✅ FIX: Defer parent update
       requestAnimationFrame(() => {
         setLayers(updater);
       });
@@ -426,14 +441,14 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         });
       };
 
-      // ✅ CRITICAL FIX: Defer ALL setState to avoid "update while rendering" error
-      // Defer internal state update using queueMicrotask (executes before next render)
+      // ✅ CRITICAL FIX: Sync to both internal AND parent state
+      // Defer internal update to microtask to avoid React warning
       queueMicrotask(() => {
         setInternalLayers(updater);
       });
 
-      // Defer parent state update using requestAnimationFrame (executes on next frame)
       if (typeof setLayers === "function") {
+        // ✅ FIX: Defer parent update to avoid "update while rendering" error
         requestAnimationFrame(() => {
           setLayers(updater);
         });
@@ -454,14 +469,14 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       });
     };
 
-    // ✅ CRITICAL FIX: Defer ALL setState to avoid "update while rendering" error  
-    // Defer internal state update
+    // ✅ CRITICAL FIX: Sync to both internal AND parent state
+    // Defer internal update to microtask to avoid React warning
     queueMicrotask(() => {
       setInternalLayers(updater);
     });
 
-    // Defer parent state update
     if (typeof setLayers === "function") {
+      // ✅ FIX: Defer parent update to avoid "update while rendering" error
       requestAnimationFrame(() => {
         setLayers(updater);
       });
@@ -508,7 +523,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
   const pan = Gesture.Pan()
     .minPointers(1)
-    //.maxPointers(1) // Chỉ nhận pan khi có 1 ngón tay (để tránh conflict với pinch)
+    //.maxPointers(1) // Chỉ nhận pan khi có 1 ngón tay (để tránh conflict with pinch)
     .onStart(() => {
       "worklet";
       // Chỉ cho phép pan nếu không đang zoom
@@ -619,50 +634,16 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     }
 
     try {
-      // 🔍 AUTO-DETECT SHAPES: Ensure shape is detected before sending via WebSocket
-      let finalStroke = { ...stroke };
-
-      // Tools that should have shape detection applied
-      const shapeTools = [
-        "rect", "square", "circle", "oval", "triangle", "right_triangle",
-        "line", "arrow", "double_arrow",
-        "polygon", "star", "pentagon", "hexagon", "octagon",
-        "diamond", "cube", "cylinder", "curve",
-        "shape" // Manual shape tool
-      ];
-
-      // Tools that might have auto-detection enabled (pen, pencil, brush, calligraphy)
-      const drawingToolsWithAutoDetect = ["pen", "pencil", "brush", "calligraphy"];
-
-      // Check if this tool should have shape geometry
-      const needsShapeDetection = shapeTools.includes(stroke.tool);
-      const mayHaveAutoDetect = drawingToolsWithAutoDetect.includes(stroke.tool);
-
-      // If stroke has points but no shape, and tool supports shapes
-      if (needsShapeDetection && stroke.points?.length >= 3 && !stroke.shape) {
-        try {
-          // Build shape based on tool type
-          const builtShape = buildShape(stroke.tool, stroke.points);
-          if (builtShape?.shape) {
-            finalStroke.shape = builtShape.shape;
-          }
-        } catch (err) {
-          console.warn("[CanvasContainer] Failed to build shape:", err);
-        }
-      }
-
-      // Add the final stroke (with detected shape if applicable)
-      updateActiveLayer((strokes) => [...strokes, finalStroke]);
-      pushUndo({ type: "add", stroke: finalStroke, layerId: activeLayerId });
+      updateActiveLayer((strokes) => [...strokes, stroke]);
+      pushUndo({ type: "add", stroke, layerId: activeLayerId });
 
       // [FIX] Automatically select the new stroke if it's a selectable object
       if (
-        ["image", "sticker", "table", "text", "emoji"].includes(finalStroke.tool)
+        ["image", "sticker", "table", "text", "emoji"].includes(stroke.tool)
       ) {
-        setSelectedId(finalStroke.id);
+        setSelectedId(stroke.id);
       }
 
-      // 🔄 REALTIME COLLABORATION: Send the FINAL stroke (with detected shape)
       try {
         if (projectId && userId) {
           // Send minimal page info for collaboration (no strokes - they're in stroke param)
@@ -677,74 +658,122 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             projectId,
             userId,
             pageId,
-            finalStroke, // Send the final stroke with detected shape
+            stroke,
             pageInfo
           );
         }
-      } catch { }
+      } catch {}
     } catch (e) {
       console.error("[CanvasContainer] addStrokeInternal error:", e);
     }
   };
 
   const deleteStrokeAt = (index) => {
-    if (typeof index !== "number" || index < 0) {
-      console.warn("[CanvasContainer] deleteStrokeAt: Invalid index");
-      return;
+    // ⚠️ Deprecated: Use deleteStrokeById for better multi-layer support.
+    // Keeping for backward compatibility but redirecting to ID-based logic if possible.
+    if (!activeLayerId) return;
+    const layer = internalLayers.find((l) => l.id === activeLayerId);
+    const stroke = layer?.strokes?.[index];
+    if (stroke?.id) {
+      deleteStrokeById(stroke.id);
     }
+  };
 
-    try {
-      // Find the stroke in allStrokes to get its ID and layerId
-      const strokeToDelete = allStrokes[index];
-      if (!strokeToDelete || !strokeToDelete.id) {
-        console.warn("[CanvasContainer] deleteStrokeAt: Stroke not found at index", index);
-        return;
-      }
+  const deleteStrokeById = (strokeId) => {
+    if (!strokeId) return;
 
-      const targetLayerId = strokeToDelete.layerId || activeLayerId;
-      let removed = null;
+    let removed = null;
+    let removedLayerId = null;
+    let removedIndex = -1;
 
-      updateLayerById(targetLayerId, (strokes) => {
-        const idx = strokes.findIndex(s => s.id === strokeToDelete.id);
-        if (idx === -1) return strokes;
-        removed = strokes[idx];
-        return [...strokes.slice(0, idx), ...strokes.slice(idx + 1)];
+    const updater = (prev) => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((layer) => {
+        const idx = (layer.strokes || []).findIndex((s) => s.id === strokeId);
+        if (idx !== -1) {
+          removed = layer.strokes[idx];
+          removedLayerId = layer.id;
+          removedIndex = idx;
+          const nextStrokes = [...layer.strokes];
+          nextStrokes.splice(idx, 1);
+          return { ...layer, strokes: nextStrokes };
+        }
+        return layer;
       });
+    };
 
-      if (removed) {
-        pushUndo({
-          type: "delete",
-          index, // Keep global index for undo reference if needed, but logic uses ID
-          stroke: removed,
-          layerId: targetLayerId,
-        });
-      }
-    } catch (e) {
-      console.error("[CanvasContainer] deleteStrokeAt error:", e);
+    setInternalLayers(updater);
+    if (typeof setLayers === "function") {
+      requestAnimationFrame(() => {
+        setLayers(updater);
+        if (removed) {
+          pushUndo({
+            type: "delete",
+            index: removedIndex,
+            stroke: removed,
+            layerId: removedLayerId,
+          });
+        }
+      });
     }
   };
 
   const modifyStrokeAt = (index, newProps) => {
-    if (typeof index !== "number" || index < 0) {
-      console.warn("[CanvasContainer] modifyStrokeAt: Invalid index");
-      return;
+    // ⚠️ Deprecated: Use modifyStrokeById for better multi-layer support.
+    if (!activeLayerId) return;
+    const layer = internalLayers.find((l) => l.id === activeLayerId);
+    const stroke = layer?.strokes?.[index];
+    if (stroke?.id) {
+      modifyStrokeById(stroke.id, newProps);
     }
+  };
 
-    try {
-      // Find the stroke in allStrokes to get its ID and layerId
-      const strokeToModify = allStrokes[index];
-      if (!strokeToModify || !strokeToModify.id) {
-        console.warn("[CanvasContainer] modifyStrokeAt: Stroke not found at index", index);
-        return;
-      }
+  const modifyStrokeById = (strokeId, newProps) => {
+    if (!strokeId) return;
 
-      // Use modifyStrokesBulk logic to handle the update correctly across layers
-      modifyStrokesBulk([{
-        id: strokeToModify.id,
-        changes: newProps
-      }]);
-    } catch (e) {
-      console.error("[CanvasContainer] modifyStrokeAt error:", e);
+    let oldStroke = null;
+    let updatedStroke = null;
+    let layerIdFound = null;
+    let strokeIndex = -1;
+
+    const { __transient, ...cleanProps } = newProps || {};
+
+    const updater = (prev) => {
+      if (!Array.isArray(prev)) return prev;
+      return prev.map((layer) => {
+        const idx = (layer.strokes || []).findIndex((s) => s.id === strokeId);
+        if (idx !== -1) {
+          oldStroke = layer.strokes[idx];
+          layerIdFound = layer.id;
+          strokeIndex = idx;
+          updatedStroke = { ...oldStroke, ...cleanProps };
+          const nextStrokes = [...layer.strokes];
+          nextStrokes[idx] = updatedStroke;
+          return { ...layer, strokes: nextStrokes };
+        }
+        return layer;
+      });
+    };
+
+    setInternalLayers(updater);
+
+    // ✅ OPTIMIZATION: Skip parent sync and undo for transient updates (dragging/resizing)
+    // to ensure 60fps local performance and avoid jitter from parent state loops.
+    if (__transient) return;
+
+    if (typeof setLayers === "function") {
+      requestAnimationFrame(() => {
+        setLayers(updater);
+        if (oldStroke && updatedStroke) {
+          pushUndo({
+            type: "modify",
+            index: strokeIndex,
+            before: oldStroke,
+            after: updatedStroke,
+            layerId: layerIdFound,
+          });
+        }
+      });
     }
   };
 
@@ -834,7 +863,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           naturalW = size.w;
           naturalH = size.h;
         }
-      } catch { }
+      } catch {}
 
       let width = typeof opts.width === "number" ? opts.width : naturalW ?? 400;
       let height =
@@ -902,15 +931,10 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       ...strokeData,
     };
 
-    // setStrokes((prev) => [...prev, newStroke]);
-    // onAddStroke?.(newStroke);
     addStrokeInternal(newStroke);
-
-    // pushUndo({type: "add", stroke: newStroke });
   };
 
   const addTextStroke = (strokeData = {}) => {
-    const widthEstimate = 0; // not needed here
     const { x: cx, y: cy } = centerFor(
       0,
       0,
@@ -929,11 +953,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       padding: strokeData.padding ?? 6,
       ...strokeData,
     };
-    // setStrokes((prev) => [...prev, newStroke]);
-    // onAddStroke?.(newStroke);
     addStrokeInternal(newStroke);
-
-    // pushUndo({type: "add", stroke: newStroke });
   };
 
   // ====== API EXPOSED ======
@@ -1042,10 +1062,16 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
     // [NEW] Clears all strokes from all layers on this canvas.
     clearAllStrokes: () => {
-      setInternalLayers((prev) => {
+      const updater = (prev) => {
         if (!Array.isArray(prev)) return [];
         return prev.map((l) => ({ ...l, strokes: [] }));
-      });
+      };
+      setInternalLayers(updater);
+      if (typeof setLayers === "function") {
+        requestAnimationFrame(() => {
+          setLayers(updater);
+        });
+      }
       setUndoStack([]);
       setRedoStack([]);
       setCurrentPoints([]);
@@ -1109,7 +1135,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     removeStrokesByIds: (ids = []) => {
       const idSet = new Set(Array.isArray(ids) ? ids : []);
       if (idSet.size === 0) return;
-      setInternalLayers((prev) => {
+      const updater = (prev) => {
         if (!Array.isArray(prev)) return prev;
         return prev.map((l) => ({
           ...l,
@@ -1117,7 +1143,13 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             ? l.strokes.filter((s) => !idSet.has(s?.id))
             : [],
         }));
-      });
+      };
+      setInternalLayers(updater);
+      if (typeof setLayers === "function") {
+        requestAnimationFrame(() => {
+          setLayers(updater);
+        });
+      }
       setUndoStack([]);
       setRedoStack([]);
     },
@@ -1125,7 +1157,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     removeStrokesByTemplateSource: (source) => {
       const key = typeof source === "string" ? source : null;
       if (!key) return;
-      setInternalLayers((prev) => {
+      const updater = (prev) => {
         if (!Array.isArray(prev)) return prev;
         return prev.map((l) => ({
           ...l,
@@ -1133,7 +1165,13 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             ? l.strokes.filter((s) => s?.__templateSource !== key)
             : [],
         }));
-      });
+      };
+      setInternalLayers(updater);
+      if (typeof setLayers === "function") {
+        requestAnimationFrame(() => {
+          setLayers(updater);
+        });
+      }
       setUndoStack([]);
       setRedoStack([]);
     },
@@ -1141,14 +1179,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     modifyStrokeAt,
 
     // Thêm ảnh / sticker / text (giữ logic layer)
-    // CanvasContainer.jsx (thêm vào ref exposes)
     addImageStroke: (stroke) => {
-      // ✅ Không thêm scrollOffsetY vào y vì image position là absolute trong canvas
-      // scrollOffsetY chỉ dùng để tính toán vị trí ban đầu, không lưu vào stroke
       const s = {
         ...stroke,
         x: stroke.x ?? 100,
-        y: stroke.y ?? 100, // ✅ Dùng y trực tiếp, không adjust với scrollOffsetY
+        y: stroke.y ?? 100,
         id: stroke.id ?? nextId(),
         tool: "image",
         layerId: stroke.layerId ?? activeLayerId,
@@ -1180,7 +1215,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     },
 
     addStickerStroke: (stroke) => {
-      // Use getCenterPosition if x/y not provided
       const stickerWidth = stroke.width ?? 120;
       const stickerHeight = stroke.height ?? 120;
       const { x: cx, y: cy } = getCenterPosition(stickerWidth, stickerHeight);
@@ -1197,7 +1231,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     },
 
     addTextStroke: (stroke) => {
-      const adjustedY = (stroke.y ?? 100) + (stroke.scrollOffsetY ?? 0); // ✅ Tương tự
+      const adjustedY = (stroke.y ?? 100) + (stroke.scrollOffsetY ?? 0);
       const s = {
         ...stroke,
         y: adjustedY,
@@ -1209,7 +1243,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     },
 
     // 📦 Load lại toàn bộ strokes, phân loại theo layerId
-    // ✅ Có thể nhận thêm layersMetadata để restore layer names
     loadStrokes: (strokesArray = [], layersMetadata = []) => {
       if (!Array.isArray(strokesArray)) {
         console.warn("[CanvasContainer] loadStrokes: invalid strokesArray");
@@ -1217,7 +1250,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       }
 
       try {
-        // Find the max ID from loaded strokes to prevent key collision
         let maxIdNum = 0;
         strokesArray.forEach((s) => {
           if (s && s.id && typeof s.id === "string" && s.id.startsWith("s_")) {
@@ -1229,7 +1261,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         });
         idCounter.current = maxIdNum + 1;
 
-        // ✅ Tạo map của layer metadata để lookup nhanh
         const layerMetadataMap = new Map();
         if (Array.isArray(layersMetadata)) {
           layersMetadata.forEach((meta) => {
@@ -1243,19 +1274,15 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           });
         }
 
-        // Validate và filter strokes
         const validStrokes = strokesArray
           .filter((s) => s && typeof s === "object")
           .map((s) => ({
             ...s,
-            // Đảm bảo mỗi stroke có layerId, fallback về layer1 nếu không có
             layerId: s.layerId || "layer1",
           }));
 
-        // Limit số lượng để tránh crash
         const safeStrokes = validStrokes.slice(0, 1000);
 
-        // ✅ Phân loại strokes theo layerId
         const strokesByLayer = {};
         safeStrokes.forEach((stroke) => {
           const layerId = stroke.layerId || "layer1";
@@ -1265,10 +1292,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           strokesByLayer[layerId].push(stroke);
         });
 
-        // ✅ Load strokes vào đúng layer với metadata
         setInternalLayers((prev) => {
           if (!Array.isArray(prev)) {
-            // Nếu không có layers, tạo mới từ strokes và metadata
             return Object.keys(strokesByLayer).map((layerId) => {
               const meta = layerMetadataMap.get(layerId);
               return {
@@ -1283,19 +1308,15 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             });
           }
 
-          // Tạo map của layers hiện tại
           const layerMap = new Map(prev.map((l) => [l.id, { ...l }]));
 
-          // Cập nhật hoặc tạo layers cho mỗi layerId có strokes
           Object.keys(strokesByLayer).forEach((layerId) => {
             const meta = layerMetadataMap.get(layerId);
             if (layerMap.has(layerId)) {
-              // Layer đã tồn tại, thay thế strokes và update metadata nếu có
               const layer = layerMap.get(layerId);
               layerMap.set(layerId, {
                 ...layer,
                 strokes: strokesByLayer[layerId],
-                // ✅ Update metadata từ saved nếu có
                 name: meta?.name || layer.name,
                 visible:
                   meta !== undefined ? meta.visible !== false : layer.visible,
@@ -1303,7 +1324,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
                   meta !== undefined ? meta.locked === true : layer.locked,
               });
             } else {
-              // Layer chưa tồn tại, tạo layer mới với metadata
               layerMap.set(layerId, {
                 id: layerId,
                 name:
@@ -1316,7 +1336,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             }
           });
 
-          // ✅ Giữ lại tất cả layers (cả layers không có strokes mới)
           return Array.from(layerMap.values());
         });
 
@@ -1334,7 +1353,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       }
 
       try {
-        // Group new strokes by layerId
         const newStrokesByLayer = {};
         strokesToAppend.forEach((stroke) => {
           if (!stroke || typeof stroke !== "object") return;
@@ -1345,84 +1363,70 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           newStrokesByLayer[layerId].push(stroke);
         });
 
-        // Update layers by appending new strokes
         const updater = (prevLayers) => {
-          // ✅ FIX: Capture fromRemote flag at the start so it's accessible in filter scope
-          const isFromRemote = options.fromRemote === true;
-
-          if (!Array.isArray(prevLayers)) {
-            return Object.keys(newStrokesByLayer).map((layerId) => ({
-              id: layerId,
-              name: `Layer ${layerId}`,
-              visible: true,
-              locked: false,
-              strokes: newStrokesByLayer[layerId],
-            }));
-          }
           const layerMap = new Map(
-            prevLayers.map((l) => [
+            (Array.isArray(prevLayers) ? prevLayers : []).map((l) => [
               l.id,
               { ...l, strokes: [...(l.strokes || [])] },
             ])
           );
+
+          const existingIds = new Set();
+          layerMap.forEach((ly) => {
+            (ly.strokes || []).forEach((s) => {
+              if (s?.id) existingIds.add(s.id);
+            });
+          });
+
           Object.keys(newStrokesByLayer).forEach((layerId) => {
             const newStrokes = newStrokesByLayer[layerId];
-            const existingIds = new Set();
-            layerMap.forEach((ly) => {
-              (ly.strokes || []).forEach((s) => {
-                if (s?.id) existingIds.add(s.id);
-              });
-            });
 
-            // 🔥 Filter out duplicates for remote strokes (don't regenerate their IDs)
-            const uniqueStrokes = newStrokes
-              .filter((s) => {
-                // 🔍 DEBUG: Log filtering decision
-                const isRemote = options.fromRemote === true;
-                const hasId = !!s?.id;
-                const idExists = hasId && existingIds.has(s.id);
+            const processedStrokes = [];
+            newStrokes.forEach((s) => {
+              if (!s) return;
+              let id = s.id;
+              const isRemote = options.fromRemote === true;
 
-                // ✅ FIX: Don't skip duplicates for remote strokes
-                // Remote strokes should always be added even if ID exists locally
+              if (id && existingIds.has(id)) {
                 if (isRemote) {
-                  return true; // Always include remote strokes
-                }
-
-                // Skip if this ID already exists (avoid duplicates for local strokes)
-                if (idExists) {
-                  return false;
-                }
-                return true;
-              })
-              .map((s) => {
-                let id = s?.id;
-                // Only generate new ID if stroke doesn't have one
-                if (!id) {
+                  console.log(
+                    "[CanvasContainer] Skipping duplicate remote stroke:",
+                    id
+                  );
+                  return;
+                } else {
                   id = nextId();
                 }
-                existingIds.add(id);
-                return { ...s, id, layerId };
-              });
+              }
 
-            const hasTemplate = uniqueStrokes.some((s) => s?.__templateSource);
+              if (!id) id = nextId();
+              existingIds.add(id);
+              processedStrokes.push({ ...s, id, layerId });
+            });
+
+            if (processedStrokes.length === 0) return;
+
+            const hasTemplate = processedStrokes.some(
+              (s) => s?.__templateSource
+            );
 
             if (layerMap.has(layerId)) {
               const existingLayer = layerMap.get(layerId);
               if (hasTemplate) {
                 existingLayer.strokes = [
-                  ...uniqueStrokes,
+                  ...processedStrokes,
                   ...(existingLayer.strokes || []),
                 ];
               } else {
-                existingLayer.strokes.push(...uniqueStrokes);
+                existingLayer.strokes.push(...processedStrokes);
               }
             } else {
               layerMap.set(layerId, {
                 id: layerId,
-                name: `Layer ${layerId}`,
+                name: layerId === "template" ? "Template" : `Layer ${layerId}`,
                 visible: true,
                 locked: false,
-                strokes: uniqueStrokes,
+                strokes: processedStrokes,
               });
             }
           });
@@ -1444,21 +1448,27 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       if (!strokeId || !changes) return;
 
       const updater = (prevLayers) => {
-        return prevLayers.map((layer) => ({
-          ...layer,
-          strokes: layer.strokes.map((stroke) =>
-            stroke.id === strokeId ? { ...stroke, ...changes } : stroke
-          ),
-        }));
+        if (!Array.isArray(prevLayers)) return prevLayers;
+        let found = false;
+        const next = prevLayers.map((layer) => {
+          const idx = (layer.strokes || []).findIndex((s) => s.id === strokeId);
+          if (idx !== -1) {
+            found = true;
+            const nextStrokes = [...layer.strokes];
+            nextStrokes[idx] = { ...nextStrokes[idx], ...changes };
+            return { ...layer, strokes: nextStrokes };
+          }
+          return layer;
+        });
+        return found ? next : prevLayers;
       };
 
-      // 🔥 Use requestAnimationFrame to avoid setState during render
-      requestAnimationFrame(() => {
-        setInternalLayers(updater);
-        if (typeof setLayers === "function") {
+      setInternalLayers(updater);
+      if (typeof setLayers === "function") {
+        requestAnimationFrame(() => {
           setLayers(updater);
-        }
-      });
+        });
+      }
     },
 
     // 🔥 REALTIME: Delete a stroke by its ID (for collaboration)
@@ -1466,19 +1476,27 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       if (!strokeId) return;
 
       const updater = (prevLayers) => {
-        return prevLayers.map((layer) => ({
-          ...layer,
-          strokes: layer.strokes.filter((stroke) => stroke.id !== strokeId),
-        }));
+        if (!Array.isArray(prevLayers)) return prevLayers;
+        let found = false;
+        const next = prevLayers.map((layer) => {
+          const idx = (layer.strokes || []).findIndex((s) => s.id === strokeId);
+          if (idx !== -1) {
+            found = true;
+            const nextStrokes = [...layer.strokes];
+            nextStrokes.splice(idx, 1);
+            return { ...layer, strokes: nextStrokes };
+          }
+          return layer;
+        });
+        return found ? next : prevLayers;
       };
 
-      // 🔥 Use requestAnimationFrame to avoid setState during render
-      requestAnimationFrame(() => {
-        setInternalLayers(updater);
-        if (typeof setLayers === "function") {
+      setInternalLayers(updater);
+      if (typeof setLayers === "function") {
+        requestAnimationFrame(() => {
           setLayers(updater);
-        }
-      });
+        });
+      }
     },
   }));
 
@@ -1519,7 +1537,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             setColor={setColor}
             setTool={setTool}
             eraserMode={eraserMode}
-            // ⬇️ giữ nguyên các callback xử lý stroke nhưng không truyền setStrokes trực tiếp
             activeLayerId={activeLayerId}
             onAddStroke={addStrokeInternal}
             onModifyStroke={modifyStrokeAt}
@@ -1528,9 +1545,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             onDeleteStroke={deleteStrokeAt}
             onSelectStroke={(id) => setSelectedId(id)}
             selectedId={selectedId}
-            // ⬇️ chỉ truyền strokes của layer đang active
             strokes={allStrokes}
-            // ⬇️ truyền tất cả strokes của các layer đang visible để eyedropper có thể lấy màu bất kể layer đang active
             allVisibleStrokes={visibleLayers.flatMap((l) => l.strokes || [])}
             setRedoStack={setRedoStack}
             currentPoints={currentPoints}
@@ -1552,14 +1567,12 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             pageOffsetY={pageOffsetY}
             onColorPicked={onColorPicked}
             zoomState={zoomStateMemo}
-            scrollRef={scrollRef} // 👈 Pass scrollRef
-            // ⬇️ truyền ref renderer để có thể nâng cấp eyedropper lấy pixel snapshot sau này
+            scrollRef={scrollRef}
             canvasRef={rendererRef}
             getNearestFont={getNearestFont}
             shapeSettings={shapeSettings}
             tapeSettings={tapeSettings}
             imageRefs={imageRefs}
-            // 🔄 REALTIME COLLABORATION props
             pageId={pageId}
             collabEnabled={collabEnabled}
             collabConnected={collabConnected}
@@ -1572,7 +1585,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           >
             <CanvasRenderer
               ref={rendererRef}
-              // ✅ Render tất cả layer visible thay vì 1 mảng strokes
               layers={visibleLayers}
               loadedFonts={loadedFonts}
               getNearestFont={getNearestFont}
@@ -1603,9 +1615,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
               pageWidth={PAGE_WIDTH}
               pageHeight={PAGE_HEIGHT}
               isCover={isCover}
-              // ⬇️ Virtual rendering props
               zoomState={zoomStateMemo}
-              // Dùng số thuần để tránh đọc .value trong render của CanvasRenderer
               zoomSnapshot={zoomSnapshot}
               scrollOffsetY={scrollOffsetY}
             />

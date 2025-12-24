@@ -89,8 +89,15 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
   return (
     <Animated.View style={[styles.popoverContainer, animatedStyle]}>
       <View style={[styles.popover, isDark && styles.popoverDark]}>
-        <View style={[styles.popoverArrowBorder, isDark && styles.popoverArrowBorderDark]} />
-        <View style={[styles.popoverArrow, isDark && styles.popoverArrowDark]} />
+        <View
+          style={[
+            styles.popoverArrowBorder,
+            isDark && styles.popoverArrowBorderDark,
+          ]}
+        />
+        <View
+          style={[styles.popoverArrow, isDark && styles.popoverArrowDark]}
+        />
         {options.map((opt, idx) => (
           <TouchableOpacity
             key={opt.id}
@@ -111,8 +118,16 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
             }}
           >
             <View style={styles.popoverRow}>
-              <Icon name={opt.icon} size={22} color={isDark ? "#60A5FA" : "#2563EB"} />
-              <Text style={[styles.popoverLabel, isDark && styles.popoverLabelDark]}>{opt.label}</Text>
+              <Icon
+                name={opt.icon}
+                size={22}
+                color={isDark ? "#60A5FA" : "#2563EB"}
+              />
+              <Text
+                style={[styles.popoverLabel, isDark && styles.popoverLabelDark]}
+              >
+                {opt.label}
+              </Text>
               {opt.badge && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{opt.badge}</Text>
@@ -122,7 +137,9 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
           </TouchableOpacity>
         ))}
         <View style={[styles.popoverTip, isDark && styles.popoverTipDark]}>
-          <Text style={[styles.popoverTipText, isDark && styles.popoverTipTextDark]}>
+          <Text
+            style={[styles.popoverTipText, isDark && styles.popoverTipTextDark]}
+          >
             Double tap "+ New" to create Quick note
           </Text>
         </View>
@@ -154,13 +171,30 @@ const ProjectMenu = React.memo(
         activeOpacity={1}
         onPress={onClose}
       >
-        <Animated.View style={[styles.menu, isDark && styles.menuDark, animatedStyle, position]}>
+        <Animated.View
+          style={[
+            styles.menu,
+            isDark && styles.menuDark,
+            animatedStyle,
+            position,
+          ]}
+        >
           <TouchableOpacity style={styles.menuItem} onPress={onEdit}>
-            <Icon name="edit" size={18} color={isDark ? "#60A5FA" : "#2563EB"} />
-            <Text style={[styles.menuText, isDark && styles.menuTextDark]}>Edit Project</Text>
+            <Icon
+              name="edit"
+              size={18}
+              color={isDark ? "#60A5FA" : "#2563EB"}
+            />
+            <Text style={[styles.menuText, isDark && styles.menuTextDark]}>
+              Edit Project
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.menuItem, styles.menuItemDelete, isDark && styles.menuItemDeleteDark]}
+            style={[
+              styles.menuItem,
+              styles.menuItemDelete,
+              isDark && styles.menuItemDeleteDark,
+            ]}
             onPress={onDelete}
           >
             <Icon name="delete-outline" size={18} color="#EF4444" />
@@ -203,7 +237,6 @@ export default function HomeScreen({ navigation }) {
   const [editPaperSize, setEditPaperSize] = useState("");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-
   const { toast } = useToast();
   const { user, fetchUser } = useContext(AuthContext);
   const { theme } = useTheme();
@@ -226,41 +259,51 @@ export default function HomeScreen({ navigation }) {
   // }));
 
   // Fetch data with pagination
-  const fetchProjects = useCallback(async (page) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchProjects = useCallback(
+    async (page) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      // If page is not a number (e.g. event object), default to 0
-      const targetPage = typeof page === "number" ? page : 0;
+        // If page is not a number (e.g. event object), default to 0
+        const targetPage = typeof page === "number" ? page : 0;
 
-      // Load cloud projects with pagination, and local projects in parallel
-      const results = await Promise.allSettled([
-        projectService.getUserProjectsPaged(targetPage, pageSize),
-        projectService.getSharedProjects(),
-        offlineStorage.getAllGuestProjects(),
-      ]);
+        // Load cloud projects with pagination, and local projects in parallel
+        const results = await Promise.allSettled([
+          projectService.getUserProjectsPaged(targetPage, pageSize),
+          projectService.getSharedProjects(),
+          offlineStorage.getAllGuestProjects(),
+        ]);
 
-      const myPaged = results[0].status === "fulfilled" ? results[0].value : { content: [], totalPages: 0 };
-      const shared = results[1].status === "fulfilled" ? results[1].value : [];
-      const local = results[2].status === "fulfilled" ? results[2].value : [];
+        const myPaged =
+          results[0].status === "fulfilled"
+            ? results[0].value
+            : { content: [], totalPages: 0 };
+        const shared =
+          results[1].status === "fulfilled" ? results[1].value : [];
+        const local = results[2].status === "fulfilled" ? results[2].value : [];
 
-      // Log errors if any
-      if (results[0].status === "rejected") console.error("Failed to load user projects:", results[0].reason);
-      if (results[1].status === "rejected") console.error("Failed to load shared projects:", results[1].reason);
-      if (results[2].status === "rejected") console.error("Failed to load local projects:", results[2].reason);
+        // Log errors if any
+        if (results[0].status === "rejected")
+          console.error("Failed to load user projects:", results[0].reason);
+        if (results[1].status === "rejected")
+          console.error("Failed to load shared projects:", results[1].reason);
+        if (results[2].status === "rejected")
+          console.error("Failed to load local projects:", results[2].reason);
 
-      setProjects(myPaged.content || []);
-      setTotalPages(myPaged.totalPages || 0);
-      setCurrentPage(targetPage);
-      setSharedProjects(shared || []);
-      setLocalProjects(local || []);
-    } catch (err) {
-      setError("Failed to load projects. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [pageSize]);
+        setProjects(myPaged.content || []);
+        setTotalPages(myPaged.totalPages || 0);
+        setCurrentPage(targetPage);
+        setSharedProjects(shared || []);
+        setLocalProjects(local || []);
+      } catch (err) {
+        setError("Failed to load projects. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pageSize]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -269,11 +312,14 @@ export default function HomeScreen({ navigation }) {
   );
 
   // Pagination handlers
-  const handlePageChange = useCallback((newPage) => {
-    if (newPage >= 0 && newPage < totalPages) {
-      fetchProjects(newPage);
-    }
-  }, [totalPages, fetchProjects]);
+  const handlePageChange = useCallback(
+    (newPage) => {
+      if (newPage >= 0 && newPage < totalPages) {
+        fetchProjects(newPage);
+      }
+    },
+    [totalPages, fetchProjects]
+  );
 
   useEffect(() => {
     const loadNotiCount = async () => {
@@ -281,8 +327,7 @@ export default function HomeScreen({ navigation }) {
         const data = await notiService.getCountNotiUnRead();
         const count = Number(data?.unread ?? 0);
         setNotiCount(count);
-      } catch (error) {
-      }
+      } catch (error) {}
     };
 
     loadNotiCount();
@@ -301,7 +346,9 @@ export default function HomeScreen({ navigation }) {
       }
     >
       <View style={[styles.card, isDark && styles.cardDark]}>
-        <View style={[styles.imageContainer, isDark && styles.imageContainerDark]}>
+        <View
+          style={[styles.imageContainer, isDark && styles.imageContainerDark]}
+        >
           <LazyImage
             source={
               item.imageUrl
@@ -321,16 +368,31 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
         <View style={styles.cardInfo}>
-          <Text style={[styles.projectTitle, isDark && styles.projectTitleDark]} numberOfLines={1}>
+          <Text
+            style={[styles.projectTitle, isDark && styles.projectTitleDark]}
+            numberOfLines={1}
+          >
             {item.name}
           </Text>
-          <Text style={[styles.projectDescription, isDark && styles.projectDescriptionDark]} numberOfLines={1}>
+          <Text
+            style={[
+              styles.projectDescription,
+              isDark && styles.projectDescriptionDark,
+            ]}
+            numberOfLines={1}
+          >
             {item.description || "Local Draft"}
           </Text>
           <View style={styles.cardFooter}>
             <View style={styles.dateContainer}>
-              <Icon name="schedule" size={14} color={isDark ? "#60A5FA" : "#60A5FA"} />
-              <Text style={[styles.dateText, isDark && styles.dateTextDark]}>{formatDate(item.updatedAt)}</Text>
+              <Icon
+                name="schedule"
+                size={14}
+                color={isDark ? "#60A5FA" : "#60A5FA"}
+              />
+              <Text style={[styles.dateText, isDark && styles.dateTextDark]}>
+                {formatDate(item.updatedAt)}
+              </Text>
             </View>
           </View>
         </View>
@@ -374,32 +436,19 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleReadSingleNoti = async (item) => {
-    // Mark as read if not already read
-    if (!item.read) {
-      try {
-        await notiService.readNotiByNotiId(item.id);
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
-        );
-        setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to mark notification as read",
-          variant: "destructive",
-        });
-      }
-    }
-
-    // Navigate based on notification type
-    setNotiOpen(false); // Close dropdown first
-
-    if (item.type === "VERSION_AVAILABLE") {
-      // Navigate to Drawing screen to view/upgrade resources
-      navigation.navigate("Gallery");
-    } else if (item.type === "PURCHASE_CONFIRM" && item.orderId) {
-      // Navigate to order history
-      navigation.navigate("OrderHistory");
+    if (item.read) return;
+    try {
+      await notiService.readNotiByNotiId(item.id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
+      );
+      setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to mark notification as read",
+        variant: "destructive",
+      });
     }
   };
 
@@ -421,9 +470,7 @@ export default function HomeScreen({ navigation }) {
     async (project) => {
       try {
         // Load the project and navigate to it
-        const details = await projectService.getProjectById(
-          project.projectId
-        );
+        const details = await projectService.getProjectById(project.projectId);
         const meta = await offlineStorage.loadProjectLocally(
           `${details.projectId}_meta`
         );
@@ -436,8 +483,8 @@ export default function HomeScreen({ navigation }) {
             details.paperSize === "LANDSCAPE"
               ? "landscape"
               : details.paperSize === "PORTRAIT"
-                ? "portrait"
-                : details.orientation || meta?.orientation || "portrait",
+              ? "portrait"
+              : details.orientation || meta?.orientation || "portrait",
           paperSize: "A4",
           cover: details.imageUrl
             ? { template: "custom_image", imageUrl: details.imageUrl }
@@ -614,7 +661,8 @@ export default function HomeScreen({ navigation }) {
         } catch (error) {
           toast({
             title: "Decode Failed",
-            description: "Failed to decode file. It may be corrupted or invalid.",
+            description:
+              "Failed to decode file. It may be corrupted or invalid.",
             variant: "destructive",
           });
           return;
@@ -657,7 +705,10 @@ export default function HomeScreen({ navigation }) {
       const projectDetails = config.projectDetails || {};
       const projectData = {
         name: config.title || projectDetails.name || "Imported Project",
-        description: config.description || projectDetails.description || "Imported from JSON",
+        description:
+          config.description ||
+          projectDetails.description ||
+          "Imported from JSON",
         imageUrl: config.cover?.imageUrl || projectDetails.imageUrl || "",
         orientation: config.orientation || "portrait",
         paperSize: config.paperSize || "A4",
@@ -702,7 +753,7 @@ export default function HomeScreen({ navigation }) {
       // Create pages in backend
       await projectService.createPage({
         projectId: newProjectId,
-        pages: uploadedPages.map(p => ({
+        pages: uploadedPages.map((p) => ({
           pageNumber: p.pageNumber,
           strokeUrl: p.strokeUrl,
         })),
@@ -731,10 +782,12 @@ export default function HomeScreen({ navigation }) {
         hasCover: !!projectData.imageUrl,
         orientation: projectData.orientation,
         paperSize: projectData.paperSize,
-        cover: projectData.imageUrl ? {
-          template: "custom_image",
-          imageUrl: projectData.imageUrl
-        } : null,
+        cover: projectData.imageUrl
+          ? {
+              template: "custom_image",
+              imageUrl: projectData.imageUrl,
+            }
+          : null,
         paper: config.paper || { template: "blank" },
         pages: uploadedPages.map((p, idx) => ({
           pageId: 10000 + idx,
@@ -758,7 +811,6 @@ export default function HomeScreen({ navigation }) {
       });
     }
   }, [navigation, toast, fetchProjects]);
-
 
   const pickImage = async () => {
     try {
@@ -812,7 +864,13 @@ export default function HomeScreen({ navigation }) {
       setProjects((prev) =>
         prev.map((p) =>
           p.projectId === selectedProject.projectId
-            ? { ...p, name: editName.trim(), description: editDesc.trim(), imageUrl: finalImageUrl || "", paperSize: editPaperSize }
+            ? {
+                ...p,
+                name: editName.trim(),
+                description: editDesc.trim(),
+                imageUrl: finalImageUrl || "",
+                paperSize: editPaperSize,
+              }
             : p
         )
       );
@@ -865,7 +923,9 @@ export default function HomeScreen({ navigation }) {
         onPress={() => handleProjectClick(item)}
       >
         <View style={[styles.card, isDark && styles.cardDark]}>
-          <View style={[styles.imageContainer, isDark && styles.imageContainerDark]}>
+          <View
+            style={[styles.imageContainer, isDark && styles.imageContainerDark]}
+          >
             {item.imageUrl ? (
               <LazyImage
                 source={{ uri: item.imageUrl }}
@@ -881,22 +941,42 @@ export default function HomeScreen({ navigation }) {
               style={styles.imageGradient}
             />
             <TouchableOpacity
-              style={[styles.threeDotButton, isDark && styles.threeDotButtonDark]}
+              style={[
+                styles.threeDotButton,
+                isDark && styles.threeDotButtonDark,
+              ]}
               onPress={(e) => openMenu(item, e)}
             >
-              <Icon name="more-vert" size={24} color={isDark ? "#94A3B8" : "#64748B"} />
+              <Icon
+                name="more-vert"
+                size={24}
+                color={isDark ? "#94A3B8" : "#64748B"}
+              />
             </TouchableOpacity>
           </View>
           <View style={styles.cardInfo}>
-            <Text style={[styles.projectTitle, isDark && styles.projectTitleDark]} numberOfLines={1}>
+            <Text
+              style={[styles.projectTitle, isDark && styles.projectTitleDark]}
+              numberOfLines={1}
+            >
               {item.name || "Untitled"}
             </Text>
-            <Text style={[styles.projectDescription, isDark && styles.projectDescriptionDark]} numberOfLines={2}>
+            <Text
+              style={[
+                styles.projectDescription,
+                isDark && styles.projectDescriptionDark,
+              ]}
+              numberOfLines={2}
+            >
               {item.description || ""}
             </Text>
             <View style={styles.cardFooter}>
               <View style={styles.dateContainer}>
-                <Icon name="schedule" size={14} color={isDark ? "#60A5FA" : "#60A5FA"} />
+                <Icon
+                  name="schedule"
+                  size={14}
+                  color={isDark ? "#60A5FA" : "#60A5FA"}
+                />
                 <Text style={[styles.dateText, isDark && styles.dateTextDark]}>
                   {formatDate(item.createdAt)}
                 </Text>
@@ -918,8 +998,15 @@ export default function HomeScreen({ navigation }) {
           {/* HEADER */}
           <View style={[styles.header, isDark && styles.headerDark]}>
             <View style={styles.headerLeft}>
-              <SidebarToggleButton iconSize={26} iconColor={isDark ? "#FFFFFF" : "#1E40AF"} />
-              <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>Projects</Text>
+              <SidebarToggleButton
+                iconSize={26}
+                iconColor={isDark ? "#FFFFFF" : "#1E40AF"}
+              />
+              <Text
+                style={[styles.headerTitle, isDark && styles.headerTitleDark]}
+              >
+                Projects
+              </Text>
               <LottieView
                 source={require("../../../assets/cat.json")}
                 autoPlay
@@ -959,8 +1046,8 @@ export default function HomeScreen({ navigation }) {
                             text={
                               user?.subscriptionEndDate
                                 ? `Active until ${formatDate(
-                                  user.subscriptionEndDate
-                                )}`
+                                    user.subscriptionEndDate
+                                  )}`
                                 : "Active"
                             }
                             style={styles.premiumSubtitle}
@@ -1056,7 +1143,6 @@ export default function HomeScreen({ navigation }) {
                       backgroundColor: "#3375f0ff",
                       justifyContent: "center",
                       alignItems: "center",
-
                     }}
                   >
                     <LottieView
@@ -1113,15 +1199,24 @@ export default function HomeScreen({ navigation }) {
               }
 
               if (type === "sketchnote") navigation.navigate("NoteSetupScreen");
-              if (type === "custom_note") navigation.navigate("CustomNoteSetupScreen");
+              if (type === "custom_note")
+                navigation.navigate("CustomNoteSetupScreen");
               if (type === "quick_note") setQuickNoteModalVisible(true);
-              if (type === "template") navigation.navigate("TemplateSelectionScreen");
+              if (type === "template")
+                navigation.navigate("TemplateSelectionScreen");
               if (type === "import") handleImportJSON();
             }}
           />
 
           {/* TABS */}
-          <View style={{ flexDirection: "row", paddingHorizontal: 16, marginBottom: 12, gap: 12 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              paddingHorizontal: 16,
+              marginBottom: 12,
+              gap: 12,
+            }}
+          >
             <TouchableOpacity
               onPress={() => {
                 setActiveTab("cloud");
@@ -1134,11 +1229,13 @@ export default function HomeScreen({ navigation }) {
                 backgroundColor: activeTab === "cloud" ? "#2563EB" : "#E0F2FE",
               }}
             >
-              <Text style={{
-                color: activeTab === "cloud" ? "#FFF" : "#2563EB",
-                fontWeight: "700",
-                fontSize: 14
-              }}>
+              <Text
+                style={{
+                  color: activeTab === "cloud" ? "#FFF" : "#2563EB",
+                  fontWeight: "700",
+                  fontSize: 14,
+                }}
+              >
                 My Projects
               </Text>
             </TouchableOpacity>
@@ -1155,11 +1252,13 @@ export default function HomeScreen({ navigation }) {
                 backgroundColor: activeTab === "local" ? "#F59E0B" : "#FEF3C7",
               }}
             >
-              <Text style={{
-                color: activeTab === "local" ? "#FFF" : "#D97706",
-                fontWeight: "700",
-                fontSize: 14
-              }}>
+              <Text
+                style={{
+                  color: activeTab === "local" ? "#FFF" : "#D97706",
+                  fontWeight: "700",
+                  fontSize: 14,
+                }}
+              >
                 Local Projects
               </Text>
             </TouchableOpacity>
@@ -1176,11 +1275,13 @@ export default function HomeScreen({ navigation }) {
                 backgroundColor: activeTab === "shared" ? "#10B981" : "#D1FAE5",
               }}
             >
-              <Text style={{
-                color: activeTab === "shared" ? "#FFF" : "#059669",
-                fontWeight: "700",
-                fontSize: 14
-              }}>
+              <Text
+                style={{
+                  color: activeTab === "shared" ? "#FFF" : "#059669",
+                  fontWeight: "700",
+                  fontSize: 14,
+                }}
+              >
                 Shared Projects
               </Text>
             </TouchableOpacity>
@@ -1199,8 +1300,14 @@ export default function HomeScreen({ navigation }) {
           ) : error ? (
             <View style={styles.centerContainer}>
               <Icon name="error-outline" size={48} color="#EF4444" />
-              <Text style={[styles.errorTitle, isDark && styles.errorTitleDark]}>Oops!</Text>
-              <Text style={[styles.errorText, isDark && styles.errorTextDark]}>{error}</Text>
+              <Text
+                style={[styles.errorTitle, isDark && styles.errorTitleDark]}
+              >
+                Oops!
+              </Text>
+              <Text style={[styles.errorText, isDark && styles.errorTextDark]}>
+                {error}
+              </Text>
               <TouchableOpacity
                 style={styles.retryButton}
                 onPress={() => fetchProjects(currentPage)}
@@ -1215,11 +1322,32 @@ export default function HomeScreen({ navigation }) {
                 <>
                   {localProjects.length === 0 ? (
                     <View style={styles.centerContainer}>
-                      <View style={[styles.emptyIcon, isDark && styles.emptyIconDark]}>
-                        <Icon name="smartphone" size={64} color={isDark ? "#FDE68A" : "#FDE68A"} />
+                      <View
+                        style={[
+                          styles.emptyIcon,
+                          isDark && styles.emptyIconDark,
+                        ]}
+                      >
+                        <Icon
+                          name="smartphone"
+                          size={64}
+                          color={isDark ? "#FDE68A" : "#FDE68A"}
+                        />
                       </View>
-                      <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>No Local Projects</Text>
-                      <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
+                      <Text
+                        style={[
+                          styles.emptyTitle,
+                          isDark && styles.emptyTitleDark,
+                        ]}
+                      >
+                        No Local Projects
+                      </Text>
+                      <Text
+                        style={[
+                          styles.emptyText,
+                          isDark && styles.emptyTextDark,
+                        ]}
+                      >
                         Projects created offline will appear here.
                       </Text>
                     </View>
@@ -1237,8 +1365,12 @@ export default function HomeScreen({ navigation }) {
                         <Text style={{ fontSize: 16, color: "#6B7280" }}>
                           Showing {localProjects.length} local project(s)
                         </Text>
-                        <TouchableOpacity onPress={() => navigation.navigate("GuestHome")}>
-                          <Text style={{ color: "#3B82F6", fontWeight: "600" }}>Manage</Text>
+                        <TouchableOpacity
+                          onPress={() => navigation.navigate("GuestHome")}
+                        >
+                          <Text style={{ color: "#3B82F6", fontWeight: "600" }}>
+                            Manage
+                          </Text>
                         </TouchableOpacity>
                       </View>
 
@@ -1265,11 +1397,32 @@ export default function HomeScreen({ navigation }) {
                 <>
                   {projects.length === 0 ? (
                     <View style={styles.centerContainer}>
-                      <View style={[styles.emptyIcon, isDark && styles.emptyIconDark]}>
-                        <Icon name="cloud-off" size={64} color={isDark ? "#BFDBFE" : "#BFDBFE"} />
+                      <View
+                        style={[
+                          styles.emptyIcon,
+                          isDark && styles.emptyIconDark,
+                        ]}
+                      >
+                        <Icon
+                          name="cloud-off"
+                          size={64}
+                          color={isDark ? "#BFDBFE" : "#BFDBFE"}
+                        />
                       </View>
-                      <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>No Cloud Projects</Text>
-                      <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
+                      <Text
+                        style={[
+                          styles.emptyTitle,
+                          isDark && styles.emptyTitleDark,
+                        ]}
+                      >
+                        No Cloud Projects
+                      </Text>
+                      <Text
+                        style={[
+                          styles.emptyText,
+                          isDark && styles.emptyTextDark,
+                        ]}
+                      >
                         Create a new project to get started!
                       </Text>
                       <TouchableOpacity
@@ -1317,11 +1470,32 @@ export default function HomeScreen({ navigation }) {
                 <>
                   {sharedProjects.length === 0 ? (
                     <View style={styles.centerContainer}>
-                      <View style={[styles.emptyIcon, isDark && styles.emptyIconDark]}>
-                        <Icon name="folder-shared" size={64} color={isDark ? "#A7F3D0" : "#A7F3D0"} />
+                      <View
+                        style={[
+                          styles.emptyIcon,
+                          isDark && styles.emptyIconDark,
+                        ]}
+                      >
+                        <Icon
+                          name="folder-shared"
+                          size={64}
+                          color={isDark ? "#A7F3D0" : "#A7F3D0"}
+                        />
                       </View>
-                      <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>No Shared Projects</Text>
-                      <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
+                      <Text
+                        style={[
+                          styles.emptyTitle,
+                          isDark && styles.emptyTitleDark,
+                        ]}
+                      >
+                        No Shared Projects
+                      </Text>
+                      <Text
+                        style={[
+                          styles.emptyText,
+                          isDark && styles.emptyTextDark,
+                        ]}
+                      >
                         Projects shared with you will appear here.
                       </Text>
                     </View>
@@ -1356,16 +1530,24 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text
-              style={[{
-                fontSize: 18,
-                fontWeight: "700",
-                color: "#111827",
-                marginBottom: 12,
-              }, isDark && { color: "#F1F5F9" }]}
+              style={[
+                {
+                  fontSize: 18,
+                  fontWeight: "700",
+                  color: "#111827",
+                  marginBottom: 12,
+                },
+                isDark && { color: "#F1F5F9" },
+              ]}
             >
               Create Quick Note
             </Text>
-            <Text style={[{ fontSize: 14, color: "#374151", marginBottom: 16 }, isDark && { color: "#94A3B8" }]}>
+            <Text
+              style={[
+                { fontSize: 14, color: "#374151", marginBottom: 16 },
+                isDark && { color: "#94A3B8" },
+              ]}
+            >
               Choose orientation for the first page
             </Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
@@ -1381,9 +1563,17 @@ export default function HomeScreen({ navigation }) {
                 }}
                 onPress={() => createQuickNote("portrait")}
               >
-                <Icon name="smartphone" size={22} color={isDark ? "#60A5FA" : "#1E40AF"} />
+                <Icon
+                  name="smartphone"
+                  size={22}
+                  color={isDark ? "#60A5FA" : "#1E40AF"}
+                />
                 <Text
-                  style={{ marginTop: 6, color: isDark ? "#F1F5F9" : "#1E293B", fontWeight: "600" }}
+                  style={{
+                    marginTop: 6,
+                    color: isDark ? "#F1F5F9" : "#1E293B",
+                    fontWeight: "600",
+                  }}
                 >
                   Portrait
                 </Text>
@@ -1400,9 +1590,17 @@ export default function HomeScreen({ navigation }) {
                 }}
                 onPress={() => createQuickNote("landscape")}
               >
-                <Icon name="stay-current-landscape" size={22} color={isDark ? "#60A5FA" : "#1E40AF"} />
+                <Icon
+                  name="stay-current-landscape"
+                  size={22}
+                  color={isDark ? "#60A5FA" : "#1E40AF"}
+                />
                 <Text
-                  style={{ marginTop: 6, color: isDark ? "#F1F5F9" : "#1E293B", fontWeight: "600" }}
+                  style={{
+                    marginTop: 6,
+                    color: isDark ? "#F1F5F9" : "#1E293B",
+                    fontWeight: "600",
+                  }}
                 >
                   Landscape
                 </Text>
@@ -1420,7 +1618,11 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => setQuickNoteModalVisible(false)}
               >
                 <Text
-                  style={{ color: isDark ? "#94A3B8" : "#111827", fontSize: 14, fontWeight: "600" }}
+                  style={{
+                    color: isDark ? "#94A3B8" : "#111827",
+                    fontSize: 14,
+                    fontWeight: "600",
+                  }}
                 >
                   Cancel
                 </Text>
@@ -1434,7 +1636,7 @@ export default function HomeScreen({ navigation }) {
           style={{
             position: "absolute",
             top: 125,
-            right: 250,
+            right: 310,
             width: 320,
             maxHeight: 360,
             backgroundColor: "#FFFFFF",
@@ -1538,107 +1740,52 @@ export default function HomeScreen({ navigation }) {
               data={notifications}
               keyExtractor={(item) => item.id?.toString()}
               style={{ maxHeight: 300 }}
-              renderItem={({ item }) => {
-                // Get icon based on notification type
-                const getNotificationIcon = (type) => {
-                  switch (type) {
-                    case "VERSION_AVAILABLE":
-                      return { name: "upgrade", color: "#10B981", bg: "#ECFDF5" };
-                    case "PURCHASE_CONFIRM":
-                      return { name: "shopping-cart", color: "#3B82F6", bg: "#EFF6FF" };
-                    default:
-                      return { name: "notifications", color: "#6B7280", bg: "#F3F4F6" };
-                  }
-                };
-                const iconInfo = getNotificationIcon(item.type);
-
-                return (
-                  <TouchableOpacity
-                    onPress={() => handleReadSingleNoti(item)}
-                    activeOpacity={0.8}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => handleReadSingleNoti(item)}
+                  activeOpacity={0.8}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 8,
+                    borderRadius: 10,
+                    backgroundColor: item.read ? "#F9FAFB" : "#DBEAFE",
+                    marginBottom: 4,
+                  }}
+                >
+                  <Text
                     style={{
-                      paddingVertical: 10,
-                      paddingHorizontal: 10,
-                      borderRadius: 12,
-                      backgroundColor: item.read ? "#F9FAFB" : "#DBEAFE",
-                      marginBottom: 6,
+                      fontSize: 14,
+                      fontWeight: "700",
+                      color: "#111827",
+                      marginBottom: 2,
                     }}
+                    numberOfLines={1}
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                      {/* Icon */}
-                      <View
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 10,
-                          backgroundColor: iconInfo.bg,
-                          justifyContent: "center",
-                          alignItems: "center",
-                          marginRight: 10,
-                        }}
-                      >
-                        <Icon name={iconInfo.name} size={18} color={iconInfo.color} />
-                      </View>
-
-                      {/* Content */}
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                          <Text
-                            style={{
-                              fontSize: 14,
-                              fontWeight: "700",
-                              color: "#111827",
-                              flex: 1,
-                            }}
-                            numberOfLines={1}
-                          >
-                            {item.title || "Notification"}
-                          </Text>
-                          {item.type === "VERSION_AVAILABLE" && (
-                            <View
-                              style={{
-                                backgroundColor: "#10B981",
-                                paddingHorizontal: 6,
-                                paddingVertical: 2,
-                                borderRadius: 4,
-                              }}
-                            >
-                              <Text style={{ fontSize: 10, fontWeight: "600", color: "#FFFFFF" }}>
-                                Upgrade
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            color: "#4B5563",
-                            marginBottom: 2,
-                            lineHeight: 16,
-                          }}
-                          numberOfLines={2}
-                        >
-                          {item.message}
-                        </Text>
-                        {item.createdAt && (
-                          <Text
-                            style={{
-                              fontSize: 11,
-                              color: "#9CA3AF",
-                              marginTop: 2,
-                            }}
-                          >
-                            {new Date(item.createdAt).toLocaleString("vi-VN")}
-                          </Text>
-                        )}
-                      </View>
-
-                      {/* Arrow */}
-                      <Icon name="chevron-right" size={18} color="#9CA3AF" />
-                    </View>
-                  </TouchableOpacity>
-                );
-              }}
+                    {item.title || "Notification"}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: "#4B5563",
+                      marginBottom: 2,
+                    }}
+                    numberOfLines={2}
+                  >
+                    {item.message}
+                  </Text>
+                  {item.createdAt && (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: "#6B7280",
+                        marginTop: 2,
+                      }}
+                    >
+                      {new Date(item.createdAt).toLocaleString("vi-VN")}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
             />
           )}
         </View>
@@ -1655,48 +1802,70 @@ export default function HomeScreen({ navigation }) {
 
       <Modal visible={editModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+          <View
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+          >
             {/* Icon bút chì + tiêu đề */}
             <View style={{ alignItems: "center", marginBottom: 20 }}>
-              <View style={[styles.modalIconCircle, isDark && styles.modalIconCircleDark]}>
+              <View
+                style={[
+                  styles.modalIconCircle,
+                  isDark && styles.modalIconCircleDark,
+                ]}
+              >
                 <Icon name="edit" size={28} color="#3B82F6" />
               </View>
-              <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>Edit Project</Text>
+              <Text
+                style={[styles.modalTitle, isDark && styles.modalTitleDark]}
+              >
+                Edit Project
+              </Text>
             </View>
 
             {/* Image Picker */}
-            <View style={{ marginBottom: 16, alignItems: 'center' }}>
-              <TouchableOpacity onPress={pickImage} style={{ position: 'relative' }}>
+            <View style={{ marginBottom: 16, alignItems: "center" }}>
+              <TouchableOpacity
+                onPress={pickImage}
+                style={{ position: "relative" }}
+              >
                 <LazyImage
-                  source={editImageUrl ? { uri: editImageUrl } : require("../../../assets/default_image.png")}
+                  source={
+                    editImageUrl
+                      ? { uri: editImageUrl }
+                      : require("../../../assets/default_image.png")
+                  }
                   style={{
                     width: 200,
                     height: 120,
                     borderRadius: 12,
-                    backgroundColor: '#F1F5F9'
+                    backgroundColor: "#F1F5F9",
                   }}
                   resizeMode="cover"
                 />
-                <View style={{
-                  position: 'absolute',
-                  bottom: -10,
-                  right: -10,
-                  backgroundColor: '#3B82F6',
-                  padding: 8,
-                  borderRadius: 20,
-                  borderWidth: 2,
-                  borderColor: '#FFF'
-                }}>
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: -10,
+                    right: -10,
+                    backgroundColor: "#3B82F6",
+                    padding: 8,
+                    borderRadius: 20,
+                    borderWidth: 2,
+                    borderColor: "#FFF",
+                  }}
+                >
                   <Icon name="camera-alt" size={20} color="#FFF" />
                 </View>
               </TouchableOpacity>
-              <Text style={{ marginTop: 12, color: '#64748B', fontSize: 13 }}>
+              <Text style={{ marginTop: 12, color: "#64748B", fontSize: 13 }}>
                 Tap to change cover image
               </Text>
             </View>
 
             {/* Input tên */}
-            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}>
+            <View
+              style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}
+            >
               <Icon
                 name="title"
                 size={18}
@@ -1713,7 +1882,9 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             {/* Input mô tả */}
-            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}>
+            <View
+              style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}
+            >
               <Icon
                 name="description"
                 size={18}
@@ -1734,7 +1905,9 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             {/* Read-only Paper Size */}
-            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}>
+            <View
+              style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}
+            >
               <Icon
                 name="aspect-ratio"
                 size={18}
@@ -1742,12 +1915,18 @@ export default function HomeScreen({ navigation }) {
                 style={styles.inputIcon}
               />
               <TextInput
-                style={[styles.modalInput, { backgroundColor: isDark ? '#334155' : '#F1F5F9', color: isDark ? '#94A3B8' : '#64748B' }]}
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: isDark ? "#334155" : "#F1F5F9",
+                    color: isDark ? "#94A3B8" : "#64748B",
+                  },
+                ]}
                 value={editPaperSize}
                 editable={false}
                 placeholder="Paper Size"
               />
-              <View style={{ position: 'absolute', right: 12, top: 20 }}>
+              <View style={{ position: "absolute", right: 12, top: 20 }}>
                 <Icon name="lock" size={16} color="#94A3B8" />
               </View>
             </View>
@@ -1755,10 +1934,20 @@ export default function HomeScreen({ navigation }) {
             {/* Nút */}
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButtonCancel, isDark && styles.modalButtonCancelDark]}
+                style={[
+                  styles.modalButtonCancel,
+                  isDark && styles.modalButtonCancelDark,
+                ]}
                 onPress={() => setEditModalVisible(false)}
               >
-                <Text style={[styles.modalButtonTextCancel, isDark && styles.modalButtonTextCancelDark]}>Cancel</Text>
+                <Text
+                  style={[
+                    styles.modalButtonTextCancel,
+                    isDark && styles.modalButtonTextCancelDark,
+                  ]}
+                >
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalButton} onPress={saveEdit}>
                 <Text style={styles.modalButtonText}>Save Changes</Text>
@@ -1770,7 +1959,9 @@ export default function HomeScreen({ navigation }) {
 
       <Modal visible={deleteModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+          <View
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+          >
             {/* Icon cảnh báo đỏ cam */}
             <View
               style={[
@@ -1781,8 +1972,12 @@ export default function HomeScreen({ navigation }) {
               <Icon name="warning" size={36} color="#EF4444" />
             </View>
 
-            <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>Delete Project Permanently?</Text>
-            <Text style={[styles.modalMessage, isDark && styles.modalMessageDark]}>
+            <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>
+              Delete Project Permanently?
+            </Text>
+            <Text
+              style={[styles.modalMessage, isDark && styles.modalMessageDark]}
+            >
               Project{" "}
               <Text style={{ fontWeight: "700", color: "#DC2626" }}>
                 "{selectedProject?.name}"
@@ -1793,10 +1988,20 @@ export default function HomeScreen({ navigation }) {
             {/* Nút */}
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButtonCancel, isDark && styles.modalButtonCancelDark]}
+                style={[
+                  styles.modalButtonCancel,
+                  isDark && styles.modalButtonCancelDark,
+                ]}
                 onPress={() => setDeleteModalVisible(false)}
               >
-                <Text style={[styles.modalButtonTextCancel, isDark && styles.modalButtonTextCancelDark]}>Cancel</Text>
+                <Text
+                  style={[
+                    styles.modalButtonTextCancel,
+                    isDark && styles.modalButtonTextCancelDark,
+                  ]}
+                >
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonDelete]}
@@ -1814,10 +2019,6 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-
-
-
-
     </View>
   );
 }
