@@ -2,17 +2,17 @@
  * =============================================================================
  * COLLABORATION MANAGER
  * =============================================================================
- * 
+ *
  * Central manager for real-time collaboration in the sketchnote app.
  * Handles WebSocket communication, state synchronization, and conflict resolution.
- * 
+ *
  * IMPORTANT: This integrates with existing stroke sync logic - does NOT replace it.
  */
 
-import { webSocketService } from './webSocketService';
-import { EventTypes, ElementTypes } from '../types/collaboration.types';
-import throttle from 'lodash/throttle';
-import debounce from 'lodash/debounce';
+import { webSocketService } from "./webSocketService";
+import { EventTypes, ElementTypes } from "../types/collaboration.types";
+import throttle from "lodash/throttle";
+import debounce from "lodash/debounce";
 
 // =============================================================================
 // CONFIGURATION
@@ -20,12 +20,12 @@ import debounce from 'lodash/debounce';
 
 const CONFIG = {
   // Throttle settings (ms)
-  DRAG_THROTTLE: 50,        // Position updates during drag
-  CURSOR_THROTTLE: 100,     // Cursor position updates
-  STROKE_THROTTLE: 16,      // ~60fps for smooth stroke sync
+  DRAG_THROTTLE: 50, // Position updates during drag
+  CURSOR_THROTTLE: 100, // Cursor position updates
+  STROKE_THROTTLE: 16, // ~60fps for smooth stroke sync
 
   // Batch settings
-  STROKE_BATCH_SIZE: 10,    // Points to batch before sending
+  STROKE_BATCH_SIZE: 10, // Points to batch before sending
   STROKE_BATCH_TIMEOUT: 50, // Max wait before sending partial batch
 
   // Reconnection
@@ -36,10 +36,10 @@ const CONFIG = {
   MAX_PENDING_MESSAGES: 100,
 
   // *** CRITICAL: Version & Ordering ***
-  SEQUENCE_GAP_THRESHOLD: 10,      // Request resync if gap > this
-  MAX_OUT_OF_ORDER_BUFFER: 50,     // Buffer for reordering messages
-  LOCK_REQUEST_TIMEOUT: 5000,      // 5s timeout for lock requests
-  DEFAULT_LOCK_TTL: 30000,         // 30s lock time-to-live
+  SEQUENCE_GAP_THRESHOLD: 10, // Request resync if gap > this
+  MAX_OUT_OF_ORDER_BUFFER: 50, // Buffer for reordering messages
+  LOCK_REQUEST_TIMEOUT: 5000, // 5s timeout for lock requests
+  DEFAULT_LOCK_TTL: 30000, // 30s lock time-to-live
 };
 
 // =============================================================================
@@ -59,25 +59,25 @@ class CollaborationManager {
     this.activePageId = null;
 
     // *** CRITICAL: Server-authoritative versioning ***
-    this.serverVersion = 0;           // Server's document version
-    this.lastProcessedSeq = 0;        // Last processed sequence number
-    this.localSeq = 0;                // Local sequence counter for outgoing messages
-    this.seqInitialized = false;      // 🔥 Track if seq has been initialized from server
+    this.serverVersion = 0; // Server's document version
+    this.lastProcessedSeq = 0; // Last processed sequence number
+    this.localSeq = 0; // Local sequence counter for outgoing messages
+    this.seqInitialized = false; // 🔥 Track if seq has been initialized from server
 
     // *** CRITICAL: Message ordering ***
     this.outOfOrderBuffer = new Map(); // seq -> message (for reordering)
-    this.pendingAcks = new Map();      // messageId -> { resolve, reject, timeout }
+    this.pendingAcks = new Map(); // messageId -> { resolve, reject, timeout }
 
     // *** CRITICAL: Element locking ***
-    this.elementLocks = new Map();     // elementId -> { lockedBy, expiresAt, lockToken }
+    this.elementLocks = new Map(); // elementId -> { lockedBy, expiresAt, lockToken }
     this.pendingLockRequests = new Map(); // elementId -> { resolve, reject, timeout }
 
     // *** CRITICAL: Active strokes (for late join) ***
-    this.activeStrokes = new Map();    // strokeId -> { userId, pageId, tool, color, points[] }
+    this.activeStrokes = new Map(); // strokeId -> { userId, pageId, tool, color, points[] }
 
     // *** CRITICAL: Chunked sync state ***
     this.syncInProgress = false;
-    this.syncChunks = [];              // Accumulate chunks during sync
+    this.syncChunks = []; // Accumulate chunks during sync
     this.expectedChunkCount = 0;
 
     // Active users
@@ -95,7 +95,7 @@ class CollaborationManager {
     this.onElementDelete = null;
     this.onStrokeAppend = null;
     this.onStrokeEnd = null;
-    this.onStrokeInit = null;         // *** NEW: For late join stroke initialization ***
+    this.onStrokeInit = null; // *** NEW: For late join stroke initialization ***
     this.onPageCreate = null;
     this.onPageUpdate = null;
     this.onPageDelete = null;
@@ -104,11 +104,11 @@ class CollaborationManager {
     this.onUserLeave = null;
     this.onUserCursor = null;
     this.onSyncComplete = null;
-    this.onSyncProgress = null;       // *** NEW: Progress during chunked sync ***
-    this.onLockAcquired = null;       // *** NEW: Lock callbacks ***
+    this.onSyncProgress = null; // *** NEW: Progress during chunked sync ***
+    this.onLockAcquired = null; // *** NEW: Lock callbacks ***
     this.onLockReleased = null;
     this.onLockRejected = null;
-    this.onVersionConflict = null;    // *** NEW: Server rejected due to version ***
+    this.onVersionConflict = null; // *** NEW: Server rejected due to version ***
     this.onError = null;
 
     // Throttled functions
@@ -141,12 +141,13 @@ class CollaborationManager {
 
   /**
    * Connect to a project's collaboration session
-   * @param {string|number} projectId 
-   * @param {string|number} userId 
+   * @param {string|number} projectId
+   * @param {string|number} userId
    * @param {Object} options
    */
   async connect(projectId, userId, options = {}) {
     if (this.connected && this.projectId === projectId) {
+      console.log("[CollabManager] Already connected to project:", projectId);
       return true;
     }
 
@@ -163,7 +164,7 @@ class CollaborationManager {
     this.serverVersion = 0;
     this.lastProcessedSeq = 0;
     this.localSeq = 0;
-    this.seqInitialized = false;  // 🔥 Reset seq initialization flag
+    this.seqInitialized = false; // 🔥 Reset seq initialization flag
     this.outOfOrderBuffer.clear();
     this.elementLocks.clear();
     this.activeStrokes.clear();
@@ -171,7 +172,7 @@ class CollaborationManager {
     this.syncChunks = [];
 
     try {
-      const wsUrl = options.wsUrl || 'wss://sketchnote.litecsys.com/ws';
+      const wsUrl = options.wsUrl || "wss://sketchnote.litecsys.com/ws";
 
       await webSocketService.connect(
         wsUrl,
@@ -197,7 +198,7 @@ class CollaborationManager {
           userName: options.userName || `User ${userId}`,
           avatarUrl: options.avatarUrl,
           currentPageId: this.activePageId,
-        }
+        },
       });
 
       // Request full sync
@@ -206,7 +207,7 @@ class CollaborationManager {
       return true;
     } catch (error) {
       this.connecting = false;
-      console.error('[CollabManager] Connection failed:', error);
+      console.error("[CollabManager] Connection failed:", error);
       throw error;
     }
   }
@@ -232,7 +233,12 @@ class CollaborationManager {
     webSocketService.disconnect();
   }
 
+  _onConnected() {
+    console.log("[CollabManager] Connected to project:", this.projectId);
+  }
+
   _onError(error) {
+    console.error("[CollabManager] WebSocket error:", error);
     this.onError?.(error);
   }
 
@@ -242,21 +248,33 @@ class CollaborationManager {
 
   /**
    * Handle incoming WebSocket message
-   * @param {Object} message 
+   * @param {Object} message
    */
   _handleMessage(message) {
     if (!message || !message.type) return;
 
     // Skip own messages (except for ACKs and server responses)
-    const isServerResponse = ['SYNC_RESPONSE', 'SYNC_RESPONSE_START', 'SYNC_RESPONSE_CHUNK',
-      'SYNC_RESPONSE_END', 'LOCK_GRANTED', 'LOCK_RELEASED',
-      'SERVER_REJECT', 'ACK'].includes(message.type);
+    const isServerResponse = [
+      "SYNC_RESPONSE",
+      "SYNC_RESPONSE_START",
+      "SYNC_RESPONSE_CHUNK",
+      "SYNC_RESPONSE_END",
+      "LOCK_GRANTED",
+      "LOCK_RELEASED",
+      "SERVER_REJECT",
+      "ACK",
+    ].includes(message.type);
 
     // 🔥 Compare as strings to handle type mismatch (number vs string)
-    const messageUserId = String(message.userId || '');
-    const myUserId = String(this.userId || '');
+    const messageUserId = String(message.userId || "");
+    const myUserId = String(this.userId || "");
 
-    if (messageUserId && myUserId && messageUserId === myUserId && !isServerResponse) {
+    if (
+      messageUserId &&
+      myUserId &&
+      messageUserId === myUserId &&
+      !isServerResponse
+    ) {
       // Skip own message - already applied optimistically
       return;
     }
@@ -275,13 +293,25 @@ class CollaborationManager {
       if (!this.seqInitialized) {
         this.lastProcessedSeq = message.seq;
         this.seqInitialized = true;
+        console.log(
+          "[CollabManager] Initialized seq from server:",
+          message.seq
+        );
       } else {
         // Check for sequence gap
         if (message.seq > this.lastProcessedSeq + 1) {
           // Gap detected - buffer this message
-          if (message.seq - this.lastProcessedSeq > CONFIG.SEQUENCE_GAP_THRESHOLD) {
+          if (
+            message.seq - this.lastProcessedSeq >
+            CONFIG.SEQUENCE_GAP_THRESHOLD
+          ) {
             // Gap too large - request resync
-            console.warn('[CollabManager] Sequence gap too large, requesting resync. Expected:', this.lastProcessedSeq + 1, 'Got:', message.seq);
+            console.warn(
+              "[CollabManager] Sequence gap too large, requesting resync. Expected:",
+              this.lastProcessedSeq + 1,
+              "Got:",
+              message.seq
+            );
             this._requestSync(this.serverVersion);
             return;
           }
@@ -293,6 +323,10 @@ class CollaborationManager {
           }
         } else if (message.seq <= this.lastProcessedSeq) {
           // Already processed - skip
+          console.log(
+            "[CollabManager] Skipping already processed seq:",
+            message.seq
+          );
           return;
         }
 
@@ -339,7 +373,7 @@ class CollaborationManager {
         break;
 
       // *** CRITICAL: Late join stroke initialization ***
-      case 'STROKE_INIT':
+      case "STROKE_INIT":
         this._handleStrokeInit(message);
         break;
 
@@ -376,47 +410,47 @@ class CollaborationManager {
         break;
 
       // *** CRITICAL: Chunked sync ***
-      case 'SYNC_RESPONSE_START':
+      case "SYNC_RESPONSE_START":
         this._handleSyncResponseStart(message);
         break;
 
-      case 'SYNC_RESPONSE_CHUNK':
+      case "SYNC_RESPONSE_CHUNK":
         this._handleSyncResponseChunk(message);
         break;
 
-      case 'SYNC_RESPONSE_END':
+      case "SYNC_RESPONSE_END":
         this._handleSyncResponseEnd(message);
         break;
 
       // *** CRITICAL: Element locking ***
-      case 'ELEMENT_LOCK':
+      case "ELEMENT_LOCK":
         this._handleElementLock(message);
         break;
 
-      case 'LOCK_GRANTED':
+      case "LOCK_GRANTED":
         this._handleLockGranted(message);
         break;
 
-      case 'LOCK_RELEASED':
+      case "LOCK_RELEASED":
         this._handleLockReleased(message);
         break;
 
-      case 'LOCK_REJECTED':
+      case "LOCK_REJECTED":
         this._handleLockRejected(message);
         break;
 
       // *** CRITICAL: Server rejection due to version conflict ***
-      case 'SERVER_REJECT':
+      case "SERVER_REJECT":
         this._handleServerReject(message);
         break;
 
       // Legacy support for existing DRAW action
-      case 'DRAW':
+      case "DRAW":
         this._handleLegacyDraw(message);
         break;
 
       default:
-        console.warn('[CollabManager] Unknown message type:', message.type);
+        console.warn("[CollabManager] Unknown message type:", message.type);
     }
   }
 
@@ -530,7 +564,8 @@ class CollaborationManager {
         element: {
           ...payload.stroke,
           type: ElementTypes.STROKE,
-          points: this._decompressPoints(payload.points) || payload.stroke.points,
+          points:
+            this._decompressPoints(payload.points) || payload.stroke.points,
         },
         userId: message.userId,
         timestamp: message.timestamp,
@@ -645,7 +680,7 @@ class CollaborationManager {
     }
 
     if (activeUsers) {
-      activeUsers.forEach(user => {
+      activeUsers.forEach((user) => {
         this.activeUsers.set(user.userId, user);
       });
     }
@@ -665,9 +700,12 @@ class CollaborationManager {
     this.expectedChunkCount = totalChunks || 1;
     this.serverVersion = version || 0;
 
+    console.log(
+      `[CollabManager] Sync started: ${totalChunks} chunks, ${totalElements} elements`
+    );
 
     this.onSyncProgress?.({
-      phase: 'start',
+      phase: "start",
       progress: 0,
       totalChunks,
       totalElements,
@@ -675,7 +713,8 @@ class CollaborationManager {
   }
 
   _handleSyncResponseChunk(message) {
-    const { chunkIndex, pageId, elements, activeStrokes } = message.payload || {};
+    const { chunkIndex, pageId, elements, activeStrokes } =
+      message.payload || {};
 
     // Accumulate chunk data
     this.syncChunks.push({
@@ -686,8 +725,12 @@ class CollaborationManager {
     });
 
     const progress = (this.syncChunks.length / this.expectedChunkCount) * 100;
+    console.log(
+      `[CollabManager] Sync chunk ${chunkIndex + 1}/${this.expectedChunkCount}`
+    );
+
     this.onSyncProgress?.({
-      phase: 'chunk',
+      phase: "chunk",
       progress,
       chunkIndex,
       pageId,
@@ -696,7 +739,7 @@ class CollaborationManager {
 
     // *** CRITICAL: Process active strokes for late join ***
     if (activeStrokes && activeStrokes.length > 0) {
-      activeStrokes.forEach(stroke => {
+      activeStrokes.forEach((stroke) => {
         this.activeStrokes.set(stroke.strokeId, stroke);
         // Notify UI to create ghost stroke
         this.onStrokeInit?.({
@@ -717,7 +760,7 @@ class CollaborationManager {
     this.syncInProgress = false;
     this.serverVersion = version || this.serverVersion;
     this.lastProcessedSeq = seq || 0;
-    this.seqInitialized = true;  // 🔥 Mark seq as initialized after sync
+    this.seqInitialized = true; // 🔥 Mark seq as initialized after sync
 
     // Apply accumulated chunks to build document state
     const document = this._buildDocumentFromChunks(this.syncChunks);
@@ -729,8 +772,13 @@ class CollaborationManager {
         this.elementLocks.set(elementId, lock);
       });
     }
+
+    console.log(
+      `[CollabManager] Sync complete: version=${version}, seq=${seq}`
+    );
+
     this.onSyncProgress?.({
-      phase: 'end',
+      phase: "end",
       progress: 100,
     });
 
@@ -747,7 +795,7 @@ class CollaborationManager {
   _buildDocumentFromChunks(chunks) {
     const pages = new Map();
 
-    chunks.forEach(chunk => {
+    chunks.forEach((chunk) => {
       if (!pages.has(chunk.pageId)) {
         pages.set(chunk.pageId, {
           id: chunk.pageId,
@@ -781,7 +829,8 @@ class CollaborationManager {
    * so User B can see the partial stroke
    */
   _handleStrokeInit(message) {
-    const { strokeId, pageId, userId, tool, color, strokeWidth, points } = message.payload || {};
+    const { strokeId, pageId, userId, tool, color, strokeWidth, points } =
+      message.payload || {};
     if (!strokeId) return;
 
     // Store in active strokes
@@ -882,7 +931,7 @@ class CollaborationManager {
     const pending = this.pendingLockRequests.get(elementId);
     if (pending) {
       clearTimeout(pending.timeout);
-      pending.reject(new Error(reason || 'Lock rejected'));
+      pending.reject(new Error(reason || "Lock rejected"));
       this.pendingLockRequests.delete(elementId);
     }
 
@@ -897,7 +946,8 @@ class CollaborationManager {
    * *** CRITICAL: Handle server rejection due to version conflict ***
    */
   _handleServerReject(message) {
-    const { reason, expectedVersion, actualVersion, originalEvent } = message.payload || {};
+    const { reason, expectedVersion, actualVersion, originalEvent } =
+      message.payload || {};
 
     console.warn(`[CollabManager] Server rejected: ${reason}`, {
       expectedVersion,
@@ -912,7 +962,7 @@ class CollaborationManager {
     });
 
     // If version mismatch, request full resync
-    if (reason === 'VERSION_MISMATCH' || reason === 'STALE_CLIENT') {
+    if (reason === "VERSION_MISMATCH" || reason === "STALE_CLIENT") {
       this._requestSync(0);
     }
   }
@@ -936,12 +986,16 @@ class CollaborationManager {
 
   /**
    * Send element creation event
-   * @param {string|number} pageId 
-   * @param {Object} element 
+   * @param {string|number} pageId
+   * @param {Object} element
    */
   sendElementCreate(pageId, element) {
     if (!this.connected) {
-      this._queueOperation({ type: EventTypes.ELEMENT_CREATE, pageId, element });
+      this._queueOperation({
+        type: EventTypes.ELEMENT_CREATE,
+        pageId,
+        element,
+      });
       return;
     }
 
@@ -953,18 +1007,26 @@ class CollaborationManager {
 
   /**
    * Send element update event (throttled for drag operations)
-   * @param {string|number} pageId 
-   * @param {string} elementId 
-   * @param {Object} changes 
+   * @param {string|number} pageId
+   * @param {string} elementId
+   * @param {Object} changes
    * @param {Object} options
    */
   sendElementUpdate(pageId, elementId, changes, options = {}) {
     if (!this.connected) {
-      this._queueOperation({ type: EventTypes.ELEMENT_UPDATE, pageId, elementId, changes });
+      this._queueOperation({
+        type: EventTypes.ELEMENT_UPDATE,
+        pageId,
+        elementId,
+        changes,
+      });
       return;
     }
 
-    if (options.throttle !== false && (changes.x !== undefined || changes.y !== undefined)) {
+    if (
+      options.throttle !== false &&
+      (changes.x !== undefined || changes.y !== undefined)
+    ) {
       // Throttle position updates
       this._sendPositionUpdate(pageId, elementId, changes, options.transient);
     } else {
@@ -979,12 +1041,16 @@ class CollaborationManager {
 
   /**
    * Send element deletion event
-   * @param {string|number} pageId 
-   * @param {string} elementId 
+   * @param {string|number} pageId
+   * @param {string} elementId
    */
   sendElementDelete(pageId, elementId) {
     if (!this.connected) {
-      this._queueOperation({ type: EventTypes.ELEMENT_DELETE, pageId, elementId });
+      this._queueOperation({
+        type: EventTypes.ELEMENT_DELETE,
+        pageId,
+        elementId,
+      });
       return;
     }
 
@@ -997,9 +1063,9 @@ class CollaborationManager {
   /**
    * Send stroke points (batched for performance)
    * Called frequently during drawing - handles batching internally
-   * @param {string|number} pageId 
-   * @param {string} strokeId 
-   * @param {Array} points 
+   * @param {string|number} pageId
+   * @param {string} strokeId
+   * @param {Array} points
    * @param {Object} strokeInit - Initial stroke properties (only for first batch)
    */
   sendStrokePoints(pageId, strokeId, points, strokeInit = null) {
@@ -1038,8 +1104,8 @@ class CollaborationManager {
 
   /**
    * Signal stroke drawing completed
-   * @param {string|number} pageId 
-   * @param {string} strokeId 
+   * @param {string|number} pageId
+   * @param {string} strokeId
    */
   sendStrokeEnd(pageId, strokeId) {
     // Flush any remaining points
@@ -1053,8 +1119,8 @@ class CollaborationManager {
 
   /**
    * Send page creation event
-   * @param {Object} page 
-   * @param {number} insertAt 
+   * @param {Object} page
+   * @param {number} insertAt
    */
   sendPageCreate(page, insertAt = -1) {
     if (!this.connected) {
@@ -1070,8 +1136,8 @@ class CollaborationManager {
 
   /**
    * Send page update event
-   * @param {string|number} pageId 
-   * @param {Object} changes 
+   * @param {string|number} pageId
+   * @param {Object} changes
    */
   sendPageUpdate(pageId, changes) {
     if (!this.connected) {
@@ -1087,7 +1153,7 @@ class CollaborationManager {
 
   /**
    * Send page deletion event
-   * @param {string|number} pageId 
+   * @param {string|number} pageId
    */
   sendPageDelete(pageId) {
     if (!this.connected) {
@@ -1102,7 +1168,7 @@ class CollaborationManager {
 
   /**
    * Send page switch event (user navigated to different page)
-   * @param {string|number} pageId 
+   * @param {string|number} pageId
    */
   sendPageSwitch(pageId) {
     this.activePageId = pageId;
@@ -1116,8 +1182,8 @@ class CollaborationManager {
 
   /**
    * Send cursor position (throttled)
-   * @param {number} x 
-   * @param {number} y 
+   * @param {number} x
+   * @param {number} y
    */
   sendCursorPosition(x, y) {
     this._sendCursorUpdate(x, y);
@@ -1129,13 +1195,13 @@ class CollaborationManager {
 
   /**
    * *** CRITICAL: Request lock on an element before dragging/editing ***
-   * @param {string} elementId 
+   * @param {string} elementId
    * @param {string|number} pageId
    * @returns {Promise<{ elementId, lockToken, expiresAt }>}
    */
   async requestLock(elementId, pageId) {
     if (!this.connected) {
-      throw new Error('Not connected');
+      throw new Error("Not connected");
     }
 
     // Check if already locked by someone else
@@ -1159,12 +1225,12 @@ class CollaborationManager {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingLockRequests.delete(elementId);
-        reject(new Error('Lock request timed out'));
+        reject(new Error("Lock request timed out"));
       }, CONFIG.LOCK_REQUEST_TIMEOUT);
 
       this.pendingLockRequests.set(elementId, { resolve, reject, timeout });
 
-      this._sendEvent('ELEMENT_LOCK_REQUEST', {
+      this._sendEvent("ELEMENT_LOCK_REQUEST", {
         pageId,
         elementId,
         requestedTtl: CONFIG.DEFAULT_LOCK_TTL,
@@ -1174,7 +1240,7 @@ class CollaborationManager {
 
   /**
    * *** CRITICAL: Release lock on an element after drag/edit complete ***
-   * @param {string} elementId 
+   * @param {string} elementId
    */
   releaseLock(elementId) {
     const lock = this.elementLocks.get(elementId);
@@ -1185,7 +1251,7 @@ class CollaborationManager {
     this.elementLocks.delete(elementId);
 
     if (this.connected) {
-      this._sendEvent('ELEMENT_LOCK_RELEASE', {
+      this._sendEvent("ELEMENT_LOCK_RELEASE", {
         elementId,
         lockToken: lock.lockToken,
       });
@@ -1194,7 +1260,7 @@ class CollaborationManager {
 
   /**
    * Check if element is locked by another user
-   * @param {string} elementId 
+   * @param {string} elementId
    * @returns {{ locked: boolean, lockedBy?: string|number, expiresAt?: number }}
    */
   isElementLocked(elementId) {
@@ -1240,7 +1306,9 @@ class CollaborationManager {
       projectId: this.projectId,
       userId: this.userId,
       timestamp: Date.now(),
-      messageId: `${this.userId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      messageId: `${this.userId}_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 8)}`,
       // *** CRITICAL: Include version for server-side validation ***
       version: this.serverVersion,
       // *** CRITICAL: Include local seq for client-side ordering ***
@@ -1335,7 +1403,7 @@ class CollaborationManager {
     const operations = [...this.pendingOperations];
     this.pendingOperations = [];
 
-    operations.forEach(op => {
+    operations.forEach((op) => {
       switch (op.type) {
         case EventTypes.ELEMENT_CREATE:
           this.sendElementCreate(op.pageId, op.element);
@@ -1367,7 +1435,7 @@ class CollaborationManager {
     if (points.length < 10) {
       return {
         compressed: false,
-        data: points.map(p => [
+        data: points.map((p) => [
           Math.round((p?.x || 0) * 100) / 100,
           Math.round((p?.y || 0) * 100) / 100,
         ]),
@@ -1407,14 +1475,14 @@ class CollaborationManager {
 
     // Uncompressed format
     if (!data.compressed) {
-      return (data.data || []).map(p =>
+      return (data.data || []).map((p) =>
         Array.isArray(p) ? { x: p[0], y: p[1] } : p
       );
     }
 
     // Empty data
     if (!data.base || !data.deltas) {
-      return (data.data || []).map(p =>
+      return (data.data || []).map((p) =>
         Array.isArray(p) ? { x: p[0], y: p[1] } : p
       );
     }
@@ -1454,8 +1522,10 @@ class CollaborationManager {
     if (element.y != null) clean.y = element.y;
     if (element.width != null) clean.width = element.width;
     if (element.height != null) clean.height = element.height;
-    if (element.rotation && element.rotation !== 0) clean.rotation = element.rotation;
-    if (element.opacity != null && element.opacity !== 1) clean.opacity = element.opacity;
+    if (element.rotation && element.rotation !== 0)
+      clean.rotation = element.rotation;
+    if (element.opacity != null && element.opacity !== 1)
+      clean.opacity = element.opacity;
     if (element.color) clean.color = element.color;
     if (element.layerId) clean.layerId = element.layerId;
     if (element.text) clean.text = element.text;
@@ -1471,7 +1541,8 @@ class CollaborationManager {
     if (element.sides) clean.sides = element.sides;
     if (element.pressure != null) clean.pressure = element.pressure;
     if (element.thickness != null) clean.thickness = element.thickness;
-    if (element.stabilization != null) clean.stabilization = element.stabilization;
+    if (element.stabilization != null)
+      clean.stabilization = element.stabilization;
 
     // Compress points if present
     if (element.points && element.points.length > 0) {

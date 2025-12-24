@@ -2941,11 +2941,18 @@ const GestureHandler = forwardRef(
                 pan={{ x: -(page?.x || 0), y: -(page?.y || 0) + 20 }}
                 onMoveStart={() => {
                   const sItem = strokes.find((it) => it.id === selectedId);
+
+                  // ✅ CRITICAL FIX: Always use selectedBox as fallback for template images
+                  // Template images may not have x/y in initial state
                   if (sItem) {
                     liveTransformRef.current.origin = {
-                      x: sItem.x ?? 0,
-                      y: sItem.y ?? 0,
-                      rotation: sItem.rotation ?? 0,
+                      x: Number.isFinite(sItem.x)
+                        ? sItem.x
+                        : selectedBox?.x ?? 0,
+                      y: Number.isFinite(sItem.y)
+                        ? sItem.y
+                        : selectedBox?.y ?? 0,
+                      rotation: sItem.rotation ?? selectedBox?.rotation ?? 0,
                     };
                   } else if (selectedBox) {
                     liveTransformRef.current.origin = {
@@ -3047,21 +3054,28 @@ const GestureHandler = forwardRef(
                 onResizeStart={(corner) => {
                   const sItem = strokes.find((it) => it.id === selectedId);
                   const base = sItem || selectedBox || {};
+
+                  // ✅ CRITICAL FIX: For template images, prioritize selectedBox dimensions
+                  // selectedBox is always updated and reflects current visual state
                   const baseWidth =
-                    base.width && base.width > 0
-                      ? base.width
-                      : sItem?.naturalWidth || selectedBox?.width || 100;
+                    selectedBox?.width && selectedBox.width > 0
+                      ? selectedBox.width
+                      : base.width && base.width > 0
+                        ? base.width
+                        : sItem?.naturalWidth || 100;
                   const baseHeight =
-                    base.height && base.height > 0
-                      ? base.height
-                      : sItem?.naturalHeight || selectedBox?.height || 100;
+                    selectedBox?.height && selectedBox.height > 0
+                      ? selectedBox.height
+                      : base.height && base.height > 0
+                        ? base.height
+                        : sItem?.naturalHeight || 100;
 
                   liveTransformRef.current.origin = {
-                    x: Number.isFinite(base.x) ? base.x : 0,
-                    y: Number.isFinite(base.y) ? base.y : 0,
+                    x: Number.isFinite(base.x) ? base.x : selectedBox?.x ?? 0,
+                    y: Number.isFinite(base.y) ? base.y : selectedBox?.y ?? 0,
                     width: baseWidth,
                     height: baseHeight,
-                    rotation: base.rotation ?? 0,
+                    rotation: base.rotation ?? selectedBox?.rotation ?? 0,
                   };
                   liveTransformRef.current.corner = corner;
                   liveTransformRef.current.dw = 0;

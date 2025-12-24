@@ -345,7 +345,10 @@ export default function DesignerProductsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <SidebarToggleButton iconColor={isDark ? "#FFFFFF" : "#084F8C"} iconSize={26} />
+          <SidebarToggleButton
+            iconColor={isDark ? "#FFFFFF" : "#084F8C"}
+            iconSize={26}
+          />
           <Text style={styles.headerTitle}>Products</Text>
         </View>
         <View style={styles.headerActions}>
@@ -354,7 +357,11 @@ export default function DesignerProductsScreen() {
             onPress={() => setShowFilterModal(true)}
             style={styles.headerActionIcon}
           >
-            <Icon name="filter-list" size={22} color={isDark ? "#FFFFFF" : "#084F8C"} />
+            <Icon
+              name="filter-list"
+              size={22}
+              color={isDark ? "#FFFFFF" : "#084F8C"}
+            />
           </Pressable>
         </View>
       </View>
@@ -366,9 +373,7 @@ export default function DesignerProductsScreen() {
           <Text style={styles.statLabel}>Total products</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {currentPage + 1}
-          </Text>
+          <Text style={styles.statNumber}>{currentPage + 1}</Text>
           <Text style={styles.statLabel}>Current Page</Text>
         </View>
         <View style={styles.statCard}>
@@ -380,7 +385,11 @@ export default function DesignerProductsScreen() {
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Icon name="search" size={20} color={isDark ? "#94A3B8" : "#6B7280"} />
+          <Icon
+            name="search"
+            size={20}
+            color={isDark ? "#94A3B8" : "#6B7280"}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Search products..."
@@ -428,9 +437,7 @@ export default function DesignerProductsScreen() {
       >
         {loading ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>
-              Loading...
-            </Text>
+            <Text style={styles.emptyStateTitle}>Loading...</Text>
           </View>
         ) : (
           filteredProducts.map((product) => {
@@ -443,7 +450,7 @@ export default function DesignerProductsScreen() {
                 key={product.resourceTemplateId}
                 style={[
                   styles.productCardContainer,
-                  { borderLeftColor: getStatusColor(product.status) }
+                  { borderLeftColor: getStatusColor(product.status) },
                 ]}
                 onPress={() => handleProductPress(product)}
               >
@@ -459,7 +466,11 @@ export default function DesignerProductsScreen() {
                     />
                   ) : (
                     <View style={styles.productThumbnailPlaceholder}>
-                      <Icon name="image" size={32} color={isDark ? "#64748B" : "#9CA3AF"} />
+                      <Icon
+                        name="image"
+                        size={32}
+                        color={isDark ? "#64748B" : "#9CA3AF"}
+                      />
                     </View>
                   )}
 
@@ -467,16 +478,13 @@ export default function DesignerProductsScreen() {
                   <View style={styles.productInfoColumn}>
                     {/* Header Row */}
                     <View style={styles.productHeaderRow}>
-                      <Text
-                        style={styles.productTitleText}
-                        numberOfLines={1}
-                      >
+                      <Text style={styles.productTitleText} numberOfLines={1}>
                         {product.name}
                       </Text>
                       <View
                         style={[
                           styles.statusBadgeContainer,
-                          { backgroundColor: getStatusColor(product.status) }
+                          { backgroundColor: getStatusColor(product.status) },
                         ]}
                       >
                         <Text style={styles.statusBadgeText}>
@@ -529,10 +537,12 @@ export default function DesignerProductsScreen() {
                     {/* Bottom Row */}
                     <View style={styles.bottomRow}>
                       <View style={styles.typeContainer}>
-                        <Icon name="category" size={12} color={isDark ? "#64748B" : "#9CA3AF"} />
-                        <Text style={styles.typeText}>
-                          {product.type}
-                        </Text>
+                        <Icon
+                          name="category"
+                          size={12}
+                          color={isDark ? "#64748B" : "#9CA3AF"}
+                        />
+                        <Text style={styles.typeText}>{product.type}</Text>
                       </View>
 
                       <View style={styles.actionButtonsRow}>
@@ -543,16 +553,22 @@ export default function DesignerProductsScreen() {
                             handleCreateVersionNavigation(product);
                           }}
                         >
-                          <Icon name="post-add" size={16} color={styles.actionButtonText} />
-                          <Text style={styles.filterTabText}>
-                            New Version
-                          </Text>
+                          <Icon
+                            name="post-add"
+                            size={16}
+                            color={styles.actionButtonText}
+                          />
+                          <Text style={styles.filterTabText}>New Version</Text>
                         </Pressable>
 
                         <Pressable
                           style={[
                             styles.archiveButtonContainer,
-                            { backgroundColor: isArchived ? styles.unarchiveButtonBg : styles.archiveButtonBg }
+                            {
+                              backgroundColor: isArchived
+                                ? styles.unarchiveButtonBg
+                                : styles.archiveButtonBg,
+                            },
                           ]}
                           onPress={(e) => {
                             e.stopPropagation();
@@ -562,12 +578,20 @@ export default function DesignerProductsScreen() {
                           <Icon
                             name={isArchived ? "unarchive" : "archive"}
                             size={16}
-                            color={isArchived ? styles.unarchiveButtonText : styles.archiveButtonText}
+                            color={
+                              isArchived
+                                ? styles.unarchiveButtonText
+                                : styles.archiveButtonText
+                            }
                           />
                           <Text
                             style={[
                               styles.archiveButtonText,
-                              { color: isArchived ? styles.unarchiveButtonText : styles.archiveButtonText }
+                              {
+                                color: isArchived
+                                  ? styles.unarchiveButtonText
+                                  : styles.archiveButtonText,
+                              },
                             ]}
                           >
                             {isArchived ? "Unarchive" : "Archive"}
@@ -585,9 +609,7 @@ export default function DesignerProductsScreen() {
         {!loading && filteredProducts.length === 0 && (
           <View style={styles.emptyState}>
             <Icon name="inventory" size={64} color={styles.emptyIconColor} />
-            <Text style={styles.emptyStateTitle}>
-              No products
-            </Text>
+            <Text style={styles.emptyStateTitle}>No products</Text>
             <Text style={styles.emptyStateText}>
               {searchQuery
                 ? "No matching products found"
@@ -603,7 +625,9 @@ export default function DesignerProductsScreen() {
             disabled={currentPage === 0}
             style={[
               styles.paginationButtonPrev,
-              currentPage === 0 ? styles.paginationButtonDisabled : styles.paginationButtonActive
+              currentPage === 0
+                ? styles.paginationButtonDisabled
+                : styles.paginationButtonActive,
             ]}
           >
             <Text style={styles.paginationButtonTextPrimary}>Prev</Text>
@@ -618,7 +642,9 @@ export default function DesignerProductsScreen() {
             disabled={currentPage + 1 >= totalPages}
             style={[
               styles.paginationButtonNext,
-              currentPage + 1 >= totalPages ? styles.paginationButtonDisabled : styles.paginationButtonActive
+              currentPage + 1 >= totalPages
+                ? styles.paginationButtonDisabled
+                : styles.paginationButtonActive,
             ]}
           >
             <Text style={styles.paginationButtonTextPrimary}>Next</Text>
@@ -645,23 +671,33 @@ export default function DesignerProductsScreen() {
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderLeft}>
                 <View style={styles.modalIconWrapper}>
-                  <Icon name="filter-list" size={22} color={isDark ? "#60A5FA" : "#1E3A8A"} />
+                  <Icon
+                    name="filter-list"
+                    size={22}
+                    color={isDark ? "#60A5FA" : "#1E3A8A"}
+                  />
                 </View>
-                <Text style={styles.modalTitle}>
-                  Filter Status
-                </Text>
+                <Text style={styles.modalTitle}>Filter Status</Text>
               </View>
               <Pressable
                 onPress={() => setShowFilterModal(false)}
                 style={styles.modalCloseBtn}
               >
-                <Icon name="close" size={22} color={isDark ? "#94A3B8" : "#64748B"} />
+                <Icon
+                  name="close"
+                  size={22}
+                  color={isDark ? "#94A3B8" : "#64748B"}
+                />
               </Pressable>
             </View>
 
             <View style={styles.modalBody}>
               {[
-                { value: "ALL", icon: "apps", color: isDark ? "#94A3B8" : "#64748B" },
+                {
+                  value: "ALL",
+                  icon: "apps",
+                  color: isDark ? "#94A3B8" : "#64748B",
+                },
                 { value: "PENDING_REVIEW", icon: "schedule", color: "#3B82F6" },
                 { value: "PUBLISHED", icon: "check-circle", color: "#10B981" },
                 { value: "REJECTED", icon: "cancel", color: "#EF4444" },
@@ -686,11 +722,7 @@ export default function DesignerProductsScreen() {
                         { backgroundColor: status.color + "20" },
                       ]}
                     >
-                      <Icon
-                        name={status.icon}
-                        size={20}
-                        color={status.color}
-                      />
+                      <Icon name={status.icon} size={20} color={status.color} />
                     </View>
                     <Text style={styles.modalOptionText}>
                       {getStatusText(status.value)}
@@ -719,11 +751,23 @@ export default function DesignerProductsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={{ padding: 24, alignItems: "center" }}>
-              <View style={[styles.modalIconContainer, { backgroundColor: "#FEF3C7" }]}>
+              <View
+                style={[
+                  styles.modalIconContainer,
+                  { backgroundColor: "#FEF3C7" },
+                ]}
+              >
                 <Icon name="archive" size={32} color="#D97706" />
               </View>
-              <Text style={[styles.modalTitle, { textAlign: "center", marginBottom: 12 }]}>
-                {archiveAction === "unarchive" ? "Unarchive Product?" : "Archive Product?"}
+              <Text
+                style={[
+                  styles.modalTitle,
+                  { textAlign: "center", marginBottom: 12 },
+                ]}
+              >
+                {archiveAction === "unarchive"
+                  ? "Unarchive Product?"
+                  : "Archive Product?"}
               </Text>
               <Text style={styles.modalMessage}>
                 {archiveAction === "unarchive"
@@ -766,14 +810,25 @@ export default function DesignerProductsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={{ padding: 24, alignItems: "center" }}>
-              <View style={[styles.modalIconContainer, { backgroundColor: "#FEE2E2" }]}>
+              <View
+                style={[
+                  styles.modalIconContainer,
+                  { backgroundColor: "#FEE2E2" },
+                ]}
+              >
                 <Icon name="delete-forever" size={32} color="#DC2626" />
               </View>
-              <Text style={[styles.modalTitle, { textAlign: "center", marginBottom: 12 }]}>
+              <Text
+                style={[
+                  styles.modalTitle,
+                  { textAlign: "center", marginBottom: 12 },
+                ]}
+              >
                 Delete Product?
               </Text>
               <Text style={styles.modalMessage}>
-                Are you sure you want to delete "{selectedProduct?.name}"? This action cannot be undone.
+                Are you sure you want to delete "{selectedProduct?.name}"? This
+                action cannot be undone.
               </Text>
               <View style={styles.modalButtons}>
                 <Pressable
@@ -809,14 +864,26 @@ export default function DesignerProductsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={{ padding: 24, alignItems: "center" }}>
-              <View style={[styles.modalIconContainer, { backgroundColor: "#D1FAE5" }]}>
+              <View
+                style={[
+                  styles.modalIconContainer,
+                  { backgroundColor: "#D1FAE5" },
+                ]}
+              >
                 <Icon name="publish" size={32} color="#059669" />
               </View>
-              <Text style={[styles.modalTitle, { textAlign: "center", marginBottom: 12 }]}>
+              <Text
+                style={[
+                  styles.modalTitle,
+                  { textAlign: "center", marginBottom: 12 },
+                ]}
+              >
                 Publish Version?
               </Text>
               <Text style={styles.modalMessage}>
-                Are you sure you want to publish version {selectedVersion?.versionNumber}? It will become available for purchase.
+                Are you sure you want to publish version{" "}
+                {selectedVersion?.versionNumber}? It will become available for
+                purchase.
               </Text>
               <View style={styles.modalButtons}>
                 <Pressable
@@ -852,14 +919,25 @@ export default function DesignerProductsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={{ padding: 24, alignItems: "center" }}>
-              <View style={[styles.modalIconContainer, { backgroundColor: "#FEE2E2" }]}>
+              <View
+                style={[
+                  styles.modalIconContainer,
+                  { backgroundColor: "#FEE2E2" },
+                ]}
+              >
                 <Icon name="delete" size={32} color="#DC2626" />
               </View>
-              <Text style={[styles.modalTitle, { textAlign: "center", marginBottom: 12 }]}>
+              <Text
+                style={[
+                  styles.modalTitle,
+                  { textAlign: "center", marginBottom: 12 },
+                ]}
+              >
                 Delete Version?
               </Text>
               <Text style={styles.modalMessage}>
-                Are you sure you want to delete version {selectedVersion?.versionNumber}? This action cannot be undone.
+                Are you sure you want to delete version{" "}
+                {selectedVersion?.versionNumber}? This action cannot be undone.
               </Text>
               <View style={styles.modalButtons}>
                 <Pressable
@@ -884,8 +962,6 @@ export default function DesignerProductsScreen() {
           </View>
         </View>
       </Modal>
-
-
-    </View >
+    </View>
   );
 }

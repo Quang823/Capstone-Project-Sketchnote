@@ -688,31 +688,35 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   };
 
   const deleteStrokeAt = (index) => {
-    // ✅ Kiểm tra activeLayerId và index trước khi xóa
-    if (!activeLayerId) {
-      console.warn("[CanvasContainer] deleteStrokeAt: No activeLayerId");
-      return;
-    }
-
     if (typeof index !== "number" || index < 0) {
       console.warn("[CanvasContainer] deleteStrokeAt: Invalid index");
       return;
     }
 
-    let removed = null;
     try {
-      updateActiveLayer((strokes) => {
-        if (index < 0 || index >= strokes.length) return strokes;
-        removed = strokes[index];
-        return [...strokes.slice(0, index), ...strokes.slice(index + 1)];
+      // Find the stroke in allStrokes to get its ID and layerId
+      const strokeToDelete = allStrokes[index];
+      if (!strokeToDelete || !strokeToDelete.id) {
+        console.warn("[CanvasContainer] deleteStrokeAt: Stroke not found at index", index);
+        return;
+      }
+
+      const targetLayerId = strokeToDelete.layerId || activeLayerId;
+      let removed = null;
+
+      updateLayerById(targetLayerId, (strokes) => {
+        const idx = strokes.findIndex(s => s.id === strokeToDelete.id);
+        if (idx === -1) return strokes;
+        removed = strokes[idx];
+        return [...strokes.slice(0, idx), ...strokes.slice(idx + 1)];
       });
-      // Push undo AFTER update để tránh setState cascade
+
       if (removed) {
         pushUndo({
           type: "delete",
-          index,
+          index, // Keep global index for undo reference if needed, but logic uses ID
           stroke: removed,
-          layerId: activeLayerId,
+          layerId: targetLayerId,
         });
       }
     } catch (e) {
@@ -721,40 +725,24 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   };
 
   const modifyStrokeAt = (index, newProps) => {
-    // ✅ Kiểm tra activeLayerId và index trước khi sửa
-    if (!activeLayerId) {
-      console.warn("[CanvasContainer] modifyStrokeAt: No activeLayerId");
-      return;
-    }
-
     if (typeof index !== "number" || index < 0) {
       console.warn("[CanvasContainer] modifyStrokeAt: Invalid index");
       return;
     }
 
     try {
-      updateActiveLayer((strokes) => {
-        if (index < 0 || index >= strokes.length) return strokes;
-        const old = strokes[index];
-        if (!old || typeof old !== "object") return strokes;
+      // Find the stroke in allStrokes to get its ID and layerId
+      const strokeToModify = allStrokes[index];
+      if (!strokeToModify || !strokeToModify.id) {
+        console.warn("[CanvasContainer] modifyStrokeAt: Stroke not found at index", index);
+        return;
+      }
 
-        const { __transient, ...cleanProps } = newProps || {};
-        const updated = { ...old, ...cleanProps };
-        if (!__transient) {
-          pushUndo({
-            type: "modify",
-            index,
-            before: old,
-            after: updated,
-            layerId: activeLayerId,
-          });
-        }
-        // avoid creating new array if not changing
-        if (updated === old) return strokes;
-        const next = [...strokes];
-        next[index] = updated;
-        return next;
-      });
+      // Use modifyStrokesBulk logic to handle the update correctly across layers
+      modifyStrokesBulk([{
+        id: strokeToModify.id,
+        changes: newProps
+      }]);
     } catch (e) {
       console.error("[CanvasContainer] modifyStrokeAt error:", e);
     }

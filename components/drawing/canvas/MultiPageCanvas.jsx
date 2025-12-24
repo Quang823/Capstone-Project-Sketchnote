@@ -150,58 +150,80 @@ function usePreloadedFonts() {
   const notoEmojiRegular18 = useFont(FONT_MAP.NotoColorEmoji.Regular, 18);
 
   // ✅ Use useMemo to create the loaded object only once
-  return React.useMemo(() => ({
-    Roboto: {
-      Regular: { 18: robotoRegular18 },
-      Bold: { 18: robotoBold18 },
-      Italic: { 18: robotoItalic18 },
-      BoldItalic: { 18: robotoBoldItalic18 },
-    },
-    Lato: {
-      Regular: { 18: latoRegular18 },
-      Bold: { 18: latoBold18 },
-      Italic: { 18: latoItalic18 },
-      BoldItalic: { 18: latoBoldItalic18 },
-    },
-    Montserrat: {
-      Regular: { 18: montserratRegular18 },
-      Bold: { 18: montserratBold18 },
-      Italic: { 18: montserratItalic18 },
-      BoldItalic: { 18: montserratBoldItalic18 },
-    },
-    OpenSans: {
-      Regular: { 18: openSansRegular18 },
-      Bold: { 18: openSansBold18 },
-      Italic: { 18: openSansItalic18 },
-      BoldItalic: { 18: openSansBoldItalic18 },
-    },
-    Inter: {
-      Regular: { 18: interRegular18 },
-      Bold: { 18: interBold18 },
-      Italic: { 18: interItalic18 },
-      BoldItalic: { 18: interBoldItalic18 },
-    },
-    Poppins: {
-      Regular: { 18: poppinsRegular18 },
-      Bold: { 18: poppinsBold18 },
-      Italic: { 18: poppinsItalic18 },
-      BoldItalic: { 18: poppinsBoldItalic18 },
-    },
-    Pacifico: {
-      Regular: { 18: pacificoRegular18 },
-    },
-    NotoColorEmoji: {
-      Regular: { 18: notoEmojiRegular18 },
-    },
-  }), [
-    robotoRegular18, robotoBold18, robotoItalic18, robotoBoldItalic18,
-    latoRegular18, latoBold18, latoItalic18, latoBoldItalic18,
-    montserratRegular18, montserratBold18, montserratItalic18, montserratBoldItalic18,
-    openSansRegular18, openSansBold18, openSansItalic18, openSansBoldItalic18,
-    interRegular18, interBold18, interItalic18, interBoldItalic18,
-    poppinsRegular18, poppinsBold18, poppinsItalic18, poppinsBoldItalic18,
-    pacificoRegular18, notoEmojiRegular18,
-  ]);
+  return React.useMemo(
+    () => ({
+      Roboto: {
+        Regular: { 18: robotoRegular18 },
+        Bold: { 18: robotoBold18 },
+        Italic: { 18: robotoItalic18 },
+        BoldItalic: { 18: robotoBoldItalic18 },
+      },
+      Lato: {
+        Regular: { 18: latoRegular18 },
+        Bold: { 18: latoBold18 },
+        Italic: { 18: latoItalic18 },
+        BoldItalic: { 18: latoBoldItalic18 },
+      },
+      Montserrat: {
+        Regular: { 18: montserratRegular18 },
+        Bold: { 18: montserratBold18 },
+        Italic: { 18: montserratItalic18 },
+        BoldItalic: { 18: montserratBoldItalic18 },
+      },
+      OpenSans: {
+        Regular: { 18: openSansRegular18 },
+        Bold: { 18: openSansBold18 },
+        Italic: { 18: openSansItalic18 },
+        BoldItalic: { 18: openSansBoldItalic18 },
+      },
+      Inter: {
+        Regular: { 18: interRegular18 },
+        Bold: { 18: interBold18 },
+        Italic: { 18: interItalic18 },
+        BoldItalic: { 18: interBoldItalic18 },
+      },
+      Poppins: {
+        Regular: { 18: poppinsRegular18 },
+        Bold: { 18: poppinsBold18 },
+        Italic: { 18: poppinsItalic18 },
+        BoldItalic: { 18: poppinsBoldItalic18 },
+      },
+      Pacifico: {
+        Regular: { 18: pacificoRegular18 },
+      },
+      NotoColorEmoji: {
+        Regular: { 18: notoEmojiRegular18 },
+      },
+    }),
+    [
+      robotoRegular18,
+      robotoBold18,
+      robotoItalic18,
+      robotoBoldItalic18,
+      latoRegular18,
+      latoBold18,
+      latoItalic18,
+      latoBoldItalic18,
+      montserratRegular18,
+      montserratBold18,
+      montserratItalic18,
+      montserratBoldItalic18,
+      openSansRegular18,
+      openSansBold18,
+      openSansItalic18,
+      openSansBoldItalic18,
+      interRegular18,
+      interBold18,
+      interItalic18,
+      interBoldItalic18,
+      poppinsRegular18,
+      poppinsBold18,
+      poppinsItalic18,
+      poppinsBoldItalic18,
+      pacificoRegular18,
+      notoEmojiRegular18,
+    ]
+  );
 }
 
 function getNearestFont(loadedFonts, family, bold, italic, size = 18) {
@@ -281,10 +303,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 ) {
   const loadedFonts = usePreloadedFonts();
 
-
   // ✅ Skia's useFont hook manages font lifecycle automatically
   // No manual dispose needed - fonts are garbage collected when component unmounts
-
 
   const drawingDataRef = useRef({ pages: {} });
 
@@ -292,7 +312,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [overviewVisible, setOverviewVisible] = useState(false);
   const [templateConfirm, setTemplateConfirm] = useState(null);
-  const [applyMode, setApplyMode] = useState("append");
+  const [applyMode, setApplyMode] = useState("none");
   const [placeTemplateOnNewLayer, setPlaceTemplateOnNewLayer] = useState(true);
 
   const { toast } = useToast();
@@ -1083,7 +1103,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       }
     });
 
-
   const derivedZoom = useDerivedValue(() =>
     Math.round(projectScale.value * 100)
   );
@@ -1091,7 +1110,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     () => derivedZoom.value,
     (val, prev) => {
       // ✅ Only update if significant change (>= 5%) - reduces JS thread load
-      if (val !== prev && Math.abs(val - prev) >= 5) runOnJS(setZoomPercent)(val);
+      if (val !== prev && Math.abs(val - prev) >= 5)
+        runOnJS(setZoomPercent)(val);
 
       // ✅ Update isZoomedIn state to enable/disable pan gesture
       const zoomed = val > 101; // > 101% considered zoomed in
@@ -1167,7 +1187,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
       // ✅ FIX: Explicitly clear large refs to release memory
       if (pageRefs.current) {
-        Object.keys(pageRefs.current).forEach(key => {
+        Object.keys(pageRefs.current).forEach((key) => {
           pageRefs.current[key] = null;
         });
         pageRefs.current = {};
@@ -1429,7 +1449,9 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       if (pageRef && typeof pageRef.updateStrokeById === "function") {
         pageRef.updateStrokeById(strokeId, changes, options);
       } else {
-        console.warn(`[MultiPageCanvas] updateStrokeById not available for pageId: ${pageId}`);
+        console.warn(
+          `[MultiPageCanvas] updateStrokeById not available for pageId: ${pageId}`
+        );
       }
     },
 
@@ -1440,7 +1462,9 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       if (pageRef && typeof pageRef.deleteStrokeById === "function") {
         pageRef.deleteStrokeById(strokeId, options);
       } else {
-        console.warn(`[MultiPageCanvas] deleteStrokeById not available for pageId: ${pageId}`);
+        console.warn(
+          `[MultiPageCanvas] deleteStrokeById not available for pageId: ${pageId}`
+        );
       }
     },
 
@@ -1449,12 +1473,13 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       if (!page || !page.id) return;
       setPages((prev) => {
         // Check if page already exists
-        if (prev.some(p => p.id === page.id)) return prev;
+        if (prev.some((p) => p.id === page.id)) return prev;
 
         const newPage = {
           id: page.id,
           type: page.type || "paper",
-          backgroundColor: page.backgroundColor || noteConfig?.paper?.color || "#FFFFFF",
+          backgroundColor:
+            page.backgroundColor || noteConfig?.paper?.color || "#FFFFFF",
           template: page.template || noteConfig?.paper?.template || "blank",
           imageUrl: page.imageUrl || null,
           snapshotUrl: page.snapshotUrl || null,
@@ -1463,10 +1488,16 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         // Initialize layers for new page
         setPageLayers?.((prev) => ({
           ...prev,
-          [page.id]: [{ id: "layer1", name: "Layer 1", visible: true, strokes: [] }],
+          [page.id]: [
+            { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
+          ],
         }));
 
-        if (typeof insertAt === "number" && insertAt >= 0 && insertAt < prev.length) {
+        if (
+          typeof insertAt === "number" &&
+          insertAt >= 0 &&
+          insertAt < prev.length
+        ) {
           const next = [...prev];
           next.splice(insertAt, 0, newPage);
           return next;
@@ -1561,7 +1592,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   }, []);
 
   const applyTemplateToPage = useCallback(
-    async (pageId, url, mode = "append") => {
+    async (pageId, url, mode = "none") => {
       try {
         if (!pageId || !url) return;
         const safeUrl = String(url).trim().replace(/^`|`$/g, "");
@@ -1580,7 +1611,13 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           extractTemplateData(json);
         const prevPage = pages.find((pg) => pg.id === pageId) || {};
         const pageRef = pageRefs.current[pageId];
-        if (placeTemplateOnNewLayer) {
+
+        // ✅ CORRECT LOGIC:
+        // - 'none' mode: respect placeTemplateOnNewLayer (user choice)
+        // - 'append'/'replace' mode: always merge into current layer (no new layer)
+        const shouldUseNewLayer = (mode === "none") && placeTemplateOnNewLayer;
+
+        if (shouldUseNewLayer) {
           setPageLayers?.((prev) => {
             const curr = prev[pageId] || [
               { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
@@ -1608,11 +1645,12 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             const toLoad = Array.isArray(strokesArray) ? strokesArray : [];
             pageRef.loadStrokes(toLoad, layersMetadata || []);
           } else if (typeof pageRef.appendStrokes === "function") {
+            // For 'none' and 'append', append the strokes
             const toAppend = Array.isArray(strokesArray)
               ? strokesArray.map((s) => ({
                 ...s,
                 __templateSource: safeUrl,
-                layerId: placeTemplateOnNewLayer
+                layerId: shouldUseNewLayer
                   ? "template"
                   : s.layerId || "layer1",
               }))
@@ -1644,7 +1682,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         console.warn("[MultiPageCanvas] applyTemplateToPage error:", e);
       }
     },
-    []
+    [placeTemplateOnNewLayer, pages, fetchTemplateJson]
   );
 
   const unapplyLastTemplate = useCallback((pageId) => {
@@ -1802,6 +1840,38 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               <Text style={styles.sectionTitle}>Apply Mode</Text>
               <View style={styles.optionRow}>
                 <TouchableOpacity
+                  key="mode-none"
+                  style={[
+                    styles.option,
+                    applyMode === "none" && styles.optionActive,
+                  ]}
+                  onPress={() => setApplyMode("none")}
+                >
+                  <Icon
+                    name="add-box"
+                    size={22}
+                    color={applyMode === "none" ? "#2563EB" : "#64748B"}
+                  />
+                  <View style={styles.optionText}>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        applyMode === "none" && styles.activeText,
+                      ]}
+                    >
+                      None
+                    </Text>
+                    <Text style={styles.optionDesc}>
+                      Add template without changing existing content
+                    </Text>
+                  </View>
+                  {applyMode === "none" && (
+                    <Icon name="check" size={24} color="#2563EB" />
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  key="mode-append"
                   style={[
                     styles.option,
                     applyMode === "append" && styles.optionActive,
@@ -1832,6 +1902,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  key="mode-replace"
                   style={[
                     styles.option,
                     applyMode === "replace" && styles.optionActive,
@@ -1864,70 +1935,42 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             </View>
 
             {/* ===== SECTION: Layer Placement ===== */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Layer Placement</Text>
-              <View style={styles.optionRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.option,
-                    placeTemplateOnNewLayer && styles.optionActive,
-                  ]}
-                  onPress={() => setPlaceTemplateOnNewLayer(true)}
-                >
-                  <Icon
-                    name="layers"
-                    size={22}
-                    color={placeTemplateOnNewLayer ? "#2563EB" : "#64748B"}
-                  />
-                  <View style={styles.optionText}>
-                    <Text
-                      style={[
-                        styles.optionLabel,
-                        placeTemplateOnNewLayer && styles.activeText,
-                      ]}
-                    >
-                      New Layer
-                    </Text>
-                    <Text style={styles.optionDesc}>
-                      Create a new layer, easier to edit later
-                    </Text>
-                  </View>
-                  {placeTemplateOnNewLayer && (
+            {/* Only show Layer Placement when mode is "none" */}
+            {applyMode === "none" && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Layer Placement</Text>
+                <View style={styles.optionRow}>
+                  <TouchableOpacity
+                    key="layer-new"
+                    style={[
+                      styles.option,
+                      styles.optionActive, // Always active since it's the only option
+                    ]}
+                    onPress={() => setPlaceTemplateOnNewLayer(true)}
+                  >
+                    <Icon
+                      name="layers"
+                      size={22}
+                      color="#2563EB"
+                    />
+                    <View style={styles.optionText}>
+                      <Text
+                        style={[
+                          styles.optionLabel,
+                          styles.activeText,
+                        ]}
+                      >
+                        New Layer
+                      </Text>
+                      <Text style={styles.optionDesc}>
+                        Create a new layer, easier to edit later
+                      </Text>
+                    </View>
                     <Icon name="check" size={24} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.option,
-                    !placeTemplateOnNewLayer && styles.optionActive,
-                  ]}
-                  onPress={() => setPlaceTemplateOnNewLayer(false)}
-                >
-                  <Icon
-                    name="merge-type"
-                    size={22}
-                    color={!placeTemplateOnNewLayer ? "#2563EB" : "#64748B"}
-                  />
-                  <View style={styles.optionText}>
-                    <Text
-                      style={[
-                        styles.optionLabel,
-                        !placeTemplateOnNewLayer && styles.activeText,
-                      ]}
-                    >
-                      Merge Layer
-                    </Text>
-                    <Text style={styles.optionDesc}>
-                      Merge directly into the current layer
-                    </Text>
-                  </View>
-                  {!placeTemplateOnNewLayer && (
-                    <Icon name="check" size={24} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            )}
 
             {/* ===== ACTION BUTTONS ===== */}
             <View style={styles.actions}>
