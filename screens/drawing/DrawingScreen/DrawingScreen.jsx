@@ -1118,6 +1118,7 @@ export default function DrawingScreen({ route }) {
               multiPageCanvasRef.current.appendStrokesToPage(pageId, batch);
             } catch (err) {
               console.warn("[DrawingScreen] Error appending strokes:", err);
+              console.warn("[DrawingScreen] Error appending strokes:", err);
             }
           }
 
@@ -1272,14 +1273,17 @@ export default function DrawingScreen({ route }) {
           } catch (e) {
             if (e.name !== "AbortError") {
               console.warn(
-                `❌ Load page ${p.pageNumber} failed:`,
-                e?.message || e
+                console.warn(
+                  `❌ Load page ${p.pageNumber} failed:`,
+                  e?.message || e
+                )
               );
             }
           }
         }
       } catch (e) {
         if (e.name !== "AbortError") {
+          console.warn("[DrawingScreen] Auto-load error:", e);
           console.warn("[DrawingScreen] Auto-load error:", e);
           if (!controller.signal.aborted) {
             Alert.alert(

@@ -16,6 +16,7 @@ import Icon from "react-native-vector-icons/MaterialIcons";
 import Toast from "react-native-toast-message";
 import LazyImage from "../../../common/LazyImage";
 import { orderService } from "../../../service/orderService";
+import { resourceService } from "../../../service/resourceService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useTheme } from "../../../context/ThemeContext";
 import getStyles from "./GalleryScreen.styles";
@@ -66,6 +67,9 @@ export default function GalleryScreen() {
   const [selectedUpgradeTemplate, setSelectedUpgradeTemplate] = useState(null);
   const [isUpgrading, setIsUpgrading] = useState(false);
 
+  // Tab state for version comparison modal
+  const [activeVersionTab, setActiveVersionTab] = useState("current"); // "current" or "new"
+
   useEffect(() => {
     fetchTemplates();
   }, []);
@@ -81,16 +85,23 @@ export default function GalleryScreen() {
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const response = await orderService.getPurchasedTemplatesV2();
-      const data = response?.content || response || [];
+      // Fetch both purchased templates and designer's own templates
+      const [purchasedResponse, designerResponse] = await Promise.all([
+        orderService.getPurchasedTemplatesV2().catch(() => []),
+        resourceService.getDesignerPublicTemplate().catch(() => []),
+      ]);
 
-      // Map templates to use current version's items and images
-      const mappedTemplates = (Array.isArray(data) ? data : []).map((template) => {
+      const purchasedData = purchasedResponse?.content || purchasedResponse || [];
+      const designerData = designerResponse || [];
+
+
+
+      // Map purchased templates (with version info)
+      const mappedPurchased = (Array.isArray(purchasedData) ? purchasedData : []).map((template) => {
         const currentVersion = template.availableVersions?.find(
           (v) => v.versionId === template.currentVersionId
         );
 
-        // Get latest version for preview
         const latestVersion = template.availableVersions?.find(
           (v) => v.versionId === template.latestVersionId
         );
@@ -105,7 +116,6 @@ export default function GalleryScreen() {
           hasNewerVersion: template.hasNewerVersion,
           latestVersionNumber: template.latestVersionNumber,
           currentVersionNumber: template.currentVersionNumber,
-          // Latest version data for preview
           latestVersion: latestVersion ? {
             name: latestVersion.name,
             description: latestVersion.description,
@@ -114,10 +124,27 @@ export default function GalleryScreen() {
             price: latestVersion.price,
             releaseDate: latestVersion.releaseDate,
           } : null,
+          isDesignerOwned: false,
         };
       });
 
-      setTemplates(mappedTemplates);
+      // Map designer's own templates (no version info, mark as owned)
+      const mappedDesigner = (Array.isArray(designerData) ? designerData : []).map((template) => ({
+        ...template,
+        items: template.items || [],
+        images: template.images || [],
+        hasNewerVersion: false,
+        isDesignerOwned: true,
+        isOwner: true,
+      }));
+
+      // Merge and deduplicate by resourceTemplateId
+      const allTemplates = [...mappedPurchased, ...mappedDesigner];
+      const uniqueTemplates = allTemplates.filter((template, index, self) =>
+        index === self.findIndex((t) => t.resourceTemplateId === template.resourceTemplateId)
+      );
+
+      setTemplates(uniqueTemplates);
     } catch (error) {
       console.warn("Error fetching templates:", error);
       setTemplates([]);
@@ -303,214 +330,273 @@ export default function GalleryScreen() {
     );
   };
 
-  const DetailModal = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={modalVisible}
-      onRequestClose={() => setModalVisible(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Item Details</Text>
-            <Pressable
-              onPress={() => setModalVisible(false)}
-              style={styles.closeButton}
-            >
-              <Icon name="close" size={24} color={colors.textPrimary} />
-            </Pressable>
-          </View>
+  const DetailModal = () => {
+    // Get the version data to display based on active tab
+    const getVersionData = () => {
+      if (!selectedItem?.hasNewerVersion || activeVersionTab === "current") {
+        return {
+          name: selectedItem?.name,
+          description: selectedItem?.description,
+          items: selectedItem?.items || [],
+          images: selectedItem?.images || [],
+          price: selectedItem?.price,
+          versionNumber: selectedItem?.currentVersionNumber,
+          purchaseDate: selectedItem?.purchaseDate || selectedItem?.createdAt,
+        };
+      } else {
+        return {
+          name: selectedItem?.latestVersion?.name,
+          description: selectedItem?.latestVersion?.description,
+          items: selectedItem?.latestVersion?.items || [],
+          images: selectedItem?.latestVersion?.images || [],
+          price: selectedItem?.latestVersion?.price,
+          versionNumber: selectedItem?.latestVersionNumber,
+          releaseDate: selectedItem?.latestVersion?.releaseDate,
+        };
+      }
+    };
 
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-            <LazyImage
-              source={{ uri: getImageUrl(selectedItem) }}
-              style={styles.modalImage}
-              resizeMode="cover"
-            />
+    const versionData = getVersionData();
 
-            <View style={styles.modalSection}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={[styles.modalTitle, { flex: 1 }]}>{selectedItem?.name}</Text>
-                {selectedItem?.currentVersionNumber && (
-                  <View style={{ backgroundColor: isDark ? "#334155" : "#E5E7EB", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: isDark ? "#94A3B8" : "#374151" }}>
-                      v{selectedItem.currentVersionNumber}
-                    </Text>
+    const getVersionImageUrl = () => {
+      if (!selectedItem?.hasNewerVersion || activeVersionTab === "current") {
+        return getImageUrl(selectedItem);
+      } else {
+        const latestVersion = selectedItem?.latestVersion;
+        if (latestVersion?.images && latestVersion.images.length > 0) {
+          const thumbnail = latestVersion.images.find((img) => img.isThumbnail);
+          return thumbnail?.imageUrl || latestVersion.images[0]?.imageUrl;
+        }
+        return getImageUrl(selectedItem);
+      }
+    };
+
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                <Text style={styles.modalTitle}>Item Details</Text>
+                {selectedItem?.hasNewerVersion && (
+                  <View style={{ backgroundColor: "#10B981", paddingVertical: 4, paddingHorizontal: 10, borderRadius: 8, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <Icon name="new-releases" size={14} color="#FFFFFF" />
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#FFFFFF" }}>NEW VERSION</Text>
                   </View>
                 )}
               </View>
-              <View style={[styles.cardBadge, { alignSelf: 'flex-start', marginTop: 8 }]}>
-                <Text style={styles.cardBadgeText}>
-                  {selectedItem?.type === "ICONS" ? "Icon Collection" : "Template"}
-                </Text>
-              </View>
+              <Pressable
+                onPress={() => setModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Icon name="close" size={24} color={colors.textPrimary} />
+              </Pressable>
             </View>
 
-            {/* New Version Available Section - At TOP */}
-            {selectedItem?.hasNewerVersion && (
-              <View style={[styles.modalSection, { backgroundColor: "#FEF3C7", borderRadius: 12, padding: 16 }]}>
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
-                  <Icon name="new-releases" size={24} color="#F59E0B" />
-                  <Text style={{ fontSize: 16, fontWeight: "700", color: "#B45309", marginLeft: 8, flex: 1 }}>
-                    New Version Available!
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              {/* Version Tabs - Only show when has newer version */}
+              {selectedItem?.hasNewerVersion && (
+                <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
+                  {/* Tab Buttons */}
+                  <View style={{ flexDirection: "row", backgroundColor: isDark ? "#1E293B" : "#F1F5F9", borderRadius: 12, padding: 4 }}>
+                    <Pressable
+                      style={{
+                        flex: 1,
+                        paddingVertical: 12,
+                        paddingHorizontal: 16,
+                        borderRadius: 10,
+                        backgroundColor: activeVersionTab === "current" ? (isDark ? "#334155" : "#FFFFFF") : "transparent",
+                        alignItems: "center",
+                        flexDirection: "row",
+                        justifyContent: "center",
+                        gap: 6,
+                      }}
+                      onPress={() => setActiveVersionTab("current")}
+                    >
+                      <Icon
+                        name="history"
+                        size={18}
+                        color={activeVersionTab === "current" ? colors.primaryBlue : (isDark ? "#94A3B8" : "#64748B")}
+                      />
+                      <Text style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: activeVersionTab === "current" ? colors.primaryBlue : (isDark ? "#94A3B8" : "#64748B"),
+                      }}>
+                        Current (v{selectedItem?.currentVersionNumber})
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={{
+                        flex: 1,
+                        paddingVertical: 12,
+                        paddingHorizontal: 16,
+                        borderRadius: 10,
+                        backgroundColor: activeVersionTab === "new" ? "#10B981" : "transparent",
+                        alignItems: "center",
+                        flexDirection: "row",
+                        justifyContent: "center",
+                        gap: 6,
+                      }}
+                      onPress={() => setActiveVersionTab("new")}
+                    >
+                      <Icon
+                        name="upgrade"
+                        size={18}
+                        color={activeVersionTab === "new" ? "#FFFFFF" : "#10B981"}
+                      />
+                      <Text style={{
+                        fontSize: 14,
+                        fontWeight: "600",
+                        color: activeVersionTab === "new" ? "#FFFFFF" : "#10B981",
+                      }}>
+                        New (v{selectedItem?.latestVersionNumber})
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+
+              {/* Main Image */}
+              <LazyImage
+                source={{ uri: getVersionImageUrl() }}
+                style={styles.modalImage}
+                resizeMode="cover"
+              />
+
+              {/* Title Section */}
+              <View style={styles.modalSection}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <Text style={[styles.modalTitle, { flex: 1 }]}>{versionData.name}</Text>
+                  <View style={{
+                    backgroundColor: activeVersionTab === "new" && selectedItem?.hasNewerVersion ? "#10B981" : (isDark ? "#334155" : "#E5E7EB"),
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 8
+                  }}>
+                    <Text style={{
+                      fontSize: 12,
+                      fontWeight: "600",
+                      color: activeVersionTab === "new" && selectedItem?.hasNewerVersion ? "#FFFFFF" : (isDark ? "#94A3B8" : "#374151")
+                    }}>
+                      v{versionData.versionNumber}
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.cardBadge, { alignSelf: 'flex-start', marginTop: 8 }]}>
+                  <Text style={styles.cardBadgeText}>
+                    {selectedItem?.type === "ICONS" ? "Icon Collection" : "Template"}
                   </Text>
-                  <View style={{ backgroundColor: "#10B981", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: "#FFFFFF" }}>
-                      v{selectedItem?.latestVersionNumber}
-                    </Text>
-                  </View>
                 </View>
+              </View>
 
-                <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", marginBottom: 12 }}>
-                  <View style={{ backgroundColor: "#FFFFFF", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, alignItems: "center", minWidth: 80 }}>
-                    <Text style={{ fontSize: 10, color: "#6B7280", fontWeight: "500" }}>Your Version</Text>
-                    <Text style={{ fontSize: 18, fontWeight: "700", color: "#374151" }}>v{selectedItem?.currentVersionNumber}</Text>
-                  </View>
-                  <Icon name="arrow-forward" size={20} color="#D97706" style={{ marginHorizontal: 12 }} />
-                  <View style={{ backgroundColor: "#10B981", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, alignItems: "center", minWidth: 80 }}>
-                    <Text style={{ fontSize: 10, color: "#FFFFFF", fontWeight: "500" }}>Latest</Text>
-                    <Text style={{ fontSize: 18, fontWeight: "700", color: "#FFFFFF" }}>v{selectedItem?.latestVersionNumber}</Text>
-                  </View>
-                </View>
-
-                {/* Latest Version Preview */}
-                {selectedItem?.latestVersion && (
-                  <View style={{ backgroundColor: "#FFFFFF", borderRadius: 12, padding: 16, marginTop: 12, borderWidth: 1, borderColor: "#D1FAE5" }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-                      <View style={{ backgroundColor: "#10B981", width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", marginRight: 10 }}>
-                        <Icon name="fiber-new" size={18} color="#FFFFFF" />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 15, fontWeight: "700", color: "#059669" }}>
-                          Preview: Version {selectedItem?.latestVersionNumber}
-                        </Text>
-                        <Text style={{ fontSize: 13, fontWeight: "600", color: "#374151" }}>
-                          {selectedItem.latestVersion.name}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={{ fontSize: 13, color: "#6B7280", marginBottom: 12, lineHeight: 18 }} numberOfLines={3}>
-                      {selectedItem.latestVersion.description || "No description available"}
-                    </Text>
-
-                    {/* Latest Version Items Preview */}
-                    {selectedItem.latestVersion.items?.length > 0 && (
-                      <View>
-                        <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151", marginBottom: 8 }}>
-                          📦 Included Items ({selectedItem.latestVersion.items.length}):
-                        </Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -4 }}>
-                          {selectedItem.latestVersion.items.map((item, idx) => (
-                            <View key={idx} style={{ marginHorizontal: 4, borderRadius: 10, overflow: "hidden", borderWidth: 1, borderColor: "#E5E7EB" }}>
-                              <LazyImage
-                                source={{ uri: item.imageUrl || item.itemUrl }}
-                                style={{ width: 80, height: 80, backgroundColor: "#F9FAFB" }}
-                                resizeMode="contain"
-                              />
-                            </View>
-                          ))}
-                        </ScrollView>
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                <Text style={{ fontSize: 13, color: "#92400E", textAlign: "center", lineHeight: 18, marginTop: 12, marginBottom: 12 }}>
-                  Upgrade to get the latest features and improvements. This upgrade is FREE!
+              {/* Description Section */}
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Description</Text>
+                <Text style={styles.modalDescription}>
+                  {versionData.description || "No description available for this item."}
                 </Text>
+              </View>
 
+              {/* Information Section */}
+              <View style={styles.modalSection}>
+                <Text style={styles.modalSectionTitle}>Information</Text>
+                <View style={styles.modalInfoGrid}>
+                  <View style={styles.modalInfoItem}>
+                    <Icon name="payments" size={16} color={colors.primaryBlue} />
+                    <Text style={styles.modalInfoText}>
+                      {versionData.price?.toLocaleString()} đ
+                    </Text>
+                  </View>
+                  <View style={styles.modalInfoItem}>
+                    <Icon name="event" size={16} color={colors.primaryBlue} />
+                    <Text style={styles.modalInfoText}>
+                      {activeVersionTab === "new" && selectedItem?.hasNewerVersion
+                        ? `Release: ${formatDate(versionData.releaseDate)}`
+                        : `Purchased: ${formatDate(versionData.purchaseDate)}`
+                      }
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Included Items Section */}
+              {versionData.items && versionData.items.length > 0 && (
+                <View style={styles.modalSection}>
+                  <Text style={styles.modalSectionTitle}>Included Items ({versionData.items.length})</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.itemsScroll}
+                  >
+                    {versionData.items.map((item, idx) => (
+                      <LazyImage
+                        key={idx}
+                        source={{ uri: item.imageUrl || item.itemUrl }}
+                        style={styles.itemThumbnail}
+                        resizeMode="contain"
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Pressable
+                style={styles.modalButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Close</Text>
+              </Pressable>
+
+              {/* Show Upgrade button when has newer version */}
+              {selectedItem?.hasNewerVersion && (
                 <Pressable
-                  style={{ backgroundColor: "#10B981", paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
+                  style={[styles.modalButton, { backgroundColor: "#10B981", borderColor: "#10B981" }]}
                   onPress={() => {
                     setModalVisible(false);
                     handleUpgradePress(selectedItem);
                   }}
                 >
                   <Icon name="upgrade" size={18} color="#FFFFFF" />
-                  <Text style={{ fontSize: 14, fontWeight: "600", color: "#FFFFFF" }}>Upgrade Now</Text>
+                  <Text style={[styles.modalButtonText, { color: "#FFFFFF" }]}>
+                    Upgrade
+                  </Text>
                 </Pressable>
-              </View>
-            )}
+              )}
 
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Description</Text>
-              <Text style={styles.modalDescription}>
-                {selectedItem?.description || "No description available for this item."}
-              </Text>
+              {/* Show Use Now button */}
+              <Pressable
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={() => {
+                  setModalVisible(false);
+                  navigation.navigate("Home");
+                  Toast.show({
+                    type: "success",
+                    text1: "Template Selected",
+                    text2: "Please enter a project to use this resource.",
+                  });
+                }}
+              >
+                <Icon name="edit" size={18} color="#FFFFFF" />
+                <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>
+                  Use Now
+                </Text>
+              </Pressable>
             </View>
-
-            <View style={styles.modalSection}>
-              <Text style={styles.modalSectionTitle}>Information</Text>
-              <View style={styles.modalInfoGrid}>
-                <View style={styles.modalInfoItem}>
-                  <Icon name="payments" size={16} color={colors.primaryBlue} />
-                  <Text style={styles.modalInfoText}>
-                    {selectedItem?.price?.toLocaleString()} đ
-                  </Text>
-                </View>
-                <View style={styles.modalInfoItem}>
-                  <Icon name="event" size={16} color={colors.primaryBlue} />
-                  <Text style={styles.modalInfoText}>
-                    Purchased: {formatDate(selectedItem?.purchaseDate || selectedItem?.createdAt)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {selectedItem?.items && selectedItem.items.length > 0 && (
-              <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Included Items ({selectedItem.items.length})</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.itemsScroll}
-                >
-                  {selectedItem.items.map((item, idx) => (
-                    <LazyImage
-                      key={idx}
-                      source={{ uri: item.imageUrl || item.itemUrl }}
-                      style={styles.itemThumbnail}
-                      resizeMode="contain"
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </ScrollView>
-
-          <View style={styles.modalFooter}>
-            <Pressable
-              style={styles.modalButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.modalButtonText}>Close</Text>
-            </Pressable>
-
-            {/* Show Use Now button for current version */}
-            <Pressable
-              style={[styles.modalButton, styles.modalButtonPrimary]}
-              onPress={() => {
-                setModalVisible(false);
-                navigation.navigate("Home");
-                Toast.show({
-                  type: "success",
-                  text1: "Template Selected",
-                  text2: "Please enter a project to use this resource.",
-                });
-              }}
-            >
-              <Icon name="edit" size={18} color="#FFFFFF" />
-              <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>
-                Use Now
-              </Text>
-            </Pressable>
           </View>
         </View>
-      </View>
-    </Modal>
-  );
+      </Modal>
+    );
+  };
 
   return (
     <View style={styles.container}>

@@ -587,6 +587,7 @@ export default function HomeScreen({ navigation }) {
         navigation.navigate("DrawingScreen", { noteConfig: config });
       } catch (error) {
         console.warn("❌ Error in handleProjectClick:", error);
+        console.warn("❌ Error in handleProjectClick:", error);
         toast({
           title: "Error",
           description: "Failed to load project",
@@ -831,6 +832,7 @@ export default function HomeScreen({ navigation }) {
           };
         } catch (error) {
           console.warn(`Failed to import page ${page.pageNumber}:`, error);
+          console.warn(`Failed to import page ${page.pageNumber}:`, error);
           return null;
         }
       });
@@ -894,6 +896,7 @@ export default function HomeScreen({ navigation }) {
 
       navigation.navigate("DrawingScreen", { noteConfig });
     } catch (error) {
+      console.warn("Import JSON error:", error);
       console.warn("Import JSON error:", error);
       toast({
         title: "Import Failed",

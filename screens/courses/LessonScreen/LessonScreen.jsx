@@ -284,7 +284,21 @@ export default function LessonScreen() {
             progressData
           );
         } catch (err) {
-          console.warn("Error auto-saving progress:", err);
+          // Silently handle errors (especially duplicate key constraint violations)
+          // Only log to console for debugging, don't show errors to users
+          const errorMessage = err.message || err.toString();
+          if (errorMessage.includes('duplicate key') ||
+            errorMessage.includes('ukqtk0f3koh1fjn49jfeu9mdcy0') ||
+            errorMessage.includes('already exists')) {
+            console.log('[Auto-save] Progress already saved for this lesson (duplicate key)', {
+              courseId,
+              lessonId: currentLesson.lessonId,
+              position: currentPosition
+            });
+          } else {
+            console.warn('[Auto-save] Error saving progress:', err);
+          }
+          // Continue playback without interrupting user experience
         }
       }
 
@@ -885,36 +899,7 @@ export default function LessonScreen() {
                   {currentLesson?.description || "No description available."}
                 </Text>
                 <View style={{ marginTop: 16 }}>
-                  {/* <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      marginBottom: 8,
-                    }}
-                  >
-                    <Icon
-                      name="schedule"
-                      size={18}
-                      color={styles.sidebarMetaIcon}
-                    />
-                    <Text style={[styles.contentText, { marginLeft: 8 }]}>
-                      Duration: {formatDuration(currentLesson?.duration)}
-                    </Text>
-                  </View> */}
-                  {currentLesson?.timeSpent > 0 && (
-                    <View
-                      style={{ flexDirection: "row", alignItems: "center" }}
-                    >
-                      <Icon
-                        name="timer"
-                        size={18}
-                        color={styles.sidebarMetaIcon}
-                      />
-                      <Text style={[styles.contentText, { marginLeft: 8 }]}>
-                        Time spent: {formatDuration(currentLesson?.timeSpent)}
-                      </Text>
-                    </View>
-                  )}
+                  {/* Duration and Time Spent removed per user request */}
                 </View>
               </View>
             )}
