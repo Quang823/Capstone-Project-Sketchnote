@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -24,7 +30,6 @@ import { useTheme } from "../../../context/ThemeContext";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerQuickUploadScreen() {
-  console.log("RENDER UPLOAD SCREEN");
   const navigation = useNavigation();
 
   const { theme } = useTheme();
@@ -34,17 +39,19 @@ export default function DesignerQuickUploadScreen() {
 
   // Theme colors for inline styles
   const isDark = theme === "dark";
-  const colors = React.useMemo(() => ({
-    primaryBlue: isDark ? "#60A5FA" : "#084F8C",
-    primaryWhite: isDark ? "#FFFFFF" : "#084F8C",
-    textMuted: isDark ? "#64748B" : "#94A3B8",
-    textSecondary: isDark ? "#94A3B8" : "#64748B",
-    emptyIconColor: isDark ? "#475569" : "#CBD5E1",
-    typeButtonText: isDark ? "#94A3B8" : "#64748B",
-  }), [isDark]);
+  const colors = React.useMemo(
+    () => ({
+      primaryBlue: isDark ? "#60A5FA" : "#084F8C",
+      primaryWhite: isDark ? "#FFFFFF" : "#084F8C",
+      textMuted: isDark ? "#64748B" : "#94A3B8",
+      textSecondary: isDark ? "#94A3B8" : "#64748B",
+      emptyIconColor: isDark ? "#475569" : "#CBD5E1",
+      typeButtonText: isDark ? "#94A3B8" : "#64748B",
+    }),
+    [isDark]
+  );
 
   // Lấy thêm activeNavItem từ context để kiểm tra
-
 
   useEffect(() => {
     setActiveNavItem("quickUpload");
@@ -115,12 +122,7 @@ export default function DesignerQuickUploadScreen() {
   };
 
   const handleUpload = async () => {
-    if (
-      !name.trim() ||
-      !description.trim() ||
-      !type.trim() ||
-      !price
-    ) {
+    if (!name.trim() || !description.trim() || !type.trim() || !price) {
       Toast.show({
         type: "error",
         text1: "Missing information",
@@ -416,7 +418,7 @@ export default function DesignerQuickUploadScreen() {
                     style={[
                       styles.projectCard,
                       selectedProjectId === proj.projectId &&
-                      styles.projectCardActive,
+                        styles.projectCardActive,
                     ]}
                   >
                     <Image

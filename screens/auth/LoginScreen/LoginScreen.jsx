@@ -103,9 +103,6 @@ export default function LoginScreen({ onBack }) {
       if (!idToken) {
         throw new Error('Failed to get ID token from Google');
       }
-      console.log('idToken:', idToken);
-      console.log('✅ Got Google ID token');
-
       // Call backend API với idToken
       const loginResult = await authService.loginGoogleMobile(idToken);
 

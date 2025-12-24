@@ -18,35 +18,44 @@ import {
 } from "react-native-reanimated";
 
 const CanvasImage = forwardRef(function CanvasImage(
-  { stroke, selectedId, onSelectImage, visualOffset }, // ✅ Add visualOffset prop
+  { stroke, selectedId, onSelectImage, visualOffset },
   ref
 ) {
   const uri = stroke?.uri ?? stroke?.imageUri ?? null;
   const img = useImage(uri);
 
-  // ✅ Track if currently being moved by lasso
+  // Track if currently being moved by lasso
   const isLassoMoving = useRef(false);
+
+  // ✅ Track if we're in the middle of a live transform (move/resize/rotate)
+  const isLiveTransforming = useRef(false);
+
+  // ✅ FIX: Remove lastSyncedRef - it was causing sync issues with template images
+  // Instead, we'll use a simpler approach that always syncs from stroke when not transforming
 
   useEffect(() => {
     return () => {
       try {
         img?.dispose?.();
-      } catch { }
+      } catch {}
     };
   }, [img]);
 
-  // Use useSharedValue to store position / size / rotation
+  // ✅ FIX: Initialize with stroke values, fallback to image natural size
+  const initialWidth = stroke?.width ?? (img ? img.width() : 100);
+  const initialHeight = stroke?.height ?? (img ? img.height() : 100);
+
   const xVal = useSharedValue(stroke?.x ?? 0);
   const yVal = useSharedValue(stroke?.y ?? 0);
-  const wVal = useSharedValue(stroke?.width ?? (img ? img.width : 100));
-  const hVal = useSharedValue(stroke?.height ?? (img ? img.height : 100));
+  const wVal = useSharedValue(initialWidth);
+  const hVal = useSharedValue(initialHeight);
   const rotVal = useSharedValue((stroke?.rotation ?? 0) * (Math.PI / 180));
 
-  // ✅ Shared values for lasso visual offset (realtime, no re-render)
+  // Shared values for lasso visual offset
   const lassoOffsetX = useSharedValue(0);
   const lassoOffsetY = useSharedValue(0);
 
-  // ✅ Update lasso offset when visualOffset prop changes
+  // Update lasso offset when visualOffset prop changes
   useEffect(() => {
     const dx = visualOffset?.dx ?? 0;
     const dy = visualOffset?.dy ?? 0;
@@ -56,20 +65,14 @@ const CanvasImage = forwardRef(function CanvasImage(
       lassoOffsetX.value = dx;
       lassoOffsetY.value = dy;
     }
-    // Note: We don't set isLassoMoving.current = false here
-    // It will be cleared by the clearLassoState() call from GestureHandler
   }, [visualOffset?.dx, visualOffset?.dy]);
 
-  // ✅ Calculate dynamic transform including lasso offset
+  // Calculate dynamic transform including lasso offset
   const transform = useDerivedValue(() => {
-    // Base position from stroke
     const baseX = xVal.value ?? 0;
     const baseY = yVal.value ?? 0;
-
-    // Add lasso offset for realtime movement
     const tx = baseX + lassoOffsetX.value;
     const ty = baseY + lassoOffsetY.value;
-
     const w = wVal.value ?? 0;
     const h = hVal.value ?? 0;
     const r = rotVal.value ?? 0;
@@ -87,28 +90,20 @@ const CanvasImage = forwardRef(function CanvasImage(
     ];
   }, [xVal, yVal, wVal, hVal, rotVal, lassoOffsetX, lassoOffsetY]);
 
-  // Kích thước động
   const widthDV = useDerivedValue(() => wVal.value, [wVal]);
   const heightDV = useDerivedValue(() => hVal.value, [hVal]);
 
-  // FIX Reanimated warning:
   const transformMemo = useMemo(() => transform, [transform]);
   const widthMemo = useMemo(() => widthDV, [widthDV]);
   const heightMemo = useMemo(() => heightDV, [heightDV]);
 
-  // ✅ FIX: Sync stroke position IMMEDIATELY without animation
-  // Only update when NOT being moved by lasso to prevent jitter
+  // ✅ CRITICAL FIX: Always sync from stroke when not in live transform mode
+  // This ensures template images get their correct positions
   useEffect(() => {
-    // ✅ Skip sync if lasso is currently moving this image
-    if (isLassoMoving.current) {
+    // Skip sync if we're actively transforming or lasso moving
+    if (isLiveTransforming.current || isLassoMoving.current) {
       return;
     }
-
-    const newX = stroke?.x ?? 0;
-    const newY = stroke?.y ?? 0;
-    const newW = stroke?.width ?? wVal.value;
-    const newH = stroke?.height ?? hVal.value;
-    const newRot = (stroke?.rotation ?? 0) * (Math.PI / 180);
 
     // Cancel any ongoing animations before updating
     cancelAnimation(xVal);
@@ -117,23 +112,59 @@ const CanvasImage = forwardRef(function CanvasImage(
     cancelAnimation(hVal);
     cancelAnimation(rotVal);
 
-    // Update values IMMEDIATELY (no animation)
-    xVal.value = newX;
-    yVal.value = newY;
-    wVal.value = newW;
-    hVal.value = newH;
-    rotVal.value = newRot;
+    // ✅ Always sync from stroke values if they are valid
+    if (Number.isFinite(stroke?.x)) {
+      xVal.value = stroke.x;
+    }
+    if (Number.isFinite(stroke?.y)) {
+      yVal.value = stroke.y;
+    }
+    if (Number.isFinite(stroke?.width) && stroke.width > 0) {
+      wVal.value = stroke.width;
+    }
+    if (Number.isFinite(stroke?.height) && stroke.height > 0) {
+      hVal.value = stroke.height;
+    }
+    if (Number.isFinite(stroke?.rotation)) {
+      rotVal.value = stroke.rotation * (Math.PI / 180);
+    }
 
-    // ✅ Also reset lasso offsets when stroke position is updated
+    // Reset lasso offsets when stroke position is updated externally
     lassoOffsetX.value = 0;
     lassoOffsetY.value = 0;
-  }, [stroke?.x, stroke?.y, stroke?.width, stroke?.height, stroke?.rotation]);
+  }, [
+    stroke?.id,
+    stroke?.x,
+    stroke?.y,
+    stroke?.width,
+    stroke?.height,
+    stroke?.rotation,
+  ]);
+
+  // ✅ FIX: Also sync when image loads (for template images that may load async)
+  useEffect(() => {
+    if (img && stroke && !isLiveTransforming.current) {
+      const needsWidthSync =
+        !Number.isFinite(stroke.width) || stroke.width <= 0;
+      const needsHeightSync =
+        !Number.isFinite(stroke.height) || stroke.height <= 0;
+
+      if (needsWidthSync) {
+        wVal.value = img.width() || 100;
+      }
+      if (needsHeightSync) {
+        hVal.value = img.height() || 100;
+      }
+    }
+  }, [img]);
 
   useImperativeHandle(
     ref,
     () => ({
       setLiveTransform: ({ x, y, width, height, rotation }) => {
-        // ✅ For non-lasso transforms (e.g., ImageTransformBox)
+        // ✅ Mark as live transforming to prevent sync from overwriting
+        isLiveTransforming.current = true;
+
         if (typeof x === "number") {
           cancelAnimation(xVal);
           xVal.value = x;
@@ -155,8 +186,52 @@ const CanvasImage = forwardRef(function CanvasImage(
           rotVal.value = rotation * (Math.PI / 180);
         }
       },
+
+      // ✅ NEW: Call this when transform ends to allow sync again
+      endLiveTransform: () => {
+        isLiveTransforming.current = false;
+      },
+
       resetToStroke: (s) => {
         if (!s) return;
+        isLassoMoving.current = false;
+        isLiveTransforming.current = false;
+
+        cancelAnimation(xVal);
+        cancelAnimation(yVal);
+        cancelAnimation(wVal);
+        cancelAnimation(hVal);
+        cancelAnimation(rotVal);
+
+        if (Number.isFinite(s.x)) xVal.value = s.x;
+        if (Number.isFinite(s.y)) yVal.value = s.y;
+        if (Number.isFinite(s.width)) wVal.value = s.width;
+        if (Number.isFinite(s.height)) hVal.value = s.height;
+        rotVal.value = (s.rotation ?? 0) * (Math.PI / 180);
+
+        lassoOffsetX.value = 0;
+        lassoOffsetY.value = 0;
+      },
+
+      getLiveTransform: () => ({
+        x: xVal.value,
+        y: yVal.value,
+        width: wVal.value,
+        height: hVal.value,
+        rotation: (rotVal.value * 180) / Math.PI,
+      }),
+
+      clearLassoState: () => {
+        isLassoMoving.current = false;
+        lassoOffsetX.value = 0;
+        lassoOffsetY.value = 0;
+      },
+
+      // ✅ Force sync from stroke (useful after resize/move commit)
+      forceSync: (s) => {
+        if (!s) return;
+
+        isLiveTransforming.current = false;
         isLassoMoving.current = false;
 
         cancelAnimation(xVal);
@@ -165,25 +240,14 @@ const CanvasImage = forwardRef(function CanvasImage(
         cancelAnimation(hVal);
         cancelAnimation(rotVal);
 
-        xVal.value = s.x ?? xVal.value;
-        yVal.value = s.y ?? yVal.value;
-        wVal.value = s.width ?? wVal.value;
-        hVal.value = s.height ?? hVal.value;
-        rotVal.value = (s.rotation ?? 0) * (Math.PI / 180);
+        if (Number.isFinite(s.x)) xVal.value = s.x;
+        if (Number.isFinite(s.y)) yVal.value = s.y;
+        if (Number.isFinite(s.width)) wVal.value = s.width;
+        if (Number.isFinite(s.height)) hVal.value = s.height;
+        if (Number.isFinite(s.rotation)) {
+          rotVal.value = s.rotation * (Math.PI / 180);
+        }
 
-        // Reset lasso offsets
-        lassoOffsetX.value = 0;
-        lassoOffsetY.value = 0;
-      },
-      getLiveTransform: () => ({
-        x: xVal.value,
-        y: yVal.value,
-        width: wVal.value,
-        height: hVal.value,
-        rotation: (rotVal.value * 180) / Math.PI,
-      }),
-      clearLassoState: () => {
-        isLassoMoving.current = false;
         lassoOffsetX.value = 0;
         lassoOffsetY.value = 0;
       },
