@@ -40,7 +40,7 @@ export const projectService = {
       // Trả về URL thật (bỏ phần query)
       return uploadUrl.split("?")[0];
     } catch (error) {
-      console.error("❌ Failed to upload asset:", error);
+      console.warn("❌ Failed to upload asset:", error);
       throw error;
     }
   },
@@ -76,7 +76,7 @@ export const projectService = {
       }
       throw new Error("Invalid response from createPage API");
     } catch (err) {
-      console.error("❌ Failed to create/update pages in DB:", err);
+      console.warn("❌ Failed to create/update pages in DB:", err);
       throw err;
     }
   },
@@ -121,7 +121,7 @@ export const projectService = {
               }
             }
           } catch (refreshError) {
-            console.error("❌ [Service] Failed to refresh URL:", refreshError);
+            console.warn("❌ [Service] Failed to refresh URL:", refreshError);
           }
         }
         throw error;
@@ -138,7 +138,7 @@ export const projectService = {
               pageNumber,
               remoteData
             );
-          } catch { }
+          } catch {}
         }
         return remoteData;
       }
@@ -170,12 +170,12 @@ export const projectService = {
             pageNumber,
             remoteData
           );
-        } catch { }
+        } catch {}
       }
       return remoteData;
     } catch (error) {
       if (error.name !== "AbortError") {
-        console.error(
+        console.warn(
           `❌ Failed to load page ${pageNumber} from both cache and server.`,
           error
         );
@@ -261,7 +261,7 @@ export const projectService = {
               });
             });
           } catch (uploadErr) {
-            console.error(
+            console.warn(
               `Failed to upload batch for project ${projectId}`,
               uploadErr
             );
@@ -286,7 +286,7 @@ export const projectService = {
           await offlineStorage.removeProjectFromSyncQueue(key);
         }
       } catch (error) {
-        console.error(`❌ FAILED to sync project ${projectId}:`, error);
+        console.warn(`❌ FAILED to sync project ${projectId}:`, error);
         // Don't remove from queue if sync fails, it will be retried next time.
       }
     }
@@ -304,7 +304,7 @@ export const projectService = {
       }
       return [];
     } catch (error) {
-      console.error("Error in getUserProjects:", error);
+      console.warn("Error in getUserProjects:", error);
       throw error;
     }
   },
@@ -318,8 +318,8 @@ export const projectService = {
       const content = Array.isArray(r?.projects)
         ? r.projects
         : Array.isArray(r?.content)
-          ? r.content
-          : [];
+        ? r.content
+        : [];
       const totalElements =
         r?.totalElements ??
         r?.page?.totalElements ??
@@ -340,7 +340,7 @@ export const projectService = {
         pageSize,
       };
     } catch (error) {
-      console.error("Error in getUserProjectsPaged:", error);
+      console.warn("Error in getUserProjectsPaged:", error);
       throw error;
     }
   },
@@ -353,7 +353,7 @@ export const projectService = {
       }
       return [];
     } catch (error) {
-      console.error("Error in getSharedProjects:", error);
+      console.warn("Error in getSharedProjects:", error);
       throw error;
     }
   },
@@ -370,7 +370,7 @@ export const projectService = {
       }
       return result;
     } catch (err) {
-      console.error("❌ Failed to get presign URL:", err);
+      console.warn("❌ Failed to get presign URL:", err);
       throw err;
     }
   },
@@ -389,7 +389,7 @@ export const projectService = {
       }
       return presignedUrl.split("?")[0];
     } catch (err) {
-      console.error(`❌ Failed to upload to presigned URL:`, err);
+      console.warn(`❌ Failed to upload to presigned URL:`, err);
       throw err;
     }
   },
@@ -411,7 +411,7 @@ export const projectService = {
     } catch (err) {
       if (err.name === "AbortError") {
       } else {
-        console.error("❌ Error loading JSON:", err);
+        console.warn("❌ Error loading JSON:", err);
       }
       throw err; // Re-throw so the caller can handle it
     }
@@ -425,7 +425,7 @@ export const projectService = {
       }
       throw new Error("Invalid response from server");
     } catch (err) {
-      console.error("❌ Failed to create project:", err);
+      console.warn("❌ Failed to create project:", err);
       throw err;
     }
   },
@@ -440,7 +440,7 @@ export const projectService = {
       }
       throw new Error("Update failed");
     } catch (err) {
-      console.error("Failed to update project:", err);
+      console.warn("Failed to update project:", err);
       throw err;
     }
   },
@@ -453,7 +453,7 @@ export const projectService = {
       }
       throw new Error("Delete failed");
     } catch (err) {
-      console.error("Failed to delete project:", err);
+      console.warn("Failed to delete project:", err);
       throw err;
     }
   },
@@ -465,7 +465,7 @@ export const projectService = {
       }
       throw new Error("Invalid response from server");
     } catch (err) {
-      console.error("❌ Failed to get project by ID:", err);
+      console.warn("❌ Failed to get project by ID:", err);
       throw err;
     }
   },
@@ -563,7 +563,7 @@ export const projectService = {
             return new WebSocket(wsUrl);
           },
 
-          debug: (str) => { },
+          debug: (str) => {},
 
           reconnectDelay: 5000,
           heartbeatIncoming: 4000,
@@ -575,11 +575,11 @@ export const projectService = {
 
           connectHeaders: token
             ? {
-              Authorization: `Bearer ${token}`,
-            }
+                Authorization: `Bearer ${token}`,
+              }
             : undefined,
 
-          beforeConnect: () => { },
+          beforeConnect: () => {},
 
           onConnect: (frame) => {
             isConnected = true;
@@ -719,7 +719,7 @@ export const projectService = {
         } else {
           pendingQueue.push(frame);
         }
-      } catch { }
+      } catch {}
     };
 
     const sendDraw = (projectId, userId, tool, points = []) => {
@@ -789,16 +789,20 @@ export const projectService = {
       stroke = {},
       pagePayload
     ) => {
+      // Only extract essential stroke properties (no duplicate)
       const hasPoints =
         Array.isArray(stroke.points) && stroke.points.length > 0;
+
+      // Compress points for tools that have them
       const compressedPoints = hasPoints ? compressPoints(stroke.points) : null;
 
+      // Build minimal stroke object - only include non-null values
       const minimalStroke = {
         id: stroke.id,
         tool: stroke.tool || "pen",
       };
 
-      // Existing properties
+      // Only add properties if they have meaningful values
       if (stroke.x != null) minimalStroke.x = stroke.x;
       if (stroke.y != null) minimalStroke.y = stroke.y;
       if (stroke.width != null) minimalStroke.width = stroke.width;
@@ -816,32 +820,18 @@ export const projectService = {
       if (stroke.rows) minimalStroke.rows = stroke.rows;
       if (stroke.cols) minimalStroke.cols = stroke.cols;
 
-      // ✅ ADD: Shape-specific properties for fill
-      if (stroke.fill != null) minimalStroke.fill = stroke.fill;
-      if (stroke.fillColor) minimalStroke.fillColor = stroke.fillColor;
-      if (stroke.shapeSettings) {
-        minimalStroke.shapeSettings = {
-          shape: stroke.shapeSettings.shape,
-          fill: stroke.shapeSettings.fill,
-          fillColor: stroke.shapeSettings.fillColor,
-          thickness: stroke.shapeSettings.thickness,
-        };
-      }
-      if (stroke.shape) {
-        // Send shape geometry
-        minimalStroke.shape = stroke.shape;
-      }
-
-      // Build payload
+      // Build optimized payload - NO DUPLICATES
       const payload = {
         pageId,
         stroke: minimalStroke,
       };
 
+      // Add compressed points separately (not inside stroke to avoid duplication)
       if (compressedPoints) {
         payload.points = compressedPoints;
       }
 
+      // Only include minimal page info if needed (NOT full page with strokes)
       if (pagePayload && typeof pagePayload === "object") {
         payload.pageInfo = {
           id: pagePayload.id,
@@ -890,7 +880,7 @@ export const projectService = {
 
       return localProject;
     } catch (error) {
-      console.error("Failed to create local project:", error);
+      console.warn("Failed to create local project:", error);
       throw error;
     }
   },
@@ -903,7 +893,7 @@ export const projectService = {
     try {
       return await offlineStorage.getAllGuestProjects();
     } catch (error) {
-      console.error("Failed to get local projects:", error);
+      console.warn("Failed to get local projects:", error);
       return [];
     }
   },
@@ -969,7 +959,7 @@ export const projectService = {
 
       return cloudProject;
     } catch (error) {
-      console.error("Failed to upload local project:", error);
+      console.warn("Failed to upload local project:", error);
       throw error;
     }
   },
@@ -996,7 +986,7 @@ export const projectService = {
       }
       throw new Error("Invalid response from server");
     } catch (err) {
-      console.error("❌ Failed to get project versions:", err);
+      console.warn("❌ Failed to get project versions:", err);
       throw err;
     }
   },
@@ -1018,7 +1008,26 @@ export const projectService = {
       }
       throw new Error("Failed to restore version");
     } catch (err) {
-      console.error("❌ Failed to restore project version:", err);
+      console.warn("❌ Failed to restore project version:", err);
+      throw err;
+    }
+  },
+
+  /**
+   * Accept a project invitation
+   * @param {string} projectId - Project ID to accept
+   * @param {boolean} accepted - Acceptance status
+   * @returns {Promise<object>} API response
+   */
+  acceptCollaboration: async (projectId, accepted = true) => {
+    try {
+      const response = await projectAPIController.acceptCollaboration(
+        projectId,
+        accepted
+      );
+      return response.data;
+    } catch (err) {
+      console.warn("❌ Failed to accept collaboration:", err);
       throw err;
     }
   },

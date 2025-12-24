@@ -111,7 +111,7 @@ export const uploadToCloudinary = async (fileUri, fileInfo = {}) => {
       throw new Error("Failed to get URL from Cloudinary");
     }
   } catch (err) {
-    console.error("Cloudinary upload error:", err);
+    console.warn("Cloudinary upload error:", err);
 
     // Provide user-friendly error messages
     if (err.message.includes("Network request failed")) {

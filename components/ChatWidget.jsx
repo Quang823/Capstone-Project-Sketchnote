@@ -82,7 +82,7 @@ export default function ChatWidget({ visible, onClose }) {
                     setCurrentUserId(profile.id);
                 }
             } catch (error) {
-                console.error("Error fetching current user profile:", error);
+                console.warn("Error fetching current user profile:", error);
             }
         };
         const getAdminUsers = async () => {
@@ -91,7 +91,7 @@ export default function ChatWidget({ visible, onClose }) {
                 setAdminUsers(adminUsers);
 
             } catch (error) {
-                console.error("Error fetching admin users:", error);
+                console.warn("Error fetching admin users:", error);
             }
         };
         getAdminUsers();
@@ -214,7 +214,7 @@ export default function ChatWidget({ visible, onClose }) {
                 setHasMore(pageToLoad > 0);
             }
         } catch (error) {
-            console.error("Fetch messages error:", error);
+            console.warn("Fetch messages error:", error);
         } finally {
             setLoading(false);
             setLoadingMore(false);
@@ -260,7 +260,7 @@ export default function ChatWidget({ visible, onClose }) {
             }
 
         } catch (error) {
-            console.error("Send failed:", error);
+            console.warn("Send failed:", error);
             toast({
                 title: "Error",
                 description: "Failed to send message",

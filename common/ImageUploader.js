@@ -49,7 +49,7 @@ export default function ImageUploader({ onUploaded, existingImage }) {
       const selectedUri = result.assets[0].uri;
       await handleUpload(selectedUri);
     } catch (error) {
-      console.error("❌ Pick image error:", error);
+      console.warn("❌ Pick image error:", error);
       Alert.alert("Error", "Cannot select image");
     }
   };
@@ -78,7 +78,7 @@ export default function ImageUploader({ onUploaded, existingImage }) {
         throw new Error("Invalid upload response");
       }
     } catch (error) {
-      console.error("❌ Upload error:", error);
+      console.warn("❌ Upload error:", error);
       Alert.alert("Error", error.message || "Cannot upload image");
     } finally {
       setUploading(false);

@@ -15,6 +15,7 @@ const DocumentSidebar = ({
   onAddPage,
   onResourceSelect,
   onOpenOverview,
+  isViewOnly = false,
 }) => {
   const [slideAnim] = useState(new Animated.Value(visible ? 0 : -280));
 
@@ -65,6 +66,7 @@ const DocumentSidebar = ({
           onAddPage={onAddPage}
           onResourceSelect={onResourceSelect}
           pageLayout="list"
+          isViewOnly={isViewOnly}
         />
       </View>
     </Animated.View>

@@ -119,7 +119,7 @@ export default function LoginScreen({ onBack }) {
       }
 
     } catch (error) {
-      console.error("Google Login Error:", error);
+      console.warn("Google Login Error:", error);
 
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         toast({

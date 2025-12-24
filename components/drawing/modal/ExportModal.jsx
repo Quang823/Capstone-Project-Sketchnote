@@ -22,7 +22,7 @@ const ExportModal = ({
   projectId,
   pages: initialPages,
 }) => {
-  const [selected, setSelected] = useState("editable");
+  const [selected, setSelected] = useState("noneditable");
   const [fileName, setFileName] = useState("Unnamed note");
   const [includeBg, setIncludeBg] = useState(true);
 
@@ -82,7 +82,7 @@ const ExportModal = ({
           }
         }
       } catch (e) {
-        console.error("Failed to load pages in ExportModal:", e);
+        console.warn("Failed to load pages in ExportModal:", e);
         if (mounted) {
           setPagePreviews([]);
           setSelectedPageIndex(0);
@@ -120,23 +120,18 @@ const ExportModal = ({
 
   const options = [
     {
-      key: "editable",
-      label: "Editable PDF",
-      icon: "https://cdn-icons-png.flaticon.com/512/1827/1827933.png",
-    },
-    {
       key: "noneditable",
       label: "Non-editable PDF",
-      icon: "https://cdn-icons-png.flaticon.com/512/565/565655.png",
+      icon: "https://cdn-icons-png.flaticon.com/512/337/337946.png",
     },
     {
       key: "pictures_all",
-      label: "Pictures (All Pages)",
-      icon: "https://cdn-icons-png.flaticon.com/512/747/747968.png",
+      label: "Pictures",
+      icon: "https://cdn-icons-png.flaticon.com/512/3342/3342137.png",
     },
     {
       key: "sketchnote_s3",
-      label: "SketchNote (S3)",
+      label: "SketchNote",
       icon: "https://res.cloudinary.com/dk3yac2ie/image/upload/v1763174915/ctsrrmlfcxxmsmvb9yhm.png",
     },
   ];
@@ -215,8 +210,7 @@ const ExportModal = ({
               </View>
 
               <Text style={styles.warningText}>
-                ⚠️ If the source file is a scanned document/image/non-editable
-                PDF, the exported file will remain as a non-editable PDF
+                ⚠️ PDF and Pictures are non-editable exports. SketchNote exports as JSON file - use Import to restore the project.
               </Text>
 
               <View style={{ marginTop: 16 }}>
@@ -357,9 +351,7 @@ const ExportModal = ({
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.savePath}>
-                Save path: storage/documents/sketchnote/export
-              </Text>
+
             </View>
           </View>
         </View>

@@ -26,7 +26,7 @@ SplashScreen.preventAutoHideAsync();
 if (typeof ErrorUtils !== "undefined") {
   const originalHandler = ErrorUtils.getGlobalHandler();
   ErrorUtils.setGlobalHandler((error, isFatal) => {
-    console.error("🚨 Global Error Handler:", error, "isFatal:", isFatal);
+    console.warn("🚨 Global Error Handler:", error, "isFatal:", isFatal);
     // Log error nhưng không crash app ngay lập tức
     if (originalHandler) {
       originalHandler(error, isFatal);
@@ -39,7 +39,7 @@ if (typeof ErrorUtils !== "undefined") {
 if (typeof global !== "undefined") {
   const originalUnhandledRejection = global.onunhandledrejection;
   global.onunhandledrejection = (event) => {
-    console.error("🚨 Unhandled Promise Rejection:", event?.reason || event);
+    console.warn("🚨 Unhandled Promise Rejection:", event?.reason || event);
     // Prevent default crash behavior
     if (event && typeof event.preventDefault === "function") {
       event.preventDefault();

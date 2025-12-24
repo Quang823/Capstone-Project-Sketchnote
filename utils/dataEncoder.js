@@ -37,7 +37,7 @@ export async function encodeProjectData(data) {
 
         return finalEncoded;
     } catch (error) {
-        console.error('Error encoding project data:', error);
+        console.warn('Error encoding project data:', error);
         throw new Error('Failed to encode project data');
     }
 }
@@ -69,7 +69,7 @@ export function decodeProjectData(encodedData) {
 
         return data;
     } catch (error) {
-        console.error('Error decoding project data:', error);
+        console.warn('Error decoding project data:', error);
         throw new Error('Failed to decode project data. File may be corrupted or invalid.');
     }
 }

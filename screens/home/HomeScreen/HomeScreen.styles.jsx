@@ -790,6 +790,7 @@ export const styles = StyleSheet.create({
     color: "#475569",
     fontWeight: "600",
     fontSize: 15.5,
+    textAlign: "center",
   },
   modalButtonTextCancelDark: {
     color: "#94A3B8",

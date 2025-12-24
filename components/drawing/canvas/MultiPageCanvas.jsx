@@ -298,6 +298,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     onCollabReleaseLock,
     onCollabIsElementLocked,
     onCollabPageCreate,
+    isViewOnly = false,
   },
   ref
 ) {
@@ -481,7 +482,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       try {
         callback();
       } catch (error) {
-        console.error("[MultiPageCanvas] Timeout callback error:", error);
+        console.warn("[MultiPageCanvas] Timeout callback error:", error);
       }
     }, delay);
     loadTimeoutsRef.current.add(id);
@@ -589,6 +590,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
   // ➕ Thêm page mới
   const addPage = useCallback(() => {
+    if (isViewOnly) return;
     if (pages.length >= 10) {
       toast({
         type: "error",
@@ -694,7 +696,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           scrollTimeoutRef.current = null;
         }, 500); // 500ms để animation hoàn thành
       } catch (error) {
-        console.error(`[MultiPageCanvas] scrollToPage error:`, error);
+        console.warn(`[MultiPageCanvas] scrollToPage error:`, error);
         isScrollingProgrammaticallyRef.current = false;
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
@@ -793,7 +795,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           try {
             pageRef.setScrollOffsetY(offset - (offsets[i] ?? 0));
           } catch (error) {
-            console.error(
+            console.warn(
               `[MultiPageCanvas] Error setting scroll offset for page ${p.id}:`,
               error
             );
@@ -1289,7 +1291,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             snapshotUrl: page.snapshotUrl,
           });
         } catch (e) {
-          console.error(`Error gathering data for page ${page.id}:`, e);
+          console.warn(`Error gathering data for page ${page.id}:`, e);
         }
       }
       return allPagesData;
@@ -1405,7 +1407,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 try {
                   pageRef.loadStrokes(safeStrokes, layersMetadata);
                 } catch (loadError) {
-                  // console.error(
+                  // console.warn(
                   //   `[MultiPageCanvas] Error loading strokes into page id: ${p.id}:`,
                   //   loadError
                   // );
@@ -1438,7 +1440,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           tryLoad();
         }
       } catch (e) {
-        console.error("[MultiPageCanvas] loadProjectData error:", e);
+        console.warn("[MultiPageCanvas] loadProjectData error:", e);
       }
     },
 
@@ -1592,7 +1594,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   }, []);
 
   const applyTemplateToPage = useCallback(
-    async (pageId, url, mode = "none") => {
+    async (pageId, url, mode = "append") => {
+      if (isViewOnly) return;
       try {
         if (!pageId || !url) return;
         const safeUrl = String(url).trim().replace(/^`|`$/g, "");
@@ -1611,48 +1614,37 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           extractTemplateData(json);
         const prevPage = pages.find((pg) => pg.id === pageId) || {};
         const pageRef = pageRefs.current[pageId];
+        const isNoneMode = mode === "none";
+        const shouldCreateNewLayer = isNoneMode && placeTemplateOnNewLayer;
 
-        // ✅ CORRECT LOGIC:
-        // - 'none' mode: respect placeTemplateOnNewLayer (user choice)
-        // - 'append'/'replace' mode: always merge into current layer (no new layer)
-        const shouldUseNewLayer = (mode === "none") && placeTemplateOnNewLayer;
-
-        if (shouldUseNewLayer) {
-          setPageLayers?.((prev) => {
-            const curr = prev[pageId] || [
-              { id: "layer1", name: "Layer 1", visible: true, strokes: [] },
-            ];
-            const hasTemplateLayer = curr.some((l) => l.id === "template");
-            return {
-              ...prev,
-              [pageId]: hasTemplateLayer
-                ? curr
-                : [
-                  ...curr,
-                  {
-                    id: "template",
-                    name: "Template",
-                    visible: true,
-                    locked: false,
-                    strokes: [],
-                  },
-                ],
-            };
-          });
-        }
         if (pageRef) {
-          if (mode === "replace" && typeof pageRef.loadStrokes === "function") {
-            const toLoad = Array.isArray(strokesArray) ? strokesArray : [];
-            pageRef.loadStrokes(toLoad, layersMetadata || []);
+          if (mode === "replace") {
+            // 🔥 Clear all strokes on this page before replacing
+            if (typeof pageRef.clearAllStrokes === "function") {
+              pageRef.clearAllStrokes();
+            }
+
+            const toLoad = Array.isArray(strokesArray)
+              ? strokesArray.map((s) => ({
+                ...s,
+                layerId: activeLayerId || "layer1",
+              }))
+              : [];
+
+            // Use appendStrokes instead of loadStrokes to ensure we use the same path
+            // and handle IDs correctly if needed, although loadStrokes would also work.
+            // But since we just cleared, append is fine.
+            if (typeof pageRef.appendStrokes === "function") {
+              pageRef.appendStrokes(toLoad);
+            }
           } else if (typeof pageRef.appendStrokes === "function") {
-            // For 'none' and 'append', append the strokes
             const toAppend = Array.isArray(strokesArray)
               ? strokesArray.map((s) => ({
                 ...s,
                 __templateSource: safeUrl,
-                layerId: shouldUseNewLayer
+                layerId: shouldCreateNewLayer
                   ? "template"
-                  : s.layerId || "layer1",
+                  : activeLayerId || "layer1",
               }))
               : [];
             pageRef.appendStrokes(toAppend);
@@ -1682,7 +1674,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         console.warn("[MultiPageCanvas] applyTemplateToPage error:", e);
       }
     },
-    [placeTemplateOnNewLayer, pages, fetchTemplateJson]
+    []
   );
 
   const unapplyLastTemplate = useCallback((pageId) => {
@@ -1722,6 +1714,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
   const handleResourceSelect = useCallback(
     async (res) => {
+      if (isViewOnly) return;
       try {
         if (!res) return;
 
@@ -1794,6 +1787,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         resourceItems={[]}
         onOpenOverview={() => setOverviewVisible(true)}
         onResourceSelect={handleResourceSelect}
+        isViewOnly={isViewOnly}
       />
       <DocumentOverviewModal
         visible={overviewVisible}
@@ -1805,6 +1799,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         }}
         onAddPage={addPage}
         onResourceSelect={handleResourceSelect}
+        isViewOnly={isViewOnly}
       />
 
       <Modal
@@ -1840,15 +1835,17 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               <Text style={styles.sectionTitle}>Apply Mode</Text>
               <View style={styles.optionRow}>
                 <TouchableOpacity
-                  key="mode-none"
                   style={[
                     styles.option,
                     applyMode === "none" && styles.optionActive,
                   ]}
-                  onPress={() => setApplyMode("none")}
+                  onPress={() => {
+                    setApplyMode("none");
+                    setPlaceTemplateOnNewLayer(true);
+                  }}
                 >
                   <Icon
-                    name="add-box"
+                    name="block"
                     size={22}
                     color={applyMode === "none" ? "#2563EB" : "#64748B"}
                   />
@@ -1862,7 +1859,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                       None
                     </Text>
                     <Text style={styles.optionDesc}>
-                      Add template without changing existing content
+                      Just add template content
                     </Text>
                   </View>
                   {applyMode === "none" && (
@@ -1871,12 +1868,14 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  key="mode-append"
                   style={[
                     styles.option,
                     applyMode === "append" && styles.optionActive,
                   ]}
-                  onPress={() => setApplyMode("append")}
+                  onPress={() => {
+                    setApplyMode("append");
+                    setPlaceTemplateOnNewLayer(false);
+                  }}
                 >
                   <Icon
                     name="playlist-add"
@@ -1902,12 +1901,14 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  key="mode-replace"
                   style={[
                     styles.option,
                     applyMode === "replace" && styles.optionActive,
                   ]}
-                  onPress={() => setApplyMode("replace")}
+                  onPress={() => {
+                    setApplyMode("replace");
+                    setPlaceTemplateOnNewLayer(false);
+                  }}
                 >
                   <Icon
                     name="refresh"
@@ -1935,29 +1936,27 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             </View>
 
             {/* ===== SECTION: Layer Placement ===== */}
-            {/* Only show Layer Placement when mode is "none" */}
             {applyMode === "none" && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Layer Placement</Text>
                 <View style={styles.optionRow}>
                   <TouchableOpacity
-                    key="layer-new"
                     style={[
                       styles.option,
-                      styles.optionActive, // Always active since it's the only option
+                      placeTemplateOnNewLayer && styles.optionActive,
                     ]}
                     onPress={() => setPlaceTemplateOnNewLayer(true)}
                   >
                     <Icon
                       name="layers"
                       size={22}
-                      color="#2563EB"
+                      color={placeTemplateOnNewLayer ? "#2563EB" : "#64748B"}
                     />
                     <View style={styles.optionText}>
                       <Text
                         style={[
                           styles.optionLabel,
-                          styles.activeText,
+                          placeTemplateOnNewLayer && styles.activeText,
                         ]}
                       >
                         New Layer
@@ -1966,7 +1965,9 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                         Create a new layer, easier to edit later
                       </Text>
                     </View>
-                    <Icon name="check" size={24} color="#2563EB" />
+                    {placeTemplateOnNewLayer && (
+                      <Icon name="check" size={24} color="#2563EB" />
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>

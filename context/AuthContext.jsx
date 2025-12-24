@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
           setRoles(rolesFromToken);
           await AsyncStorage.setItem("roles", JSON.stringify(rolesFromToken));
         } catch (e) {
-          console.error("Error decoding token in fetchUser:", e);
+          console.warn("Error decoding token in fetchUser:", e);
         }
       }
 
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
       // Only log unexpected errors (not auth-related)
       if (!err.message?.includes("Invalid email or password") &&
         !err.message?.includes("Unauthorized")) {
-        console.error("Unexpected error fetching user:", err);
+        console.warn("Unexpected error fetching user:", err);
       }
 
       // Clear local state (this is expected when tokens expire)
@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }) => {
       setRoles([]); // reset roles
       setIsGuest(true); // return to guest mode
     } catch (err) {
-      console.error("Logout failed:", err);
+      console.warn("Logout failed:", err);
     }
   };
 

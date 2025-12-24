@@ -57,13 +57,13 @@ class WebSocketService {
             },
 
             onStompError: (frame) => {
-                console.error('❌ Broker reported error: ' + frame.headers['message']);
-                console.error('Additional details: ' + frame.body);
+                console.warn('❌ Broker reported error: ' + frame.headers['message']);
+                console.warn('Additional details: ' + frame.body);
                 if (onError) onError(frame);
             },
 
             onWebSocketError: (event) => {
-                console.error("❌ WebSocket Error Event:", event);
+                console.warn("❌ WebSocket Error Event:", event);
             },
 
             onWebSocketClose: (e) => {
@@ -96,7 +96,7 @@ class WebSocketService {
                     const msg = JSON.parse(message.body);
                     callback(msg);
                 } catch (e) {
-                    console.error("❌ Error parsing message:", e);
+                    console.warn("❌ Error parsing message:", e);
                 }
             }
         });

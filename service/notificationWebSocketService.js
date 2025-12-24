@@ -62,15 +62,15 @@ class NotificationWebSocketService {
                                 this.onMessageCallback(notification);
                             }
                         } catch (e) {
-                            console.error("Failed to parse notification:", e);
+                            console.warn("Failed to parse notification:", e);
                         }
                     }
                 });
             },
 
             onStompError: (frame) => {
-                console.error('❌ Broker reported error: ' + frame.headers['message']);
-                console.error('Additional details: ' + frame.body);
+                console.warn('❌ Broker reported error: ' + frame.headers['message']);
+                console.warn('Additional details: ' + frame.body);
                 if (onError) onError(frame);
             },
 

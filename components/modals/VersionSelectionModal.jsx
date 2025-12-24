@@ -47,7 +47,7 @@ const VersionSelectionModal = ({
                     const list = await projectService.getProjectVersions(projectId);
                     setInternalVersions(list || []);
                 } catch (error) {
-                    console.error("Failed to fetch versions:", error);
+                    console.warn("Failed to fetch versions:", error);
                 } finally {
                     setInternalLoading(false);
                 }

@@ -48,7 +48,7 @@ const AIImageChatModal = ({ visible, onClose, onImageSelect }) => {
             }
         } catch (err) {
             setError(err.message || "Failed to generate image");
-            console.error("Error generating image:", err);
+            console.warn("Error generating image:", err);
         } finally {
             setIsGenerating(false);
         }
