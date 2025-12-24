@@ -29,6 +29,7 @@ import { File } from "expo-file-system";
 import { projectService } from "../../../service/projectService";
 import { ImageFormat } from "@shopify/react-native-skia";
 import { Dimensions, Image } from "react-native";
+import { detectShape, buildShape } from "./ShapeDetector";
 
 const PAGE_MARGIN_H = 24;
 const PAGE_MARGIN_TOP = 20;
@@ -368,14 +369,17 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       return newLayers;
     };
 
-    // ✅ FIX: Update both states synchronously to prevent visual flicker
-    setInternalLayers(updater);
+    // ✅ FIX: Defer both setState calls to prevent "update while rendering" error
+    // Update internal state first (faster)
+    queueMicrotask(() => {
+      setInternalLayers(updater);
+    });
 
+    // Update parent state (slightly delayed for better batching)
     if (typeof setLayers === "function") {
-      // ✅ FIX: Use setTimeout instead of requestAnimationFrame for more reliable timing
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         setLayers(updater);
-      }, 0);
+      });
     }
   };
 
@@ -422,10 +426,14 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         });
       };
 
-      // ✅ CRITICAL FIX: Sync to both internal AND parent state
-      setInternalLayers(updater);
+      // ✅ CRITICAL FIX: Defer ALL setState to avoid "update while rendering" error
+      // Defer internal state update using queueMicrotask (executes before next render)
+      queueMicrotask(() => {
+        setInternalLayers(updater);
+      });
+
+      // Defer parent state update using requestAnimationFrame (executes on next frame)
       if (typeof setLayers === "function") {
-        // ✅ FIX: Defer parent update to avoid "update while rendering" error
         requestAnimationFrame(() => {
           setLayers(updater);
         });
@@ -446,10 +454,14 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       });
     };
 
-    // ✅ CRITICAL FIX: Sync to both internal AND parent state
-    setInternalLayers(updater);
+    // ✅ CRITICAL FIX: Defer ALL setState to avoid "update while rendering" error  
+    // Defer internal state update
+    queueMicrotask(() => {
+      setInternalLayers(updater);
+    });
+
+    // Defer parent state update
     if (typeof setLayers === "function") {
-      // ✅ FIX: Defer parent update to avoid "update while rendering" error
       requestAnimationFrame(() => {
         setLayers(updater);
       });
@@ -607,16 +619,50 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     }
 
     try {
-      updateActiveLayer((strokes) => [...strokes, stroke]);
-      pushUndo({ type: "add", stroke, layerId: activeLayerId });
+      // 🔍 AUTO-DETECT SHAPES: Ensure shape is detected before sending via WebSocket
+      let finalStroke = { ...stroke };
+
+      // Tools that should have shape detection applied
+      const shapeTools = [
+        "rect", "square", "circle", "oval", "triangle", "right_triangle",
+        "line", "arrow", "double_arrow",
+        "polygon", "star", "pentagon", "hexagon", "octagon",
+        "diamond", "cube", "cylinder", "curve",
+        "shape" // Manual shape tool
+      ];
+
+      // Tools that might have auto-detection enabled (pen, pencil, brush, calligraphy)
+      const drawingToolsWithAutoDetect = ["pen", "pencil", "brush", "calligraphy"];
+
+      // Check if this tool should have shape geometry
+      const needsShapeDetection = shapeTools.includes(stroke.tool);
+      const mayHaveAutoDetect = drawingToolsWithAutoDetect.includes(stroke.tool);
+
+      // If stroke has points but no shape, and tool supports shapes
+      if (needsShapeDetection && stroke.points?.length >= 3 && !stroke.shape) {
+        try {
+          // Build shape based on tool type
+          const builtShape = buildShape(stroke.tool, stroke.points);
+          if (builtShape?.shape) {
+            finalStroke.shape = builtShape.shape;
+          }
+        } catch (err) {
+          console.warn("[CanvasContainer] Failed to build shape:", err);
+        }
+      }
+
+      // Add the final stroke (with detected shape if applicable)
+      updateActiveLayer((strokes) => [...strokes, finalStroke]);
+      pushUndo({ type: "add", stroke: finalStroke, layerId: activeLayerId });
 
       // [FIX] Automatically select the new stroke if it's a selectable object
       if (
-        ["image", "sticker", "table", "text", "emoji"].includes(stroke.tool)
+        ["image", "sticker", "table", "text", "emoji"].includes(finalStroke.tool)
       ) {
-        setSelectedId(stroke.id);
+        setSelectedId(finalStroke.id);
       }
 
+      // 🔄 REALTIME COLLABORATION: Send the FINAL stroke (with detected shape)
       try {
         if (projectId && userId) {
           // Send minimal page info for collaboration (no strokes - they're in stroke param)
@@ -631,7 +677,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             projectId,
             userId,
             pageId,
-            stroke,
+            finalStroke, // Send the final stroke with detected shape
             pageInfo
           );
         }
@@ -642,31 +688,35 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   };
 
   const deleteStrokeAt = (index) => {
-    // ✅ Kiểm tra activeLayerId và index trước khi xóa
-    if (!activeLayerId) {
-      console.warn("[CanvasContainer] deleteStrokeAt: No activeLayerId");
-      return;
-    }
-
     if (typeof index !== "number" || index < 0) {
       console.warn("[CanvasContainer] deleteStrokeAt: Invalid index");
       return;
     }
 
-    let removed = null;
     try {
-      updateActiveLayer((strokes) => {
-        if (index < 0 || index >= strokes.length) return strokes;
-        removed = strokes[index];
-        return [...strokes.slice(0, index), ...strokes.slice(index + 1)];
+      // Find the stroke in allStrokes to get its ID and layerId
+      const strokeToDelete = allStrokes[index];
+      if (!strokeToDelete || !strokeToDelete.id) {
+        console.warn("[CanvasContainer] deleteStrokeAt: Stroke not found at index", index);
+        return;
+      }
+
+      const targetLayerId = strokeToDelete.layerId || activeLayerId;
+      let removed = null;
+
+      updateLayerById(targetLayerId, (strokes) => {
+        const idx = strokes.findIndex(s => s.id === strokeToDelete.id);
+        if (idx === -1) return strokes;
+        removed = strokes[idx];
+        return [...strokes.slice(0, idx), ...strokes.slice(idx + 1)];
       });
-      // Push undo AFTER update để tránh setState cascade
+
       if (removed) {
         pushUndo({
           type: "delete",
-          index,
+          index, // Keep global index for undo reference if needed, but logic uses ID
           stroke: removed,
-          layerId: activeLayerId,
+          layerId: targetLayerId,
         });
       }
     } catch (e) {
@@ -675,40 +725,24 @@ const CanvasContainer = forwardRef(function CanvasContainer(
   };
 
   const modifyStrokeAt = (index, newProps) => {
-    // ✅ Kiểm tra activeLayerId và index trước khi sửa
-    if (!activeLayerId) {
-      console.warn("[CanvasContainer] modifyStrokeAt: No activeLayerId");
-      return;
-    }
-
     if (typeof index !== "number" || index < 0) {
       console.warn("[CanvasContainer] modifyStrokeAt: Invalid index");
       return;
     }
 
     try {
-      updateActiveLayer((strokes) => {
-        if (index < 0 || index >= strokes.length) return strokes;
-        const old = strokes[index];
-        if (!old || typeof old !== "object") return strokes;
+      // Find the stroke in allStrokes to get its ID and layerId
+      const strokeToModify = allStrokes[index];
+      if (!strokeToModify || !strokeToModify.id) {
+        console.warn("[CanvasContainer] modifyStrokeAt: Stroke not found at index", index);
+        return;
+      }
 
-        const { __transient, ...cleanProps } = newProps || {};
-        const updated = { ...old, ...cleanProps };
-        if (!__transient) {
-          pushUndo({
-            type: "modify",
-            index,
-            before: old,
-            after: updated,
-            layerId: activeLayerId,
-          });
-        }
-        // avoid creating new array if not changing
-        if (updated === old) return strokes;
-        const next = [...strokes];
-        next[index] = updated;
-        return next;
-      });
+      // Use modifyStrokesBulk logic to handle the update correctly across layers
+      modifyStrokesBulk([{
+        id: strokeToModify.id,
+        changes: newProps
+      }]);
     } catch (e) {
       console.error("[CanvasContainer] modifyStrokeAt error:", e);
     }
@@ -1313,6 +1347,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
         // Update layers by appending new strokes
         const updater = (prevLayers) => {
+          // ✅ FIX: Capture fromRemote flag at the start so it's accessible in filter scope
+          const isFromRemote = options.fromRemote === true;
+
           if (!Array.isArray(prevLayers)) {
             return Object.keys(newStrokesByLayer).map((layerId) => ({
               id: layerId,
@@ -1340,12 +1377,19 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             // 🔥 Filter out duplicates for remote strokes (don't regenerate their IDs)
             const uniqueStrokes = newStrokes
               .filter((s) => {
-                // Skip if this ID already exists (avoid duplicates)
-                if (s?.id && existingIds.has(s.id)) {
-                  console.log(
-                    "[CanvasContainer] Skipping duplicate stroke:",
-                    s.id
-                  );
+                // 🔍 DEBUG: Log filtering decision
+                const isRemote = options.fromRemote === true;
+                const hasId = !!s?.id;
+                const idExists = hasId && existingIds.has(s.id);
+
+                // ✅ FIX: Don't skip duplicates for remote strokes
+                // Remote strokes should always be added even if ID exists locally
+                if (isRemote) {
+                  return true; // Always include remote strokes
+                }
+
+                // Skip if this ID already exists (avoid duplicates for local strokes)
+                if (idExists) {
                   return false;
                 }
                 return true;

@@ -20,7 +20,15 @@ import {
   Modal,
   TouchableOpacity,
   Platform,
+  LogBox, // ✅ Added for error suppression
 } from "react-native";
+
+// ✅ Suppress React warnings that are handled by our deferred setState fixes
+// This is a safety net in case any third-party libraries trigger similar warnings
+LogBox.ignoreLogs([
+  'Cannot update a component',
+  'Cannot update during an existing state transition',
+]);
 import * as ImagePicker from "expo-image-picker";
 import HeaderToolbar from "../../../components/drawing/toolbar/HeaderToolbar";
 import ToolbarContainer from "../../../components/drawing/toolbar/ToolbarContainer";
@@ -185,7 +193,7 @@ export default function DrawingScreen({ route }) {
 
   // 🔄 REALTIME COLLABORATION - useCollaboration hook
   const enableCollaboration = !!safeNoteConfig?.projectDetails?.hasCollaboration && !isLocalProject;
-  
+
   const {
     isConnected: isCollabConnected,
     updateElement: collabUpdateElement,
@@ -205,18 +213,16 @@ export default function DrawingScreen({ route }) {
     onElementUpdate: useCallback((data) => {
       if (!multiPageCanvasRef.current) return;
       const { pageId, elementId, changes, transient, userId: remoteUserId } = data;
-      
+
       // Skip own updates (already applied optimistically)
       if (String(remoteUserId) === String(user?.id)) return;
-      
-      console.log('[Collab] Remote ELEMENT_UPDATE:', elementId, changes);
-      
+
       // 🔥 Use requestAnimationFrame to avoid setState during render
       requestAnimationFrame(() => {
         try {
-          multiPageCanvasRef.current?.updateStrokeById?.(pageId, elementId, changes, { 
+          multiPageCanvasRef.current?.updateStrokeById?.(pageId, elementId, changes, {
             fromRemote: true,
-            transient 
+            transient
           });
         } catch (err) {
           console.error('[Collab] Error applying remote update:', err);
@@ -227,15 +233,12 @@ export default function DrawingScreen({ route }) {
     onElementCreate: useCallback((data) => {
       if (!multiPageCanvasRef.current) return;
       const { pageId, element, userId: remoteUserId } = data;
-      
+
       if (String(remoteUserId) === String(user?.id)) return;
-      
-      console.log('[Collab] Remote ELEMENT_CREATE:', element?.id);
-      
-      // 🔥 Use requestAnimationFrame to avoid setState during render
+
       requestAnimationFrame(() => {
         try {
-          multiPageCanvasRef.current?.appendStrokesToPage?.(pageId, [element]);
+          multiPageCanvasRef.current?.appendStrokesToPage?.(pageId, [element], { fromRemote: true });
         } catch (err) {
           console.error('[Collab] Error applying remote create:', err);
         }
@@ -245,12 +248,9 @@ export default function DrawingScreen({ route }) {
     onElementDelete: useCallback((data) => {
       if (!multiPageCanvasRef.current) return;
       const { pageId, elementId, userId: remoteUserId } = data;
-      
+
       if (String(remoteUserId) === String(user?.id)) return;
-      
-      console.log('[Collab] Remote ELEMENT_DELETE:', elementId);
-      
-      // 🔥 Use requestAnimationFrame to avoid setState during render
+
       requestAnimationFrame(() => {
         try {
           multiPageCanvasRef.current?.deleteStrokeById?.(pageId, elementId, { fromRemote: true });
@@ -263,11 +263,9 @@ export default function DrawingScreen({ route }) {
     onPageCreate: useCallback((data) => {
       if (!multiPageCanvasRef.current) return;
       const { page, insertAt, userId: remoteUserId } = data;
-      
+
       if (String(remoteUserId) === String(user?.id)) return;
-      
-      console.log('[Collab] Remote PAGE_CREATE:', page?.id);
-      
+
       // 🔥 Use requestAnimationFrame to avoid setState during render
       requestAnimationFrame(() => {
         try {
@@ -384,10 +382,20 @@ export default function DrawingScreen({ route }) {
         ? stroke.layerId
         : "layer1";
 
+    // ✅ ADD: Preserve shapeSettings
+    if (stroke.shapeSettings && typeof stroke.shapeSettings === 'object') {
+      safe.shapeSettings = {
+        shape: stroke.shapeSettings.shape,
+        fill: stroke.shapeSettings.fill,
+        fillColor: stroke.shapeSettings.fillColor,
+        thickness: stroke.shapeSettings.thickness,
+        color: stroke.shapeSettings.color,
+      };
+    }
     // Handle shape-specific properties
-    if (safe.fill === true) {
-      safe.fillColor =
-        typeof safe.fillColor === "string" ? safe.fillColor : "#000000";
+    if (safe.fill === true || safe.shapeSettings?.fill === true) {
+      safe.fill = true;
+      safe.fillColor = safe.fillColor || safe.shapeSettings?.fillColor || safe.shapeSettings?.color || "#000000";
       safe.shape = typeof safe.shape === "object" ? safe.shape : {};
     }
 

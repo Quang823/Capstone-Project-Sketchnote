@@ -1989,7 +1989,18 @@ const GestureHandler = forwardRef(
               tapY <= bbox.maxY
             ) {
               try {
-                onModifyStroke?.(i, { fill: true, fillColor: color });
+                const fillChanges = { fill: true, fillColor: color };
+                onModifyStroke?.(i, fillChanges);
+
+                // 🔄 REALTIME COLLABORATION: Send fill update to other users
+                if (
+                  collabEnabled &&
+                  collabConnected &&
+                  typeof onCollabElementUpdate === "function" &&
+                  s?.id
+                ) {
+                  onCollabElementUpdate(pageId, s.id, fillChanges);
+                }
               } catch (err) {
                 console.error("Error modifying fill:", err);
               }
@@ -2150,11 +2161,6 @@ const GestureHandler = forwardRef(
               collabConnected &&
               typeof onCollabElementCreate === "function"
             ) {
-              console.log(
-                "[Collab] Sending ELEMENT_CREATE (stroke/shape):",
-                newStroke.id,
-                newStroke.tool
-              );
               onCollabElementCreate(pageId, newStroke);
             }
           } catch (err) {
@@ -2570,10 +2576,6 @@ const GestureHandler = forwardRef(
                 typeof onCollabElementDelete === "function"
               ) {
                 toDelete.forEach((item) => {
-                  console.log(
-                    "[Collab] Sending ELEMENT_DELETE (lasso cut):",
-                    item.id
-                  );
                   onCollabElementDelete(pageId, item.id);
                 });
               }
@@ -2600,10 +2602,6 @@ const GestureHandler = forwardRef(
                 typeof onCollabElementDelete === "function"
               ) {
                 toDelete.forEach((item) => {
-                  console.log(
-                    "[Collab] Sending ELEMENT_DELETE (lasso):",
-                    item.id
-                  );
                   onCollabElementDelete(pageId, item.id);
                 });
               }
@@ -2681,11 +2679,6 @@ const GestureHandler = forwardRef(
                       collabConnected &&
                       typeof onCollabElementUpdate === "function"
                     ) {
-                      console.log(
-                        "[Collab] Sending ELEMENT_UPDATE (text move):",
-                        selectedId,
-                        { x: newX, y: newY }
-                      );
                       onCollabElementUpdate(
                         pageId,
                         selectedId,
@@ -2795,11 +2788,6 @@ const GestureHandler = forwardRef(
                     collabConnected &&
                     typeof onCollabElementUpdate === "function"
                   ) {
-                    console.log(
-                      "[Collab] Sending ELEMENT_UPDATE (text resize):",
-                      selectedId,
-                      changes
-                    );
                     onCollabElementUpdate(pageId, selectedId, changes, {
                       transient: false,
                     });
@@ -2836,10 +2824,6 @@ const GestureHandler = forwardRef(
                   typeof onCollabElementDelete === "function" &&
                   deletedId
                 ) {
-                  console.log(
-                    "[Collab] Sending ELEMENT_DELETE (text cut):",
-                    deletedId
-                  );
                   onCollabElementDelete(pageId, deletedId);
                 }
 
@@ -2859,10 +2843,6 @@ const GestureHandler = forwardRef(
                   typeof onCollabElementDelete === "function" &&
                   deletedId
                 ) {
-                  console.log(
-                    "[Collab] Sending ELEMENT_DELETE (text):",
-                    deletedId
-                  );
                   onCollabElementDelete(pageId, deletedId);
                 }
 
@@ -2961,11 +2941,18 @@ const GestureHandler = forwardRef(
                 pan={{ x: -(page?.x || 0), y: -(page?.y || 0) + 20 }}
                 onMoveStart={() => {
                   const sItem = strokes.find((it) => it.id === selectedId);
+
+                  // ✅ CRITICAL FIX: Always use selectedBox as fallback for template images
+                  // Template images may not have x/y in initial state
                   if (sItem) {
                     liveTransformRef.current.origin = {
-                      x: sItem.x ?? 0,
-                      y: sItem.y ?? 0,
-                      rotation: sItem.rotation ?? 0,
+                      x: Number.isFinite(sItem.x)
+                        ? sItem.x
+                        : selectedBox?.x ?? 0,
+                      y: Number.isFinite(sItem.y)
+                        ? sItem.y
+                        : selectedBox?.y ?? 0,
+                      rotation: sItem.rotation ?? selectedBox?.rotation ?? 0,
                     };
                   } else if (selectedBox) {
                     liveTransformRef.current.origin = {
@@ -3053,11 +3040,6 @@ const GestureHandler = forwardRef(
                       if (liveTransformRef.current.drot !== 0) {
                         changes.rotation = final.rotation;
                       }
-                      console.log(
-                        "[Collab] Sending ELEMENT_UPDATE (move):",
-                        selectedId,
-                        changes
-                      );
                       onCollabElementUpdate(pageId, selectedId, changes, {
                         transient: false,
                       });
@@ -3072,21 +3054,28 @@ const GestureHandler = forwardRef(
                 onResizeStart={(corner) => {
                   const sItem = strokes.find((it) => it.id === selectedId);
                   const base = sItem || selectedBox || {};
+
+                  // ✅ CRITICAL FIX: For template images, prioritize selectedBox dimensions
+                  // selectedBox is always updated and reflects current visual state
                   const baseWidth =
-                    base.width && base.width > 0
-                      ? base.width
-                      : sItem?.naturalWidth || selectedBox?.width || 100;
+                    selectedBox?.width && selectedBox.width > 0
+                      ? selectedBox.width
+                      : base.width && base.width > 0
+                        ? base.width
+                        : sItem?.naturalWidth || 100;
                   const baseHeight =
-                    base.height && base.height > 0
-                      ? base.height
-                      : sItem?.naturalHeight || selectedBox?.height || 100;
+                    selectedBox?.height && selectedBox.height > 0
+                      ? selectedBox.height
+                      : base.height && base.height > 0
+                        ? base.height
+                        : sItem?.naturalHeight || 100;
 
                   liveTransformRef.current.origin = {
-                    x: Number.isFinite(base.x) ? base.x : 0,
-                    y: Number.isFinite(base.y) ? base.y : 0,
+                    x: Number.isFinite(base.x) ? base.x : selectedBox?.x ?? 0,
+                    y: Number.isFinite(base.y) ? base.y : selectedBox?.y ?? 0,
                     width: baseWidth,
                     height: baseHeight,
-                    rotation: base.rotation ?? 0,
+                    rotation: base.rotation ?? selectedBox?.rotation ?? 0,
                   };
                   liveTransformRef.current.corner = corner;
                   liveTransformRef.current.dw = 0;
@@ -3190,11 +3179,6 @@ const GestureHandler = forwardRef(
                         width: final.width,
                         height: final.height,
                       };
-                      console.log(
-                        "[Collab] Sending ELEMENT_UPDATE (resize):",
-                        selectedId,
-                        changes
-                      );
                       onCollabElementUpdate(pageId, selectedId, changes, {
                         transient: false,
                       });
@@ -3245,11 +3229,6 @@ const GestureHandler = forwardRef(
                       typeof onCollabElementUpdate === "function"
                     ) {
                       const changes = { rotation: finalRot };
-                      console.log(
-                        "[Collab] Sending ELEMENT_UPDATE (rotate):",
-                        selectedId,
-                        changes
-                      );
                       onCollabElementUpdate(pageId, selectedId, changes, {
                         transient: false,
                       });
@@ -3291,10 +3270,6 @@ const GestureHandler = forwardRef(
                     typeof onCollabElementDelete === "function" &&
                     deletedId
                   ) {
-                    console.log(
-                      "[Collab] Sending ELEMENT_DELETE (image cut):",
-                      deletedId
-                    );
                     onCollabElementDelete(pageId, deletedId);
                   }
 
@@ -3315,10 +3290,6 @@ const GestureHandler = forwardRef(
                     typeof onCollabElementDelete === "function" &&
                     deletedId
                   ) {
-                    console.log(
-                      "[Collab] Sending ELEMENT_DELETE (image):",
-                      deletedId
-                    );
                     onCollabElementDelete(pageId, deletedId);
                   }
 

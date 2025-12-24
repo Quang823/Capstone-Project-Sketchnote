@@ -256,8 +256,6 @@ export default function DesignerWalletScreen() {
           // Refresh saved accounts list immediately
           const accounts = await bankAccountService.getBankAccounts();
           setSavedBankAccounts(accounts);
-
-          console.log("Bank account saved successfully");
         } catch (saveError) {
           console.error("Failed to save bank account:", saveError);
           // Continue with withdrawal even if save fails
