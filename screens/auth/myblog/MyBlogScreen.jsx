@@ -83,7 +83,7 @@ export default function MyBlogScreen({ navigation }) {
     }, [])
   );
 
-  const statuses = ["ALL", "PUBLISHED", "DRAFT", "ARCHIVED"];
+  const statuses = ["ALL", "PUBLISHED", "PENDING_REVIEW", "REJECTED"];
   const visibleBlogs =
     statusFilter === "ALL"
       ? blogs
@@ -97,17 +97,23 @@ export default function MyBlogScreen({ navigation }) {
           color: isDark ? "#6EE7B7" : "#16A34A",
           icon: "check-circle"
         };
-      case "DRAFT":
+      case "PENDING_REVIEW":
         return {
-          backgroundColor: isDark ? "#422006" : "#FEF9C3",
-          color: isDark ? "#FDE047" : "#CA8A04",
-          icon: "edit"
+          backgroundColor: isDark ? "#1e3a8a" : "#DBEAFE",
+          color: isDark ? "#60A5FA" : "#1E40AF",
+          icon: "schedule"
         };
-      case "ARCHIVED":
+      case "REJECTED":
         return {
           backgroundColor: isDark ? "#450a0a" : "#FEE2E2",
           color: isDark ? "#fca5a5" : "#DC2626",
-          icon: "archive"
+          icon: "cancel"
+        };
+      case "AI_REJECTED":
+        return {
+          backgroundColor: isDark ? "#450a0a" : "#FEE2E2",
+          color: isDark ? "#fca5a5" : "#DC2626",
+          icon: "block"
         };
       default:
         return {
@@ -250,7 +256,7 @@ export default function MyBlogScreen({ navigation }) {
                   style={[
                     myBlogStyles.blogCard,
                     isDark && myBlogStyles.blogCardDark,
-                    { opacity: item.status === "ARCHIVED" ? 0.7 : 1 }
+                    { opacity: (item.status === "REJECTED" || item.status === "AI_REJECTED") ? 0.7 : 1 }
                   ]}
                   onPress={() => handleViewBlog(item.id)}
                 >
@@ -275,7 +281,7 @@ export default function MyBlogScreen({ navigation }) {
                         myBlogStyles.statusBadgeText,
                         { color: statusStyle.color }
                       ]}>
-                        {String(item.status || "DRAFT").toUpperCase()}
+                        {String(item.status || "PENDING_REVIEW").toUpperCase()}
                       </Text>
                     </View>
                   </View>

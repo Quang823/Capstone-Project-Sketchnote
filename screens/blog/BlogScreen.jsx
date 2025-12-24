@@ -58,15 +58,25 @@ export default function BlogScreen() {
     ],
   });
 
-  // 🔹 Fetch blogs từ API
+  // 🔹 Fetch blogs từ API - Lấy cả public và pending review
   const fetchBlogs = async () => {
     try {
-      const response = await blogService.getAllBlogs(0, 10);
+      setLoading(true);
 
-      // ✅ FIX: Truy cập đúng cấu trúc dữ liệu từ API
-      const data = response.result?.content || [];
-      setBlogs(data);
-      setFilteredBlogs(data);
+      // Fetch cả public blogs và pending review blogs
+      const [publicResponse, pendingResponse] = await Promise.all([
+        blogService.getAllBlogs(0, 10),
+        blogService.getBlogWithStatusPending(0, 10, "PENDING_REVIEW")
+      ]);
+
+      const publicBlogs = publicResponse.result?.content || [];
+      const pendingBlogs = pendingResponse?.content || [];
+
+      // Gộp cả hai danh sách lại
+      const allBlogs = [...publicBlogs, ...pendingBlogs];
+
+      setBlogs(allBlogs);
+      setFilteredBlogs(allBlogs);
     } catch (error) {
       console.error("Error fetching blogs:", error);
       // Toast.show({

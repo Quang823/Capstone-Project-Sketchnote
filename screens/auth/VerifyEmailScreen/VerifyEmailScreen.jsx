@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -42,21 +42,8 @@ export default function VerifyEmailScreen() {
     }
   };
 
-  useEffect(() => {
-    const send = async () => {
-      try {
-        await authService.sendVerifyEmail(email);
-        toast({ title: "Verification email sent", variant: "success" });
-      } catch (err) {
-        toast({
-          title: "Failed to send verification",
-          description: err.message,
-          variant: "destructive",
-        });
-      }
-    };
-    if (email) send();
-  }, [email]);
+  // Backend already sends verification email during registration
+  // Users can manually resend using the "Resend" button below if needed
 
   return (
     <ScrollView

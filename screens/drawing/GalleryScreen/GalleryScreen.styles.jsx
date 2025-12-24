@@ -321,9 +321,9 @@ const getStyles = (theme = "light") => {
       padding: 20,
     },
     modalContainer: {
-      width: "90%",
-      maxWidth: 700,
-      maxHeight: "85%",
+      width: "95%",
+      maxWidth: 900,
+      maxHeight: "90%",
       backgroundColor: colors.cardBackground,
       borderRadius: 24,
       overflow: "hidden",
@@ -350,11 +350,11 @@ const getStyles = (theme = "light") => {
       padding: 4,
     },
     modalContent: {
-      padding: 20,
+      padding: 24,
     },
     modalImage: {
       width: "100%",
-      height: 160,
+      height: 200,
       borderRadius: 16,
       marginBottom: 20,
       backgroundColor: colors.borderColor,

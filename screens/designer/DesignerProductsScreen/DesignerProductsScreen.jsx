@@ -9,6 +9,7 @@ import {
   Modal,
   Image,
   Animated,
+  RefreshControl,
 } from "react-native";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
@@ -43,6 +44,7 @@ export default function DesignerProductsScreen() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Modal states for confirmations
   const [showArchiveModal, setShowArchiveModal] = useState(false);
@@ -92,7 +94,13 @@ export default function DesignerProductsScreen() {
       });
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchProducts(0, pageSize, searchQuery);
   };
 
   // Reload products when screen gains focus (e.g., after creating a new version)
@@ -434,6 +442,14 @@ export default function DesignerProductsScreen() {
       <ScrollView
         style={styles.productsList}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={isDark ? "#60A5FA" : "#3B82F6"}
+            colors={["#3B82F6", "#2563EB"]}
+          />
+        }
       >
         {loading ? (
           <View style={styles.emptyState}>

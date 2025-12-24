@@ -30,7 +30,6 @@ import { useTheme } from "../../../context/ThemeContext";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function DesignerQuickUploadScreen() {
-  console.log("RENDER UPLOAD SCREEN");
   const navigation = useNavigation();
 
   const { theme } = useTheme();

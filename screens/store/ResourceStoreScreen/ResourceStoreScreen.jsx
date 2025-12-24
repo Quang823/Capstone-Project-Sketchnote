@@ -494,8 +494,6 @@ export default function ResourceStoreScreen() {
       setPages({ all: 0, popular: 0, latest: 0, filtered: 0 });
       setHasMore({ all: true, popular: true, latest: true, filtered: true });
 
-      let ownedAccumulator = [];
-
       if (user) {
         try {
           const resUser = await resourceService.getResourceProjectByUserId(0, 20);
@@ -509,10 +507,8 @@ export default function ResourceStoreScreen() {
         const resAll = await resourceService.getAllResource(0, PAGE_SIZE, !!user);
         const allRaw = resAll?.content || resAll || [];
         const items = Array.isArray(allRaw) ? allRaw : [];
-        const owned = items.filter((r) => r?.isOwner);
         const notOwned = items.filter((r) => !r?.isOwner);
         setAllResources(notOwned);
-        ownedAccumulator.push(...owned);
         setHasMore(prev => ({ ...prev, all: items.length === PAGE_SIZE }));
 
         const types = [
@@ -536,9 +532,8 @@ export default function ResourceStoreScreen() {
         const res = await resourceService.getAllResourcePopular(PAGE_SIZE, !!user);
         const data = res?.result || res?.content || res || [];
         const items = Array.isArray(data) ? data : [];
-        const notOwned = items.filter((r) => r?.isOwner);
+        const notOwned = items.filter((r) => !r?.isOwner);
         setPopularResources(notOwned);
-        ownedAccumulator.push(...items.filter((r) => r?.isOwner));
         setHasMore(prev => ({ ...prev, popular: items.length === PAGE_SIZE }));
       } catch (e) {
         console.error(e);
@@ -548,20 +543,50 @@ export default function ResourceStoreScreen() {
         const res = await resourceService.getAllResourceLatest(PAGE_SIZE, !!user);
         const data = res?.result || res?.content || res || [];
         const items = Array.isArray(data) ? data : [];
-        const notOwned = items.filter((r) => r?.isOwner);
+        const notOwned = items.filter((r) => !r?.isOwner);
         setLatestResources(notOwned);
-        ownedAccumulator.push(...items.filter((r) => r?.isOwner));
         setHasMore(prev => ({ ...prev, latest: items.length === PAGE_SIZE }));
       } catch (e) {
         console.error(e);
       }
 
-      const map = new Map();
-      ownedAccumulator.forEach((item) => {
-        const key = item.resourceTemplateId || item.id;
-        if (key && !map.has(key)) map.set(key, { ...item, isOwner: true });
-      });
-      setOwnedResources(Array.from(map.values()));
+      // Fetch owned resources with V2 API for latest version info
+      if (user) {
+        try {
+          const purchasedRes = await orderService.getPurchasedTemplatesV2();
+          const data = purchasedRes?.content || purchasedRes || [];
+          const mappedOwned = (Array.isArray(data) ? data : []).map((template) => {
+            const currentVersion = template.availableVersions?.find(
+              (v) => v.versionId === template.currentVersionId
+            );
+            const latestVersion = template.availableVersions?.find(
+              (v) => v.versionId === template.latestVersionId
+            );
+            return {
+              ...template,
+              isOwner: true,
+              name: currentVersion?.name || template.name,
+              description: currentVersion?.description || template.description,
+              items: currentVersion?.items || template.items || [],
+              images: currentVersion?.images || template.images || [],
+              versionNumber: template.currentVersionNumber,
+              hasNewerVersion: template.hasNewerVersion,
+              latestVersionNumber: template.latestVersionNumber,
+              currentVersionNumber: template.currentVersionNumber,
+              latestVersion: latestVersion ? {
+                name: latestVersion.name,
+                description: latestVersion.description,
+                items: latestVersion.items || [],
+                images: latestVersion.images || [],
+              } : null,
+            };
+          });
+          setOwnedResources(mappedOwned);
+        } catch (e) {
+          console.error("Error fetching purchased templates:", e);
+          setOwnedResources([]);
+        }
+      }
     } catch (e) {
       Toast.show({
         type: "error",

@@ -435,13 +435,6 @@ export default function TransactionHistoryScreen() {
                         </View>
 
                         <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>Transaction ID</Text>
-                          <Text style={styles.detailValue}>
-                            #{selectedTx.transactionId}
-                          </Text>
-                        </View>
-
-                        <View style={styles.detailRow}>
                           <Text style={styles.detailLabel}>Type</Text>
                           <Text style={styles.detailValue}>
                             {selectedTx.type}

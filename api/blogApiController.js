@@ -60,4 +60,7 @@ export const blogApiController = {
   changeBlogStatus: async (id, status) => {
     return await privateApi.put(`/api/blogs/${id}/publish`, { status });
   },
+  getBlogWithStatusPending: async (pageNo, pageSize,status) => {
+    return await privateApi.get(`/api/blogs?pageNo=${pageNo}&pageSize=${pageSize}&status=${status}`);
+  },
 };
