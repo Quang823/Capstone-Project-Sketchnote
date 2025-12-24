@@ -126,64 +126,15 @@ class CollaborationManager {
 
     // Message deduplication
     this.processedMessageIds = new Set();
-    this.MESSAGE_ID_RETENTION = 30000; // 1 minute
-    this.MAX_PROCESSED_IDS = 500;
-
-    // ✅ FIX: Track cleanup intervals for proper disposal
-    this._cleanupIntervals = [];
+    this.MESSAGE_ID_RETENTION = 60000; // 1 minute
 
     // Cleanup old message IDs periodically
-    const msgCleanupInterval = setInterval(
-      () => this._cleanupMessageIds(),
-      15000
-    ); // Reduced from 30000
-    this._cleanupIntervals.push(msgCleanupInterval);
+    setInterval(() => this._cleanupMessageIds(), 30000);
 
-    // Cleanup expired locks periodically
-    const lockCleanupInterval = setInterval(
-      () => this._cleanupExpiredLocks(),
-      5000
-    );
-    this._cleanupIntervals.push(lockCleanupInterval);
+    // *** CRITICAL: Cleanup expired locks periodically ***
+    setInterval(() => this._cleanupExpiredLocks(), 5000);
   }
-  destroy() {
-    // Clear all intervals
-    this._cleanupIntervals.forEach((interval) => {
-      try {
-        clearInterval(interval);
-      } catch { }
-    });
-    this._cleanupIntervals = [];
 
-    // Clear all maps and sets
-    this.processedMessageIds.clear();
-    this.outOfOrderBuffer.clear();
-    this.elementLocks.clear();
-    this.activeStrokes.clear();
-    this.activeUsers.clear();
-
-    // Clear pending lock requests and their timeouts
-    this.pendingLockRequests.forEach((pending) => {
-      if (pending.timeout) {
-        try {
-          clearTimeout(pending.timeout);
-        } catch { }
-      }
-    });
-    this.pendingLockRequests.clear();
-
-    this.pendingAcks.clear();
-
-    // Flush and clear stroke batches
-    this._flushAllStrokeBatches();
-    this.strokeBatches.clear();
-
-    // Clear pending operations
-    this.pendingOperations = [];
-
-    // Disconnect
-    this.disconnect();
-  }
   // ===========================================================================
   // CONNECTION MANAGEMENT
   // ===========================================================================
@@ -256,7 +207,7 @@ class CollaborationManager {
       return true;
     } catch (error) {
       this.connecting = false;
-      console.warn("[CollabManager] Connection failed:", error);
+      console.error("[CollabManager] Connection failed:", error);
       throw error;
     }
   }
@@ -267,36 +218,27 @@ class CollaborationManager {
   async disconnect() {
     if (!this.connected) return;
 
-    try {
-      this._sendEvent(EventTypes.USER_LEAVE, {});
-    } catch { }
+    // Send leave event
+    this._sendEvent(EventTypes.USER_LEAVE, {});
 
     // Flush pending stroke batches
     this._flushAllStrokeBatches();
 
-    // Clear all state
+    // Clear state
     this.projectId = null;
     this.connected = false;
-    this.connecting = false;
     this.activeUsers.clear();
     this.strokeBatches.clear();
-    this.outOfOrderBuffer.clear();
-    this.activeStrokes.clear();
-    this.elementLocks.clear();
-    this.pendingLockRequests.clear();
-    this.processedMessageIds.clear();
-    this.pendingOperations = [];
 
-    try {
-      webSocketService.disconnect();
-    } catch { }
+    webSocketService.disconnect();
   }
+
   _onConnected() {
     console.log("[CollabManager] Connected to project:", this.projectId);
   }
 
   _onError(error) {
-    console.warn("[CollabManager] WebSocket error:", error);
+    console.error("[CollabManager] WebSocket error:", error);
     this.onError?.(error);
   }
 
@@ -1129,44 +1071,31 @@ class CollaborationManager {
   sendStrokePoints(pageId, strokeId, points, strokeInit = null) {
     if (!this.connected || !points || points.length === 0) return;
 
+    // Get or create batch for this stroke
     let batch = this.strokeBatches.get(strokeId);
     if (!batch) {
       batch = {
         pageId,
-        strokeId,
-        points: [],
         strokeInit,
+        points: [],
         timeout: null,
       };
       this.strokeBatches.set(strokeId, batch);
     }
-    const MAX_BATCH_POINTS = 500;
-    if (batch.points.length + points.length > MAX_BATCH_POINTS) {
-      // Flush current batch first
-      this._flushStrokeBatch(strokeId);
-      // Re-get batch after flush
-      batch = this.strokeBatches.get(strokeId);
-      if (!batch) {
-        batch = {
-          pageId,
-          strokeId,
-          points: [],
-          strokeInit: null,
-          timeout: null,
-        };
-        this.strokeBatches.set(strokeId, batch);
-      }
-    }
+
+    // Add points to batch
     batch.points.push(...points);
 
+    // Clear existing timeout
     if (batch.timeout) {
       clearTimeout(batch.timeout);
-      batch.timeout = null;
     }
 
+    // Send if batch is full
     if (batch.points.length >= CONFIG.STROKE_BATCH_SIZE) {
       this._flushStrokeBatch(strokeId);
     } else {
+      // Set timeout to flush partial batch
       batch.timeout = setTimeout(() => {
         this._flushStrokeBatch(strokeId);
       }, CONFIG.STROKE_BATCH_TIMEOUT);
@@ -1423,11 +1352,13 @@ class CollaborationManager {
     const batch = this.strokeBatches.get(strokeId);
     if (!batch || batch.points.length === 0) return;
 
+    // Clear timeout
     if (batch.timeout) {
       clearTimeout(batch.timeout);
       batch.timeout = null;
     }
 
+    // Compress and send points
     const compressedPoints = this._compressPoints(batch.points);
 
     this._sendEvent(EventTypes.STROKE_APPEND, {
@@ -1438,24 +1369,16 @@ class CollaborationManager {
     });
 
     // Clear batch points but keep batch for more points
-    batch.points.length = 0;
-    batch.strokeInit = null;
+    batch.points = [];
+    batch.strokeInit = null; // Only send init once
   }
 
   /**
    * Flush all pending stroke batches
    */
   _flushAllStrokeBatches() {
-    this.strokeBatches.forEach((batch, strokeId) => {
-      // Clear timeout first
-      if (batch.timeout) {
-        clearTimeout(batch.timeout);
-        batch.timeout = null;
-      }
-      // Clear points array
-      if (batch.points) {
-        batch.points.length = 0;
-      }
+    this.strokeBatches.forEach((_, strokeId) => {
+      this._flushStrokeBatch(strokeId);
     });
     this.strokeBatches.clear();
   }
@@ -1650,12 +1573,9 @@ class CollaborationManager {
    * Cleanup old message IDs to prevent memory leak
    */
   _cleanupMessageIds() {
-    // ✅ FIX: Hard limit on size
-    if (this.processedMessageIds.size > this.MAX_PROCESSED_IDS) {
-      // Convert to array, keep only last MAX_PROCESSED_IDS/2 items
-      const arr = Array.from(this.processedMessageIds);
-      const keepCount = Math.floor(this.MAX_PROCESSED_IDS / 2);
-      this.processedMessageIds = new Set(arr.slice(-keepCount));
+    // Keep last 1000 message IDs or clear if too many
+    if (this.processedMessageIds.size > 1000) {
+      this.processedMessageIds.clear();
     }
   }
 

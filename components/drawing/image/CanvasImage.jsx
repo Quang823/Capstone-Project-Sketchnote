@@ -24,14 +24,7 @@ const CanvasImage = forwardRef(function CanvasImage(
   const uri = stroke?.uri ?? stroke?.imageUri ?? null;
   const img = useImage(uri);
 
-  // Track if currently being moved by lasso
-  const isLassoMoving = useRef(false);
-
-  // ✅ Track if we're in the middle of a live transform (move/resize/rotate)
   const isLiveTransforming = useRef(false);
-
-  // ✅ FIX: Remove lastSyncedRef - it was causing sync issues with template images
-  // Instead, we'll use a simpler approach that always syncs from stroke when not transforming
 
   useEffect(() => {
     return () => {
@@ -41,7 +34,6 @@ const CanvasImage = forwardRef(function CanvasImage(
     };
   }, [img]);
 
-  // ✅ FIX: Initialize with stroke values, fallback to image natural size
   const initialWidth = stroke?.width ?? (img ? img.width() : 100);
   const initialHeight = stroke?.height ?? (img ? img.height() : 100);
 
@@ -51,28 +43,17 @@ const CanvasImage = forwardRef(function CanvasImage(
   const hVal = useSharedValue(initialHeight);
   const rotVal = useSharedValue((stroke?.rotation ?? 0) * (Math.PI / 180));
 
-  // Shared values for lasso visual offset
-  const lassoOffsetX = useSharedValue(0);
-  const lassoOffsetY = useSharedValue(0);
+  // ✅ Get offset directly from props - NO internal lasso state
+  const offsetX = visualOffset?.dx ?? 0;
+  const offsetY = visualOffset?.dy ?? 0;
 
-  // Update lasso offset when visualOffset prop changes
-  useEffect(() => {
-    const dx = visualOffset?.dx ?? 0;
-    const dy = visualOffset?.dy ?? 0;
-
-    if (dx !== 0 || dy !== 0) {
-      isLassoMoving.current = true;
-      lassoOffsetX.value = dx;
-      lassoOffsetY.value = dy;
-    }
-  }, [visualOffset?.dx, visualOffset?.dy]);
-
-  // Calculate dynamic transform including lasso offset
+  // ✅ Calculate transform with offset applied directly from props
   const transform = useDerivedValue(() => {
     const baseX = xVal.value ?? 0;
     const baseY = yVal.value ?? 0;
-    const tx = baseX + lassoOffsetX.value;
-    const ty = baseY + lassoOffsetY.value;
+    // Apply offset from props
+    const tx = baseX + offsetX;
+    const ty = baseY + offsetY;
     const w = wVal.value ?? 0;
     const h = hVal.value ?? 0;
     const r = rotVal.value ?? 0;
@@ -88,7 +69,7 @@ const CanvasImage = forwardRef(function CanvasImage(
       { translateX: -cx },
       { translateY: -cy },
     ];
-  }, [xVal, yVal, wVal, hVal, rotVal, lassoOffsetX, lassoOffsetY]);
+  }, [xVal, yVal, wVal, hVal, rotVal, offsetX, offsetY]);
 
   const widthDV = useDerivedValue(() => wVal.value, [wVal]);
   const heightDV = useDerivedValue(() => hVal.value, [hVal]);
@@ -97,41 +78,30 @@ const CanvasImage = forwardRef(function CanvasImage(
   const widthMemo = useMemo(() => widthDV, [widthDV]);
   const heightMemo = useMemo(() => heightDV, [heightDV]);
 
-  // ✅ CRITICAL FIX: Always sync from stroke when not in live transform mode
-  // This ensures template images get their correct positions
+  // ✅ Sync from stroke when:
+  // 1. Not live transforming
+  // 2. No active visual offset (not being dragged by lasso)
   useEffect(() => {
-    // Skip sync if we're actively transforming or lasso moving
-    if (isLiveTransforming.current || isLassoMoving.current) {
-      return;
-    }
+    if (isLiveTransforming.current) return;
 
-    // Cancel any ongoing animations before updating
+    // ✅ IMPORTANT: Only sync when there's NO offset
+    // This prevents jumping when offset is cleared but stroke hasn't updated yet
+    if (offsetX !== 0 || offsetY !== 0) return;
+
     cancelAnimation(xVal);
     cancelAnimation(yVal);
     cancelAnimation(wVal);
     cancelAnimation(hVal);
     cancelAnimation(rotVal);
 
-    // ✅ Always sync from stroke values if they are valid
-    if (Number.isFinite(stroke?.x)) {
-      xVal.value = stroke.x;
-    }
-    if (Number.isFinite(stroke?.y)) {
-      yVal.value = stroke.y;
-    }
-    if (Number.isFinite(stroke?.width) && stroke.width > 0) {
+    if (Number.isFinite(stroke?.x)) xVal.value = stroke.x;
+    if (Number.isFinite(stroke?.y)) yVal.value = stroke.y;
+    if (Number.isFinite(stroke?.width) && stroke.width > 0)
       wVal.value = stroke.width;
-    }
-    if (Number.isFinite(stroke?.height) && stroke.height > 0) {
+    if (Number.isFinite(stroke?.height) && stroke.height > 0)
       hVal.value = stroke.height;
-    }
-    if (Number.isFinite(stroke?.rotation)) {
+    if (Number.isFinite(stroke?.rotation))
       rotVal.value = stroke.rotation * (Math.PI / 180);
-    }
-
-    // Reset lasso offsets when stroke position is updated externally
-    lassoOffsetX.value = 0;
-    lassoOffsetY.value = 0;
   }, [
     stroke?.id,
     stroke?.x,
@@ -139,9 +109,11 @@ const CanvasImage = forwardRef(function CanvasImage(
     stroke?.width,
     stroke?.height,
     stroke?.rotation,
+    offsetX,
+    offsetY,
   ]);
 
-  // ✅ FIX: Also sync when image loads (for template images that may load async)
+  // Sync when image loads
   useEffect(() => {
     if (img && stroke && !isLiveTransforming.current) {
       const needsWidthSync =
@@ -149,12 +121,8 @@ const CanvasImage = forwardRef(function CanvasImage(
       const needsHeightSync =
         !Number.isFinite(stroke.height) || stroke.height <= 0;
 
-      if (needsWidthSync) {
-        wVal.value = img.width() || 100;
-      }
-      if (needsHeightSync) {
-        hVal.value = img.height() || 100;
-      }
+      if (needsWidthSync) wVal.value = img.width() || 100;
+      if (needsHeightSync) hVal.value = img.height() || 100;
     }
   }, [img]);
 
@@ -162,7 +130,6 @@ const CanvasImage = forwardRef(function CanvasImage(
     ref,
     () => ({
       setLiveTransform: ({ x, y, width, height, rotation }) => {
-        // ✅ Mark as live transforming to prevent sync from overwriting
         isLiveTransforming.current = true;
 
         if (typeof x === "number") {
@@ -187,14 +154,12 @@ const CanvasImage = forwardRef(function CanvasImage(
         }
       },
 
-      // ✅ NEW: Call this when transform ends to allow sync again
       endLiveTransform: () => {
         isLiveTransforming.current = false;
       },
 
       resetToStroke: (s) => {
         if (!s) return;
-        isLassoMoving.current = false;
         isLiveTransforming.current = false;
 
         cancelAnimation(xVal);
@@ -208,9 +173,6 @@ const CanvasImage = forwardRef(function CanvasImage(
         if (Number.isFinite(s.width)) wVal.value = s.width;
         if (Number.isFinite(s.height)) hVal.value = s.height;
         rotVal.value = (s.rotation ?? 0) * (Math.PI / 180);
-
-        lassoOffsetX.value = 0;
-        lassoOffsetY.value = 0;
       },
 
       getLiveTransform: () => ({
@@ -221,18 +183,9 @@ const CanvasImage = forwardRef(function CanvasImage(
         rotation: (rotVal.value * 180) / Math.PI,
       }),
 
-      clearLassoState: () => {
-        isLassoMoving.current = false;
-        lassoOffsetX.value = 0;
-        lassoOffsetY.value = 0;
-      },
-
-      // ✅ Force sync from stroke (useful after resize/move commit)
       forceSync: (s) => {
         if (!s) return;
-
         isLiveTransforming.current = false;
-        isLassoMoving.current = false;
 
         cancelAnimation(xVal);
         cancelAnimation(yVal);
@@ -244,15 +197,15 @@ const CanvasImage = forwardRef(function CanvasImage(
         if (Number.isFinite(s.y)) yVal.value = s.y;
         if (Number.isFinite(s.width)) wVal.value = s.width;
         if (Number.isFinite(s.height)) hVal.value = s.height;
-        if (Number.isFinite(s.rotation)) {
+        if (Number.isFinite(s.rotation))
           rotVal.value = s.rotation * (Math.PI / 180);
-        }
+      },
 
-        lassoOffsetX.value = 0;
-        lassoOffsetY.value = 0;
+      clearLassoState: () => {
+        isLiveTransforming.current = false;
       },
     }),
-    [xVal, yVal, wVal, hVal, rotVal, lassoOffsetX, lassoOffsetY]
+    [xVal, yVal, wVal, hVal, rotVal]
   );
 
   if (!img) return null;
@@ -276,7 +229,6 @@ const CanvasImage = forwardRef(function CanvasImage(
           strokeWidth={1.5}
           strokeColor="#2563EB"
           style="stroke"
-          dashEffect={[6, 4]}
         />
       )}
     </Group>

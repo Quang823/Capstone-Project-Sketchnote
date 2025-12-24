@@ -2,12 +2,12 @@
  * =============================================================================
  * useCollaboration Hook
  * =============================================================================
- * 
+ *
  * React hook for integrating real-time collaboration into drawing components.
  * Manages connection lifecycle, event handling, and state synchronization.
- * 
+ *
  * IMPORTANT: This hook works alongside existing stroke sync - it doesn't replace it.
- * 
+ *
  * *** CRITICAL FEATURES ***
  * - Server-authoritative versioning
  * - Element locking for concurrent edits
@@ -16,9 +16,9 @@
  * - Message sequence ordering
  */
 
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { collaborationManager } from '../service/collaborationManager';
-import { EventTypes, ElementTypes } from '../types/collaboration.types';
+import { useEffect, useRef, useCallback, useState } from "react";
+import { collaborationManager } from "../service/collaborationManager";
+import { EventTypes, ElementTypes } from "../types/collaboration.types";
 
 /**
  * Hook configuration options
@@ -48,7 +48,7 @@ import { EventTypes, ElementTypes } from '../types/collaboration.types';
 
 /**
  * Real-time collaboration hook
- * @param {UseCollaborationOptions} options 
+ * @param {UseCollaborationOptions} options
  */
 export function useCollaboration(options) {
   const {
@@ -61,18 +61,18 @@ export function useCollaboration(options) {
     onElementUpdate,
     onElementDelete,
     onStrokeAppend,
-    onStrokeInit,       // *** NEW: Late join ***
+    onStrokeInit, // *** NEW: Late join ***
     onPageCreate,
     onPageUpdate,
     onPageDelete,
     onUserJoin,
     onUserLeave,
     onSyncComplete,
-    onSyncProgress,     // *** NEW: Chunked sync ***
-    onLockAcquired,     // *** NEW: Locking ***
+    onSyncProgress, // *** NEW: Chunked sync ***
+    onLockAcquired, // *** NEW: Locking ***
     onLockReleased,
     onLockRejected,
-    onVersionConflict,  // *** NEW: Server rejection ***
+    onVersionConflict, // *** NEW: Server rejection ***
   } = options;
 
   // Connection state
@@ -169,12 +169,12 @@ export function useCollaboration(options) {
 
     // *** CRITICAL: Chunked sync progress ***
     collaborationManager.onSyncProgress = (data) => {
-      if (data.phase === 'start') {
+      if (data.phase === "start") {
         setIsSyncing(true);
         setSyncProgress(0);
-      } else if (data.phase === 'chunk') {
+      } else if (data.phase === "chunk") {
         setSyncProgress(data.progress);
-      } else if (data.phase === 'end') {
+      } else if (data.phase === "end") {
         setSyncProgress(100);
       }
       callbacksRef.current.onSyncProgress?.(data);
@@ -211,16 +211,19 @@ export function useCollaboration(options) {
 
     // Connect
     setIsSyncing(true);
-    collaborationManager.connect(projectId, userId, {
-      userName,
-      avatarUrl,
-    }).then(() => {
-      setIsConnected(true);
-    }).catch((error) => {
-      console.warn('[useCollaboration] Connection failed:', error);
-      setIsConnected(false);
-      setIsSyncing(false);
-    });
+    collaborationManager
+      .connect(projectId, userId, {
+        userName,
+        avatarUrl,
+      })
+      .then(() => {
+        setIsConnected(true);
+      })
+      .catch((error) => {
+        console.error("[useCollaboration] Connection failed:", error);
+        setIsConnected(false);
+        setIsSyncing(false);
+      });
 
     // Cleanup on unmount or dependency change
     return () => {
@@ -244,9 +247,17 @@ export function useCollaboration(options) {
    * Update an element (position, size, properties)
    * @param {Object} options - { throttle: boolean, transient: boolean }
    */
-  const updateElement = useCallback((pageId, elementId, changes, options = {}) => {
-    collaborationManager.sendElementUpdate(pageId, elementId, changes, options);
-  }, []);
+  const updateElement = useCallback(
+    (pageId, elementId, changes, options = {}) => {
+      collaborationManager.sendElementUpdate(
+        pageId,
+        elementId,
+        changes,
+        options
+      );
+    },
+    []
+  );
 
   /**
    * Delete an element
@@ -259,9 +270,17 @@ export function useCollaboration(options) {
    * Send stroke points during drawing
    * This is called frequently - internal batching handles optimization
    */
-  const sendStrokePoints = useCallback((pageId, strokeId, points, strokeInit = null) => {
-    collaborationManager.sendStrokePoints(pageId, strokeId, points, strokeInit);
-  }, []);
+  const sendStrokePoints = useCallback(
+    (pageId, strokeId, points, strokeInit = null) => {
+      collaborationManager.sendStrokePoints(
+        pageId,
+        strokeId,
+        points,
+        strokeInit
+      );
+    },
+    []
+  );
 
   /**
    * Signal stroke drawing completed
@@ -312,7 +331,7 @@ export function useCollaboration(options) {
   /**
    * *** CRITICAL: Request lock on an element before drag/edit ***
    * Must be called before allowing user to drag/resize an element
-   * @param {string} elementId 
+   * @param {string} elementId
    * @param {string|number} pageId
    * @returns {Promise<{ elementId, lockToken, expiresAt }>}
    */
@@ -323,7 +342,7 @@ export function useCollaboration(options) {
   /**
    * *** CRITICAL: Release lock after drag/edit complete ***
    * Must be called when user finishes dragging/editing
-   * @param {string} elementId 
+   * @param {string} elementId
    */
   const releaseLock = useCallback((elementId) => {
     collaborationManager.releaseLock(elementId);
@@ -331,7 +350,7 @@ export function useCollaboration(options) {
 
   /**
    * Check if element is locked by another user
-   * @param {string} elementId 
+   * @param {string} elementId
    * @returns {{ locked: boolean, lockedBy?: string|number }}
    */
   const isElementLocked = useCallback((elementId) => {
@@ -343,9 +362,9 @@ export function useCollaboration(options) {
     isConnected,
     activeUsers,
     isSyncing,
-    syncProgress,       // *** NEW: For chunked sync progress UI ***
-    serverVersion,      // *** NEW: Server-authoritative version ***
-    elementLocks,       // *** NEW: Current lock state ***
+    syncProgress, // *** NEW: For chunked sync progress UI ***
+    serverVersion, // *** NEW: Server-authoritative version ***
+    elementLocks, // *** NEW: Current lock state ***
 
     // Element operations
     createElement,

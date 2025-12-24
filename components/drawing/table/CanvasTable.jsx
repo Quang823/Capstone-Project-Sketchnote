@@ -11,81 +11,38 @@ import TableRenderer from "./TableRenderer";
 
 const CanvasTable = forwardRef(({ stroke, selectedId, visualOffset }, ref) => {
   const [liveTransform, setLiveTransform] = useState(null);
+  const isLiveTransforming = useRef(false);
 
-  // ✅ Track if currently being moved by lasso
-  const isLassoMoving = useRef(false);
+  // ✅ Get offset directly from props
+  const offsetX = visualOffset?.dx ?? 0;
+  const offsetY = visualOffset?.dy ?? 0;
 
-  // ✅ Track previous stroke position to detect changes
-  const prevStrokeRef = useRef({
-    x: stroke?.x,
-    y: stroke?.y,
-    width: stroke?.width,
-    height: stroke?.height,
-    rotation: stroke?.rotation,
-  });
-
-  // ✅ Sync liveTransform when stroke props change (after lasso commit)
+  // ✅ Sync when stroke changes and no offset active
   useEffect(() => {
-    // Skip if lasso is currently moving
-    if (isLassoMoving.current) {
-      return;
-    }
+    if (isLiveTransforming.current) return;
+    if (offsetX !== 0 || offsetY !== 0) return;
 
-    const prev = prevStrokeRef.current;
-    const hasChanged =
-      prev.x !== stroke?.x ||
-      prev.y !== stroke?.y ||
-      prev.width !== stroke?.width ||
-      prev.height !== stroke?.height ||
-      prev.rotation !== stroke?.rotation;
-
-    if (hasChanged) {
-      // ✅ Reset liveTransform to null so displayTable uses stroke directly
-      setLiveTransform(null);
-
-      // Update ref
-      prevStrokeRef.current = {
-        x: stroke?.x,
-        y: stroke?.y,
-        width: stroke?.width,
-        height: stroke?.height,
-        rotation: stroke?.rotation,
-      };
-    }
-  }, [stroke?.x, stroke?.y, stroke?.width, stroke?.height, stroke?.rotation]);
-
-  // ✅ Handle visualOffset from lasso
-  useEffect(() => {
-    const dx = visualOffset?.dx ?? 0;
-    const dy = visualOffset?.dy ?? 0;
-
-    if (dx !== 0 || dy !== 0) {
-      // Lasso is actively moving
-      isLassoMoving.current = true;
-    }
-    // Note: We don't set isLassoMoving.current = false here
-    // It will be cleared by the clearLassoState() call from GestureHandler
-  }, [visualOffset?.dx, visualOffset?.dy]);
+    // Reset liveTransform to use stroke values
+    setLiveTransform(null);
+  }, [
+    stroke?.x,
+    stroke?.y,
+    stroke?.width,
+    stroke?.height,
+    stroke?.rotation,
+    offsetX,
+    offsetY,
+  ]);
 
   useImperativeHandle(ref, () => ({
     setLiveTransform: (transform) => {
-      // ✅ Don't set live transform if lasso is moving (it handles offset separately)
-      if (isLassoMoving.current && visualOffset?.dx !== undefined) {
-        return;
-      }
+      isLiveTransforming.current = true;
       setLiveTransform(transform);
     },
     resetToStroke: (s) => {
       if (!s) return;
-      isLassoMoving.current = false;
+      isLiveTransforming.current = false;
       setLiveTransform(null);
-      prevStrokeRef.current = {
-        x: s.x,
-        y: s.y,
-        width: s.width,
-        height: s.height,
-        rotation: s.rotation,
-      };
     },
     getLiveTransform: () => {
       if (liveTransform) {
@@ -105,19 +62,20 @@ const CanvasTable = forwardRef(({ stroke, selectedId, visualOffset }, ref) => {
         rotation: stroke?.rotation ?? 0,
       };
     },
+    forceSync: (s) => {
+      if (!s) return;
+      isLiveTransforming.current = false;
+      setLiveTransform(null);
+    },
     clearLassoState: () => {
-      isLassoMoving.current = false;
+      isLiveTransforming.current = false;
     },
   }));
 
-  // ✅ Calculate display position including visualOffset
+  // ✅ Calculate display position with offset applied
   const displayTable = useMemo(() => {
     const baseX = liveTransform?.x ?? stroke?.x ?? 0;
     const baseY = liveTransform?.y ?? stroke?.y ?? 0;
-
-    // Add lasso visual offset
-    const offsetX = visualOffset?.dx ?? 0;
-    const offsetY = visualOffset?.dy ?? 0;
 
     return {
       ...stroke,
@@ -127,7 +85,7 @@ const CanvasTable = forwardRef(({ stroke, selectedId, visualOffset }, ref) => {
       height: liveTransform?.height ?? stroke?.height,
       rotation: liveTransform?.rotation ?? stroke?.rotation,
     };
-  }, [stroke, liveTransform, visualOffset?.dx, visualOffset?.dy]);
+  }, [stroke, liveTransform, offsetX, offsetY]);
 
   const isSelected = stroke?.id === selectedId;
 

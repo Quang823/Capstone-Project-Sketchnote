@@ -138,7 +138,7 @@ export const projectService = {
               pageNumber,
               remoteData
             );
-          } catch { }
+          } catch {}
         }
         return remoteData;
       }
@@ -170,7 +170,7 @@ export const projectService = {
             pageNumber,
             remoteData
           );
-        } catch { }
+        } catch {}
       }
       return remoteData;
     } catch (error) {
@@ -318,8 +318,8 @@ export const projectService = {
       const content = Array.isArray(r?.projects)
         ? r.projects
         : Array.isArray(r?.content)
-          ? r.content
-          : [];
+        ? r.content
+        : [];
       const totalElements =
         r?.totalElements ??
         r?.page?.totalElements ??
@@ -511,7 +511,7 @@ export const projectService = {
     let pendingQueue = [];
     let stompClient = null;
     let activeSubscription = null; // ✅ FIXED: Track subscription for cleanup
-    let pendingTimeouts = new Set();
+
     const buildFrame = (command, headers = {}, body = "") => {
       const lines = [command];
       Object.keys(headers).forEach((k) => {
@@ -563,7 +563,7 @@ export const projectService = {
             return new WebSocket(wsUrl);
           },
 
-          debug: (str) => { },
+          debug: (str) => {},
 
           reconnectDelay: 5000,
           heartbeatIncoming: 4000,
@@ -575,11 +575,11 @@ export const projectService = {
 
           connectHeaders: token
             ? {
-              Authorization: `Bearer ${token}`,
-            }
+                Authorization: `Bearer ${token}`,
+              }
             : undefined,
 
-          beforeConnect: () => { },
+          beforeConnect: () => {},
 
           onConnect: (frame) => {
             isConnected = true;
@@ -598,7 +598,7 @@ export const projectService = {
                   onMessageCb(json);
                 }
               } catch (err) {
-                console.warn("❌ [Realtime] Error processing message:", err);
+                console.error("❌ [Realtime] Error processing message:", err);
               }
             });
 
@@ -615,7 +615,7 @@ export const projectService = {
                     });
                   }
                 } catch (err) {
-                  console.warn("❌ [Realtime] Error flushing message:", err);
+                  console.error("❌ [Realtime] Error flushing message:", err);
                 }
               });
               pendingQueue = [];
@@ -623,11 +623,11 @@ export const projectService = {
           },
 
           onWebSocketError: (e) => {
-            console.warn("❌❌❌ [Realtime] WebSocket ERROR ❌❌❌", e);
+            console.error("❌❌❌ [Realtime] WebSocket ERROR ❌❌❌", e);
           },
 
           onStompError: (frame) => {
-            console.warn("❌❌❌ [Realtime] STOMP ERROR ❌❌❌", frame);
+            console.error("❌❌❌ [Realtime] STOMP ERROR ❌❌❌", frame);
           },
 
           onWebSocketClose: (e) => {
@@ -641,22 +641,14 @@ export const projectService = {
 
         return true;
       } catch (err) {
-        console.warn("❌❌❌ [Realtime] CONNECT ERROR ❌❌❌", err);
+        console.error("❌❌❌ [Realtime] CONNECT ERROR ❌❌❌", err);
         throw err;
       }
     };
 
     const disconnect = () => {
       try {
-        // ✅ FIX: Clear all pending timeouts
-        pendingTimeouts.forEach((timeoutId) => {
-          try {
-            clearTimeout(timeoutId);
-          } catch { }
-        });
-        pendingTimeouts.clear();
-
-        // ✅ Unsubscribe before deactivating
+        // ✅ FIXED: Unsubscribe before deactivating
         if (activeSubscription) {
           try {
             activeSubscription.unsubscribe();
@@ -682,10 +674,12 @@ export const projectService = {
           heartbeatTimer = null;
         }
 
-        // ✅ Close underlying WebSocket
+        // ✅ Close underlying WebSocket if still open
         try {
           socket?.close?.();
-        } catch { }
+        } catch (err) {
+          console.warn("⚠️ [Realtime] Error closing socket:", err);
+        }
         socket = null;
 
         // ✅ Reset state
@@ -693,19 +687,12 @@ export const projectService = {
         activeProjectId = null;
         onMessageCb = null;
 
-        // ✅ Clear pending queue properly
+        // ✅ FIXED: Clear pending queue properly
         pendingQueue.length = 0;
         pendingQueue = [];
       }
     };
-    const safeSetTimeout = (callback, delay) => {
-      const id = setTimeout(() => {
-        pendingTimeouts.delete(id);
-        callback();
-      }, delay);
-      pendingTimeouts.add(id);
-      return id;
-    };
+
     const sendAction = (projectId, userId, actionType, payload = {}) => {
       try {
         const body = JSON.stringify({
@@ -732,7 +719,7 @@ export const projectService = {
         } else {
           pendingQueue.push(frame);
         }
-      } catch { }
+      } catch {}
     };
 
     const sendDraw = (projectId, userId, tool, points = []) => {
@@ -802,16 +789,20 @@ export const projectService = {
       stroke = {},
       pagePayload
     ) => {
+      // Only extract essential stroke properties (no duplicate)
       const hasPoints =
         Array.isArray(stroke.points) && stroke.points.length > 0;
+
+      // Compress points for tools that have them
       const compressedPoints = hasPoints ? compressPoints(stroke.points) : null;
 
+      // Build minimal stroke object - only include non-null values
       const minimalStroke = {
         id: stroke.id,
         tool: stroke.tool || "pen",
       };
 
-      // Existing properties
+      // Only add properties if they have meaningful values
       if (stroke.x != null) minimalStroke.x = stroke.x;
       if (stroke.y != null) minimalStroke.y = stroke.y;
       if (stroke.width != null) minimalStroke.width = stroke.width;
@@ -829,32 +820,18 @@ export const projectService = {
       if (stroke.rows) minimalStroke.rows = stroke.rows;
       if (stroke.cols) minimalStroke.cols = stroke.cols;
 
-      // ✅ ADD: Shape-specific properties for fill
-      if (stroke.fill != null) minimalStroke.fill = stroke.fill;
-      if (stroke.fillColor) minimalStroke.fillColor = stroke.fillColor;
-      if (stroke.shapeSettings) {
-        minimalStroke.shapeSettings = {
-          shape: stroke.shapeSettings.shape,
-          fill: stroke.shapeSettings.fill,
-          fillColor: stroke.shapeSettings.fillColor,
-          thickness: stroke.shapeSettings.thickness,
-        };
-      }
-      if (stroke.shape) {
-        // Send shape geometry
-        minimalStroke.shape = stroke.shape;
-      }
-
-      // Build payload
+      // Build optimized payload - NO DUPLICATES
       const payload = {
         pageId,
         stroke: minimalStroke,
       };
 
+      // Add compressed points separately (not inside stroke to avoid duplication)
       if (compressedPoints) {
         payload.points = compressedPoints;
       }
 
+      // Only include minimal page info if needed (NOT full page with strokes)
       if (pagePayload && typeof pagePayload === "object") {
         payload.pageInfo = {
           id: pagePayload.id,
