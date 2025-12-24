@@ -47,7 +47,7 @@ export default function CreditTransactionHistoryScreen() {
                 setTransactions(historyData.content);
             }
         } catch (error) {
-            console.error("Failed to fetch history", error);
+            console.warn("Failed to fetch history", error);
         } finally {
             setLoading(false);
         }

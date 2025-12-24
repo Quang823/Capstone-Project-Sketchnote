@@ -107,7 +107,7 @@ export default function BlogDetailScreen() {
         navigation.goBack();
       }
     } catch (error) {
-      console.error("Error fetching blog detail:", error);
+      console.warn("Error fetching blog detail:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -135,7 +135,7 @@ export default function BlogDetailScreen() {
         return next;
       });
     } catch (error) {
-      console.error("Error fetching comments blog:", error);
+      console.warn("Error fetching comments blog:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -153,7 +153,7 @@ export default function BlogDetailScreen() {
       const replyData = response?.result?.content || [];
       setReplies((prev) => ({ ...prev, [commentId]: replyData }));
     } catch (error) {
-      console.error("Error fetching reply comments:", error);
+      console.warn("Error fetching reply comments:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -191,7 +191,7 @@ export default function BlogDetailScreen() {
       });
       return true;
     } catch (error) {
-      console.error("Error creating comment:", error);
+      console.warn("Error creating comment:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -235,7 +235,7 @@ export default function BlogDetailScreen() {
       });
       handleCancelEditing();
     } catch (error) {
-      console.error("Error updating comment:", error);
+      console.warn("Error updating comment:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -259,7 +259,7 @@ export default function BlogDetailScreen() {
         await fetchReplyComments(parentId);
       }
     } catch (error) {
-      console.error("Error deleting comment:", error);
+      console.warn("Error deleting comment:", error);
       Toast.show({
         type: "error",
         text1: "Error",

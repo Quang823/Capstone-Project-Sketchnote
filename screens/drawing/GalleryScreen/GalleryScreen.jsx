@@ -119,7 +119,7 @@ export default function GalleryScreen() {
 
       setTemplates(mappedTemplates);
     } catch (error) {
-      console.error("Error fetching templates:", error);
+      console.warn("Error fetching templates:", error);
       setTemplates([]);
     } finally {
       setLoading(false);
@@ -149,7 +149,7 @@ export default function GalleryScreen() {
       // Refresh templates
       fetchTemplates();
     } catch (error) {
-      console.error("Failed to upgrade template:", error);
+      console.warn("Failed to upgrade template:", error);
       Alert.alert(
         "Upgrade Failed",
         error.message || "Failed to upgrade to the latest version. Please try again.",

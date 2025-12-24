@@ -92,7 +92,7 @@ export default function CourseDetailScreen() {
         setWalletBalance(data.result.balance || 0);
       }
     } catch (error) {
-      console.error("Error fetching wallet:", error);
+      console.warn("Error fetching wallet:", error);
     }
   };
 
@@ -152,7 +152,7 @@ export default function CourseDetailScreen() {
       await fetchCourseDetail(courseId);
       handleStartLearning();
     } catch (error) {
-      console.error("Error in handleBuyCourse:", error);
+      console.warn("Error in handleBuyCourse:", error);
 
       // Xử lý lỗi không đủ tiền
       if (error.message && error.message.toLowerCase().includes("insufficient balance")) {
@@ -267,7 +267,7 @@ export default function CourseDetailScreen() {
         setCourse(transformedCourse);
       }
     } catch (error) {
-      console.error("Error fetching course detail:", error.message);
+      console.warn("Error fetching course detail:", error.message);
       setError("Error fetching course detail");
     } finally {
       setLoading(false);

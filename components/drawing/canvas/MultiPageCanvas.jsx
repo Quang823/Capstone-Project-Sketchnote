@@ -237,10 +237,10 @@ function getNearestFont(loadedFonts, family, bold, italic, size = 18) {
     bold && italic
       ? "BoldItalic"
       : bold
-      ? "Bold"
-      : italic
-      ? "Italic"
-      : "Regular";
+        ? "Bold"
+        : italic
+          ? "Italic"
+          : "Regular";
 
   const nearest = FONT_SIZES.reduce((a, b) =>
     Math.abs(b - size) < Math.abs(a - size) ? b : a
@@ -298,6 +298,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
     onCollabReleaseLock,
     onCollabIsElementLocked,
     onCollabPageCreate,
+    isViewOnly = false,
   },
   ref
 ) {
@@ -481,7 +482,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       try {
         callback();
       } catch (error) {
-        console.error("[MultiPageCanvas] Timeout callback error:", error);
+        console.warn("[MultiPageCanvas] Timeout callback error:", error);
       }
     }, delay);
     loadTimeoutsRef.current.add(id);
@@ -589,6 +590,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
   // ➕ Thêm page mới
   const addPage = useCallback(() => {
+    if (isViewOnly) return;
     if (pages.length >= 10) {
       toast({
         type: "error",
@@ -694,7 +696,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           scrollTimeoutRef.current = null;
         }, 500); // 500ms để animation hoàn thành
       } catch (error) {
-        console.error(`[MultiPageCanvas] scrollToPage error:`, error);
+        console.warn(`[MultiPageCanvas] scrollToPage error:`, error);
         isScrollingProgrammaticallyRef.current = false;
         if (scrollTimeoutRef.current) {
           clearTimeout(scrollTimeoutRef.current);
@@ -793,7 +795,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           try {
             pageRef.setScrollOffsetY(offset - (offsets[i] ?? 0));
           } catch (error) {
-            console.error(
+            console.warn(
               `[MultiPageCanvas] Error setting scroll offset for page ${p.id}:`,
               error
             );
@@ -1016,7 +1018,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           projectTranslateY.value = newTranslateY;
           clampProjectPan();
         }
-      } catch (err) {}
+      } catch (err) { }
     })
     .onEnd((e) => {
       "worklet";
@@ -1049,7 +1051,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         }
         clampProjectPan();
         runOnJS(setIsZooming)(false);
-      } catch (err) {}
+      } catch (err) { }
     });
 
   // ✅ Single-finger scroll gesture - chỉ hoạt động khi tool === "scroll"
@@ -1279,8 +1281,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             typeof page.pageNumber === "number"
               ? page.pageNumber
               : page.type === "cover"
-              ? 1
-              : fallbackNumber;
+                ? 1
+                : fallbackNumber;
 
           allPagesData.push({
             pageId: page.id,
@@ -1289,7 +1291,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             snapshotUrl: page.snapshotUrl,
           });
         } catch (e) {
-          console.error(`Error gathering data for page ${page.id}:`, e);
+          console.warn(`Error gathering data for page ${page.id}:`, e);
         }
       }
       return allPagesData;
@@ -1312,8 +1314,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           typeof page.pageNumber === "number"
             ? page.pageNumber
             : page.type === "cover"
-            ? 1
-            : fallbackNumber;
+              ? 1
+              : fallbackNumber;
         out.push({ pageId: page.id, pageNumber, base64: b64 });
       }
       return out;
@@ -1333,14 +1335,14 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               typeof pg.pageNumber === "number"
                 ? pg.pageNumber
                 : pg.type === "cover"
-                ? 1
-                : fallbackNumber;
+                  ? 1
+                  : fallbackNumber;
             const snap = map.get(num);
             if (snap == null || snap === pg.snapshotUrl) return pg;
             return { ...pg, snapshotUrl: snap };
           });
         });
-      } catch (e) {}
+      } catch (e) { }
     },
 
     // [NEW] Append strokes to a specific page, used for incremental loading.
@@ -1405,7 +1407,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 try {
                   pageRef.loadStrokes(safeStrokes, layersMetadata);
                 } catch (loadError) {
-                  // console.error(
+                  // console.warn(
                   //   `[MultiPageCanvas] Error loading strokes into page id: ${p.id}:`,
                   //   loadError
                   // );
@@ -1438,7 +1440,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           tryLoad();
         }
       } catch (e) {
-        console.error("[MultiPageCanvas] loadProjectData error:", e);
+        console.warn("[MultiPageCanvas] loadProjectData error:", e);
       }
     },
 
@@ -1593,6 +1595,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
   const applyTemplateToPage = useCallback(
     async (pageId, url, mode = "append") => {
+      if (isViewOnly) return;
       try {
         if (!pageId || !url) return;
         const safeUrl = String(url).trim().replace(/^`|`$/g, "");
@@ -1623,9 +1626,9 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
             const toLoad = Array.isArray(strokesArray)
               ? strokesArray.map((s) => ({
-                  ...s,
-                  layerId: activeLayerId || "layer1",
-                }))
+                ...s,
+                layerId: activeLayerId || "layer1",
+              }))
               : [];
 
             // Use appendStrokes instead of loadStrokes to ensure we use the same path
@@ -1637,12 +1640,12 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           } else if (typeof pageRef.appendStrokes === "function") {
             const toAppend = Array.isArray(strokesArray)
               ? strokesArray.map((s) => ({
-                  ...s,
-                  __templateSource: safeUrl,
-                  layerId: shouldCreateNewLayer
-                    ? "template"
-                    : activeLayerId || "layer1",
-                }))
+                ...s,
+                __templateSource: safeUrl,
+                layerId: shouldCreateNewLayer
+                  ? "template"
+                  : activeLayerId || "layer1",
+              }))
               : [];
             pageRef.appendStrokes(toAppend);
           }
@@ -1699,11 +1702,11 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
       prev.map((pg) =>
         pg.id === pageId
           ? {
-              ...pg,
-              backgroundColor: last.prevBackgroundColor,
-              template: last.prevTemplate,
-              imageUrl: last.prevImageUrl,
-            }
+            ...pg,
+            backgroundColor: last.prevBackgroundColor,
+            template: last.prevTemplate,
+            imageUrl: last.prevImageUrl,
+          }
           : pg
       )
     );
@@ -1711,6 +1714,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
 
   const handleResourceSelect = useCallback(
     async (res) => {
+      if (isViewOnly) return;
       try {
         if (!res) return;
 
@@ -1772,8 +1776,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           pages[activeIndex]?.id != null
             ? String(pages[activeIndex].id)
             : pages.length > 0 && pages[0]?.id != null
-            ? String(pages[0].id)
-            : "1"
+              ? String(pages[0].id)
+              : "1"
         }
         onPageSelect={(pageId) => {
           // ✅ Sử dụng scrollToPageById với debounce đã có trong scrollToPage
@@ -1783,6 +1787,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         resourceItems={[]}
         onOpenOverview={() => setOverviewVisible(true)}
         onResourceSelect={handleResourceSelect}
+        isViewOnly={isViewOnly}
       />
       <DocumentOverviewModal
         visible={overviewVisible}
@@ -1794,6 +1799,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         }}
         onAddPage={addPage}
         onResourceSelect={handleResourceSelect}
+        isViewOnly={isViewOnly}
       />
 
       <Modal
@@ -2142,15 +2148,15 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                             [p.id]:
                               typeof updater === "function"
                                 ? updater(
-                                    prev[p.id] || [
-                                      {
-                                        id: "layer1",
-                                        name: "Layer 1",
-                                        visible: true,
-                                        strokes: [],
-                                      },
-                                    ]
-                                  )
+                                  prev[p.id] || [
+                                    {
+                                      id: "layer1",
+                                      name: "Layer 1",
+                                      visible: true,
+                                      strokes: [],
+                                    },
+                                  ]
+                                )
                                 : updater,
                           }));
                         }, // 👈 Update page-specific layers

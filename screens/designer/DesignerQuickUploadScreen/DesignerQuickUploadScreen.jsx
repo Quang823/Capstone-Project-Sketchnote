@@ -87,7 +87,7 @@ export default function DesignerQuickUploadScreen() {
       const response = await resourceService.getProjectByUserId();
       setProjects(response?.content || []);
     } catch (error) {
-      console.error("Error fetching project by user ID:", error);
+      console.warn("Error fetching project by user ID:", error);
       setProjects([]);
     }
   }, []);
@@ -208,7 +208,7 @@ export default function DesignerQuickUploadScreen() {
 
       setTimeout(() => navigation.goBack(), 1500);
     } catch (err) {
-      console.error("Upload error:", err);
+      console.warn("Upload error:", err);
       Toast.show({
         type: "error",
         text1: "Upload Failed",
@@ -418,7 +418,7 @@ export default function DesignerQuickUploadScreen() {
                     style={[
                       styles.projectCard,
                       selectedProjectId === proj.projectId &&
-                        styles.projectCardActive,
+                      styles.projectCardActive,
                     ]}
                   >
                     <Image

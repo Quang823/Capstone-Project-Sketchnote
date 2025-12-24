@@ -99,7 +99,7 @@ export default function CreateVersionScreen() {
       const response = await resourceService.getProjectByUserId();
       setProjects(response?.content || []);
     } catch (error) {
-      console.error("Error fetching project by user ID:", error);
+      console.warn("Error fetching project by user ID:", error);
       setProjects([]);
     }
   };
@@ -115,7 +115,7 @@ export default function CreateVersionScreen() {
         setProjectPages(projectDetails.pages);
       }
     } catch (error) {
-      console.error("Error fetching project details:", error);
+      console.warn("Error fetching project details:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -243,7 +243,7 @@ export default function CreateVersionScreen() {
 
       setTimeout(() => navigation.goBack(), 1500);
     } catch (err) {
-      console.error(
+      console.warn(
         isUpdateMode ? "Update version error:" : "Create version error:",
         err
       );
@@ -253,8 +253,8 @@ export default function CreateVersionScreen() {
         text2:
           err.message ||
           "Something went wrong while " +
-            (isUpdateMode ? "updating" : "creating") +
-            " version.",
+          (isUpdateMode ? "updating" : "creating") +
+          " version.",
       });
     } finally {
       setIsUploading(false);
@@ -293,8 +293,8 @@ export default function CreateVersionScreen() {
             {isUploading
               ? "..."
               : isUpdateMode
-              ? "Update Version"
-              : "Create Version"}
+                ? "Update Version"
+                : "Create Version"}
           </Text>
         </Pressable>
       </View>
@@ -465,7 +465,7 @@ export default function CreateVersionScreen() {
                     style={[
                       styles.projectCard,
                       selectedProjectId === proj.projectId &&
-                        styles.projectCardActive,
+                      styles.projectCardActive,
                     ]}
                   >
                     <Image

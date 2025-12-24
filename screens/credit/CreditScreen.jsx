@@ -80,7 +80,7 @@ export default function CreditScreen() {
                 setHistory([]);
             }
         } catch (error) {
-            console.error('Fetch history error:', error);
+            console.warn('Fetch history error:', error);
             Toast.show({
                 type: 'error',
                 text1: 'Error',

@@ -30,6 +30,7 @@ const DocumentBrowserContent = ({
   pageLayout = "grid", // 'grid' or 'list'
   onClose, // For modal's page selection
   showTabLabels = false, // To show labels in modal tabs
+  isViewOnly = false, // View-only mode flag
 }) => {
   const safeActivePageId = activePageId != null ? String(activePageId) : null;
   const [activeTab, setActiveTab] = useState("pages");
@@ -93,7 +94,7 @@ const DocumentBrowserContent = ({
 
           setPurchasedTemplates(mappedTemplates);
         } catch (error) {
-          console.error("Failed to fetch purchased templates:", error);
+          console.warn("Failed to fetch purchased templates:", error);
         } finally {
           setIsLoadingResources(false);
         }
@@ -118,7 +119,7 @@ const DocumentBrowserContent = ({
         setAiImagesTotalPages(result.totalPages || 1);
       }
     } catch (error) {
-      console.error("Failed to fetch AI image history:", error);
+      console.warn("Failed to fetch AI image history:", error);
       setAiImages([]);
     } finally {
       setIsLoadingAIImages(false);
@@ -158,7 +159,7 @@ const DocumentBrowserContent = ({
             pageSelectTimeoutRef.current = null;
           }, 100);
         } catch (error) {
-          console.error(`[DocumentBrowser] Error in pageSelect:`, error);
+          console.warn(`[DocumentBrowser] Error in pageSelect:`, error);
           isProcessingRef.current = false;
           pageSelectTimeoutRef.current = null;
           onClose?.();
@@ -209,7 +210,7 @@ const DocumentBrowserContent = ({
       });
       setPurchasedTemplates(mappedTemplates);
     } catch (error) {
-      console.error("Failed to upgrade template:", error);
+      console.warn("Failed to upgrade template:", error);
       Alert.alert(
         "Upgrade Failed",
         error.message || "Failed to upgrade to the latest version. Please try again.",
@@ -220,7 +221,8 @@ const DocumentBrowserContent = ({
     }
   };
 
-  const tabs = [
+  // Filter tabs based on view-only mode
+  const allTabs = [
     { id: "pages", label: "Pages", icon: "insert-drive-file" },
     { id: "resources", label: "Resources", icon: "collections" },
     { id: "icons", label: "Icons", icon: "photo" },
@@ -229,18 +231,25 @@ const DocumentBrowserContent = ({
     { id: "history", label: "History", icon: "history" },
   ];
 
+  // In view-only mode, show only Pages tab
+  const tabs = isViewOnly
+    ? allTabs.filter(tab => tab.id === "pages")
+    : allTabs;
+
   const renderPages = () => {
     const isListLayout = pageLayout === "list";
 
     return (
       <View style={{ flex: 1 }}>
-        {/* Floating Add Page button */}
-        <Pressable onPress={onAddPage} style={styles.floatingAddButton}>
-          <Icon name="add" size={20} color="#3B82F6" />
-          <Text style={{ color: "#3B82F6", marginLeft: 6, fontWeight: "600" }}>
-            Add Page
-          </Text>
-        </Pressable>
+        {/* Floating Add Page button - hide in view-only mode */}
+        {!isViewOnly && (
+          <Pressable onPress={onAddPage} style={styles.floatingAddButton}>
+            <Icon name="add" size={20} color="#3B82F6" />
+            <Text style={{ color: "#3B82F6", marginLeft: 6, fontWeight: "600" }}>
+              Add Page
+            </Text>
+          </Pressable>
+        )}
 
         {/* Scrollable list of pages */}
         <ScrollView

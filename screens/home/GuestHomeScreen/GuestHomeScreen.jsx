@@ -72,7 +72,7 @@ export default function GuestHomeScreen({ navigation }) {
                 });
             }
         } catch (err) {
-            console.error("Failed to load local projects:", err);
+            console.warn("Failed to load local projects:", err);
             toast({
                 title: "Error",
                 description: "Failed to load projects",

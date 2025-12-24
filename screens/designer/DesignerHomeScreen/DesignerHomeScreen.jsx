@@ -156,7 +156,7 @@ export default function DesignerHomeScreen() {
                     setCurrentUserId(profile.id);
                 }
             } catch (error) {
-                console.error("Error fetching current user:", error);
+                console.warn("Error fetching current user:", error);
             }
         };
         getCurrentUser();
@@ -178,7 +178,7 @@ export default function DesignerHomeScreen() {
                 try {
                     const token = await AsyncStorage.getItem("accessToken");
                     if (!token) {
-                        console.error("❌ No access token, cannot connect WebSocket");
+                        console.warn("❌ No access token, cannot connect WebSocket");
                         return;
                     }
 
@@ -198,10 +198,10 @@ export default function DesignerHomeScreen() {
                                 setNotifications((prev) => [{ ...notification, read: isRead }, ...prev]);
                             }
                         },
-                        (error) => console.error("❌ WebSocket error:", error)
+                        (error) => console.warn("❌ WebSocket error:", error)
                     );
                 } catch (error) {
-                    console.error("❌ Error connecting WebSocket:", error);
+                    console.warn("❌ Error connecting WebSocket:", error);
                 }
             };
 

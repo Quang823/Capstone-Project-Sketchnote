@@ -208,6 +208,84 @@ const ProjectMenu = React.memo(
   }
 );
 
+// Accept Invitation Modal
+const AcceptInvitationModal = React.memo(
+  ({ visible, onClose, onAccept, onReject, project, isDark }) => {
+    if (!visible || !project) return null;
+
+    return (
+      <Modal visible={visible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+          >
+            <View
+              style={[
+                styles.modalIconCircle,
+                { backgroundColor: "#DBEAFE", marginBottom: 20 },
+              ]}
+            >
+              <Icon name="mail-outline" size={36} color="#3B82F6" />
+            </View>
+
+            <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>
+              Project Invitation
+            </Text>
+            <Text
+              style={[styles.modalMessage, isDark && styles.modalMessageDark]}
+            >
+              You have been invited to collaborate on{" "}
+              <Text style={{ fontWeight: "700", color: "#3B82F6" }}>
+                "{project.name}"
+              </Text>
+              . Do you want to accept this invitation?
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButtonCancel,
+                  isDark && styles.modalButtonCancelDark,
+                  { flex: 1 },
+                ]}
+                onPress={onClose}
+              >
+                <Text
+                  style={[
+                    styles.modalButtonTextCancel,
+                    isDark && styles.modalButtonTextCancelDark,
+                  ]}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modalButtonCancel,
+                  { flex: 1, borderColor: "#EF4444", borderWidth: 1 },
+                ]}
+                onPress={onReject}
+              >
+                <Text style={{ color: "#EF4444", fontWeight: "600", textAlign: "center" }}>
+                  Reject
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { flex: 1.2 }]}
+                onPress={onAccept}
+              >
+                <Text style={styles.modalButtonText}>Accept</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+);
+
 export default function HomeScreen({ navigation }) {
   const [projects, setProjects] = useState([]);
   const [sharedProjects, setSharedProjects] = useState([]);
@@ -236,7 +314,10 @@ export default function HomeScreen({ navigation }) {
   const [editImageUrl, setEditImageUrl] = useState(null);
   const [editPaperSize, setEditPaperSize] = useState("");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-
+  const [limitModalVisible, setLimitModalVisible] = useState(false);
+  const [limitInfo, setLimitInfo] = useState({ current: 0, max: 0 });
+  const [acceptModalVisible, setAcceptModalVisible] = useState(false);
+  const [pendingProject, setPendingProject] = useState(null);
   const { toast } = useToast();
   const { user, fetchUser } = useContext(AuthContext);
   const { theme } = useTheme();
@@ -285,11 +366,11 @@ export default function HomeScreen({ navigation }) {
 
         // Log errors if any
         if (results[0].status === "rejected")
-          console.error("Failed to load user projects:", results[0].reason);
+          console.warn("Failed to load user projects:", results[0].reason);
         if (results[1].status === "rejected")
-          console.error("Failed to load shared projects:", results[1].reason);
+          console.warn("Failed to load shared projects:", results[1].reason);
         if (results[2].status === "rejected")
-          console.error("Failed to load local projects:", results[2].reason);
+          console.warn("Failed to load local projects:", results[2].reason);
 
         setProjects(myPaged.content || []);
         setTotalPages(myPaged.totalPages || 0);
@@ -327,7 +408,7 @@ export default function HomeScreen({ navigation }) {
         const data = await notiService.getCountNotiUnRead();
         const count = Number(data?.unread ?? 0);
         setNotiCount(count);
-      } catch (error) {}
+      } catch (error) { }
     };
 
     loadNotiCount();
@@ -483,8 +564,8 @@ export default function HomeScreen({ navigation }) {
             details.paperSize === "LANDSCAPE"
               ? "landscape"
               : details.paperSize === "PORTRAIT"
-              ? "portrait"
-              : details.orientation || meta?.orientation || "portrait",
+                ? "portrait"
+                : details.orientation || meta?.orientation || "portrait",
           paperSize: "A4",
           cover: details.imageUrl
             ? { template: "custom_image", imageUrl: details.imageUrl }
@@ -492,10 +573,20 @@ export default function HomeScreen({ navigation }) {
           paper: { template: "blank" },
           pages: details.pages || [],
           projectDetails: details,
+          // 🔒 Pass view-only mode flag
+          isViewOnly: details.hasCollaboration && details.edited === false,
         };
+
+        // 🛑 Check if project is shared but not yet accepted
+        if (activeTab === "shared" && project.accepted === false) {
+          setPendingProject({ ...project, config });
+          setAcceptModalVisible(true);
+          return;
+        }
+
         navigation.navigate("DrawingScreen", { noteConfig: config });
       } catch (error) {
-        console.error("❌ Error in handleProjectClick:", error);
+        console.warn("❌ Error in handleProjectClick:", error);
         toast({
           title: "Error",
           description: "Failed to load project",
@@ -503,7 +594,7 @@ export default function HomeScreen({ navigation }) {
         });
       }
     },
-    [navigation, toast]
+    [navigation, toast, activeTab, fetchProjects, currentPage]
   );
 
   // 3-dot menu
@@ -739,7 +830,7 @@ export default function HomeScreen({ navigation }) {
             snapshotUrl: page.snapshotUrl || null,
           };
         } catch (error) {
-          console.error(`Failed to import page ${page.pageNumber}:`, error);
+          console.warn(`Failed to import page ${page.pageNumber}:`, error);
           return null;
         }
       });
@@ -784,9 +875,9 @@ export default function HomeScreen({ navigation }) {
         paperSize: projectData.paperSize,
         cover: projectData.imageUrl
           ? {
-              template: "custom_image",
-              imageUrl: projectData.imageUrl,
-            }
+            template: "custom_image",
+            imageUrl: projectData.imageUrl,
+          }
           : null,
         paper: config.paper || { template: "blank" },
         pages: uploadedPages.map((p, idx) => ({
@@ -803,7 +894,7 @@ export default function HomeScreen({ navigation }) {
 
       navigation.navigate("DrawingScreen", { noteConfig });
     } catch (error) {
-      console.error("Import JSON error:", error);
+      console.warn("Import JSON error:", error);
       toast({
         title: "Import Failed",
         description: error.message || "Failed to import project",
@@ -865,12 +956,12 @@ export default function HomeScreen({ navigation }) {
         prev.map((p) =>
           p.projectId === selectedProject.projectId
             ? {
-                ...p,
-                name: editName.trim(),
-                description: editDesc.trim(),
-                imageUrl: finalImageUrl || "",
-                paperSize: editPaperSize,
-              }
+              ...p,
+              name: editName.trim(),
+              description: editDesc.trim(),
+              imageUrl: finalImageUrl || "",
+              paperSize: editPaperSize,
+            }
             : p
         )
       );
@@ -881,7 +972,7 @@ export default function HomeScreen({ navigation }) {
       });
       setEditModalVisible(false);
     } catch (err) {
-      console.error(err);
+      console.warn(err);
       toast({
         title: "Error",
         description: "Failed to update project",
@@ -940,19 +1031,29 @@ export default function HomeScreen({ navigation }) {
               colors={["transparent", "rgba(0,0,0,0.08)"]}
               style={styles.imageGradient}
             />
-            <TouchableOpacity
-              style={[
-                styles.threeDotButton,
-                isDark && styles.threeDotButtonDark,
-              ]}
-              onPress={(e) => openMenu(item, e)}
-            >
-              <Icon
-                name="more-vert"
-                size={24}
-                color={isDark ? "#94A3B8" : "#64748B"}
-              />
-            </TouchableOpacity>
+            {(item.owner === true || activeTab === "local") && (
+              <TouchableOpacity
+                style={[
+                  styles.threeDotButton,
+                  isDark && styles.threeDotButtonDark,
+                ]}
+                onPress={(e) => openMenu(item, e)}
+              >
+                <Icon
+                  name="more-vert"
+                  size={24}
+                  color={isDark ? "#94A3B8" : "#64748B"}
+                />
+              </TouchableOpacity>
+            )}
+            {activeTab === "shared" && item.accepted === false && (
+              <View style={styles.cardBadges}>
+                <View style={[styles.badge, { backgroundColor: "#EF4444" }]}>
+                  <Icon name="warning" size={12} color="#FFF" style={{ marginRight: 4 }} />
+                  <Text style={styles.badgeText}>Pending</Text>
+                </View>
+              </View>
+            )}
           </View>
           <View style={styles.cardInfo}>
             <Text
@@ -987,7 +1088,7 @@ export default function HomeScreen({ navigation }) {
         </View>
       </TouchableOpacity>
     ),
-    [handleProjectClick]
+    [handleProjectClick, isDark, activeTab]
   );
 
   return (
@@ -1007,6 +1108,7 @@ export default function HomeScreen({ navigation }) {
               >
                 Projects
               </Text>
+
               <LottieView
                 source={require("../../../assets/cat.json")}
                 autoPlay
@@ -1035,7 +1137,21 @@ export default function HomeScreen({ navigation }) {
                 >
                   <View style={styles.premiumContent}>
                     <View style={styles.premiumTextBox}>
-                      {user?.hasActiveSubscription ? (
+                      {user?.role === "DESIGNER" &&
+                        !user?.hasActiveSubscription ? (
+                        <>
+                          <TypeFloatText
+                            text="Your subscription has expired"
+                            style={styles.premiumTitle}
+                            speed={40}
+                          />
+                          <TypeFloatText
+                            text="Would you like to renew?"
+                            style={styles.premiumSubtitle}
+                            speed={35}
+                          />
+                        </>
+                      ) : user?.hasActiveSubscription ? (
                         <>
                           <TypeFloatText
                             text={user?.subscriptionType || "Subscribed"}
@@ -1046,8 +1162,8 @@ export default function HomeScreen({ navigation }) {
                             text={
                               user?.subscriptionEndDate
                                 ? `Active until ${formatDate(
-                                    user.subscriptionEndDate
-                                  )}`
+                                  user.subscriptionEndDate
+                                )}`
                                 : "Active"
                             }
                             style={styles.premiumSubtitle}
@@ -1189,11 +1305,9 @@ export default function HomeScreen({ navigation }) {
                 const max = user.maxProjects || 3;
 
                 if (current >= max) {
-                  toast({
-                    type: "error",
-                    text1: "Project Limit Reached",
-                    text2: `You have reached the limit of ${max} projects for the Free plan. Please upgrade to a Premium plan to create more projects.`,
-                  });
+                  // ✅ FIX: Show modal instead of toast
+                  setLimitInfo({ current, max });
+                  setLimitModalVisible(true);
                   return;
                 }
               }
@@ -1208,83 +1322,158 @@ export default function HomeScreen({ navigation }) {
             }}
           />
 
-          {/* TABS */}
+          {/* TABS AND TOTAL PROJECTS - SAME ROW */}
           <View
             style={{
               flexDirection: "row",
               paddingHorizontal: 16,
-              marginBottom: 12,
-              gap: 12,
+              marginBottom: 16,
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            <TouchableOpacity
-              onPress={() => {
-                setActiveTab("cloud");
-                fetchProjects(0);
-              }}
+            {/* Tabs Container */}
+            <View
               style={{
-                paddingVertical: 8,
-                paddingHorizontal: 16,
-                borderRadius: 20,
-                backgroundColor: activeTab === "cloud" ? "#2563EB" : "#E0F2FE",
+                flexDirection: "row",
+                gap: 12,
+                flex: 1,
               }}
             >
-              <Text
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveTab("cloud");
+                  fetchProjects(0);
+                }}
                 style={{
-                  color: activeTab === "cloud" ? "#FFF" : "#2563EB",
-                  fontWeight: "700",
-                  fontSize: 14,
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderRadius: 20,
+                  backgroundColor: activeTab === "cloud" ? "#2563EB" : "#E0F2FE",
                 }}
               >
-                My Projects
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={{
+                    color: activeTab === "cloud" ? "#FFF" : "#2563EB",
+                    fontWeight: "700",
+                    fontSize: 14,
+                  }}
+                >
+                  My Projects ({user?.currentProjects || 0})
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => {
-                setActiveTab("local");
-                fetchProjects(0);
-              }}
-              style={{
-                paddingVertical: 8,
-                paddingHorizontal: 16,
-                borderRadius: 20,
-                backgroundColor: activeTab === "local" ? "#F59E0B" : "#FEF3C7",
-              }}
-            >
-              <Text
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveTab("local");
+                  fetchProjects(0);
+                }}
                 style={{
-                  color: activeTab === "local" ? "#FFF" : "#D97706",
-                  fontWeight: "700",
-                  fontSize: 14,
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderRadius: 20,
+                  backgroundColor: activeTab === "local" ? "#F59E0B" : "#FEF3C7",
                 }}
               >
-                Local Projects
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={{
+                    color: activeTab === "local" ? "#FFF" : "#D97706",
+                    fontWeight: "700",
+                    fontSize: 14,
+                  }}
+                >
+                  Local Projects ({localProjects.length})
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => {
-                setActiveTab("shared");
-                fetchProjects(0);
-              }}
-              style={{
-                paddingVertical: 8,
-                paddingHorizontal: 16,
-                borderRadius: 20,
-                backgroundColor: activeTab === "shared" ? "#10B981" : "#D1FAE5",
-              }}
-            >
-              <Text
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveTab("shared");
+                  fetchProjects(0);
+                }}
                 style={{
-                  color: activeTab === "shared" ? "#FFF" : "#059669",
-                  fontWeight: "700",
-                  fontSize: 14,
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderRadius: 20,
+                  backgroundColor: activeTab === "shared" ? "#10B981" : "#D1FAE5",
                 }}
               >
-                Shared Projects
+                <Text
+                  style={{
+                    color: activeTab === "shared" ? "#FFF" : "#059669",
+                    fontWeight: "700",
+                    fontSize: 14,
+                  }}
+                >
+                  Shared Projects ({sharedProjects.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Total Projects Badge */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: isDark ? "#1F2937" : "#F3F4F6",
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                borderRadius: 24,
+                borderWidth: 1,
+                borderColor: isDark ? "#374151" : "#E5E7EB",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+                marginLeft: 12,
+              }}
+            >
+              <Icon
+                name="folder"
+                size={20}
+                color={isDark ? "#60A5FA" : "#3B82F6"}
+                style={{ marginRight: 8 }}
+              />
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#E5E7EB" : "#374151",
+                  fontWeight: "600",
+                  marginRight: 8,
+                }}
+              >
+                Total Projects:
               </Text>
-            </TouchableOpacity>
+              <Text
+                style={{
+                  fontSize: 16,
+                  color: isDark ? "#60A5FA" : "#3B82F6",
+                  fontWeight: "700",
+                }}
+              >
+                {user?.currentProjects || 0}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#9CA3AF" : "#6B7280",
+                  fontWeight: "600",
+                  marginHorizontal: 4,
+                }}
+              >
+                /
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#9CA3AF" : "#6B7280",
+                  fontWeight: "600",
+                }}
+              >
+                {user?.maxProjects || 3}
+              </Text>
+            </View>
           </View>
 
           {/* MAIN CONTENT */}
@@ -2019,6 +2208,221 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={limitModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLimitModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+          >
+            {/* Warning Icon */}
+            <View
+              style={[
+                styles.modalIconCircle,
+                { backgroundColor: "#FEF3C7", marginBottom: 16 },
+              ]}
+            >
+              <Icon name="warning" size={36} color="#F59E0B" />
+            </View>
+
+            {/* Title */}
+            <Text
+              style={[
+                styles.modalTitle,
+                isDark && styles.modalTitleDark,
+                { marginBottom: 12 },
+              ]}
+            >
+              Project Limit Reached
+            </Text>
+
+            {/* Message */}
+            <Text
+              style={[
+                styles.modalMessage,
+                isDark && styles.modalMessageDark,
+                { textAlign: "center", lineHeight: 22 },
+              ]}
+            >
+              You have reached the limit of{" "}
+              <Text style={{ fontWeight: "700", color: "#F59E0B" }}>
+                {limitInfo.max} projects
+              </Text>{" "}
+              for the Free plan.
+            </Text>
+
+            <Text
+              style={[
+                styles.modalMessage,
+                isDark && styles.modalMessageDark,
+                { textAlign: "center", marginTop: 8, lineHeight: 22 },
+              ]}
+            >
+              Upgrade to{" "}
+              <Text style={{ fontWeight: "700", color: "#3B82F6" }}>
+                Premium
+              </Text>{" "}
+              to create unlimited projects and unlock exclusive features!
+            </Text>
+
+            {/* Current Usage */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: 16,
+                paddingVertical: 12,
+                paddingHorizontal: 20,
+                backgroundColor: isDark ? "#334155" : "#F1F5F9",
+                borderRadius: 12,
+              }}
+            >
+              <Icon
+                name="folder"
+                size={20}
+                color={isDark ? "#60A5FA" : "#3B82F6"}
+              />
+              <Text
+                style={{
+                  marginLeft: 8,
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: isDark ? "#E2E8F0" : "#334155",
+                }}
+              >
+                {limitInfo.current} / {limitInfo.max} projects used
+              </Text>
+            </View>
+
+            {/* Progress Bar */}
+            <View
+              style={{
+                width: "100%",
+                height: 6,
+                backgroundColor: isDark ? "#475569" : "#E2E8F0",
+                borderRadius: 3,
+                marginTop: 12,
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: "#EF4444",
+                  borderRadius: 3,
+                }}
+              />
+            </View>
+
+            {/* Buttons */}
+            <View style={[styles.modalButtons, { marginTop: 24 }]}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButtonCancel,
+                  isDark && styles.modalButtonCancelDark,
+                ]}
+                onPress={() => setLimitModalVisible(false)}
+              >
+                <Text
+                  style={[
+                    styles.modalButtonTextCancel,
+                    isDark && styles.modalButtonTextCancelDark,
+                  ]}
+                >
+                  Maybe Later
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  {
+                    backgroundColor: "#3B82F6",
+                    flexDirection: "row",
+                    alignItems: "center",
+                  },
+                ]}
+                onPress={() => {
+                  setLimitModalVisible(false);
+                  navigation.navigate("DesignerSubscription");
+                }}
+              >
+                <Text style={styles.modalButtonText}>Upgrade Now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <AcceptInvitationModal
+        visible={acceptModalVisible}
+        project={pendingProject}
+        isDark={isDark}
+        onClose={() => {
+          setAcceptModalVisible(false);
+          setPendingProject(null);
+        }}
+        onAccept={async () => {
+          if (!pendingProject) return;
+          try {
+            setAcceptModalVisible(false);
+            setLoading(true);
+            await projectService.acceptCollaboration(
+              pendingProject.projectId,
+              true
+            );
+            toast({
+              title: "Success",
+              description: "Invitation accepted!",
+              variant: "success",
+            });
+            await fetchProjects(currentPage);
+            navigation.navigate("DrawingScreen", {
+              noteConfig: pendingProject.config,
+            });
+          } catch (err) {
+            toast({
+              title: "Error",
+              description: "Failed to accept invitation",
+              variant: "destructive",
+            });
+          } finally {
+            setLoading(false);
+            setPendingProject(null);
+          }
+        }}
+        onReject={async () => {
+          if (!pendingProject) return;
+          try {
+            setAcceptModalVisible(false);
+            setLoading(true);
+            await projectService.acceptCollaboration(
+              pendingProject.projectId,
+              false
+            );
+            toast({
+              title: "Rejected",
+              description: "Invitation declined",
+            });
+            await fetchProjects(currentPage);
+          } catch (err) {
+            toast({
+              title: "Error",
+              description: "Failed to reject invitation",
+              variant: "destructive",
+            });
+          } finally {
+            setLoading(false);
+            setPendingProject(null);
+          }
+        }}
+      />
     </View>
   );
 }

@@ -63,7 +63,7 @@ export default function MultipleImageUploader({
 
       const selectedUri = result.assets[0].uri;
       await handleUpload(selectedUri);
-    } catch (error) {}
+    } catch (error) { }
   };
 
   const handleUpload = async (uri) => {
@@ -89,7 +89,7 @@ export default function MultipleImageUploader({
         throw new Error("Invalid upload response");
       }
     } catch (error) {
-      console.error("❌ Upload error:", error);
+      console.warn("❌ Upload error:", error);
       Alert.alert("Error", error.message || "Cannot upload image");
     } finally {
       setUploading(false);

@@ -135,7 +135,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     return () => {
       try {
         imageRefs.current.clear();
-      } catch {}
+      } catch { }
     };
   }, []);
 
@@ -164,7 +164,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     refsToDelete.forEach((id) => {
       try {
         imageRefs.current.delete(id);
-      } catch {}
+      } catch { }
     });
   }, [internalLayers]);
 
@@ -245,7 +245,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           cancelAnimationFrame(snapshotUpdateLockRef.rafId);
           snapshotUpdateLockRef.rafId = null;
         }
-      } catch {}
+      } catch { }
     };
   }, []);
 
@@ -662,9 +662,9 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             pageInfo
           );
         }
-      } catch {}
+      } catch { }
     } catch (e) {
-      console.error("[CanvasContainer] addStrokeInternal error:", e);
+      console.warn("[CanvasContainer] addStrokeInternal error:", e);
     }
   };
 
@@ -863,7 +863,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           naturalW = size.w;
           naturalH = size.h;
         }
-      } catch {}
+      } catch { }
 
       let width = typeof opts.width === "number" ? opts.width : naturalW ?? 400;
       let height =
@@ -899,7 +899,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
 
       addStrokeInternal(newStroke);
     } catch (err) {
-      console.error("Failed to add image:", err);
+      console.warn("Failed to add image:", err);
       Alert.alert("Lỗi ảnh", "Không thể đọc hoặc hiển thị ảnh này.");
     }
   };
@@ -1128,7 +1128,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         const s = { ...stroke, id: stroke.id ?? nextId() };
         addStrokeInternal(s);
       } catch (e) {
-        console.error("[CanvasContainer] addStrokeDirect error:", e);
+        console.warn("[CanvasContainer] addStrokeDirect error:", e);
       }
     },
 
@@ -1342,7 +1342,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         setUndoStack([]);
         setRedoStack([]);
       } catch (e) {
-        console.error("[CanvasContainer] loadStrokes error:", e);
+        console.warn("[CanvasContainer] loadStrokes error:", e);
       }
     },
 
@@ -1439,7 +1439,7 @@ const CanvasContainer = forwardRef(function CanvasContainer(
           });
         }
       } catch (e) {
-        console.error("[CanvasContainer] appendStrokes error:", e);
+        console.warn("[CanvasContainer] appendStrokes error:", e);
       }
     },
 

@@ -97,11 +97,49 @@ const GestureHandler = forwardRef(
     shapeSettingsRef.current = shapeSettings;
     const tapeSettingsRef = useRef(tapeSettings);
     tapeSettingsRef.current = tapeSettings;
-
+    const rafIdsRef = useRef(new Set());
+    const timeoutIdsRef = useRef(new Set());
+    const safeRAF = useCallback((callback) => {
+      const id = requestAnimationFrame(() => {
+        rafIdsRef.current.delete(id);
+        callback();
+      });
+      rafIdsRef.current.add(id);
+      return id;
+    }, []);
+    // ✅ Helper: Safe timeout that tracks IDs
+    const safeTimeout = useCallback((callback, delay) => {
+      const id = setTimeout(() => {
+        timeoutIdsRef.current.delete(id);
+        callback();
+      }, delay);
+      timeoutIdsRef.current.add(id);
+      return id;
+    }, []);
     // Cleanup: cancel any pending RAF to prevent leaks when unmounting
     useEffect(() => {
       return () => {
         try {
+          // Clear all tracked RAF IDs
+          if (rafIdsRef.current) {
+            rafIdsRef.current.forEach((id) => {
+              try {
+                cancelAnimationFrame(id);
+              } catch { }
+            });
+            rafIdsRef.current.clear();
+          }
+
+          // Clear all tracked timeout IDs
+          if (timeoutIdsRef.current) {
+            timeoutIdsRef.current.forEach((id) => {
+              try {
+                clearTimeout(id);
+              } catch { }
+            });
+            timeoutIdsRef.current.clear();
+          }
+
           if (typeof rafIdRef.current === "number") {
             cancelAnimationFrame(rafIdRef.current);
           }
@@ -109,9 +147,83 @@ const GestureHandler = forwardRef(
         rafIdRef.current = null;
         // Reset transient refs to release memory
         rafScheduled.current = false;
+        visualFlushRaf.current = false;
+        lassoMoveRAF.current = false;
+        selectionBoxRaf.current = false;
         liveRef.current = [];
       };
     }, []);
+
+    const MAX_STROKE_POINTS = 2000;
+    const MAX_LASSO_POINTS = 1000;
+
+    const commitCurrentStroke = useCallback(() => {
+      if (liveRef.current.length < 2) {
+        liveRef.current = [];
+        setCurrentPoints([]);
+        return;
+      }
+
+      const w =
+        {
+          pen: strokeWidth,
+          pencil: pencilWidth,
+          brush: brushWidth,
+          calligraphy: calligraphyWidth,
+          highlighter: strokeWidth * 2,
+          eraser: eraserSize,
+        }[tool] ?? strokeWidth;
+
+      const toolConfig = configByTool[tool] || {
+        pressure: 0.5,
+        thickness: 1,
+        stabilization: 0.2,
+      };
+
+      const newStroke = {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        tool,
+        color,
+        width: w,
+        points: [...liveRef.current],
+        opacity:
+          tool === "brush"
+            ? brushOpacity
+            : tool === "calligraphy"
+              ? calligraphyOpacity
+              : 1,
+        ...toolConfig,
+        layerId: activeLayerId,
+        rotation: 0,
+      };
+
+      if (typeof onAddStroke === "function") {
+        try {
+          onAddStroke(newStroke);
+        } catch (err) {
+          console.warn("Error auto-committing stroke:", err);
+        }
+      }
+
+      liveRef.current = [];
+      setCurrentPoints([]);
+    }, [
+      tool,
+      strokeWidth,
+      pencilWidth,
+      brushWidth,
+      eraserSize,
+      calligraphyWidth,
+      color,
+      brushOpacity,
+      calligraphyOpacity,
+      activeLayerId,
+      configByTool,
+      onAddStroke,
+      setCurrentPoints,
+    ]);
+
+
 
     // Helper: dynamic minimum distance squared for point sampling
     const getMinDistSq = useCallback(() => {
@@ -1051,7 +1163,7 @@ const GestureHandler = forwardRef(
           try {
             onAddStroke?.(newStroke);
           } catch (err) {
-            console.error("Error adding dot stroke:", err);
+            console.warn("Error adding dot stroke:", err);
           }
           return;
         }
@@ -1489,11 +1601,10 @@ const GestureHandler = forwardRef(
 
         if (!rafScheduled.current) {
           rafScheduled.current = true;
-          const id = requestAnimationFrame(() => {
+          safeRAF(() => {
             rafScheduled.current = false;
             setCurrentPoints([...liveRef.current]);
           });
-          rafIdRef.current = id;
         }
       })
 
@@ -1533,7 +1644,10 @@ const GestureHandler = forwardRef(
 
         // --- Nếu đang vẽ vùng lasso mới ---
         if (tool === "lasso" && !isMovingLasso) {
-          setLassoPoints((prev) => [...prev, { x: e.x, y: e.y }]);
+          setLassoPoints((prev) => {
+            if (prev.length >= MAX_LASSO_POINTS) return prev;
+            return [...prev, { x: e.x, y: e.y }];
+          });
           return;
         }
 
@@ -1602,7 +1716,7 @@ const GestureHandler = forwardRef(
           if (eraserMode === "stroke") {
             if (!rafScheduled.current) {
               rafScheduled.current = true;
-              const id = requestAnimationFrame(() => {
+              safeRAF(() => {
                 rafScheduled.current = false;
                 validStrokes.forEach((s, i) => {
                   // ✅ RESTRICT ERASER: Skip images, text, stickers, tables
@@ -1631,7 +1745,6 @@ const GestureHandler = forwardRef(
                   }
                 });
               });
-              rafIdRef.current = id;
             }
             return;
           }
@@ -1642,11 +1755,10 @@ const GestureHandler = forwardRef(
               liveRef.current.push({ x: e.x, y: e.y });
               if (!rafScheduled.current) {
                 rafScheduled.current = true;
-                const id = requestAnimationFrame(() => {
+                safeRAF(() => {
                   rafScheduled.current = false;
                   setCurrentPoints([...liveRef.current]);
                 });
-                rafIdRef.current = id;
               }
               return;
             }
@@ -1657,11 +1769,10 @@ const GestureHandler = forwardRef(
             liveRef.current.push({ x: e.x, y: e.y });
             if (!rafScheduled.current) {
               rafScheduled.current = true;
-              const id = requestAnimationFrame(() => {
+              safeRAF(() => {
                 rafScheduled.current = false;
                 setCurrentPoints([...liveRef.current]);
               });
-              rafIdRef.current = id;
             }
             return;
           }
@@ -1674,13 +1785,12 @@ const GestureHandler = forwardRef(
             liveRef.current.push({ x: e.x, y: e.y });
             if (!rafScheduled.current) {
               rafScheduled.current = true;
-              const id = requestAnimationFrame(() => {
+              safeRAF(() => {
                 rafScheduled.current = false;
                 setCurrentPoints([...liveRef.current]);
+                const livePath = canvasRef?.current?.livePath;
+                if (livePath) livePath.lineTo(e.x, e.y);
               });
-              rafIdRef.current = id;
-              const livePath = canvasRef?.current?.livePath;
-              if (livePath) livePath.lineTo(e.x, e.y);
             }
             return;
           }
@@ -1724,6 +1834,10 @@ const GestureHandler = forwardRef(
         let point = { x: e.x, y: e.y };
         const prevPoint = liveRef.current.at(-1) || null;
 
+        if (liveRef.current.length >= MAX_STROKE_POINTS) {
+          commitCurrentStroke();
+        }
+
         liveRef.current.push({
           x: point.x,
           y: point.y,
@@ -1734,11 +1848,10 @@ const GestureHandler = forwardRef(
 
         if (!rafScheduled.current) {
           rafScheduled.current = true;
-          const id = requestAnimationFrame(() => {
+          safeRAF(() => {
             rafScheduled.current = false;
             setCurrentPoints([...liveRef.current]);
           });
-          rafIdRef.current = id;
         }
       })
       .onFinalize(() => {
@@ -1935,7 +2048,7 @@ const GestureHandler = forwardRef(
                 );
                 if (globalIndex !== -1) onDeleteStroke(globalIndex);
               } catch (err) {
-                console.error("Error deleting stroke:", err);
+                console.warn("Error deleting stroke:", err);
               }
             }
           }
@@ -2034,7 +2147,7 @@ const GestureHandler = forwardRef(
                   onCollabElementUpdate(pageId, s.id, fillChanges);
                 }
               } catch (err) {
-                console.error("Error modifying fill:", err);
+                console.warn("Error modifying fill:", err);
               }
               break;
             }
@@ -2187,12 +2300,12 @@ const GestureHandler = forwardRef(
           try {
             onAddStroke(newStroke);
 
-            // 🔄 REALTIME COLLABORATION: 
+            // 🔄 REALTIME COLLABORATION:
             // ❌ REMOVED duplicate onCollabElementCreate call here.
             // CanvasContainer.jsx's addStrokeInternal ALREADY calls projectService.realtime.sendStroke.
             // Calling it here caused double-strokes (ghosts) on other clients.
           } catch (err) {
-            console.error("Error adding stroke:", err);
+            console.warn("Error adding stroke:", err);
           }
         }
       });
@@ -2509,7 +2622,7 @@ const GestureHandler = forwardRef(
               // ✅ Update cả visual offsets VÀ lassoVisualOffset cùng lúc trong RAF
               if (!visualFlushRaf.current) {
                 visualFlushRaf.current = true;
-                requestAnimationFrame(() => {
+                safeRAF(() => {
                   visualFlushRaf.current = false;
 
                   // Update visual offsets cho strokes
@@ -2682,7 +2795,7 @@ const GestureHandler = forwardRef(
                 );
 
                 if (typeof setRealtimeText === "function") {
-                  requestAnimationFrame(() => {
+                  safeRAF(() => {
                     setRealtimeText((prev) =>
                       prev && prev.id === selectedId
                         ? { ...prev, x: prev.x + dx, y: prev.y + dy }

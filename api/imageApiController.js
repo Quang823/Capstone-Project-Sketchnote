@@ -19,7 +19,7 @@ export const imageApiController = {
             });
             return res;
         } catch (err) {
-            console.error("❌ Error generating image:", err);
+            console.warn("❌ Error generating image:", err);
             throw err;
         }
     },
@@ -37,7 +37,7 @@ export const imageApiController = {
             });
             return res;
         } catch (err) {
-            console.error("❌ Error fetching image history:", err);
+            console.warn("❌ Error fetching image history:", err);
             throw err;
         }
     },

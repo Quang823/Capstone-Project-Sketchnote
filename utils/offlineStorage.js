@@ -29,7 +29,7 @@ export const saveProjectLocally = async (projectId, projectData) => {
     const jsonValue = JSON.stringify(projectData);
     await AsyncStorage.setItem(key, jsonValue);
   } catch (e) {
-    console.error("Failed to save project locally", e);
+    console.warn("Failed to save project locally", e);
   }
 };
 
@@ -48,7 +48,7 @@ export const saveProjectPageLocally = async (projectId, pageNumber, pageData) =>
       encoding: FileSystem.EncodingType.UTF8,
     });
   } catch (e) {
-    console.error(`Failed to save page ${pageNumber} locally`, e);
+    console.warn(`Failed to save page ${pageNumber} locally`, e);
     throw e;
   }
 };
@@ -68,7 +68,7 @@ export const loadProjectLocally = async (projectId) => {
     // Use background parser to avoid blocking UI
     return await parseJsonInBackground(jsonValue);
   } catch (e) {
-    console.error("Failed to load project locally", e);
+    console.warn("Failed to load project locally", e);
     return null;
   }
 };
@@ -105,7 +105,7 @@ export const loadProjectPageLocally = async (projectId, pageNumber) => {
 
     return null;
   } catch (e) {
-    console.error(`Failed to load page ${pageNumber} locally`, e);
+    console.warn(`Failed to load page ${pageNumber} locally`, e);
     return null;
   }
 };
@@ -122,7 +122,7 @@ export const addProjectToSyncQueue = async (projectId) => {
       await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
     }
   } catch (e) {
-    console.error("Failed to add project to sync queue", e);
+    console.warn("Failed to add project to sync queue", e);
   }
 };
 
@@ -138,7 +138,7 @@ export const getProjectsToSync = async () => {
     const queue = await parseJsonInBackground(jsonValue);
     return Array.isArray(queue) ? queue : [];
   } catch (e) {
-    console.error("Failed to get sync queue", e);
+    console.warn("Failed to get sync queue", e);
     return [];
   }
 };
@@ -153,7 +153,7 @@ export const removeProjectFromSyncQueue = async (projectId) => {
     const newQueue = queue.filter((id) => id !== projectId);
     await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(newQueue));
   } catch (e) {
-    console.error("Failed to remove project from sync queue", e);
+    console.warn("Failed to remove project from sync queue", e);
   }
 };
 
@@ -195,7 +195,7 @@ export const saveGuestProject = async (projectId, projectData) => {
     // 4. Update List
     await addToGuestProjectList(projectId);
   } catch (e) {
-    console.error("Failed to save guest project", e);
+    console.warn("Failed to save guest project", e);
     throw e;
   }
 };
@@ -219,7 +219,7 @@ export const saveGuestProjectMetadata = async (projectId, metadata) => {
     await AsyncStorage.setItem(key, JSON.stringify(safeMetadata));
     await addToGuestProjectList(projectId);
   } catch (e) {
-    console.error("Failed to save guest project metadata", e);
+    console.warn("Failed to save guest project metadata", e);
   }
 };
 
@@ -272,7 +272,7 @@ export const loadGuestProject = async (projectId) => {
 
         return metadata; // Return lightweight metadata
       } catch (migrationError) {
-        console.error("Migration failed:", migrationError);
+        console.warn("Migration failed:", migrationError);
         // Return original data as fallback, but it might be slow
         return data;
       }
@@ -280,7 +280,7 @@ export const loadGuestProject = async (projectId) => {
 
     return data;
   } catch (e) {
-    console.error("Failed to load guest project", e);
+    console.warn("Failed to load guest project", e);
     return null;
   }
 };
@@ -312,7 +312,7 @@ export const loadGuestProjectFull = async (projectId) => {
 
     return null;
   } catch (e) {
-    console.error("Failed to load full guest project", e);
+    console.warn("Failed to load full guest project", e);
     return null;
   }
 };
@@ -348,7 +348,7 @@ export const getAllGuestProjects = async () => {
       return dateB - dateA;
     });
   } catch (e) {
-    console.error("Failed to get all guest projects", e);
+    console.warn("Failed to get all guest projects", e);
     return [];
   }
 };
@@ -372,7 +372,7 @@ export const deleteGuestProject = async (projectId) => {
     // 3. Remove from List
     await removeFromGuestProjectList(projectId);
   } catch (e) {
-    console.error("Failed to delete guest project", e);
+    console.warn("Failed to delete guest project", e);
     throw e;
   }
 };
@@ -391,7 +391,7 @@ const addToGuestProjectList = async (projectId) => {
       await AsyncStorage.setItem(GUEST_PROJECT_LIST_KEY, JSON.stringify(projectIds));
     }
   } catch (e) {
-    console.error("Failed to add to guest project list", e);
+    console.warn("Failed to add to guest project list", e);
   }
 };
 
@@ -406,7 +406,7 @@ const removeFromGuestProjectList = async (projectId) => {
     const newList = projectIds.filter(id => id !== projectId);
     await AsyncStorage.setItem(GUEST_PROJECT_LIST_KEY, JSON.stringify(newList));
   } catch (e) {
-    console.error("Failed to remove from guest project list", e);
+    console.warn("Failed to remove from guest project list", e);
   }
 };
 

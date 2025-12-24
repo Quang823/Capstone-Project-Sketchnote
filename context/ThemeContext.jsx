@@ -19,7 +19,7 @@ export const ThemeProvider = ({ children }) => {
                     setTheme(systemScheme);
                 }
             } catch (error) {
-                console.error('Failed to load theme:', error);
+                console.warn('Failed to load theme:', error);
             } finally {
                 setLoading(false);
             }
@@ -34,7 +34,7 @@ export const ThemeProvider = ({ children }) => {
         try {
             await AsyncStorage.setItem('user_theme', newTheme);
         } catch (error) {
-            console.error('Failed to save theme:', error);
+            console.warn('Failed to save theme:', error);
         }
     };
 
@@ -43,7 +43,7 @@ export const ThemeProvider = ({ children }) => {
         try {
             await AsyncStorage.setItem('user_theme', newTheme);
         } catch (error) {
-            console.error('Failed to save theme:', error);
+            console.warn('Failed to save theme:', error);
         }
     }
 

@@ -84,7 +84,7 @@ export default function DesignerAnalyticsScreen() {
 
       setSalesData(result);
     } catch (error) {
-      console.error("❌ Error fetching sales report:", error);
+      console.warn("❌ Error fetching sales report:", error);
     } finally {
       setLoading(false);
     }
@@ -96,7 +96,7 @@ export default function DesignerAnalyticsScreen() {
       const res = await dashboardService.getTopTemplates();
       setTopTemplates(res);
     } catch (error) {
-      console.error("Error fetching top templates:", error);
+      console.warn("Error fetching top templates:", error);
     }
   };
 
@@ -106,7 +106,7 @@ export default function DesignerAnalyticsScreen() {
       const res = await dashboardService.getDashboardSummaryDesigner();
       setSummary(res);
     } catch (error) {
-      console.error("Error fetching summary:", error);
+      console.warn("Error fetching summary:", error);
     }
   };
 

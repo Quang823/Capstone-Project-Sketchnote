@@ -40,7 +40,7 @@ export const projectService = {
       // Trả về URL thật (bỏ phần query)
       return uploadUrl.split("?")[0];
     } catch (error) {
-      console.error("❌ Failed to upload asset:", error);
+      console.warn("❌ Failed to upload asset:", error);
       throw error;
     }
   },
@@ -76,7 +76,7 @@ export const projectService = {
       }
       throw new Error("Invalid response from createPage API");
     } catch (err) {
-      console.error("❌ Failed to create/update pages in DB:", err);
+      console.warn("❌ Failed to create/update pages in DB:", err);
       throw err;
     }
   },
@@ -121,7 +121,7 @@ export const projectService = {
               }
             }
           } catch (refreshError) {
-            console.error("❌ [Service] Failed to refresh URL:", refreshError);
+            console.warn("❌ [Service] Failed to refresh URL:", refreshError);
           }
         }
         throw error;
@@ -175,7 +175,7 @@ export const projectService = {
       return remoteData;
     } catch (error) {
       if (error.name !== "AbortError") {
-        console.error(
+        console.warn(
           `❌ Failed to load page ${pageNumber} from both cache and server.`,
           error
         );
@@ -261,7 +261,7 @@ export const projectService = {
               });
             });
           } catch (uploadErr) {
-            console.error(
+            console.warn(
               `Failed to upload batch for project ${projectId}`,
               uploadErr
             );
@@ -286,7 +286,7 @@ export const projectService = {
           await offlineStorage.removeProjectFromSyncQueue(key);
         }
       } catch (error) {
-        console.error(`❌ FAILED to sync project ${projectId}:`, error);
+        console.warn(`❌ FAILED to sync project ${projectId}:`, error);
         // Don't remove from queue if sync fails, it will be retried next time.
       }
     }
@@ -304,7 +304,7 @@ export const projectService = {
       }
       return [];
     } catch (error) {
-      console.error("Error in getUserProjects:", error);
+      console.warn("Error in getUserProjects:", error);
       throw error;
     }
   },
@@ -340,7 +340,7 @@ export const projectService = {
         pageSize,
       };
     } catch (error) {
-      console.error("Error in getUserProjectsPaged:", error);
+      console.warn("Error in getUserProjectsPaged:", error);
       throw error;
     }
   },
@@ -353,7 +353,7 @@ export const projectService = {
       }
       return [];
     } catch (error) {
-      console.error("Error in getSharedProjects:", error);
+      console.warn("Error in getSharedProjects:", error);
       throw error;
     }
   },
@@ -370,7 +370,7 @@ export const projectService = {
       }
       return result;
     } catch (err) {
-      console.error("❌ Failed to get presign URL:", err);
+      console.warn("❌ Failed to get presign URL:", err);
       throw err;
     }
   },
@@ -389,7 +389,7 @@ export const projectService = {
       }
       return presignedUrl.split("?")[0];
     } catch (err) {
-      console.error(`❌ Failed to upload to presigned URL:`, err);
+      console.warn(`❌ Failed to upload to presigned URL:`, err);
       throw err;
     }
   },
@@ -411,7 +411,7 @@ export const projectService = {
     } catch (err) {
       if (err.name === "AbortError") {
       } else {
-        console.error("❌ Error loading JSON:", err);
+        console.warn("❌ Error loading JSON:", err);
       }
       throw err; // Re-throw so the caller can handle it
     }
@@ -425,7 +425,7 @@ export const projectService = {
       }
       throw new Error("Invalid response from server");
     } catch (err) {
-      console.error("❌ Failed to create project:", err);
+      console.warn("❌ Failed to create project:", err);
       throw err;
     }
   },
@@ -440,7 +440,7 @@ export const projectService = {
       }
       throw new Error("Update failed");
     } catch (err) {
-      console.error("Failed to update project:", err);
+      console.warn("Failed to update project:", err);
       throw err;
     }
   },
@@ -453,7 +453,7 @@ export const projectService = {
       }
       throw new Error("Delete failed");
     } catch (err) {
-      console.error("Failed to delete project:", err);
+      console.warn("Failed to delete project:", err);
       throw err;
     }
   },
@@ -465,7 +465,7 @@ export const projectService = {
       }
       throw new Error("Invalid response from server");
     } catch (err) {
-      console.error("❌ Failed to get project by ID:", err);
+      console.warn("❌ Failed to get project by ID:", err);
       throw err;
     }
   },
@@ -511,7 +511,7 @@ export const projectService = {
     let pendingQueue = [];
     let stompClient = null;
     let activeSubscription = null; // ✅ FIXED: Track subscription for cleanup
-
+    let pendingTimeouts = new Set();
     const buildFrame = (command, headers = {}, body = "") => {
       const lines = [command];
       Object.keys(headers).forEach((k) => {
@@ -598,7 +598,7 @@ export const projectService = {
                   onMessageCb(json);
                 }
               } catch (err) {
-                console.error("❌ [Realtime] Error processing message:", err);
+                console.warn("❌ [Realtime] Error processing message:", err);
               }
             });
 
@@ -615,7 +615,7 @@ export const projectService = {
                     });
                   }
                 } catch (err) {
-                  console.error("❌ [Realtime] Error flushing message:", err);
+                  console.warn("❌ [Realtime] Error flushing message:", err);
                 }
               });
               pendingQueue = [];
@@ -623,11 +623,11 @@ export const projectService = {
           },
 
           onWebSocketError: (e) => {
-            console.error("❌❌❌ [Realtime] WebSocket ERROR ❌❌❌", e);
+            console.warn("❌❌❌ [Realtime] WebSocket ERROR ❌❌❌", e);
           },
 
           onStompError: (frame) => {
-            console.error("❌❌❌ [Realtime] STOMP ERROR ❌❌❌", frame);
+            console.warn("❌❌❌ [Realtime] STOMP ERROR ❌❌❌", frame);
           },
 
           onWebSocketClose: (e) => {
@@ -641,14 +641,22 @@ export const projectService = {
 
         return true;
       } catch (err) {
-        console.error("❌❌❌ [Realtime] CONNECT ERROR ❌❌❌", err);
+        console.warn("❌❌❌ [Realtime] CONNECT ERROR ❌❌❌", err);
         throw err;
       }
     };
 
     const disconnect = () => {
       try {
-        // ✅ FIXED: Unsubscribe before deactivating
+        // ✅ FIX: Clear all pending timeouts
+        pendingTimeouts.forEach((timeoutId) => {
+          try {
+            clearTimeout(timeoutId);
+          } catch { }
+        });
+        pendingTimeouts.clear();
+
+        // ✅ Unsubscribe before deactivating
         if (activeSubscription) {
           try {
             activeSubscription.unsubscribe();
@@ -674,12 +682,10 @@ export const projectService = {
           heartbeatTimer = null;
         }
 
-        // ✅ Close underlying WebSocket if still open
+        // ✅ Close underlying WebSocket
         try {
           socket?.close?.();
-        } catch (err) {
-          console.warn("⚠️ [Realtime] Error closing socket:", err);
-        }
+        } catch { }
         socket = null;
 
         // ✅ Reset state
@@ -687,12 +693,19 @@ export const projectService = {
         activeProjectId = null;
         onMessageCb = null;
 
-        // ✅ FIXED: Clear pending queue properly
+        // ✅ Clear pending queue properly
         pendingQueue.length = 0;
         pendingQueue = [];
       }
     };
-
+    const safeSetTimeout = (callback, delay) => {
+      const id = setTimeout(() => {
+        pendingTimeouts.delete(id);
+        callback();
+      }, delay);
+      pendingTimeouts.add(id);
+      return id;
+    };
     const sendAction = (projectId, userId, actionType, payload = {}) => {
       try {
         const body = JSON.stringify({
@@ -890,7 +903,7 @@ export const projectService = {
 
       return localProject;
     } catch (error) {
-      console.error("Failed to create local project:", error);
+      console.warn("Failed to create local project:", error);
       throw error;
     }
   },
@@ -903,7 +916,7 @@ export const projectService = {
     try {
       return await offlineStorage.getAllGuestProjects();
     } catch (error) {
-      console.error("Failed to get local projects:", error);
+      console.warn("Failed to get local projects:", error);
       return [];
     }
   },
@@ -969,7 +982,7 @@ export const projectService = {
 
       return cloudProject;
     } catch (error) {
-      console.error("Failed to upload local project:", error);
+      console.warn("Failed to upload local project:", error);
       throw error;
     }
   },
@@ -996,7 +1009,7 @@ export const projectService = {
       }
       throw new Error("Invalid response from server");
     } catch (err) {
-      console.error("❌ Failed to get project versions:", err);
+      console.warn("❌ Failed to get project versions:", err);
       throw err;
     }
   },
@@ -1018,7 +1031,26 @@ export const projectService = {
       }
       throw new Error("Failed to restore version");
     } catch (err) {
-      console.error("❌ Failed to restore project version:", err);
+      console.warn("❌ Failed to restore project version:", err);
+      throw err;
+    }
+  },
+
+  /**
+   * Accept a project invitation
+   * @param {string} projectId - Project ID to accept
+   * @param {boolean} accepted - Acceptance status
+   * @returns {Promise<object>} API response
+   */
+  acceptCollaboration: async (projectId, accepted = true) => {
+    try {
+      const response = await projectAPIController.acceptCollaboration(
+        projectId,
+        accepted
+      );
+      return response.data;
+    } catch (err) {
+      console.warn("❌ Failed to accept collaboration:", err);
       throw err;
     }
   },

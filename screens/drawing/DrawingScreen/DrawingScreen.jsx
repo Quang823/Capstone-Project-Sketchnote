@@ -38,6 +38,7 @@ import ExportModal from "../../../components/drawing/modal/ExportModal";
 import AIImageChatModal from "../../../components/drawing/modal/AIImageChatModal";
 import VersionSelectionModal from "../../../components/modals/VersionSelectionModal";
 import { projectService } from "../../../service/projectService";
+import { collabService } from "../../../service/collabService";
 import { AuthContext } from "../../../context/AuthContext";
 import styles from "./DrawingScreen.styles";
 import * as offlineStorage from "../../../utils/offlineStorage";
@@ -157,6 +158,20 @@ export default function DrawingScreen({ route }) {
   const { toast } = useToast();
   const [creditRefreshCounter, setCreditRefreshCounter] = useState(0);
   const [versionModalVisible, setVersionModalVisible] = useState(false);
+  const [collaborators, setCollaborators] = useState([]);
+
+  useEffect(() => {
+    const fetchCollaborators = async () => {
+      if (!safeNoteConfig?.projectId) return;
+      try {
+        const data = await collabService.getCollaborators(safeNoteConfig.projectId);
+        setCollaborators(data || []);
+      } catch (error) {
+        console.warn("Failed to fetch collaborators:", error);
+      }
+    };
+    fetchCollaborators();
+  }, [safeNoteConfig?.projectId]);
 
   const handleRestoreVersion = useCallback(
     async (version) => {
@@ -199,6 +214,11 @@ export default function DrawingScreen({ route }) {
       projectService.isLocalProject(projectId) ||
       safeNoteConfig?.isLocal === true
     );
+  }, [safeNoteConfig]);
+
+  // 🔒 Detect if this is view-only mode (collaboration without edit permission)
+  const isViewOnly = useMemo(() => {
+    return safeNoteConfig?.isViewOnly === true;
   }, [safeNoteConfig]);
 
   // 🔄 REALTIME COLLABORATION - useCollaboration hook
@@ -250,7 +270,7 @@ export default function DrawingScreen({ route }) {
               }
             );
           } catch (err) {
-            console.error("[Collab] Error applying remote update:", err);
+            console.warn("[Collab] Error applying remote update:", err);
           }
         });
       },
@@ -273,7 +293,7 @@ export default function DrawingScreen({ route }) {
               element,
             ]);
           } catch (err) {
-            console.error("[Collab] Error applying remote create:", err);
+            console.warn("[Collab] Error applying remote create:", err);
           }
         });
       },
@@ -296,7 +316,7 @@ export default function DrawingScreen({ route }) {
               fromRemote: true,
             });
           } catch (err) {
-            console.error("[Collab] Error applying remote delete:", err);
+            console.warn("[Collab] Error applying remote delete:", err);
           }
         });
       },
@@ -317,7 +337,7 @@ export default function DrawingScreen({ route }) {
           try {
             multiPageCanvasRef.current?.addPageFromRemote?.(page, insertAt);
           } catch (err) {
-            console.error("[Collab] Error applying remote page create:", err);
+            console.warn("[Collab] Error applying remote page create:", err);
           }
         });
       },
@@ -1097,7 +1117,7 @@ export default function DrawingScreen({ route }) {
             try {
               multiPageCanvasRef.current.appendStrokesToPage(pageId, batch);
             } catch (err) {
-              console.error("[DrawingScreen] Error appending strokes:", err);
+              console.warn("[DrawingScreen] Error appending strokes:", err);
             }
           }
 
@@ -1149,7 +1169,7 @@ export default function DrawingScreen({ route }) {
               }
             }
           } catch (localError) {
-            console.error("❌ Failed to load from FileSystem:", localError);
+            console.warn("❌ Failed to load from FileSystem:", localError);
           }
           return;
         }
@@ -1251,7 +1271,7 @@ export default function DrawingScreen({ route }) {
             }
           } catch (e) {
             if (e.name !== "AbortError") {
-              console.error(
+              console.warn(
                 `❌ Load page ${p.pageNumber} failed:`,
                 e?.message || e
               );
@@ -1260,7 +1280,7 @@ export default function DrawingScreen({ route }) {
         }
       } catch (e) {
         if (e.name !== "AbortError") {
-          console.error("[DrawingScreen] Auto-load error:", e);
+          console.warn("[DrawingScreen] Auto-load error:", e);
           if (!controller.signal.aborted) {
             Alert.alert(
               "Lỗi",
@@ -1342,7 +1362,7 @@ export default function DrawingScreen({ route }) {
             });
           }
         } catch (error) {
-          console.error("❌ Failed to save locally:", error);
+          console.warn("❌ Failed to save locally:", error);
           if (!silent) {
             toast({
               title: "Save Failed",
@@ -1373,7 +1393,7 @@ export default function DrawingScreen({ route }) {
           });
         }
       } catch (localSaveError) {
-        console.error(
+        console.warn(
           "❌ [DrawingScreen] Error saving locally:",
           localSaveError
         );
@@ -1466,7 +1486,7 @@ export default function DrawingScreen({ route }) {
           });
         }
       } catch (syncError) {
-        console.error("❌ [DrawingScreen] Sync failed:", syncError);
+        console.warn("❌ [DrawingScreen] Sync failed:", syncError);
         if (!silent) {
           toast({
             title: "Sync Failed",
@@ -1611,7 +1631,7 @@ export default function DrawingScreen({ route }) {
                           chunk
                         );
                       } catch (err) {
-                        console.error(
+                        console.warn(
                           "[Realtime] Error appending strokes:",
                           err
                         );
@@ -1681,7 +1701,7 @@ export default function DrawingScreen({ route }) {
         // Handle other payload types (pageJson, pointsDetailed, etc.)
         // ... rest of your handler code
       } catch (err) {
-        console.error("[Realtime] Handler error:", err);
+        console.warn("[Realtime] Handler error:", err);
       }
     },
     [activePageId, user?.id, decompressPoints]
@@ -1703,7 +1723,7 @@ export default function DrawingScreen({ route }) {
           await handleSaveFileRef.current({ silent: true });
         }
       } catch (err) {
-        console.error("[DrawingScreen] Auto-save error:", err);
+        console.warn("[DrawingScreen] Auto-save error:", err);
       }
     }, 60000); // Auto-save every 60 seconds
 
@@ -1807,7 +1827,7 @@ export default function DrawingScreen({ route }) {
             });
             return;
           } catch (error) {
-            console.error("MediaLibrary error:", error);
+            console.warn("MediaLibrary error:", error);
             // Fallback to Sharing if MediaLibrary fails
           }
         }
@@ -1820,7 +1840,7 @@ export default function DrawingScreen({ route }) {
           });
         }
       } catch (error) {
-        console.error("Error exporting image:", error);
+        console.warn("Error exporting image:", error);
         toast({
           title: "Export Image Failed",
           description: "An error occurred while exporting the image.",
@@ -1929,7 +1949,7 @@ export default function DrawingScreen({ route }) {
             });
             return;
           } catch (error) {
-            console.error("MediaLibrary error:", error);
+            console.warn("MediaLibrary error:", error);
             // Fallback to SAF for all images
           }
         }
@@ -1958,7 +1978,7 @@ export default function DrawingScreen({ route }) {
 
                   savedCount++;
                 } catch (err) {
-                  console.error(`Error saving page ${snap.pageNumber}:`, err);
+                  console.warn(`Error saving page ${snap.pageNumber}:`, err);
                 }
               }
 
@@ -1970,7 +1990,7 @@ export default function DrawingScreen({ route }) {
               return;
             }
           } catch (error) {
-            console.error("SAF error:", error);
+            console.warn("SAF error:", error);
           }
         }
 
@@ -1991,7 +2011,7 @@ export default function DrawingScreen({ route }) {
           });
         }
       } catch (error) {
-        console.error("Error exporting all images:", error);
+        console.warn("Error exporting all images:", error);
         toast({
           title: "Export Failed",
           description: "An error occurred while exporting images.",
@@ -2063,7 +2083,7 @@ export default function DrawingScreen({ route }) {
           variant: "success",
         });
       } catch (error) {
-        console.error("Error exporting SketchNote:", error);
+        console.warn("Error exporting SketchNote:", error);
         toast({
           title: "Export SketchNote Failed",
           description: "An error occurred while exporting the file.",
@@ -2242,7 +2262,7 @@ export default function DrawingScreen({ route }) {
         });
         setIsSaving(false);
       } catch (error) {
-        console.error("Error exporting SketchNote S3:", error);
+        console.warn("Error exporting SketchNote S3:", error);
         toast({
           title: "Export Failed",
           description: "An error occurred while exporting.",
@@ -2347,7 +2367,7 @@ export default function DrawingScreen({ route }) {
               return;
             }
           } catch (error) {
-            console.error("SAF error:", error);
+            console.warn("SAF error:", error);
             // Fallback to sharing
           }
         }
@@ -2359,7 +2379,7 @@ export default function DrawingScreen({ route }) {
           variant: "default",
         });
       } catch (error) {
-        console.error("Error exporting multi-page PDF:", error);
+        console.warn("Error exporting multi-page PDF:", error);
         toast({
           title: "Export PDF Failed",
           description: "An error occurred while exporting the PDF.",
@@ -2461,7 +2481,7 @@ export default function DrawingScreen({ route }) {
           });
         }
       } catch (error) {
-        console.error("Error sharing images:", error);
+        console.warn("Error sharing images:", error);
         toast({
           title: "Share Failed",
           description: "Unable to share images.",
@@ -2504,7 +2524,7 @@ export default function DrawingScreen({ route }) {
           });
         }
       } catch (error) {
-        console.error("Error exporting image for share:", error);
+        console.warn("Error exporting image for share:", error);
         toast({
           title: "Share Failed",
           description: "Unable to share the image.",
@@ -2547,7 +2567,7 @@ export default function DrawingScreen({ route }) {
           });
         }
       } catch (error) {
-        console.error("Error exporting SketchNote for share:", error);
+        console.warn("Error exporting SketchNote for share:", error);
         toast({
           title: "Share Failed",
           description: "Unable to share the file.",
@@ -2607,7 +2627,7 @@ export default function DrawingScreen({ route }) {
           });
         }
       } catch (error) {
-        console.error("Error exporting PDF for share:", error);
+        console.warn("Error exporting PDF for share:", error);
         toast({
           title: "Share Failed",
           description: "Unable to share the PDF.",
@@ -2653,7 +2673,7 @@ export default function DrawingScreen({ route }) {
       // Refresh credit balance after successful AI image generation
       setCreditRefreshCounter((prev) => prev + 1);
     } catch (err) {
-      console.error("Error inserting AI image:", err);
+      console.warn("Error inserting AI image:", err);
       toast({
         title: "Insert Image Failed",
         description: "An error occurred while inserting the AI image.",
@@ -3016,6 +3036,8 @@ export default function DrawingScreen({ route }) {
         onAIChat={() => setAiChatVisible(true)}
         onRefreshCredit={creditRefreshCounter}
         onHistory={() => setVersionModalVisible(true)}
+        collaborators={collaborators}
+        isViewOnly={isViewOnly}
       />
       <Modal
         visible={exitModalVisible}
@@ -3238,7 +3260,7 @@ export default function DrawingScreen({ route }) {
         projectId={safeNoteConfig?.projectId}
         pages={safeNoteConfig?.pages}
       />
-      {showLayerPanel && (
+      {showLayerPanel && !isViewOnly && (
         <LayerPanel
           layers={Array.isArray(deferredLayers) ? deferredLayers : []}
           activeLayerId={activeLayerId}
@@ -3252,7 +3274,7 @@ export default function DrawingScreen({ route }) {
         />
       )}
       {/* 🎨 Main Toolbar */}
-      {toolbarVisible && (
+      {toolbarVisible && !isViewOnly && (
         <ToolbarContainer
           tool={tool}
           setTool={(name) => {
@@ -3313,7 +3335,7 @@ export default function DrawingScreen({ route }) {
       )}
 
       {/* 🖋 Pen Settings */}
-      {[
+      {!isViewOnly && [
         "pen",
         "pencil",
         "brush",
@@ -3383,6 +3405,8 @@ export default function DrawingScreen({ route }) {
           onCollabReleaseLock={collabReleaseLock}
           onCollabIsElementLocked={collabIsElementLocked}
           onCollabPageCreate={collabCreatePage}
+          // 🔒 VIEW ONLY MODE
+          isViewOnly={isViewOnly}
           onRequestTextInput={(x, y) => {
             if (tool === "text") {
               setTimeout(() => setEditingText({ x, y, text: "" }), 0);
