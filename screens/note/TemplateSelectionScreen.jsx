@@ -129,7 +129,7 @@ export default function TemplateSelectionScreen({ navigation }) {
             const data = await orderService.getPurchasedTemplates();
             setTemplates(data || []);
         } catch (error) {
-            console.error("Failed to fetch templates:", error);
+            console.warn("Failed to fetch templates:", error);
             toast({
                 title: "Error",
                 description: "Failed to load purchased templates",
@@ -183,7 +183,7 @@ export default function TemplateSelectionScreen({ navigation }) {
                             snapshotUrl: item.imageUrl || null,
                         };
                     } catch (error) {
-                        console.error(`Failed to import template item ${index}:`, error);
+                        console.warn(`Failed to import template item ${index}:`, error);
                         return null;
                     }
                 });
@@ -240,7 +240,7 @@ export default function TemplateSelectionScreen({ navigation }) {
                 if (fetchUser) fetchUser(false);
                 navigation.replace("DrawingScreen", { noteConfig });
             } catch (error) {
-                console.error("Create from template error:", error);
+                console.warn("Create from template error:", error);
                 toast({
                     title: "Failed",
                     description: error.message || "Failed to create project from template",

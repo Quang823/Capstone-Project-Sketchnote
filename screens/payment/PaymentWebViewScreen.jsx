@@ -57,7 +57,7 @@ export default function PaymentWebViewScreen() {
 
   const handleError = (syntheticEvent) => {
     const { nativeEvent } = syntheticEvent;
-    console.error("[PaymentWebView] Error:", nativeEvent);
+    console.warn("[PaymentWebView] Error:", nativeEvent);
 
     if (!isMounted.current) return;
 
@@ -99,7 +99,7 @@ export default function PaymentWebViewScreen() {
   };
 
   const handleErrorBoundary = (error, errorInfo) => {
-    console.error("[PaymentWebView] ErrorBoundary caught:", error, errorInfo);
+    console.warn("[PaymentWebView] ErrorBoundary caught:", error, errorInfo);
 
     if (isMounted.current) {
       Alert.alert("Lỗi", "Trang thanh toán gặp sự cố. Vui lòng thử lại.", [

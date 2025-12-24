@@ -145,7 +145,7 @@ export default function DesignerProfileScreen() {
                 );
                 setProducts(productsData?.content || []);
             } catch (error) {
-                console.error("Error fetching designer data:", error);
+                console.warn("Error fetching designer data:", error);
                 Toast.show({
                     type: "error",
                     text1: "Error",

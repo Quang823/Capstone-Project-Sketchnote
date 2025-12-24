@@ -16,7 +16,7 @@ export const CartProvider = ({ children }) => {
           setCart(JSON.parse(storedCart));
         }
       } catch (error) {
-        console.error("❌ Error loading cart:", error);
+        console.warn(" Error loading cart:", error);
       }
     })();
   }, []);
@@ -27,7 +27,7 @@ export const CartProvider = ({ children }) => {
       try {
         await AsyncStorage.setItem("cart", JSON.stringify(cart));
       } catch (error) {
-        console.error("❌ Error saving cart:", error);
+        console.warn(" Error saving cart:", error);
       }
     })();
   }, [cart]);

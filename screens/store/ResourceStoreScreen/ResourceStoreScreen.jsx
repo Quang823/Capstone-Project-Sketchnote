@@ -475,7 +475,7 @@ export default function ResourceStoreScreen() {
       setHasMore(prev => ({ ...prev, filtered: items.length === PAGE_SIZE }));
       setPages(prev => ({ ...prev, filtered: page }));
     } catch (error) {
-      console.error("Error fetching resources by type:", error);
+      console.warn("Error fetching resources by type:", error);
       Toast.show({
         type: "error",
         text1: "Error",
@@ -499,7 +499,7 @@ export default function ResourceStoreScreen() {
           const resUser = await resourceService.getResourceProjectByUserId(0, 20);
           setUserResources(Array.isArray(resUser.content) ? resUser.content : []);
         } catch (e) {
-          console.error(e);
+          console.warn(e);
         }
       }
 
@@ -525,7 +525,7 @@ export default function ResourceStoreScreen() {
 
         setCategories(["All", ...types.map(formatCategoryName)]);
       } catch (e) {
-        console.error(e);
+        console.warn(e);
       }
 
       try {
@@ -536,7 +536,7 @@ export default function ResourceStoreScreen() {
         setPopularResources(notOwned);
         setHasMore(prev => ({ ...prev, popular: items.length === PAGE_SIZE }));
       } catch (e) {
-        console.error(e);
+        console.warn(e);
       }
 
       try {
@@ -547,7 +547,7 @@ export default function ResourceStoreScreen() {
         setLatestResources(notOwned);
         setHasMore(prev => ({ ...prev, latest: items.length === PAGE_SIZE }));
       } catch (e) {
-        console.error(e);
+        console.warn(e);
       }
 
       // Fetch owned resources with V2 API for latest version info
@@ -583,7 +583,7 @@ export default function ResourceStoreScreen() {
           });
           setOwnedResources(mappedOwned);
         } catch (e) {
-          console.error("Error fetching purchased templates:", e);
+          console.warn("Error fetching purchased templates:", e);
           setOwnedResources([]);
         }
       }
@@ -631,7 +631,7 @@ export default function ResourceStoreScreen() {
       setHasMore(prev => ({ ...prev, [section]: items.length >= PAGE_SIZE * (nextPage + 1) || items.length === PAGE_SIZE }));
       setPages(prev => ({ ...prev, [section]: nextPage }));
     } catch (error) {
-      console.error(`Error loading more ${section}:`, error);
+      console.warn(`Error loading more ${section}:`, error);
     } finally {
       setLoadingMore(prev => ({ ...prev, [section]: false }));
     }

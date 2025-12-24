@@ -157,11 +157,11 @@ export default function DesignerWalletScreen() {
           totalWithdrawn: totalWithdrawn,
         });
       } catch (withdrawalError) {
-        console.error("Error fetching withdrawal history:", withdrawalError);
+        console.warn("Error fetching withdrawal history:", withdrawalError);
         setWalletData(data.result);
       }
     } catch (error) {
-      console.error("Error fetching wallet:", error.message);
+      console.warn("Error fetching wallet:", error.message);
       showAlert(
         "error",
         "Error",
@@ -257,7 +257,7 @@ export default function DesignerWalletScreen() {
           const accounts = await bankAccountService.getBankAccounts();
           setSavedBankAccounts(accounts);
         } catch (saveError) {
-          console.error("Failed to save bank account:", saveError);
+          console.warn("Failed to save bank account:", saveError);
           // Continue with withdrawal even if save fails
         }
       }
@@ -285,7 +285,7 @@ export default function DesignerWalletScreen() {
 
       fetchWallet();
     } catch (error) {
-      console.error("Withdrawal error:", error);
+      console.warn("Withdrawal error:", error);
       showAlert(
         "error",
         "Withdrawal Failed",
@@ -312,7 +312,7 @@ export default function DesignerWalletScreen() {
       setDepositAmount("");
       navigation.navigate("PaymentWebView", { paymentUrl: url.message });
     } catch (error) {
-      console.error("Payment error:", error);
+      console.warn("Payment error:", error);
       showAlert("error", "Deposit Failed", "Deposit failed. Please try again.");
     }
   };
@@ -335,7 +335,7 @@ export default function DesignerWalletScreen() {
         const banksData = await bankAccountService.getBanks();
         setBanks(banksData);
       } catch (err) {
-        console.error("Failed to fetch banks:", err);
+        console.warn("Failed to fetch banks:", err);
       }
     };
     fetchBanks();
@@ -348,7 +348,7 @@ export default function DesignerWalletScreen() {
         const accounts = await bankAccountService.getBankAccounts();
         setSavedBankAccounts(accounts);
       } catch (err) {
-        console.error("Failed to fetch saved bank accounts:", err);
+        console.warn("Failed to fetch saved bank accounts:", err);
       }
     };
     fetchSavedAccounts();

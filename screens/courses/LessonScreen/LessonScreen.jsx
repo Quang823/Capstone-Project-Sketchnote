@@ -103,7 +103,7 @@ export default function LessonScreen() {
         );
       }
     } catch (err) {
-      console.error("Error fetching course data:", err);
+      console.warn("Error fetching course data:", err);
       setError(err.message || "Failed to load course data");
     } finally {
       setLoading(false);
@@ -224,7 +224,7 @@ export default function LessonScreen() {
           }
           // If all lessons completed, just stay on current screen (don't navigate)
         } catch (err) {
-          console.error("Error saving lesson progress:", err);
+          console.warn("Error saving lesson progress:", err);
           Toast.show({
             type: "error",
             position: "top",
@@ -296,7 +296,7 @@ export default function LessonScreen() {
               position: currentPosition
             });
           } else {
-            console.error('[Auto-save] Error saving progress:', err);
+            console.warn('[Auto-save] Error saving progress:', err);
           }
           // Continue playback without interrupting user experience
         }
@@ -325,7 +325,7 @@ export default function LessonScreen() {
             currentLesson.lastPosition * 1000
           );
         } catch (err) {
-          console.error("Error seeking to last position:", err);
+          console.warn("Error seeking to last position:", err);
         }
       }, 500);
     }
@@ -402,7 +402,7 @@ export default function LessonScreen() {
       }
       // If all lessons completed, just stay on current screen (don't navigate)
     } catch (err) {
-      console.error("Error saving lesson progress:", err);
+      console.warn("Error saving lesson progress:", err);
       Toast.show({
         type: "error",
         position: "top",

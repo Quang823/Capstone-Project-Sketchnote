@@ -51,7 +51,7 @@ export default function SubscriptionPlansScreen() {
         const data = Array.isArray(res?.result) ? res.result : [];
         setPlans(data);
       } catch (err) {
-        console.error(err);
+        console.warn(err);
       } finally {
         setLoading(false);
       }

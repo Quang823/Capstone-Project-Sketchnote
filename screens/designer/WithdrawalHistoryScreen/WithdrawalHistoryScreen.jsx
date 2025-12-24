@@ -81,7 +81,7 @@ export default function WithdrawalHistoryScreen() {
       setHasMore(pageNumber + 1 < totalPages);
       setPage(pageNumber);
     } catch (error) {
-      console.error("Failed to fetch withdrawal history", error);
+      console.warn("Failed to fetch withdrawal history", error);
     } finally {
       setLoading(false);
       setIsFetchingMore(false);

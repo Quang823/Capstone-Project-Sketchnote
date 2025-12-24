@@ -182,7 +182,7 @@ export default function CoursesScreen() {
       setFilteredNotEnrolledCourses(transformedNotEnrolled);
     } catch (err) {
       setError(err.message);
-      console.error("Error fetching courses:", err);
+      console.warn("Error fetching courses:", err);
     } finally {
       setLoading(false);
     }

@@ -100,7 +100,7 @@ export default function ResourceDetailScreen() {
               }
             }
           } catch (error) {
-            console.error("Failed to fetch version data:", error);
+            console.warn("Failed to fetch version data:", error);
           }
         }
       } catch (error) {

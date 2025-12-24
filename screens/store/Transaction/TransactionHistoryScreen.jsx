@@ -101,7 +101,7 @@ export default function TransactionHistoryScreen() {
       setTotalPages(data.totalPages);
       setHasMore(!data.last);
     } catch (error) {
-      console.error("Failed to fetch transactions:", error);
+      console.warn("Failed to fetch transactions:", error);
     } finally {
       setLoading(false);
       setLoadingMore(false);

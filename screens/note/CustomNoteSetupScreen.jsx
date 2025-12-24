@@ -162,7 +162,7 @@ export default function CustomNoteSetupScreen({ navigation }) {
             if (fetchUser) fetchUser(false);
             navigation.replace("DrawingScreen", { noteConfig });
         } catch (error) {
-            console.error("Create custom note error:", error);
+            console.warn("Create custom note error:", error);
             toast({
                 title: "Error",
                 description: error.message || "Failed to create custom notebook",

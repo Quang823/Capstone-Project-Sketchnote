@@ -68,7 +68,7 @@ export default function BankAccountsScreen() {
       const accounts = await bankAccountService.getBankAccounts();
       setBankAccounts(accounts);
     } catch (error) {
-      console.error("Failed to fetch bank accounts:", error);
+      console.warn("Failed to fetch bank accounts:", error);
       toast({
         title: "Error",
         description: "Failed to fetch bank accounts",
@@ -84,7 +84,7 @@ export default function BankAccountsScreen() {
       const banksData = await bankAccountService.getBanks();
       setBanks(banksData);
     } catch (error) {
-      console.error("Failed to fetch banks:", error);
+      console.warn("Failed to fetch banks:", error);
     }
   };
 

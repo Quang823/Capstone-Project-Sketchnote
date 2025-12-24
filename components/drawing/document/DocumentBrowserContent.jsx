@@ -93,7 +93,7 @@ const DocumentBrowserContent = ({
 
           setPurchasedTemplates(mappedTemplates);
         } catch (error) {
-          console.error("Failed to fetch purchased templates:", error);
+          console.warn("Failed to fetch purchased templates:", error);
         } finally {
           setIsLoadingResources(false);
         }
@@ -118,7 +118,7 @@ const DocumentBrowserContent = ({
         setAiImagesTotalPages(result.totalPages || 1);
       }
     } catch (error) {
-      console.error("Failed to fetch AI image history:", error);
+      console.warn("Failed to fetch AI image history:", error);
       setAiImages([]);
     } finally {
       setIsLoadingAIImages(false);
@@ -158,7 +158,7 @@ const DocumentBrowserContent = ({
             pageSelectTimeoutRef.current = null;
           }, 100);
         } catch (error) {
-          console.error(`[DocumentBrowser] Error in pageSelect:`, error);
+          console.warn(`[DocumentBrowser] Error in pageSelect:`, error);
           isProcessingRef.current = false;
           pageSelectTimeoutRef.current = null;
           onClose?.();
@@ -209,7 +209,7 @@ const DocumentBrowserContent = ({
       });
       setPurchasedTemplates(mappedTemplates);
     } catch (error) {
-      console.error("Failed to upgrade template:", error);
+      console.warn("Failed to upgrade template:", error);
       Alert.alert(
         "Upgrade Failed",
         error.message || "Failed to upgrade to the latest version. Please try again.",

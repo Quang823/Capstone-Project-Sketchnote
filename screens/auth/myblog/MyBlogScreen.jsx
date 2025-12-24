@@ -35,7 +35,7 @@ export default function MyBlogScreen({ navigation }) {
       const res = await blogService.getBlogByUserId();
       setBlogs(res.result || []);
     } catch (error) {
-      console.error("❌ Error fetching blogs:", error);
+      console.warn("❌ Error fetching blogs:", error);
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export default function MyBlogScreen({ navigation }) {
         text1: "Blog deleted successfully",
       });
     } catch (err) {
-      console.error("❌ Delete failed:", err.message);
+      console.warn("❌ Delete failed:", err.message);
       Toast.show({
         type: "error",
         text1: "Delete failed",

@@ -114,7 +114,7 @@ const ProfileScreen = () => {
         const banksData = await bankAccountService.getBanks();
         setBanks(banksData);
       } catch (err) {
-        console.error("Failed to fetch banks:", err);
+        console.warn("Failed to fetch banks:", err);
       }
     };
     fetchBanks();
@@ -128,7 +128,7 @@ const ProfileScreen = () => {
         const accounts = await bankAccountService.getBankAccounts();
         setBankAccounts(accounts);
       } catch (err) {
-        console.error("Failed to fetch bank accounts:", err);
+        console.warn("Failed to fetch bank accounts:", err);
       }
     };
     fetchBankAccounts();

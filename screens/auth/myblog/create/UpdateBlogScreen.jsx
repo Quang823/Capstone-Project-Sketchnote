@@ -63,7 +63,7 @@ export default function UpdateBlogScreen({ route, navigation }) {
             ]
         );
       } catch (err) {
-        console.error("❌ Fetch blog detail failed:", err);
+        console.warn("❌ Fetch blog detail failed:", err);
         Toast.show({
           type: "error",
           text1: "Failed to load blog data",
@@ -102,7 +102,7 @@ export default function UpdateBlogScreen({ route, navigation }) {
           text1: "✅ Section deleted successfully!",
         });
       } catch (err) {
-        console.error("❌ Delete content failed:", err);
+        console.warn("❌ Delete content failed:", err);
         Toast.show({
           type: "error",
           text1: "Delete failed",
@@ -228,7 +228,7 @@ export default function UpdateBlogScreen({ route, navigation }) {
 
       navigation.goBack();
     } catch (err) {
-      console.error("❌ Update error:", err);
+      console.warn("❌ Update error:", err);
       Toast.show({
         type: "error",
         text1: "Update failed",
