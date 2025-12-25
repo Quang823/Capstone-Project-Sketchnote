@@ -664,13 +664,25 @@ const GestureHandler = forwardRef(
                 }));
               }
 
+              // ✅ CRITICAL FIX: Also update points array if it exists
+              // Shapes have BOTH shape and points properties, and getBoundingBoxForStroke
+              // may use points for some calculations, so we must update both
+              const changes = { shape: newShape };
+              if (s.points && Array.isArray(s.points)) {
+                changes.points = s.points.map((p) => ({
+                  ...p,
+                  x: (p.x ?? 0) + dx,
+                  y: (p.y ?? 0) + dy,
+                }));
+              }
+
               return {
                 id: s.id,
-                changes: { shape: newShape },
+                changes,
               };
             }
 
-            // For strokes with points
+            // For strokes with points (but no shape property)
             if (s.points && Array.isArray(s.points)) {
               const newPoints = s.points.map((p) => ({
                 ...p,
@@ -1885,7 +1897,7 @@ const GestureHandler = forwardRef(
                 (s) =>
                   s &&
                   (!activeLayerId || s.layerId === activeLayerId) &&
-                  (s.points || s.x)
+                  (s.points || s.x || s.shape)
               )
               .filter((s) => {
                 const bbox = getBoundingBoxForStroke(s);
@@ -2155,17 +2167,22 @@ const GestureHandler = forwardRef(
               tapY <= bbox.maxY
             ) {
               try {
-                const fillChanges = { fill: true, fillColor: color };
-                onModifyStroke?.(i, fillChanges);
+                const globalIndex = strokes.findIndex((st) => st.id === s.id);
+                if (globalIndex !== -1) {
+                  const fillChanges = { fill: true, fillColor: color };
+                  onModifyStroke?.(globalIndex, fillChanges);
 
-                // 🔄 REALTIME COLLABORATION: Send fill update to other users
-                if (
-                  collabEnabled &&
-                  collabConnected &&
-                  typeof onCollabElementUpdate === "function" &&
-                  s?.id
-                ) {
-                  onCollabElementUpdate(pageId, s.id, fillChanges);
+                  // 🔄 REALTIME COLLABORATION: Send fill update to other users
+                  if (
+                    collabEnabled &&
+                    collabConnected &&
+                    typeof onCollabElementUpdate === "function" &&
+                    s?.id
+                  ) {
+                    onCollabElementUpdate(pageId, s.id, fillChanges, {
+                      transient: false,
+                    });
+                  }
                 }
               } catch (err) {
                 console.warn("Error modifying fill:", err);

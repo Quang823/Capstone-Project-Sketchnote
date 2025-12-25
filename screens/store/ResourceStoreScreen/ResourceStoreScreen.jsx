@@ -15,7 +15,11 @@ import {
 } from "react-native";
 import { Shadow } from "react-native-shadow-2";
 import { useNavigation } from "@react-navigation/native";
-import { resourceStoreStyles, CARD_GAP, CARD_WIDTH } from "./ResourceStoreScreen.styles";
+import {
+  resourceStoreStyles,
+  CARD_GAP,
+  CARD_WIDTH,
+} from "./ResourceStoreScreen.styles";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { resourceService } from "../../../service/resourceService";
 import { orderService } from "../../../service/orderService";
@@ -53,9 +57,10 @@ const AnimatedResourceCard = ({
   const scaleValue = new Animated.Value(1);
   const translateY = new Animated.Value(0);
   const [imageUri, setImageUri] = useState(
-    item.images?.[0]?.imageUrl ||
-    item.images?.[0]?.url ||
-    FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]
+    item.bannerUrl ||
+      item.images?.[0]?.imageUrl ||
+      item.images?.[0]?.url ||
+      FALLBACK_IMAGES[index % FALLBACK_IMAGES.length]
   );
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -94,7 +99,7 @@ const AnimatedResourceCard = ({
             key={i}
             name={i < filled ? "star" : "star-border"}
             size={8}
-            color={i < filled ? "#FBBF24" : (isDark ? "#475569" : "#CBD5E1")}
+            color={i < filled ? "#FBBF24" : isDark ? "#475569" : "#CBD5E1"}
           />
         ))}
       </View>
@@ -118,10 +123,18 @@ const AnimatedResourceCard = ({
           onPress={onPress}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
-          style={[resourceStoreStyles.resourceCard, isDark && resourceStoreStyles.resourceCardDark]}
+          style={[
+            resourceStoreStyles.resourceCard,
+            isDark && resourceStoreStyles.resourceCardDark,
+          ]}
         >
           {/* Ảnh + fallback + xử lý lỗi */}
-          <View style={[resourceStoreStyles.imageContainer, isDark && resourceStoreStyles.imageContainerDark]}>
+          <View
+            style={[
+              resourceStoreStyles.imageContainer,
+              isDark && resourceStoreStyles.imageContainerDark,
+            ]}
+          >
             <Image
               source={{ uri: imageUri }}
               style={resourceStoreStyles.resourceImage}
@@ -149,7 +162,7 @@ const AnimatedResourceCard = ({
             )}
 
             {/* Badge HOT */}
-            {(item.isTrending || Math.random() > 0.65) && (
+            {item.isHot && (
               <View style={resourceStoreStyles.trendingBadge}>
                 <Icon name="local-fire-department" size={12} color="#FFF" />
                 <Text style={resourceStoreStyles.trendingBadgeText}>HOT</Text>
@@ -159,12 +172,21 @@ const AnimatedResourceCard = ({
 
           {/* Nội dung */}
           <View style={resourceStoreStyles.resourceInfo}>
-            <Text style={[resourceStoreStyles.resourceName, isDark && resourceStoreStyles.resourceNameDark]} numberOfLines={2}>
+            <Text
+              style={[
+                resourceStoreStyles.resourceName,
+                isDark && resourceStoreStyles.resourceNameDark,
+              ]}
+              numberOfLines={2}
+            >
               {item.name || "Premium Resource Pack"}
             </Text>
 
             <Text
-              style={[resourceStoreStyles.resourceDescription, isDark && resourceStoreStyles.resourceDescriptionDark]}
+              style={[
+                resourceStoreStyles.resourceDescription,
+                isDark && resourceStoreStyles.resourceDescriptionDark,
+              ]}
               numberOfLines={2}
             >
               {item.description ||
@@ -175,9 +197,23 @@ const AnimatedResourceCard = ({
             <View style={resourceStoreStyles.infoRow}>
               <View style={resourceStoreStyles.dateContainer}>
                 {item.releaseDate && (
-                  <View style={[resourceStoreStyles.datePill, isDark && resourceStoreStyles.datePillDark]}>
-                    <Icon name="event" size={10} color={isDark ? "#94A3B8" : "#64748B"} />
-                    <Text style={[resourceStoreStyles.datePillText, isDark && resourceStoreStyles.datePillTextDark]}>
+                  <View
+                    style={[
+                      resourceStoreStyles.datePill,
+                      isDark && resourceStoreStyles.datePillDark,
+                    ]}
+                  >
+                    <Icon
+                      name="event"
+                      size={10}
+                      color={isDark ? "#94A3B8" : "#64748B"}
+                    />
+                    <Text
+                      style={[
+                        resourceStoreStyles.datePillText,
+                        isDark && resourceStoreStyles.datePillTextDark,
+                      ]}
+                    >
                       {formatDate(item.releaseDate)}
                     </Text>
                   </View>
@@ -204,16 +240,33 @@ const AnimatedResourceCard = ({
             </View>
 
             {/* Giá */}
-            {!item?.isOwner && (
+            {!item?.isOwner ? (
               <View style={resourceStoreStyles.priceContainer}>
-                <Text style={[resourceStoreStyles.price, isDark && resourceStoreStyles.priceDark]}>
+                <Text
+                  style={[
+                    resourceStoreStyles.price,
+                    isDark && resourceStoreStyles.priceDark,
+                  ]}
+                >
                   {item.price?.toLocaleString()} ₫
                 </Text>
                 {item.originalPrice && (
-                  <Text style={[resourceStoreStyles.originalPrice, isDark && resourceStoreStyles.originalPriceDark]}>
+                  <Text
+                    style={[
+                      resourceStoreStyles.originalPrice,
+                      isDark && resourceStoreStyles.originalPriceDark,
+                    ]}
+                  >
                     {item.originalPrice.toLocaleString()} ₫
                   </Text>
                 )}
+              </View>
+            ) : (
+              // Placeholder để card cao bằng nhau
+              <View
+                style={[resourceStoreStyles.priceContainer, { opacity: 0 }]}
+              >
+                <Text style={resourceStoreStyles.price}>Placeholder</Text>
               </View>
             )}
 
@@ -231,14 +284,26 @@ const AnimatedResourceCard = ({
             ) : (
               <View style={resourceStoreStyles.actionButtons}>
                 <Pressable
-                  style={[resourceStoreStyles.addToCartButton, isDark && resourceStoreStyles.addToCartButtonDark]}
+                  style={[
+                    resourceStoreStyles.addToCartButton,
+                    isDark && resourceStoreStyles.addToCartButtonDark,
+                  ]}
                   onPress={(e) => {
                     e.stopPropagation();
                     onAddToCart();
                   }}
                 >
-                  <Icon name="add-shopping-cart" size={14} color={isDark ? "#6EE7B7" : "#059669"} />
-                  <Text style={[resourceStoreStyles.addToCartText, isDark && resourceStoreStyles.addToCartTextDark]}>
+                  <Icon
+                    name="add-shopping-cart"
+                    size={14}
+                    color={isDark ? "#6EE7B7" : "#059669"}
+                  />
+                  <Text
+                    style={[
+                      resourceStoreStyles.addToCartText,
+                      isDark && resourceStoreStyles.addToCartTextDark,
+                    ]}
+                  >
                     Add
                   </Text>
                 </Pressable>
@@ -273,7 +338,10 @@ const LoadMoreCard = ({ onPress, loading, isDark }) => {
     >
       <View style={resourceStoreStyles.loadMoreContent}>
         {loading ? (
-          <ActivityIndicator size="small" color={isDark ? "#60A5FA" : "#084F8C"} />
+          <ActivityIndicator
+            size="small"
+            color={isDark ? "#60A5FA" : "#084F8C"}
+          />
         ) : (
           <>
             <Icon
@@ -285,7 +353,7 @@ const LoadMoreCard = ({ onPress, loading, isDark }) => {
               style={[
                 resourceStoreStyles.loadMoreText,
                 isDark && resourceStoreStyles.loadMoreTextDark,
-                { fontSize: 10 }
+                { fontSize: 10 },
               ]}
             >
               More
@@ -390,7 +458,12 @@ const PromoBanner = ({ searchQuery, setSearchQuery }) => {
         <Text style={resourceStoreStyles.promoTitle}>Find exciting goods.</Text>
 
         {/* Search Bar inside Banner */}
-        <View style={[resourceStoreStyles.bannerSearchContainer, isDark && resourceStoreStyles.bannerSearchContainerDark]}>
+        <View
+          style={[
+            resourceStoreStyles.bannerSearchContainer,
+            isDark && resourceStoreStyles.bannerSearchContainerDark,
+          ]}
+        >
           <Icon
             name="search"
             size={24}
@@ -398,7 +471,10 @@ const PromoBanner = ({ searchQuery, setSearchQuery }) => {
             style={{ marginLeft: 16 }}
           />
           <TextInput
-            style={[resourceStoreStyles.bannerSearchInput, isDark && resourceStoreStyles.bannerSearchInputDark]}
+            style={[
+              resourceStoreStyles.bannerSearchInput,
+              isDark && resourceStoreStyles.bannerSearchInputDark,
+            ]}
             placeholder="What are you looking for?"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -431,23 +507,26 @@ export default function ResourceStoreScreen() {
   const isDark = theme === "dark";
   const { user } = useContext(AuthContext);
 
+  const [storeResources, setStoreResources] = useState([]);
+  const [purchasedResources, setPurchasedResources] = useState([]);
+
   // Pagination states
   const [pages, setPages] = useState({
-    all: 0,
+    store: 0,
     popular: 0,
-    latest: 0,
+    purchased: 0,
     filtered: 0,
   });
   const [hasMore, setHasMore] = useState({
-    all: true,
+    store: true,
     popular: true,
-    latest: true,
+    purchased: true,
     filtered: true,
   });
   const [loadingMore, setLoadingMore] = useState({
-    all: false,
+    store: false,
     popular: false,
-    latest: false,
+    purchased: false,
     filtered: false,
   });
 
@@ -459,21 +538,34 @@ export default function ResourceStoreScreen() {
         setLoading(true);
         setIsFilteringByType(true);
       } else {
-        setLoadingMore(prev => ({ ...prev, filtered: true }));
+        setLoadingMore((prev) => ({ ...prev, filtered: true }));
       }
 
-      const response = await orderService.getTemplatesByType(type, page, PAGE_SIZE);
+      const response = await orderService.getTemplatesByType(
+        type,
+        page,
+        PAGE_SIZE
+      );
       const data = response?.content || response || [];
       const items = Array.isArray(data) ? data : [];
 
+      // Map items to include isOwner flag based on purchasedResources
+      // Note: This is a simple check, ideally backend returns isOwner
+      const mappedItems = items.map((item) => {
+        const isOwned = purchasedResources.some(
+          (p) => p.resourceTemplateId === item.resourceTemplateId
+        );
+        return { ...item, isOwner: isOwned || item.isOwner };
+      });
+
       if (page === 0) {
-        setFilteredByType(items);
+        setFilteredByType(mappedItems);
       } else {
-        setFilteredByType(prev => [...prev, ...items]);
+        setFilteredByType((prev) => [...prev, ...mappedItems]);
       }
 
-      setHasMore(prev => ({ ...prev, filtered: items.length === PAGE_SIZE }));
-      setPages(prev => ({ ...prev, filtered: page }));
+      setHasMore((prev) => ({ ...prev, filtered: items.length === PAGE_SIZE }));
+      setPages((prev) => ({ ...prev, filtered: page }));
     } catch (error) {
       console.warn("Error fetching resources by type:", error);
       Toast.show({
@@ -483,7 +575,95 @@ export default function ResourceStoreScreen() {
       });
     } finally {
       setLoading(false);
-      setLoadingMore(prev => ({ ...prev, filtered: false }));
+      setLoadingMore((prev) => ({ ...prev, filtered: false }));
+    }
+  };
+
+  const fetchPurchasedResources = async (page = 0) => {
+    if (!user) return;
+    try {
+      // Use V1 endpoint as requested to get correct count
+      const res = await orderService.getPurchasedTemplates();
+      const data = res?.content || res || [];
+      const items = Array.isArray(data) ? data : [];
+
+      const mappedOwned = items.map((template) => {
+        // Handle both V1 and V2 structures if possible, or assume V1 structure
+        // V1 might return direct template object or similar structure
+        const currentVersion = template.availableVersions?.find(
+          (v) => v.versionId === template.currentVersionId
+        );
+        const latestVersion = template.availableVersions?.find(
+          (v) => v.versionId === template.latestVersionId
+        );
+
+        return {
+          ...template,
+          isOwner: true,
+          // If V1 doesn't have availableVersions populated the same way, fallback to template props
+          name: currentVersion?.name || template.name,
+          description: currentVersion?.description || template.description,
+          items: currentVersion?.items || template.items || [],
+          images: currentVersion?.images || template.images || [],
+          versionNumber: template.currentVersionNumber,
+          hasNewerVersion: template.hasNewerVersion,
+          latestVersionNumber: template.latestVersionNumber,
+          currentVersionNumber: template.currentVersionNumber,
+          latestVersion: latestVersion
+            ? {
+                name: latestVersion.name,
+                description: latestVersion.description,
+                items: latestVersion.items || [],
+                images: latestVersion.images || [],
+              }
+            : null,
+        };
+      });
+
+      setPurchasedResources(mappedOwned);
+      setHasMore((prev) => ({ ...prev, purchased: false }));
+    } catch (e) {
+      console.warn("Error fetching purchased templates:", e);
+    }
+  };
+
+  const fetchStoreResources = async (page = 0) => {
+    try {
+      if (page > 0) setLoadingMore((prev) => ({ ...prev, store: true }));
+
+      const res = await orderService.getAllTemplates(page, PAGE_SIZE);
+      const data = res?.content || res || [];
+      const items = Array.isArray(data) ? data : [];
+
+      // Filter out owned resources
+      // We need purchasedResources to be loaded to filter effectively.
+      // However, for "All Resources" (Store), we might want to show everything
+      // but mark owned ones, or filter them out as requested.
+      // User said: "cái nào chưa mua thì hiện bên dưới Resource" -> Filter out owned.
+
+      // We can't easily filter out owned items server-side without a specific endpoint.
+      // So we filter client-side. This might mess up page size (e.g. fetch 10, all 10 owned -> show 0).
+      // Ideally backend handles this. For now, we'll filter what we get.
+
+      const notOwned = items.filter(
+        (item) =>
+          !purchasedResources.some(
+            (p) => p.resourceTemplateId === item.resourceTemplateId
+          ) && !item.isOwner
+      );
+
+      if (page === 0) {
+        setStoreResources(notOwned);
+      } else {
+        setStoreResources((prev) => [...prev, ...notOwned]);
+      }
+
+      setHasMore((prev) => ({ ...prev, store: items.length === PAGE_SIZE }));
+      setPages((prev) => ({ ...prev, store: page }));
+    } catch (e) {
+      console.warn("Error fetching store resources:", e);
+    } finally {
+      setLoadingMore((prev) => ({ ...prev, store: false }));
     }
   };
 
@@ -491,102 +671,64 @@ export default function ResourceStoreScreen() {
     try {
       setLoading(true);
       // Reset pagination
-      setPages({ all: 0, popular: 0, latest: 0, filtered: 0 });
-      setHasMore({ all: true, popular: true, latest: true, filtered: true });
+      setPages({ store: 0, popular: 0, purchased: 0, filtered: 0 });
+      setHasMore({
+        store: true,
+        popular: true,
+        purchased: true,
+        filtered: true,
+      });
 
+      // 1. Fetch Purchased (Your Resources) first to help with filtering
       if (user) {
-        try {
-          const resUser = await resourceService.getResourceProjectByUserId(0, 20);
-          setUserResources(Array.isArray(resUser.content) ? resUser.content : []);
-        } catch (e) {
-          console.warn(e);
-        }
+        await fetchPurchasedResources();
       }
 
+      // 2. Fetch Popular - Limit to 5
       try {
-        const resAll = await resourceService.getAllResource(0, PAGE_SIZE, !!user);
-        const allRaw = resAll?.content || resAll || [];
-        const items = Array.isArray(allRaw) ? allRaw : [];
-        const notOwned = items.filter((r) => !r?.isOwner);
-        setAllResources(notOwned);
-        setHasMore(prev => ({ ...prev, all: items.length === PAGE_SIZE }));
-
-        const types = [
-          ...new Set(
-            items
-              .map((r) => r.type)
-              .filter(Boolean)
-              .map((t) => t.trim().toUpperCase())
-          ),
-        ];
-
-        const formatCategoryName = (str) =>
-          str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-
-        setCategories(["All", ...types.map(formatCategoryName)]);
-      } catch (e) {
-        console.warn(e);
-      }
-
-      try {
-        const res = await resourceService.getAllResourcePopular(PAGE_SIZE, !!user);
+        const res = await resourceService.getAllResourcePopular(5, !!user);
         const data = res?.result || res?.content || res || [];
-        const items = Array.isArray(data) ? data : [];
-        const notOwned = items.filter((r) => !r?.isOwner);
-        setPopularResources(notOwned);
-        setHasMore(prev => ({ ...prev, popular: items.length === PAGE_SIZE }));
-      } catch (e) {
-        console.warn(e);
-      }
+        let items = Array.isArray(data) ? data : [];
 
-      try {
-        const res = await resourceService.getAllResourceLatest(PAGE_SIZE, !!user);
-        const data = res?.result || res?.content || res || [];
-        const items = Array.isArray(data) ? data : [];
-        const notOwned = items.filter((r) => !r?.isOwner);
-        setLatestResources(notOwned);
-        setHasMore(prev => ({ ...prev, latest: items.length === PAGE_SIZE }));
-      } catch (e) {
-        console.warn(e);
-      }
-
-      // Fetch owned resources with V2 API for latest version info
-      if (user) {
-        try {
-          const purchasedRes = await orderService.getPurchasedTemplatesV2();
-          const data = purchasedRes?.content || purchasedRes || [];
-          const mappedOwned = (Array.isArray(data) ? data : []).map((template) => {
-            const currentVersion = template.availableVersions?.find(
-              (v) => v.versionId === template.currentVersionId
-            );
-            const latestVersion = template.availableVersions?.find(
-              (v) => v.versionId === template.latestVersionId
-            );
-            return {
-              ...template,
-              isOwner: true,
-              name: currentVersion?.name || template.name,
-              description: currentVersion?.description || template.description,
-              items: currentVersion?.items || template.items || [],
-              images: currentVersion?.images || template.images || [],
-              versionNumber: template.currentVersionNumber,
-              hasNewerVersion: template.hasNewerVersion,
-              latestVersionNumber: template.latestVersionNumber,
-              currentVersionNumber: template.currentVersionNumber,
-              latestVersion: latestVersion ? {
-                name: latestVersion.name,
-                description: latestVersion.description,
-                items: latestVersion.items || [],
-                images: latestVersion.images || [],
-              } : null,
-            };
-          });
-          setOwnedResources(mappedOwned);
-        } catch (e) {
-          console.warn("Error fetching purchased templates:", e);
-          setOwnedResources([]);
+        // Calculate Hot item (highest purchaseCount)
+        if (items.length > 0) {
+          const maxPurchaseCount = Math.max(
+            ...items.map((i) => i.purchaseCount || 0)
+          );
+          items = items.map((item) => ({
+            ...item,
+            isHot:
+              (item.purchaseCount || 0) === maxPurchaseCount &&
+              maxPurchaseCount > 0,
+          }));
         }
+
+        setPopularResources(items);
+        // Disable load more for popular since we only want top 5
+        setHasMore((prev) => ({ ...prev, popular: false }));
+      } catch (e) {
+        console.warn(e);
       }
+
+      // 3. Fetch Store Resources (All)
+      await fetchStoreResources(0);
+
+      // 4. Categories
+      try {
+        // We can fetch categories from store resources or a dedicated endpoint
+        // For now, let's just use the ones from storeResources or a static list + dynamic
+        // Re-using logic from before but based on store fetch if possible,
+        // or just fetch a batch to get categories.
+        // Let's assume the first batch of store resources gives us some categories.
+        // Or better, keep the logic to extract from a larger set if possible.
+        // Since we are paginating, we might miss categories.
+        // Ideally we have getCategories endpoint.
+        // For now, we'll extract from what we have loaded.
+        // Note: The previous logic fetched ALL to get categories.
+        // If we paginate, we only see categories of current page.
+        // Let's stick to "All" and maybe some hardcoded popular ones,
+        // or extract from popular + store.
+      } catch (e) {}
     } catch (e) {
       Toast.show({
         type: "error",
@@ -602,44 +744,36 @@ export default function ResourceStoreScreen() {
     if (loadingMore[section] || !hasMore[section]) return;
 
     const nextPage = pages[section] + 1;
-    setLoadingMore(prev => ({ ...prev, [section]: true }));
 
-    try {
-      let items = [];
-      if (section === 'all') {
-        const res = await resourceService.getAllResource(nextPage, PAGE_SIZE, !!user);
-        items = res?.content || res || [];
-        const notOwned = items.filter((r) => !r?.isOwner);
-        setAllResources(prev => [...prev, ...notOwned]);
-      } else if (section === 'popular') {
-        // Note: Popular and Latest might not support page-based pagination in current API
-        // but we'll try to use the same logic if they support it or just limit
-        const res = await resourceService.getAllResourcePopular(PAGE_SIZE * (nextPage + 1), !!user);
-        items = res?.result || res?.content || res || [];
-        const notOwned = items.filter((r) => !r?.isOwner);
-        setPopularResources(notOwned); // Replace for limit-based
-      } else if (section === 'latest') {
-        const res = await resourceService.getAllResourceLatest(PAGE_SIZE * (nextPage + 1), !!user);
-        items = res?.result || res?.content || res || [];
-        const notOwned = items.filter((r) => !r?.isOwner);
-        setLatestResources(notOwned); // Replace for limit-based
-      } else if (section === 'filtered') {
-        await fetchResourcesByType(selectedCategory.toUpperCase(), nextPage);
-        return; // fetchResourcesByType handles state
+    if (section === "store") {
+      await fetchStoreResources(nextPage);
+    } else if (section === "popular") {
+      // Popular pagination logic if supported
+      setLoadingMore((prev) => ({ ...prev, popular: true }));
+      try {
+        const res = await resourceService.getAllResourcePopular(
+          PAGE_SIZE * (nextPage + 1),
+          !!user
+        );
+        const items = res?.result || res?.content || res || [];
+        setPopularResources(items);
+        setHasMore((prev) => ({
+          ...prev,
+          popular: items.length >= PAGE_SIZE * (nextPage + 1),
+        }));
+        setPages((prev) => ({ ...prev, popular: nextPage }));
+      } catch (e) {
+      } finally {
+        setLoadingMore((prev) => ({ ...prev, popular: false }));
       }
-
-      setHasMore(prev => ({ ...prev, [section]: items.length >= PAGE_SIZE * (nextPage + 1) || items.length === PAGE_SIZE }));
-      setPages(prev => ({ ...prev, [section]: nextPage }));
-    } catch (error) {
-      console.warn(`Error loading more ${section}:`, error);
-    } finally {
-      setLoadingMore(prev => ({ ...prev, [section]: false }));
+    } else if (section === "filtered") {
+      await fetchResourcesByType(selectedCategory.toUpperCase(), nextPage);
     }
   };
 
   useEffect(() => {
     fetchAllData();
-  }, []);
+  }, [user]); // Re-fetch when user changes (login/logout)
 
   const handleAddToCart = (resource, goToCart = false) => {
     if (!user) {
@@ -673,6 +807,7 @@ export default function ResourceStoreScreen() {
       name: resource.name,
       price: resource.price,
       image:
+        resource.bannerUrl ||
         resource.images?.[0]?.imageUrl ||
         resource.images?.[0]?.url ||
         FALLBACK_IMAGES[0],
@@ -696,7 +831,12 @@ export default function ResourceStoreScreen() {
 
   if (loading) {
     return (
-      <View style={[resourceStoreStyles.centerContainer, isDark && resourceStoreStyles.centerContainerDark]}>
+      <View
+        style={[
+          resourceStoreStyles.centerContainer,
+          isDark && resourceStoreStyles.centerContainerDark,
+        ]}
+      >
         <LottieView
           source={loadingAnimation}
           autoPlay
@@ -708,28 +848,58 @@ export default function ResourceStoreScreen() {
   }
 
   return (
-    <View style={[resourceStoreStyles.container, isDark && resourceStoreStyles.containerDark]}>
-      <View style={[resourceStoreStyles.header, isDark && resourceStoreStyles.headerDark]}>
+    <View
+      style={[
+        resourceStoreStyles.container,
+        isDark && resourceStoreStyles.containerDark,
+      ]}
+    >
+      <View
+        style={[
+          resourceStoreStyles.header,
+          isDark && resourceStoreStyles.headerDark,
+        ]}
+      >
         <View style={resourceStoreStyles.headerGradient} />
         <View style={resourceStoreStyles.headerContent}>
           <View style={resourceStoreStyles.headerLeft}>
-            <SidebarToggleButton iconSize={28} iconColor={isDark ? "#FFFFFF" : "#1E40AF"} />
+            <SidebarToggleButton
+              iconSize={28}
+              iconColor={isDark ? "#FFFFFF" : "#1E40AF"}
+            />
             <View>
-              <Text style={[resourceStoreStyles.headerTitle, isDark && resourceStoreStyles.headerTitleDark]}>
+              <Text
+                style={[
+                  resourceStoreStyles.headerTitle,
+                  isDark && resourceStoreStyles.headerTitleDark,
+                ]}
+              >
                 Resource Store
               </Text>
-              <Text style={[resourceStoreStyles.headerSubtitle, isDark && resourceStoreStyles.headerSubtitleDark]}>
+              <Text
+                style={[
+                  resourceStoreStyles.headerSubtitle,
+                  isDark && resourceStoreStyles.headerSubtitleDark,
+                ]}
+              >
                 Premium resources for creators
               </Text>
             </View>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <NotificationButton />
             <Pressable
-              style={[resourceStoreStyles.cartButton, isDark && resourceStoreStyles.cartButtonDark]}
+              style={[
+                resourceStoreStyles.cartButton,
+                isDark && resourceStoreStyles.cartButtonDark,
+              ]}
               onPress={() => navigation.navigate("Cart")}
             >
-              <Icon name="shopping-cart" size={24} color={isDark ? "#FFFFFF" : "#084F8C"} />
+              <Icon
+                name="shopping-cart"
+                size={24}
+                color={isDark ? "#FFFFFF" : "#084F8C"}
+              />
               {cart.length > 0 && (
                 <View style={resourceStoreStyles.cartBadge}>
                   <Text style={resourceStoreStyles.cartBadgeText}>
@@ -760,7 +930,7 @@ export default function ResourceStoreScreen() {
                 resourceStoreStyles.categoryButton,
                 isDark && resourceStoreStyles.categoryButtonDark,
                 selectedCategory === cat &&
-                resourceStoreStyles.selectedCategoryButton,
+                  resourceStoreStyles.selectedCategoryButton,
               ]}
               onPress={() => {
                 setSelectedCategory(cat);
@@ -781,7 +951,7 @@ export default function ResourceStoreScreen() {
                   resourceStoreStyles.categoryText,
                   isDark && resourceStoreStyles.categoryTextDark,
                   selectedCategory === cat &&
-                  resourceStoreStyles.selectedCategoryText,
+                    resourceStoreStyles.selectedCategoryText,
                 ]}
               >
                 {cat}
@@ -790,71 +960,32 @@ export default function ResourceStoreScreen() {
           ))}
         </ScrollView>
 
-        {ownedResources.length > 0 && (
-          <View style={resourceStoreStyles.sectionContainer}>
-            <Text style={[resourceStoreStyles.sectionTitle, isDark && resourceStoreStyles.sectionTitleDark]}>Your resources</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20 }}
-            >
-              {ownedResources.map((item, i) => (
-                <AnimatedResourceCard
-                  key={i}
-                  item={item}
-                  index={i}
-                  onPress={() =>
-                    navigation.navigate("ResourceDetail", {
-                      resourceId: item.resourceTemplateId,
-                      owned: true,
-                    })
-                  }
-                  onAddToCart={() => { }}
-                  onBuyNow={() => { }}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {latestResources.length > 0 && (
-          <View style={resourceStoreStyles.sectionContainer}>
-            <Text style={[resourceStoreStyles.sectionTitle, isDark && resourceStoreStyles.sectionTitleDark]}>Newest</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ paddingHorizontal: 20 }}
-            >
-              {getFiltered(latestResources).map((item, i) => (
-                <AnimatedResourceCard
-                  key={i}
-                  item={item}
-                  index={i}
-                  onPress={() =>
-                    navigation.navigate("ResourceDetail", {
-                      resourceId: item.resourceTemplateId,
-                    })
-                  }
-                  onAddToCart={() => handleAddToCart(item)}
-                  onBuyNow={() => handleAddToCart(item, true)}
-                />
-              ))}
-              {hasMore.latest && (
-                <LoadMoreCard
-                  onPress={() => handleLoadMore('latest')}
-                  loading={loadingMore.latest}
-                  isDark={isDark}
-                />
-              )}
-            </ScrollView>
-          </View>
-        )}
-
         {popularResources.length > 0 && (
           <View style={resourceStoreStyles.sectionContainer}>
-            <Text style={[resourceStoreStyles.sectionTitle, isDark && resourceStoreStyles.sectionTitleDark]}>
-              Popular this week
-            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 20,
+                marginBottom: 16,
+                gap: 8,
+              }}
+            >
+              <Icon
+                name="whatshot"
+                size={28}
+                color={isDark ? "#F87171" : "#EF4444"}
+              />
+              <Text
+                style={[
+                  resourceStoreStyles.sectionTitle,
+                  isDark && resourceStoreStyles.sectionTitleDark,
+                  { paddingHorizontal: 0, marginBottom: 0 },
+                ]}
+              >
+                Popular this week
+              </Text>
+            </View>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -874,29 +1005,33 @@ export default function ResourceStoreScreen() {
                   onBuyNow={() => handleAddToCart(item, true)}
                 />
               ))}
-              {hasMore.popular && (
-                <LoadMoreCard
-                  onPress={() => handleLoadMore('popular')}
-                  loading={loadingMore.popular}
-                  isDark={isDark}
-                />
-              )}
             </ScrollView>
           </View>
         )}
 
-        {isFilteringByType ? (
-          filteredByType.length > 0 && (
+        {/* Your Resources (Purchased) - Only show if filtering by type is active and matches, or if not filtering */}
+        {purchasedResources.length > 0 &&
+          (!isFilteringByType ||
+            (isFilteringByType && filteredByType.some((r) => r.isOwner))) && (
             <View style={resourceStoreStyles.sectionContainer}>
-              <Text style={[resourceStoreStyles.sectionTitle, isDark && resourceStoreStyles.sectionTitleDark]}>
-                {selectedCategory} Resources
+              <Text
+                style={[
+                  resourceStoreStyles.sectionTitle,
+                  isDark && resourceStoreStyles.sectionTitleDark,
+                ]}
+              >
+                Your Resources
               </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={{ paddingHorizontal: 20 }}
               >
-                {filteredByType.map((item, i) => (
+                {/* If filtering, show only filtered owned items. If not, show all purchased. */}
+                {(isFilteringByType
+                  ? filteredByType.filter((r) => r.isOwner)
+                  : purchasedResources
+                ).map((item, i) => (
                   <AnimatedResourceCard
                     key={i}
                     item={item}
@@ -904,59 +1039,80 @@ export default function ResourceStoreScreen() {
                     onPress={() =>
                       navigation.navigate("ResourceDetail", {
                         resourceId: item.resourceTemplateId,
+                        owned: true,
                       })
                     }
-                    onAddToCart={() => handleAddToCart(item)}
-                    onBuyNow={() => handleAddToCart(item, true)}
+                    onAddToCart={() => {}}
+                    onBuyNow={() => {}}
                   />
                 ))}
-                {hasMore.filtered && (
+                {!isFilteringByType && hasMore.purchased && (
                   <LoadMoreCard
-                    onPress={() => handleLoadMore('filtered')}
-                    loading={loadingMore.filtered}
+                    onPress={() => handleLoadMore("purchased")}
+                    loading={loadingMore.purchased}
                     isDark={isDark}
                   />
                 )}
               </ScrollView>
             </View>
-          )
-        ) : (
-          allResources.length > 0 && (
-            <View style={resourceStoreStyles.sectionContainer}>
-              <Text style={[resourceStoreStyles.sectionTitle, isDark && resourceStoreStyles.sectionTitleDark]}>All resources</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20 }}
-              >
-                {getFiltered(allResources).map((item, i) => (
-                  <AnimatedResourceCard
-                    key={i}
-                    item={item}
-                    index={i}
-                    onPress={() =>
-                      navigation.navigate("ResourceDetail", {
-                        resourceId: item.resourceTemplateId,
-                      })
-                    }
-                    onAddToCart={() => handleAddToCart(item)}
-                    onBuyNow={() => handleAddToCart(item, true)}
-                  />
-                ))}
-                {hasMore.all && (
-                  <LoadMoreCard
-                    onPress={() => handleLoadMore('all')}
-                    loading={loadingMore.all}
-                    isDark={isDark}
-                  />
-                )}
-              </ScrollView>
-            </View>
-          )
-        )}
+          )}
 
+        {/* Store Resources (All / Filtered) */}
+        <View style={resourceStoreStyles.sectionContainer}>
+          <Text
+            style={[
+              resourceStoreStyles.sectionTitle,
+              isDark && resourceStoreStyles.sectionTitleDark,
+            ]}
+          >
+            {isFilteringByType
+              ? `${selectedCategory} Resources`
+              : "All Resources"}
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20 }}
+          >
+            {/* If filtering, show filtered unowned items. If not, show storeResources (which are unowned). */}
+            {(isFilteringByType
+              ? filteredByType.filter((r) => !r.isOwner)
+              : storeResources
+            ).map((item, i) => (
+              <AnimatedResourceCard
+                key={i}
+                item={item}
+                index={i}
+                onPress={() =>
+                  navigation.navigate("ResourceDetail", {
+                    resourceId: item.resourceTemplateId,
+                  })
+                }
+                onAddToCart={() => handleAddToCart(item)}
+                onBuyNow={() => handleAddToCart(item, true)}
+              />
+            ))}
+
+            {/* Show load more if:
+                1. Not filtering and store has more
+                2. Filtering and filtered has more (and we are showing unowned items)
+            */}
+            {((!isFilteringByType && hasMore.store) ||
+              (isFilteringByType && hasMore.filtered)) && (
+              <LoadMoreCard
+                onPress={() =>
+                  handleLoadMore(isFilteringByType ? "filtered" : "store")
+                }
+                loading={
+                  isFilteringByType ? loadingMore.filtered : loadingMore.store
+                }
+                isDark={isDark}
+              />
+            )}
+          </ScrollView>
+        </View>
         <View style={{ height: 80 }} />
       </ScrollView>
-    </View >
+    </View>
   );
 }

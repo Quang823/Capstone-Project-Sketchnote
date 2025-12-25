@@ -207,7 +207,7 @@ class CollaborationManager {
       return true;
     } catch (error) {
       this.connecting = false;
-      console.error("[CollabManager] Connection failed:", error);
+      console.warn("[CollabManager] Connection failed:", error);
       throw error;
     }
   }
@@ -238,7 +238,7 @@ class CollaborationManager {
   }
 
   _onError(error) {
-    console.error("[CollabManager] WebSocket error:", error);
+    console.warn("[CollabManager] WebSocket error:", error);
     this.onError?.(error);
   }
 

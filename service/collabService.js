@@ -13,4 +13,13 @@ export const collabService = {
             throw error;
         }
     },
+    updateCollaboratorPermission: async (projectId, userId, edited) => {
+        try {
+            const response = await collabApiController.updatePermission(projectId, userId, edited);
+            return response?.data;
+        } catch (error) {
+            console.warn("Error in updateCollaboratorPermission:", error);
+            throw error;
+        }
+    },
 };

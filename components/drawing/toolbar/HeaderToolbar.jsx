@@ -33,6 +33,8 @@ export default function HeaderToolbar({
   onHistory,
   collaborators = [],
   isViewOnly = false,
+  isOwner = false,
+  onCollaboratorsClick,
 }) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -156,49 +158,58 @@ export default function HeaderToolbar({
             <Text style={styles.viewOnlyText}>View Only</Text>
           </View>
         )}
-
         {/* Right */}
         <View style={[styles.row, { gap: 12 }]}>
 
-
-          {/* Collaborators */}
-          {collaborators.length > 0 && (
-            <View style={{ flexDirection: "row", alignItems: "center", marginRight: 8 }}>
-              {collaborators.slice(0, 3).map((c, index) => (
-                <Image
-                  key={c.userId || index}
-                  source={{ uri: c.avatarUrl || "https://ui-avatars.com/api/?name=User" }}
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 15,
-                    marginLeft: index === 0 ? 0 : -10,
-                    borderWidth: 2,
-                    borderColor: "#FFFFFF",
-                  }}
-                />
-              ))}
-              {collaborators.length > 3 && (
-                <View
-                  style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 15,
-                    backgroundColor: "#F3F4F6",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    marginLeft: -10,
-                    borderWidth: 2,
-                    borderColor: "#FFFFFF",
-                  }}
-                >
-                  <Text style={{ fontSize: 10, fontWeight: "700", color: "#6B7280" }}>
-                    +{collaborators.length - 3}
-                  </Text>
-                </View>
-              )}
+          {/* Collaborators & Status */}
+          <View style={[styles.row, { gap: 8, marginRight: 4 }]}>
+            <View style={styles.activeStatusBadge}>
+              <View style={styles.activeDot} />
+              <Text style={styles.activeStatusText}>Active</Text>
             </View>
-          )}
+
+            {collaborators.length > 0 && (
+              <TouchableOpacity
+                style={{ flexDirection: "row", alignItems: "center" }}
+                onPress={onCollaboratorsClick}
+                disabled={!isOwner}
+              >
+                {collaborators.slice(0, 3).map((c, index) => (
+                  <Image
+                    key={c.userId || index}
+                    source={{ uri: c.avatarUrl || "https://ui-avatars.com/api/?name=User" }}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      marginLeft: index === 0 ? 0 : -10,
+                      borderWidth: 2,
+                      borderColor: "#FFFFFF",
+                    }}
+                  />
+                ))}
+                {collaborators.length > 3 && (
+                  <View
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: "#F3F4F6",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      marginLeft: -10,
+                      borderWidth: 2,
+                      borderColor: "#FFFFFF",
+                    }}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: "700", color: "#6B7280" }}>
+                      +{collaborators.length - 3}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
 
           {!isViewOnly && renderButton("share-outline", onExportPress, Ionicons)}
           {!isViewOnly && renderButton("time-outline", onHistory, Ionicons)}
@@ -211,7 +222,7 @@ export default function HeaderToolbar({
           )}
           {!isViewOnly && renderButton("circle-with-cross", onToggleToolbar, Entypo)}
         </View>
-      </View>
+      </View >
       <Modal
         visible={inviteVisible}
         transparent
@@ -317,9 +328,7 @@ export default function HeaderToolbar({
           </View>
         </View>
       </Modal>
-
-
-    </View>
+    </View >
   );
 }
 
@@ -455,5 +464,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#EF4444",
+  },
+  activeStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#22C55E",
+  },
+  activeStatusText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#166534",
+    textTransform: "uppercase",
   },
 });

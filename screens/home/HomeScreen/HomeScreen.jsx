@@ -38,9 +38,8 @@ import TypeFloatText from "./TypeFloatText";
 import { useToast } from "../../../hooks/use-toast";
 import { AuthContext } from "../../../context/AuthContext";
 import { useTheme } from "../../../context/ThemeContext";
-
+import { useNotifications } from "../../../context/NotificationContext";
 import { notiService } from "../../../service/notiService";
-
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary } from "../../../service/cloudinary";
@@ -293,10 +292,19 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
-  const [notiCount, setNotiCount] = useState(0);
   const [notiOpen, setNotiOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   const [loadingNoti, setLoadingNoti] = useState(false);
+
+  // Use NotificationContext for real-time notifications
+  const {
+    notifications,
+    setNotifications,
+    unreadCount: notiCount,
+    setUnreadCount: setNotiCount,
+    setPanelOpen,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(0);
@@ -402,17 +410,11 @@ export default function HomeScreen({ navigation }) {
     [totalPages, fetchProjects]
   );
 
-  useEffect(() => {
-    const loadNotiCount = async () => {
-      try {
-        const data = await notiService.getCountNotiUnRead();
-        const count = Number(data?.unread ?? 0);
-        setNotiCount(count);
-      } catch (error) { }
-    };
 
-    loadNotiCount();
-  }, []);
+  // Sync panel open state with NotificationContext
+  useEffect(() => {
+    setPanelOpen(notiOpen);
+  }, [notiOpen, setPanelOpen]);
 
   // Render Local Project Item
   const renderLocalProjectItem = ({ item }) => (
@@ -504,9 +506,7 @@ export default function HomeScreen({ navigation }) {
 
   const handleReadAllNoti = async () => {
     try {
-      await notiService.readAllNoti();
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      setNotiCount(0);
+      await markAllAsRead();
     } catch (error) {
       toast({
         title: "Error",
@@ -519,11 +519,7 @@ export default function HomeScreen({ navigation }) {
   const handleReadSingleNoti = async (item) => {
     if (item.read) return;
     try {
-      await notiService.readNotiByNotiId(item.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
-      );
-      setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
+      await markAsRead(item.id);
     } catch (error) {
       toast({
         title: "Error",

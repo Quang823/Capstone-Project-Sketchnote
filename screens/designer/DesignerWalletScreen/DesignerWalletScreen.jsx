@@ -22,9 +22,9 @@ import { paymentService } from "../../../service/paymentService";
 import { bankAccountService } from "../../../service/bankAccountService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
-import { useTheme } from "../../../context/ThemeContext";
 import getStyles, { getAlertStyles } from "./DesignerWalletScreen.styles";
-
+import NotificationButton from "../../../components/common/NotificationButton";
+import { useTheme } from "../../../context/ThemeContext";
 const quickAmounts = [50000, 100000, 200000, 500000, 1000000, 2000000];
 
 export default function DesignerWalletScreen() {
@@ -424,7 +424,7 @@ export default function DesignerWalletScreen() {
           <SidebarToggleButton iconSize={26} iconColor={colors.primaryWhite} />
           <Text style={styles.headerTitle}>Wallet</Text>
         </View>
-        <View style={{ width: 40 }} />
+        <NotificationButton />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>

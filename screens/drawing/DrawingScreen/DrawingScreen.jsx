@@ -37,6 +37,7 @@ import { exportPagesToPdf } from "../../../utils/ExportUtils";
 import ExportModal from "../../../components/drawing/modal/ExportModal";
 import AIImageChatModal from "../../../components/drawing/modal/AIImageChatModal";
 import VersionSelectionModal from "../../../components/modals/VersionSelectionModal";
+import CollaboratorManagementModal from "../../../components/drawing/modal/CollaboratorManagementModal";
 import { projectService } from "../../../service/projectService";
 import { collabService } from "../../../service/collabService";
 import { AuthContext } from "../../../context/AuthContext";
@@ -159,6 +160,7 @@ export default function DrawingScreen({ route }) {
   const [creditRefreshCounter, setCreditRefreshCounter] = useState(0);
   const [versionModalVisible, setVersionModalVisible] = useState(false);
   const [collaborators, setCollaborators] = useState([]);
+  const [collabModalVisible, setCollabModalVisible] = useState(false);
 
   useEffect(() => {
     const fetchCollaborators = async () => {
@@ -207,6 +209,35 @@ export default function DrawingScreen({ route }) {
     [safeNoteConfig.projectId, navigation, toast]
   );
 
+  const handleUpdatePermission = useCallback(
+    async (userId, edited) => {
+      try {
+        await collabService.updateCollaboratorPermission(
+          safeNoteConfig.projectId,
+          userId,
+          edited
+        );
+
+        // Refresh collaborators list
+        const data = await collabService.getCollaborators(safeNoteConfig.projectId);
+        setCollaborators(data || []);
+
+        toast({
+          title: "Success",
+          description: `Permission updated to ${edited ? "Can Edit" : "View Only"}`,
+          variant: "success",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to update permission",
+          variant: "destructive",
+        });
+      }
+    },
+    [safeNoteConfig.projectId, toast]
+  );
+
   // 🔥 Detect if this is a local project (guest mode)
   const isLocalProject = useMemo(() => {
     const projectId = safeNoteConfig?.projectId;
@@ -218,8 +249,46 @@ export default function DrawingScreen({ route }) {
 
   // 🔒 Detect if this is view-only mode (collaboration without edit permission)
   const isViewOnly = useMemo(() => {
-    return safeNoteConfig?.isViewOnly === true;
-  }, [safeNoteConfig]);
+    // Check if explicitly set to view-only
+    if (safeNoteConfig?.isViewOnly === true) return true;
+
+    // Check if current user has edit permission in collaborators
+    if (collaborators && collaborators.length > 0 && user?.id) {
+      const currentUserCollab = collaborators.find(
+        (c) => String(c.userId) === String(user.id)
+      );
+      // If user is in collaborators list and edited is false, it's view-only
+      if (currentUserCollab && currentUserCollab.edited === false) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [safeNoteConfig, collaborators, user?.id]);
+
+  // 👑 Detect if current user is the project owner
+  const isOwner = useMemo(() => {
+    // Check if user is owner via projectDetails
+    if (safeNoteConfig?.projectDetails?.isOwner === true) return true;
+
+    // ✅ Check ID match (ownerId or userId)
+    const details = safeNoteConfig?.projectDetails;
+    if (details && user?.id) {
+      if (details.ownerId && String(details.ownerId) === String(user.id)) return true;
+      if (details.userId && String(details.userId) === String(user.id)) return true;
+    }
+
+    // Fallback: check if user is NOT in collaborators list (meaning they're the owner)
+    if (collaborators && collaborators.length > 0 && user?.id) {
+      const isCollaborator = collaborators.some(
+        (c) => String(c.userId) === String(user.id)
+      );
+      // If user is not in collaborators list, they're the owner
+      return !isCollaborator;
+    }
+
+    return false;
+  }, [safeNoteConfig, collaborators, user?.id]);
 
   // 🔄 REALTIME COLLABORATION - useCollaboration hook
   const enableCollaboration =
@@ -255,8 +324,6 @@ export default function DrawingScreen({ route }) {
         // Skip own updates (already applied optimistically)
         if (String(remoteUserId) === String(user?.id)) return;
 
-        console.log("[Collab] Remote ELEMENT_UPDATE:", elementId, changes);
-
         // 🔥 Use requestAnimationFrame to avoid setState during render
         requestAnimationFrame(() => {
           try {
@@ -284,8 +351,6 @@ export default function DrawingScreen({ route }) {
 
         if (String(remoteUserId) === String(user?.id)) return;
 
-        console.log("[Collab] Remote ELEMENT_CREATE:", element?.id);
-
         // 🔥 Use requestAnimationFrame to avoid setState during render
         requestAnimationFrame(() => {
           try {
@@ -307,8 +372,6 @@ export default function DrawingScreen({ route }) {
 
         if (String(remoteUserId) === String(user?.id)) return;
 
-        console.log("[Collab] Remote ELEMENT_DELETE:", elementId);
-
         // 🔥 Use requestAnimationFrame to avoid setState during render
         requestAnimationFrame(() => {
           try {
@@ -329,8 +392,6 @@ export default function DrawingScreen({ route }) {
         const { page, insertAt, userId: remoteUserId } = data;
 
         if (String(remoteUserId) === String(user?.id)) return;
-
-        console.log("[Collab] Remote PAGE_CREATE:", page?.id);
 
         // 🔥 Use requestAnimationFrame to avoid setState during render
         requestAnimationFrame(() => {
@@ -762,8 +823,29 @@ export default function DrawingScreen({ route }) {
   const [toolbarVisible, setToolbarVisible] = useState(true);
 
   // 🎨 ===== TOOL & COLOR =====
-  const [tool, setTool] = useState("pen");
+  // ✅ Set default tool to 'scroll' for view-only users
+  const [tool, setToolInternal] = useState(() => isViewOnly ? "scroll" : "pen");
   const [color, setColor] = useState("#111827");
+
+  // ✅ Wrap setTool to prevent view-only users from selecting drawing tools
+  const setTool = useCallback((newTool) => {
+    if (isViewOnly) {
+      // Only allow scroll and zoom tools for view-only users
+      if (newTool === "scroll" || newTool === "zoom") {
+        setToolInternal(newTool);
+      }
+      // Silently ignore attempts to select drawing tools
+      return;
+    }
+    setToolInternal(newTool);
+  }, [isViewOnly]);
+
+  // ✅ Force tool to 'scroll' when isViewOnly changes to true
+  useEffect(() => {
+    if (isViewOnly && tool !== "scroll" && tool !== "zoom") {
+      setToolInternal("scroll");
+    }
+  }, [isViewOnly, tool]);
 
   // 🎨 ===== EYEDROPPER PICKED COLORS =====
   const [pickedColors, setPickedColors] = useState([]);
@@ -1605,6 +1687,12 @@ export default function DrawingScreen({ route }) {
             uri: s.uri,
             rows: s.rows,
             cols: s.cols,
+            shape: s.shape,
+            sides: s.sides,
+            tapeSettings: s.tapeSettings,
+            fill: s.fill,
+            fillColor: s.fillColor,
+            shapeSettings: s.shapeSettings,
           };
           const pageId = msg.payload?.pageId || activePageId;
           if (sanitized.points?.length >= 2 || sanitized.tool !== "pen") {
@@ -3042,6 +3130,8 @@ export default function DrawingScreen({ route }) {
         onHistory={() => setVersionModalVisible(true)}
         collaborators={collaborators}
         isViewOnly={isViewOnly}
+        isOwner={isOwner}
+        onCollaboratorsClick={() => setCollabModalVisible(true)}
       />
       <Modal
         visible={exitModalVisible}
@@ -3075,45 +3165,49 @@ export default function DrawingScreen({ route }) {
                 marginBottom: 12,
               }}
             >
-              Save project before exit?
+              {isViewOnly ? "Exit project?" : "Save project before exit?"}
             </Text>
             <Text style={{ fontSize: 14, color: "#374151", marginBottom: 16 }}>
-              Your latest changes can be saved now.
+              {isViewOnly
+                ? "You are viewing this project in read-only mode."
+                : "Your latest changes can be saved now."}
             </Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
-              <TouchableOpacity
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: 10,
-                  alignItems: "center",
-                  backgroundColor: "#3B82F6",
-                }}
-                onPress={async () => {
-                  try {
-                    await handleSaveFile();
-                  } catch { }
-                  try {
-                    projectService.realtime.disconnect();
-                  } catch { }
-                  setExitModalVisible(false);
-                  // 🔥 Navigate to correct home based on guest mode
-                  navigation.navigate(isLocalProject ? "GuestHome" : "Home");
-                }}
-              >
-                <Text
-                  style={{ color: "white", fontSize: 14, fontWeight: "600" }}
+              {!isViewOnly && (
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    backgroundColor: "#3B82F6",
+                  }}
+                  onPress={async () => {
+                    try {
+                      await handleSaveFile();
+                    } catch { }
+                    try {
+                      projectService.realtime.disconnect();
+                    } catch { }
+                    setExitModalVisible(false);
+                    // 🔥 Navigate to correct home based on guest mode
+                    navigation.navigate(isLocalProject ? "GuestHome" : "Home");
+                  }}
                 >
-                  Save & Exit
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={{ color: "white", fontSize: 14, fontWeight: "600" }}
+                  >
+                    Save & Exit
+                  </Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity
                 style={{
                   flex: 1,
                   paddingVertical: 10,
                   borderRadius: 10,
                   alignItems: "center",
-                  backgroundColor: "#E5E7EB",
+                  backgroundColor: isViewOnly ? "#3B82F6" : "#E5E7EB",
                 }}
                 onPress={() => {
                   try {
@@ -3125,9 +3219,9 @@ export default function DrawingScreen({ route }) {
                 }}
               >
                 <Text
-                  style={{ color: "#111827", fontSize: 14, fontWeight: "600" }}
+                  style={{ color: isViewOnly ? "white" : "#111827", fontSize: 14, fontWeight: "600" }}
                 >
-                  Exit without Save
+                  {isViewOnly ? "Exit" : "Exit without Save"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -3471,6 +3565,14 @@ export default function DrawingScreen({ route }) {
         onClose={() => setVersionModalVisible(false)}
         projectId={safeNoteConfig.projectId}
         onVersionSelect={handleRestoreVersion}
+      />
+      <CollaboratorManagementModal
+        visible={collabModalVisible}
+        onClose={() => setCollabModalVisible(false)}
+        collaborators={collaborators}
+        currentUserId={user?.id}
+        isOwner={isOwner}
+        onUpdatePermission={handleUpdatePermission}
       />
     </View>
   );

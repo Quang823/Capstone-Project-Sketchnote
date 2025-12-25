@@ -313,8 +313,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [overviewVisible, setOverviewVisible] = useState(false);
   const [templateConfirm, setTemplateConfirm] = useState(null);
-  const [applyMode, setApplyMode] = useState("none");
-  const [placeTemplateOnNewLayer, setPlaceTemplateOnNewLayer] = useState(true);
+  const [applyMode, setApplyMode] = useState("append");
+
 
   const { toast } = useToast();
   // Initialize pages based on noteConfig
@@ -1614,8 +1614,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
           extractTemplateData(json);
         const prevPage = pages.find((pg) => pg.id === pageId) || {};
         const pageRef = pageRefs.current[pageId];
-        const isNoneMode = mode === "none";
-        const shouldCreateNewLayer = isNoneMode && placeTemplateOnNewLayer;
 
         if (pageRef) {
           if (mode === "replace") {
@@ -1642,9 +1640,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               ? strokesArray.map((s) => ({
                 ...s,
                 __templateSource: safeUrl,
-                layerId: shouldCreateNewLayer
-                  ? "template"
-                  : activeLayerId || "layer1",
+                layerId: activeLayerId || "layer1",
               }))
               : [];
             pageRef.appendStrokes(toAppend);
@@ -1833,72 +1829,37 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             {/* ===== SECTION: Apply Mode ===== */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Apply Mode</Text>
-              <View style={styles.optionRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.option,
-                    applyMode === "none" && styles.optionActive,
-                  ]}
-                  onPress={() => {
-                    setApplyMode("none");
-                    setPlaceTemplateOnNewLayer(true);
-                  }}
-                >
-                  <Icon
-                    name="block"
-                    size={22}
-                    color={applyMode === "none" ? "#2563EB" : "#64748B"}
-                  />
-                  <View style={styles.optionText}>
-                    <Text
-                      style={[
-                        styles.optionLabel,
-                        applyMode === "none" && styles.activeText,
-                      ]}
-                    >
-                      None
-                    </Text>
-                    <Text style={styles.optionDesc}>
-                      Just add template content
-                    </Text>
-                  </View>
-                  {applyMode === "none" && (
-                    <Icon name="check" size={24} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.option,
-                    applyMode === "append" && styles.optionActive,
-                  ]}
-                  onPress={() => {
-                    setApplyMode("append");
-                    setPlaceTemplateOnNewLayer(false);
-                  }}
-                >
-                  <Icon
-                    name="playlist-add"
-                    size={22}
-                    color={applyMode === "append" ? "#2563EB" : "#64748B"}
-                  />
-                  <View style={styles.optionText}>
-                    <Text
-                      style={[
-                        styles.optionLabel,
-                        applyMode === "append" && styles.activeText,
-                      ]}
-                    >
-                      Append
-                    </Text>
-                    <Text style={styles.optionDesc}>
-                      Keep current content, add template to the end
-                    </Text>
-                  </View>
-                  {applyMode === "append" && (
-                    <Icon name="check" size={24} color="#2563EB" />
-                  )}
-                </TouchableOpacity>
+              <View style={styles.optionRow}>                <TouchableOpacity
+                style={[
+                  styles.option,
+                  applyMode === "append" && styles.optionActive,
+                ]}
+                onPress={() => {
+                  setApplyMode("append");
+                }}
+              >
+                <Icon
+                  name="playlist-add"
+                  size={22}
+                  color={applyMode === "append" ? "#2563EB" : "#64748B"}
+                />
+                <View style={styles.optionText}>
+                  <Text
+                    style={[
+                      styles.optionLabel,
+                      applyMode === "append" && styles.activeText,
+                    ]}
+                  >
+                    Append
+                  </Text>
+                  <Text style={styles.optionDesc}>
+                    Keep current content, add template to the end
+                  </Text>
+                </View>
+                {applyMode === "append" && (
+                  <Icon name="check" size={24} color="#2563EB" />
+                )}
+              </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
@@ -1907,7 +1868,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                   ]}
                   onPress={() => {
                     setApplyMode("replace");
-                    setPlaceTemplateOnNewLayer(false);
                   }}
                 >
                   <Icon
@@ -1934,44 +1894,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 </TouchableOpacity>
               </View>
             </View>
-
-            {/* ===== SECTION: Layer Placement ===== */}
-            {applyMode === "none" && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Layer Placement</Text>
-                <View style={styles.optionRow}>
-                  <TouchableOpacity
-                    style={[
-                      styles.option,
-                      placeTemplateOnNewLayer && styles.optionActive,
-                    ]}
-                    onPress={() => setPlaceTemplateOnNewLayer(true)}
-                  >
-                    <Icon
-                      name="layers"
-                      size={22}
-                      color={placeTemplateOnNewLayer ? "#2563EB" : "#64748B"}
-                    />
-                    <View style={styles.optionText}>
-                      <Text
-                        style={[
-                          styles.optionLabel,
-                          placeTemplateOnNewLayer && styles.activeText,
-                        ]}
-                      >
-                        New Layer
-                      </Text>
-                      <Text style={styles.optionDesc}>
-                        Create a new layer, easier to edit later
-                      </Text>
-                    </View>
-                    {placeTemplateOnNewLayer && (
-                      <Icon name="check" size={24} color="#2563EB" />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
 
             {/* ===== ACTION BUTTONS ===== */}
             <View style={styles.actions}>
