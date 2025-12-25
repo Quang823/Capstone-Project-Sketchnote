@@ -19,6 +19,7 @@ function LayerPanel({
   onAdd,
   onDelete,
   onRename, // thêm callback rename
+  onClearLayer, // thêm callback clear layer
   onClose,
 }) {
   const [dropdownVisible, setDropdownVisible] = useState(null);
@@ -49,7 +50,8 @@ function LayerPanel({
       setRenameVisible(true);
     }
     if (action === "clear") {
-      /* Clear layer action */
+      // Clear all strokes on this layer
+      onClearLayer?.(layerId);
     }
     if (action === "delete") {
       // Block deletion for base layer (Layer 1)

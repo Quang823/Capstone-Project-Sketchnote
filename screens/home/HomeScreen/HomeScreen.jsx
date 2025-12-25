@@ -1298,13 +1298,17 @@ export default function HomeScreen({ navigation }) {
             onSelect={(type) => {
               setPopoverVisible(false);
 
-              // 🚀 Check project limits for logged-in users without active subscription
-              if (user && !user.hasActiveSubscription) {
+              // 🚀 Check project limits for ALL users (including Premium)
+              if (user) {
                 const current = user.currentProjects || 0;
                 const max = user.maxProjects || 3;
 
-                if (current >= max) {
-                  // ✅ FIX: Show modal instead of toast
+                // ✅ Use canCreateProject from API if available, otherwise compare current vs max
+                const canCreate = user.canCreateProject !== undefined
+                  ? user.canCreateProject
+                  : (current < max);
+
+                if (!canCreate) {
                   setLimitInfo({ current, max });
                   setLimitModalVisible(true);
                   return;

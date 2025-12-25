@@ -1784,6 +1784,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         onOpenOverview={() => setOverviewVisible(true)}
         onResourceSelect={handleResourceSelect}
         isViewOnly={isViewOnly}
+        paperSize={noteConfig?.paperSize}
       />
       <DocumentOverviewModal
         visible={overviewVisible}
@@ -1796,6 +1797,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         onAddPage={addPage}
         onResourceSelect={handleResourceSelect}
         isViewOnly={isViewOnly}
+        paperSize={noteConfig?.paperSize}
       />
 
       <Modal
@@ -1814,7 +1816,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 </View>
                 <View>
                   <Text style={styles.title}>Apply Template</Text>
-                  {templateConfirm?.name && (
+                  {!!templateConfirm?.name && (
                     <Text style={styles.templateName} numberOfLines={1}>
                       {templateConfirm.name}
                     </Text>
@@ -1829,37 +1831,38 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             {/* ===== SECTION: Apply Mode ===== */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Apply Mode</Text>
-              <View style={styles.optionRow}>                <TouchableOpacity
-                style={[
-                  styles.option,
-                  applyMode === "append" && styles.optionActive,
-                ]}
-                onPress={() => {
-                  setApplyMode("append");
-                }}
-              >
-                <Icon
-                  name="playlist-add"
-                  size={22}
-                  color={applyMode === "append" ? "#2563EB" : "#64748B"}
-                />
-                <View style={styles.optionText}>
-                  <Text
-                    style={[
-                      styles.optionLabel,
-                      applyMode === "append" && styles.activeText,
-                    ]}
-                  >
-                    Append
-                  </Text>
-                  <Text style={styles.optionDesc}>
-                    Keep current content, add template to the end
-                  </Text>
-                </View>
-                {applyMode === "append" && (
-                  <Icon name="check" size={24} color="#2563EB" />
-                )}
-              </TouchableOpacity>
+              <View style={styles.optionRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.option,
+                    applyMode === "append" && styles.optionActive,
+                  ]}
+                  onPress={() => {
+                    setApplyMode("append");
+                  }}
+                >
+                  <Icon
+                    name="playlist-add"
+                    size={22}
+                    color={applyMode === "append" ? "#2563EB" : "#64748B"}
+                  />
+                  <View style={styles.optionText}>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        applyMode === "append" && styles.activeText,
+                      ]}
+                    >
+                      Append
+                    </Text>
+                    <Text style={styles.optionDesc}>
+                      Keep current content, add template to the end
+                    </Text>
+                  </View>
+                  {applyMode === "append" && (
+                    <Icon name="check" size={24} color="#2563EB" />
+                  )}
+                </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
@@ -2003,6 +2006,30 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
               {pages.map((p, i) => {
                 // ✅ Đảm bảo page id luôn hợp lệ cho key
                 const pageKey = p?.id != null ? String(p.id) : `page-${i}`;
+
+                // 🔥 VIRTUALIZATION: Only render pages within a certain range of the active index
+                // Render active page, one before, and one after (buffer of 1)
+                const isVisible = Math.abs(i - activeIndex) <= 1;
+
+                if (!isVisible) {
+                  return (
+                    <View
+                      key={pageKey}
+                      style={{
+                        marginBottom: PAGE_SPACING,
+                        width: "100%",
+                        height: pageLayouts[p.id] ?? fallbackHeight,
+                        backgroundColor: "#f1f3f5", // Placeholder color
+                        borderRadius: 8,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <ActivityIndicator color="#adb5bd" />
+                    </View>
+                  );
+                }
+
                 return (
                   <View
                     key={pageKey}
@@ -2052,40 +2079,39 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                         pressure,
                         thickness,
                         stabilization,
-                        tapeSettings, // ✅ Pass tape settings
-                        shapeSettings, // ✅ Pass shape settings
-                        layers: pageLayers?.[p.id] || [
-                          {
-                            id: "layer1",
-                            name: "Layer 1",
-                            visible: true,
-                            strokes: [],
-                          },
-                        ], // 👈 Pass page-specific layers
+                        tapeSettings,
+                        shapeSettings,
+                        layers: pageLayers?.[p.id] || [], // 🔥 Stable fallback
                         activeLayerId,
                         setLayers: (updater) => {
                           if (p?.id == null) return;
-                          setPageLayers?.((prev) => ({
-                            ...prev,
-                            [p.id]:
+                          setPageLayers?.((prev) => {
+                            const current = prev[p.id] || [
+                              {
+                                id: "layer1",
+                                name: "Layer 1",
+                                visible: true,
+                                strokes: [],
+                              },
+                            ];
+                            const next =
                               typeof updater === "function"
-                                ? updater(
-                                  prev[p.id] || [
-                                    {
-                                      id: "layer1",
-                                      name: "Layer 1",
-                                      visible: true,
-                                      strokes: [],
-                                    },
-                                  ]
-                                )
-                                : updater,
-                          }));
-                        }, // 👈 Update page-specific layers
+                                ? updater(current)
+                                : updater;
+
+                            // Only update if actually different
+                            if (next === current) return prev;
+
+                            return {
+                              ...prev,
+                              [p.id]: next,
+                            };
+                          });
+                        },
                         onColorPicked,
                         scrollOffsetY: scrollY - (offsets[activeIndex] ?? 0),
-                        scrollYShared, // ✅ Animated scroll value
-                        pageOffsetY: offsets[i] ?? 0, // ✅ Page offset trong project
+                        scrollYShared,
+                        pageOffsetY: offsets[i] ?? 0,
                         backgroundColor: p.backgroundColor,
                         pageTemplate: p.template,
                         backgroundImageUrl: p.imageUrl,
@@ -2093,11 +2119,8 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                         pageWidth: pageDimensions.width,
                         pageHeight: pageDimensions.height,
                         onZoomChange: (isZoomActive) => {
-                          // Update zoom state: true when pinch gesture starts, false when ends
-                          // Disable ScrollView scroll when pinch gesture is active to prevent crash
                           setIsZooming(isZoomActive);
                         },
-                        // Pass down selection state
                         selectedId:
                           selectionPageId === p.id ? selectedId : null,
                         selectedBox:
@@ -2105,7 +2128,6 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                         onSelectionChange: (strokeId, box) => {
                           handleSelectionChange(p.id, strokeId, box);
                         },
-                        // 🔄 REALTIME COLLABORATION props
                         collabEnabled,
                         collabConnected,
                         onCollabElementUpdate,

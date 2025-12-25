@@ -123,4 +123,16 @@ export const orderService = {
       throw new Error(message);
     }
   },
+  getDesignerPublishedTemplates: async () => {
+    try {
+      const res = await orderController.getDesignerPublishedTemplates();
+      return res.data.result;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Get designer published templates failed.";
+      throw new Error(message);
+    }
+  },
 };

@@ -58,8 +58,10 @@ const GestureHandler = forwardRef(
       configByTool = {},
       onAddStroke,
       onModifyStroke,
+      onModifyStrokeById,
       onModifyStrokesBulk,
       onDeleteStroke,
+      onDeleteStrokeById,
       children,
       canvasRef,
       setRealtimeText,
@@ -116,6 +118,7 @@ const GestureHandler = forwardRef(
       timeoutIdsRef.current.add(id);
       return id;
     }, []);
+
     // Cleanup: cancel any pending RAF to prevent leaks when unmounting
     useEffect(() => {
       return () => {
@@ -1164,6 +1167,87 @@ const GestureHandler = forwardRef(
           return;
         }
 
+        // 🪣 Fill Tool
+        if (tool === "fill") {
+          const activeStrokes = getActiveStrokes();
+          // Iterate in reverse to hit top-most first
+          for (let i = activeStrokes.length - 1; i >= 0; i--) {
+            const s = activeStrokes[i];
+            // Check if it's a shape
+            const isShape = [
+              "rect",
+              "rectangle",
+              "circle",
+              "triangle",
+              "star",
+              "polygon",
+              "diamond",
+              "pentagon",
+              "hexagon",
+              "octagon",
+              "cube",
+              "cylinder",
+              "cone",
+              "pyramid",
+              "torus",
+              "sphere",
+              "hemisphere",
+              "prism",
+              "shape", // ✅ Added generic shape tool
+            ].includes(s.tool);
+
+            if (!isShape) continue;
+
+            // Check hit
+            const bbox = getBoundingBoxForStroke(s);
+            if (
+              bbox &&
+              e.x >= bbox.minX &&
+              e.x <= bbox.maxX &&
+              e.y >= bbox.minY &&
+              e.y <= bbox.maxY
+            ) {
+              let isInside = false;
+
+              // Determine specific shape type
+              const shapeType =
+                s.tool === "shape" ? s.shapeSettings?.shape : s.tool;
+
+              if (shapeType === "circle") {
+                const centerX = (bbox.minX + bbox.maxX) / 2;
+                const centerY = (bbox.minY + bbox.maxY) / 2;
+                const radiusX = (bbox.maxX - bbox.minX) / 2;
+                const radiusY = (bbox.maxY - bbox.minY) / 2;
+                const dx = (e.x - centerX) / radiusX;
+                const dy = (e.y - centerY) / radiusY;
+                isInside = dx * dx + dy * dy <= 1;
+              } else if (shapeType === "rect" || shapeType === "rectangle") {
+                isInside = true;
+              } else {
+                // For other shapes, use pointInPolygon
+                const pts = s.points || s.shape?.points;
+                if (pts && pts.length > 0) {
+                  isInside = pointInPolygon(pts, e.x, e.y);
+                }
+              }
+
+              if (isInside) {
+                // Fill it!
+                if (typeof onModifyStrokesBulk === "function") {
+                  onModifyStrokesBulk([
+                    {
+                      id: s.id,
+                      changes: { fill: true, fillColor: color },
+                    },
+                  ]);
+                }
+                return;
+              }
+            }
+          }
+          return;
+        }
+
         // 🎨 Eyedropper tool - pick color from stroke
         if (tool === "eyedropper") {
           // Try to find a stroke at tap position across ALL visible strokes
@@ -1181,11 +1265,16 @@ const GestureHandler = forwardRef(
             const activeStrokes = visible;
             for (let i = activeStrokes.length - 1; i >= 0; i--) {
               const s = activeStrokes[i];
-              if (!s.points) continue;
 
-              // Kiểm tra xem có phải shape với fill không
+              // Determine the actual shape type (handles tool="shape" with shapeSettings)
+              const shapeType =
+                s.tool === "shape"
+                  ? s.shapeSettings?.shape || s.shape?.type
+                  : s.tool;
+
+              // ✅ Check if it's a fillable shape (now includes "shape" tool)
               const isShape =
-                s.tool &&
+                shapeType &&
                 [
                   "rect",
                   "rectangle",
@@ -1193,7 +1282,12 @@ const GestureHandler = forwardRef(
                   "triangle",
                   "star",
                   "polygon",
-                ].includes(s.tool);
+                  "diamond",
+                  "pentagon",
+                  "hexagon",
+                  "octagon",
+                ].includes(shapeType);
+
               const hasFill = s.fill && s.fillColor;
 
               if (isShape && hasFill) {
@@ -1209,7 +1303,7 @@ const GestureHandler = forwardRef(
                   // Nằm trong bounding box, kiểm tra chi tiết hơn
                   let isInside = false;
 
-                  if (s.tool === "circle") {
+                  if (shapeType === "circle") {
                     // Kiểm tra trong hình tròn
                     const centerX = (bbox.minX + bbox.maxX) / 2;
                     const centerY = (bbox.minY + bbox.maxY) / 2;
@@ -1218,17 +1312,32 @@ const GestureHandler = forwardRef(
                     const dx = (e.x - centerX) / radiusX;
                     const dy = (e.y - centerY) / radiusY;
                     isInside = dx * dx + dy * dy <= 1;
-                  } else if (s.tool === "rect" || s.tool === "rectangle") {
+                  } else if (
+                    shapeType === "rect" ||
+                    shapeType === "rectangle"
+                  ) {
                     // Rectangle luôn trong bbox
                     isInside = true;
                   } else if (
-                    s.tool === "triangle" ||
-                    s.tool === "star" ||
-                    s.tool === "polygon"
+                    shapeType === "triangle" ||
+                    shapeType === "star" ||
+                    shapeType === "polygon" ||
+                    shapeType === "diamond" ||
+                    shapeType === "pentagon" ||
+                    shapeType === "hexagon" ||
+                    shapeType === "octagon"
                   ) {
-                    // Dùng pointInPolygon
-                    const pts = s.points || s.shape?.points;
-                    isInside = pointInPolygon(pts, e.x, e.y);
+                    // Dùng pointInPolygon - check shape.points first, then s.points
+                    const pts = s.shape?.points || s.points;
+                    if (pts && pts.length > 0) {
+                      isInside = pointInPolygon(pts, e.x, e.y);
+                    } else {
+                      // Fallback: if inside bbox, consider it inside
+                      isInside = true;
+                    }
+                  } else {
+                    // Fallback for other shapes: if inside bbox, consider it inside
+                    isInside = true;
                   }
 
                   if (isInside) {
@@ -1241,8 +1350,10 @@ const GestureHandler = forwardRef(
               }
 
               // Kiểm tra gần viền (cho cả shape và stroke thường)
-              if (s.color) {
-                const isNear = s.points.some((p) => {
+              // ✅ Check both s.points and s.shape for points
+              const pointsToCheck = s.points || s.shape?.points;
+              if (s.color && pointsToCheck && Array.isArray(pointsToCheck)) {
+                const isNear = pointsToCheck.some((p) => {
                   const dx = p.x - e.x;
                   const dy = p.y - e.y;
                   return Math.sqrt(dx * dx + dy * dy) <= (s.width || 6) + 10;
@@ -1280,7 +1391,9 @@ const GestureHandler = forwardRef(
         }
 
         // 🖼️ Check if tapping on an image/table - should always show transform box
-        const hitImage = hitTestImage(e.x, e.y, strokes);
+        // ✅ FIX: Only allow selection on active layer
+        const validStrokesForTap = getActiveStrokes();
+        const hitImage = hitTestImage(e.x, e.y, validStrokesForTap);
         if (hitImage) {
           const newBox = {
             x: hitImage.x ?? 0,
@@ -1297,7 +1410,8 @@ const GestureHandler = forwardRef(
         }
 
         // 📝 Check if tapping on text
-        const hit = hitTestText(e.x, e.y, strokes);
+        // ✅ FIX: Only allow selection on active layer
+        const hit = hitTestText(e.x, e.y, validStrokesForTap);
         if (!hit) {
           // ✅ Tap on empty canvas: immediately clear selection
           setSelectedId(null);
@@ -1731,23 +1845,26 @@ const GestureHandler = forwardRef(
                     return Math.sqrt(dx * dx + dy * dy) <= (s.width || 6) + 4;
                   });
 
-                  if (hit && typeof onDeleteStroke === "function") {
-                    const globalIndex = strokes.findIndex(
-                      (s) => s.id === validStrokes[i].id
-                    );
-                    if (globalIndex !== -1) {
-                      const deletedId = validStrokes[i].id;
+                  if (hit) {
+                    const deletedId = validStrokes[i].id;
+                    if (typeof onDeleteStrokeById === "function") {
+                      onDeleteStrokeById(deletedId);
+                    } else if (typeof onDeleteStroke === "function") {
+                      // Fallback (might be buggy if indices don't match)
+                      const globalIndex = strokes.findIndex(
+                        (s) => s.id === deletedId
+                      );
                       onDeleteStroke(globalIndex);
+                    }
 
-                      // 🔄 REALTIME COLLABORATION: Send delete event
-                      if (
-                        collabEnabled &&
-                        collabConnected &&
-                        typeof onCollabElementDelete === "function" &&
-                        deletedId
-                      ) {
-                        onCollabElementDelete(pageId, deletedId);
-                      }
+                    // 🔄 REALTIME COLLABORATION: Send delete event
+                    if (
+                      collabEnabled &&
+                      collabConnected &&
+                      typeof onCollabElementDelete === "function" &&
+                      deletedId
+                    ) {
+                      onCollabElementDelete(pageId, deletedId);
                     }
                   }
                 });
@@ -2050,21 +2167,23 @@ const GestureHandler = forwardRef(
             const cy = (bbox.minY + bbox.maxY) / 2;
             if (pointInPolygon(poly, cx, cy)) {
               try {
-                const globalIndex = strokes.findIndex(
-                  (st) => st.id === s.id
-                );
-                if (globalIndex !== -1) {
-                  onDeleteStroke(globalIndex);
-
-                  // 🔄 REALTIME COLLABORATION: Send delete event
-                  if (
-                    collabEnabled &&
-                    collabConnected &&
-                    typeof onCollabElementDelete === "function" &&
-                    s.id
-                  ) {
-                    onCollabElementDelete(pageId, s.id);
+                if (typeof onDeleteStrokeById === "function") {
+                  onDeleteStrokeById(s.id);
+                } else {
+                  const globalIndex = strokes.findIndex((st) => st.id === s.id);
+                  if (globalIndex !== -1) {
+                    onDeleteStroke(globalIndex);
                   }
+                }
+
+                // 🔄 REALTIME COLLABORATION: Send delete event
+                if (
+                  collabEnabled &&
+                  collabConnected &&
+                  typeof onCollabElementDelete === "function" &&
+                  s.id
+                ) {
+                  onCollabElementDelete(pageId, s.id);
                 }
               } catch (err) {
                 console.warn("Error deleting stroke:", err);
@@ -2109,7 +2228,11 @@ const GestureHandler = forwardRef(
           mutations
             .sort((a, b) => b.globalIndex - a.globalIndex)
             .forEach((m) => {
-              onDeleteStroke?.(m.globalIndex);
+              if (typeof onDeleteStrokeById === "function") {
+                onDeleteStrokeById(m.id);
+              } else {
+                onDeleteStroke?.(m.globalIndex);
+              }
 
               // 🔄 REALTIME COLLABORATION: Send delete event
               if (
@@ -2167,22 +2290,26 @@ const GestureHandler = forwardRef(
               tapY <= bbox.maxY
             ) {
               try {
-                const globalIndex = strokes.findIndex((st) => st.id === s.id);
-                if (globalIndex !== -1) {
-                  const fillChanges = { fill: true, fillColor: color };
-                  onModifyStroke?.(globalIndex, fillChanges);
-
-                  // 🔄 REALTIME COLLABORATION: Send fill update to other users
-                  if (
-                    collabEnabled &&
-                    collabConnected &&
-                    typeof onCollabElementUpdate === "function" &&
-                    s?.id
-                  ) {
-                    onCollabElementUpdate(pageId, s.id, fillChanges, {
-                      transient: false,
-                    });
+                const fillChanges = { fill: true, fillColor: color };
+                if (typeof onModifyStrokeById === "function") {
+                  onModifyStrokeById(s.id, fillChanges);
+                } else {
+                  const globalIndex = strokes.findIndex((st) => st.id === s.id);
+                  if (globalIndex !== -1) {
+                    onModifyStroke?.(globalIndex, fillChanges);
                   }
+                }
+
+                // 🔄 REALTIME COLLABORATION: Send fill update to other users
+                if (
+                  collabEnabled &&
+                  collabConnected &&
+                  typeof onCollabElementUpdate === "function" &&
+                  s?.id
+                ) {
+                  onCollabElementUpdate(pageId, s.id, fillChanges, {
+                    transient: false,
+                  });
                 }
               } catch (err) {
                 console.warn("Error modifying fill:", err);
@@ -2761,17 +2888,19 @@ const GestureHandler = forwardRef(
               setLassoSelection([]);
             }}
             onCut={() => {
-              // Capture IDs before deleting
+              // Capture IDs before deleting - use onDeleteStrokeById for cross-layer deletion
               const toDelete = strokes
                 .filter((s) => lassoSelection.includes(s.id))
-                .map((s) => ({
-                  id: s.id,
-                  index: strokes.findIndex((st) => st.id === s.id),
-                }))
-                .filter((item) => item.index !== -1)
-                .sort((a, b) => b.index - a.index); // Sort descending để xóa từ cuối lên
+                .map((s) => s.id);
 
-              toDelete.forEach((item) => onDeleteStroke?.(item.index));
+              toDelete.forEach((id) => {
+                if (typeof onDeleteStrokeById === "function") {
+                  onDeleteStrokeById(id);
+                } else {
+                  const index = strokes.findIndex((st) => st.id === id);
+                  if (index !== -1) onDeleteStroke?.(index);
+                }
+              });
 
               // 🔄 REALTIME COLLABORATION: Send delete events for all lasso selected items
               if (
@@ -2779,25 +2908,27 @@ const GestureHandler = forwardRef(
                 collabConnected &&
                 typeof onCollabElementDelete === "function"
               ) {
-                toDelete.forEach((item) => {
-                  onCollabElementDelete(pageId, item.id);
+                toDelete.forEach((id) => {
+                  onCollabElementDelete(pageId, id);
                 });
               }
 
               setLassoSelection([]);
             }}
             onDelete={() => {
-              // Capture IDs before deleting
+              // Capture IDs before deleting - use onDeleteStrokeById for cross-layer deletion
               const toDelete = strokes
                 .filter((s) => lassoSelection.includes(s.id))
-                .map((s) => ({
-                  id: s.id,
-                  index: strokes.findIndex((st) => st.id === s.id),
-                }))
-                .filter((item) => item.index !== -1)
-                .sort((a, b) => b.index - a.index); // Sort descending để xóa từ cuối lên
+                .map((s) => s.id);
 
-              toDelete.forEach((item) => onDeleteStroke?.(item.index));
+              toDelete.forEach((id) => {
+                if (typeof onDeleteStrokeById === "function") {
+                  onDeleteStrokeById(id);
+                } else {
+                  const index = strokes.findIndex((st) => st.id === id);
+                  if (index !== -1) onDeleteStroke?.(index);
+                }
+              });
 
               // 🔄 REALTIME COLLABORATION: Send delete events for all lasso selected items
               if (
@@ -2805,8 +2936,8 @@ const GestureHandler = forwardRef(
                 collabConnected &&
                 typeof onCollabElementDelete === "function"
               ) {
-                toDelete.forEach((item) => {
-                  onCollabElementDelete(pageId, item.id);
+                toDelete.forEach((id) => {
+                  onCollabElementDelete(pageId, id);
                 });
               }
 
@@ -3018,8 +3149,13 @@ const GestureHandler = forwardRef(
               onCut={() => {
                 const index = strokes.findIndex((s) => s.id === selectedId);
                 const deletedId = selectedId; // Capture before clearing
-                if (index !== -1 && typeof onDeleteStroke === "function")
+
+                // ✅ FIX: Use ID-based deletion if available (safer for layers)
+                if (deletedId && typeof onDeleteStrokeById === "function") {
+                  onDeleteStrokeById(deletedId);
+                } else if (index !== -1 && typeof onDeleteStroke === "function") {
                   onDeleteStroke(index);
+                }
 
                 // 🔄 REALTIME COLLABORATION: Send delete event
                 if (
@@ -3037,8 +3173,13 @@ const GestureHandler = forwardRef(
               onDelete={() => {
                 const index = strokes.findIndex((s) => s.id === selectedId);
                 const deletedId = selectedId; // Capture before clearing
-                if (index !== -1 && typeof onDeleteStroke === "function")
+
+                // ✅ FIX: Use ID-based deletion if available (safer for layers)
+                if (deletedId && typeof onDeleteStrokeById === "function") {
+                  onDeleteStrokeById(deletedId);
+                } else if (index !== -1 && typeof onDeleteStroke === "function") {
                   onDeleteStroke(index);
+                }
 
                 // 🔄 REALTIME COLLABORATION: Send delete event
                 if (
@@ -3197,30 +3338,45 @@ const GestureHandler = forwardRef(
                   }
                 }}
                 onMoveEnd={() => {
-                  const index = strokes.findIndex((s) => s.id === selectedId);
-                  if (index !== -1) {
-                    const sItem = strokes[index];
+                  const sItem = strokes.find((s) => s.id === selectedId);
+                  if (sItem) {
                     const origin = liveTransformRef.current.origin;
-                    const final = {
-                      ...sItem,
+                    const changes = {
                       x:
                         (origin?.x ?? sItem.x ?? 0) +
                         (liveTransformRef.current.dx || 0),
                       y:
                         (origin?.y ?? sItem.y ?? 0) +
                         (liveTransformRef.current.dy || 0),
-                      width:
-                        (origin?.width ?? sItem.width ?? 0) +
-                        (liveTransformRef.current.dw || 0),
-                      height:
-                        (origin?.height ?? sItem.height ?? 0) +
-                        (liveTransformRef.current.dh || 0),
-                      rotation:
-                        (origin?.rotation ?? sItem.rotation ?? 0) +
-                        (liveTransformRef.current.drot || 0),
                     };
-                    if (typeof onModifyStroke === "function")
-                      onModifyStroke(index, final);
+
+                    // ✅ Only include width/height/rotation if they changed
+                    if (
+                      liveTransformRef.current.dw !== 0 ||
+                      liveTransformRef.current.dh !== 0
+                    ) {
+                      changes.width =
+                        (origin?.width ?? sItem.width ?? 0) +
+                        (liveTransformRef.current.dw || 0);
+                      changes.height =
+                        (origin?.height ?? sItem.height ?? 0) +
+                        (liveTransformRef.current.dh || 0);
+                    }
+                    if (liveTransformRef.current.drot !== 0) {
+                      changes.rotation =
+                        (origin?.rotation ?? sItem.rotation ?? 0) +
+                        (liveTransformRef.current.drot || 0);
+                    }
+
+                    // ✅ Use onModifyStrokeById for cross-layer support
+                    if (typeof onModifyStrokeById === "function") {
+                      onModifyStrokeById(selectedId, changes);
+                    } else if (typeof onModifyStroke === "function") {
+                      const index = strokes.findIndex(
+                        (s) => s.id === selectedId
+                      );
+                      if (index !== -1) onModifyStroke(index, changes);
+                    }
 
                     // 🔄 REALTIME COLLABORATION: Send position update to other users
                     if (
@@ -3228,22 +3384,6 @@ const GestureHandler = forwardRef(
                       collabConnected &&
                       typeof onCollabElementUpdate === "function"
                     ) {
-                      const changes = {
-                        x: final.x,
-                        y: final.y,
-                      };
-                      // Only send width/height if they changed (resize, not just move)
-                      if (
-                        liveTransformRef.current.dw !== 0 ||
-                        liveTransformRef.current.dh !== 0
-                      ) {
-                        changes.width = final.width;
-                        changes.height = final.height;
-                      }
-                      // Only send rotation if it changed
-                      if (liveTransformRef.current.drot !== 0) {
-                        changes.rotation = final.rotation;
-                      }
                       onCollabElementUpdate(pageId, selectedId, changes, {
                         transient: false,
                       });
@@ -3368,8 +3508,12 @@ const GestureHandler = forwardRef(
                       height:
                         (o.height ?? 0) + (liveTransformRef.current.dh || 0),
                     };
-                    if (typeof onModifyStroke === "function")
+                    // ✅ FIX: Use onModifyStrokeById for cross-layer support
+                    if (typeof onModifyStrokeById === "function") {
+                      onModifyStrokeById(selectedId, final);
+                    } else if (typeof onModifyStroke === "function") {
                       onModifyStroke(index, final);
+                    }
 
                     // 🔄 REALTIME COLLABORATION: Send resize update to other users
                     if (
@@ -3423,8 +3567,12 @@ const GestureHandler = forwardRef(
                       0;
                     const finalRot =
                       originRot + (liveTransformRef.current.drot || 0);
-                    if (typeof onModifyStroke === "function")
+                    // ✅ FIX: Use onModifyStrokeById for cross-layer support
+                    if (typeof onModifyStrokeById === "function") {
+                      onModifyStrokeById(selectedId, { rotation: finalRot });
+                    } else if (typeof onModifyStroke === "function") {
                       onModifyStroke(index, { rotation: finalRot });
+                    }
 
                     // 🔄 REALTIME COLLABORATION: Send rotation update to other users
                     if (
@@ -3464,8 +3612,13 @@ const GestureHandler = forwardRef(
                 onCut={() => {
                   const index = strokes.findIndex((s) => s.id === selectedId);
                   const deletedId = selectedId; // Capture before clearing
-                  if (index !== -1 && typeof onDeleteStroke === "function")
+
+                  // ✅ FIX: Use ID-based deletion if available (safer for layers)
+                  if (deletedId && typeof onDeleteStrokeById === "function") {
+                    onDeleteStrokeById(deletedId);
+                  } else if (index !== -1 && typeof onDeleteStroke === "function") {
                     onDeleteStroke(index);
+                  }
 
                   // 🔄 REALTIME COLLABORATION: Send delete event
                   if (
@@ -3484,8 +3637,13 @@ const GestureHandler = forwardRef(
                 onDelete={() => {
                   const index = strokes.findIndex((s) => s.id === selectedId);
                   const deletedId = selectedId; // Capture before clearing
-                  if (index !== -1 && typeof onDeleteStroke === "function")
+
+                  // ✅ FIX: Use ID-based deletion if available (safer for layers)
+                  if (deletedId && typeof onDeleteStrokeById === "function") {
+                    onDeleteStrokeById(deletedId);
+                  } else if (index !== -1 && typeof onDeleteStroke === "function") {
                     onDeleteStroke(index);
+                  }
 
                   // 🔄 REALTIME COLLABORATION: Send delete event
                   if (

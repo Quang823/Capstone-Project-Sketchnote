@@ -31,10 +31,14 @@ const DocumentBrowserContent = ({
   onClose, // For modal's page selection
   showTabLabels = false, // To show labels in modal tabs
   isViewOnly = false, // View-only mode flag
+  paperSize = "PORTRAIT", // Default to PORTRAIT
 }) => {
+  const isLandscape = paperSize === "LANDSCAPE";
+  const thumbnailAspectRatio = isLandscape ? 4 / 3 : 3 / 4;
   const safeActivePageId = activePageId != null ? String(activePageId) : null;
   const [activeTab, setActiveTab] = useState("pages");
   const [purchasedTemplates, setPurchasedTemplates] = useState([]);
+  const [publishedTemplates, setPublishedTemplates] = useState([]); // New state for published templates
   const [isLoadingResources, setIsLoadingResources] = useState(false);
 
   // Upgrade modal state
@@ -100,6 +104,27 @@ const DocumentBrowserContent = ({
         }
       };
       fetchTemplates();
+    } else if (activeTab === "your-uploads" && visible) {
+      // Fetch published templates
+      const fetchPublishedTemplates = async () => {
+        setIsLoadingResources(true);
+        try {
+          const templates = await orderService.getDesignerPublishedTemplates();
+          // Map published templates if necessary (assuming similar structure or just raw data)
+          // The API returns "result" which is an array of templates.
+          // We might need to ensure they have 'items' and 'images' populated or handle them similarly.
+          // For now, let's assume the structure is compatible or we map it.
+          // If the API returns templates with 'items' directly, we can use them.
+          // If it returns versions, we might need to pick the latest one.
+          // Let's assume standard template structure for now.
+          setPublishedTemplates(templates || []);
+        } catch (error) {
+          console.warn("Failed to fetch published templates:", error);
+        } finally {
+          setIsLoadingResources(false);
+        }
+      };
+      fetchPublishedTemplates();
     }
   }, [activeTab, visible]);
 
@@ -228,7 +253,7 @@ const DocumentBrowserContent = ({
     { id: "icons", label: "Icons", icon: "photo" },
     { id: "templates", label: "Templates", icon: "view-quilt" },
     { id: "ai-images", label: "AI Images", icon: "auto-awesome" },
-    { id: "history", label: "History", icon: "history" },
+    { id: "your-uploads", label: "Your Uploads", icon: "cloud-upload" },
   ];
 
   // In view-only mode, show only Pages tab
@@ -278,11 +303,12 @@ const DocumentBrowserContent = ({
                   ]}
                   onPress={() => handlePageSelect(pageId)}
                 >
-                  <View style={styles.pageThumbnail}>
+                  <View style={[styles.pageThumbnail, { aspectRatio: thumbnailAspectRatio }]}>
                     {page.snapshotUrl ? (
                       <LazyImage
                         source={{ uri: page.snapshotUrl }}
                         style={styles.thumbnailImage}
+                        resizeMode="contain"
                       />
                     ) : (
                       <View style={styles.emptyThumbnail}>
@@ -324,7 +350,8 @@ const DocumentBrowserContent = ({
     );
   };
 
-  const renderResources = (filterType) => {
+  const renderResources = (filterType, usePublished = false) => {
+    const data = usePublished ? publishedTemplates : purchasedTemplates;
     if (isLoadingResources) {
       return (
         <View style={styles.emptyState}>
@@ -340,13 +367,15 @@ const DocumentBrowserContent = ({
         nestedScrollEnabled
         keyboardShouldPersistTaps="handled"
       >
-        {purchasedTemplates.length === 0 ? (
+        {data.length === 0 ? (
           <View style={styles.emptyState}>
             <Icon name="collections" size={48} color="#D1D5DB" />
-            <Text style={styles.emptyStateText}>No purchased resources</Text>
+            <Text style={styles.emptyStateText}>
+              {usePublished ? "No uploaded resources" : "No purchased resources"}
+            </Text>
           </View>
         ) : (
-          purchasedTemplates
+          data
             .filter((t) =>
               !filterType ? true : String(t.type).toUpperCase() === filterType
             )
@@ -544,15 +573,8 @@ const DocumentBrowserContent = ({
         return renderResources("TEMPLATES");
       case "ai-images":
         return renderAIImages();
-      case "history":
-        return (
-          <View style={styles.tabContent}>
-            <View style={styles.emptyState}>
-              <Icon name="history" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyStateText}>Coming soon</Text>
-            </View>
-          </View>
-        );
+      case "your-uploads":
+        return renderResources(null, true); // Pass true to indicate using publishedTemplates
       default:
         return null;
     }
@@ -715,7 +737,7 @@ const styles = StyleSheet.create({
 
   pageThumbnail: {
     width: "100%",
-    aspectRatio: 3 / 4,
+    // aspectRatio is now handled dynamically in render
     backgroundColor: "#FFFFFF",
     borderRadius: 6,
     overflow: "hidden",

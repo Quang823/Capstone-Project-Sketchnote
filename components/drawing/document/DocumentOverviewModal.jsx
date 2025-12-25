@@ -15,6 +15,7 @@ const DocumentOverviewModal = ({
   onAddPage,
   onResourceSelect,
   isViewOnly = false,
+  paperSize,
 }) => {
   return (
     <Modal
@@ -45,6 +46,7 @@ const DocumentOverviewModal = ({
             onClose={onClose}
             showTabLabels={true}
             isViewOnly={isViewOnly}
+            paperSize={paperSize}
           />
         </View>
       </View>

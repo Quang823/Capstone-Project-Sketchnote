@@ -128,11 +128,18 @@ class CollaborationManager {
     this.processedMessageIds = new Set();
     this.MESSAGE_ID_RETENTION = 60000; // 1 minute
 
+    // *** CRITICAL FIX: Store interval IDs for cleanup ***
+    this.cleanupIntervals = [];
+
     // Cleanup old message IDs periodically
-    setInterval(() => this._cleanupMessageIds(), 30000);
+    this.cleanupIntervals.push(
+      setInterval(() => this._cleanupMessageIds(), 30000)
+    );
 
     // *** CRITICAL: Cleanup expired locks periodically ***
-    setInterval(() => this._cleanupExpiredLocks(), 5000);
+    this.cleanupIntervals.push(
+      setInterval(() => this._cleanupExpiredLocks(), 5000)
+    );
   }
 
   // ===========================================================================
@@ -218,17 +225,61 @@ class CollaborationManager {
   async disconnect() {
     if (!this.connected) return;
 
-    // Send leave event
-    this._sendEvent(EventTypes.USER_LEAVE, {});
+    try {
+      // Send leave event
+      this._sendEvent(EventTypes.USER_LEAVE, {});
+    } catch (e) {
+      // Ignore errors when sending leave event
+    }
 
     // Flush pending stroke batches
     this._flushAllStrokeBatches();
 
+    // *** CRITICAL FIX: Clear all intervals to prevent memory leaks ***
+    if (this.cleanupIntervals && Array.isArray(this.cleanupIntervals)) {
+      this.cleanupIntervals.forEach(intervalId => {
+        clearInterval(intervalId);
+      });
+      this.cleanupIntervals = [];
+    }
+
+    // *** CRITICAL FIX: Clear all timeouts ***
+    this.strokeBatches.forEach(batch => {
+      if (batch.timeout) {
+        clearTimeout(batch.timeout);
+      }
+    });
+
+    this.pendingLockRequests.forEach(request => {
+      if (request.timeout) {
+        clearTimeout(request.timeout);
+        request.reject(new Error("Disconnected"));
+      }
+    });
+
+    // *** CRITICAL FIX: Clear all maps and sets ***
+    this.outOfOrderBuffer.clear();
+    this.pendingAcks.clear();
+    this.elementLocks.clear();
+    this.pendingLockRequests.clear();
+    this.activeStrokes.clear();
+    this.processedMessageIds.clear();
+    this.syncChunks = [];
+    this.pendingOperations = [];
+
     // Clear state
     this.projectId = null;
     this.connected = false;
+    this.connecting = false;
     this.activeUsers.clear();
     this.strokeBatches.clear();
+
+    // Reset flags
+    this.seqInitialized = false;
+    this.serverVersion = 0;
+    this.lastProcessedSeq = 0;
+    this.localSeq = 0;
+    this.syncInProgress = false;
 
     webSocketService.disconnect();
   }
@@ -251,22 +302,33 @@ class CollaborationManager {
    * @param {Object} message
    */
   _handleMessage(message) {
-    if (!message || !message.type) return;
+    // *** CRITICAL FIX: Add comprehensive null checks ***
+    try {
+      if (!message || typeof message !== 'object' || !message.type) {
+        console.warn("[CollabManager] Invalid message received:", message);
+        return;
+      }
 
-    // Skip own messages (except for ACKs and server responses)
-    const isServerResponse = [
-      "SYNC_RESPONSE",
-      "SYNC_RESPONSE_START",
-      "SYNC_RESPONSE_CHUNK",
-      "SYNC_RESPONSE_END",
-      "LOCK_GRANTED",
-      "LOCK_RELEASED",
-      "SERVER_REJECT",
-      "ACK",
-    ].includes(message.type);
+      // *** FIX: Validate message structure ***
+      if (typeof message.type !== 'string') {
+        console.warn("[CollabManager] Message type must be string:", message.type);
+        return;
+      }
 
-    // 🔥 Compare as strings to handle type mismatch (number vs string)
-    const messageUserId = String(message.userId || "");
+      // Skip own messages (except for ACKs and server responses)
+      const isServerResponse = [
+        "SYNC_RESPONSE",
+        "SYNC_RESPONSE_START", 
+        "SYNC_RESPONSE_CHUNK",
+        "SYNC_RESPONSE_END",
+        "LOCK_GRANTED",
+        "LOCK_RELEASED",
+        "SERVER_REJECT",
+        "ACK",
+      ].includes(message.type);
+
+      // 🔥 Compare as strings to handle type mismatch (number vs string)
+      const messageUserId = String(message.userId || "");
     const myUserId = String(this.userId || "");
 
     if (
@@ -345,6 +407,11 @@ class CollaborationManager {
 
     // *** CRITICAL: Process buffered out-of-order messages ***
     this._processBufferedMessages();
+
+    } catch (error) {
+      console.warn("[CollabManager] Error handling message:", error, message);
+      // Don't crash the app - just log and continue
+    }
   }
 
   /**
@@ -459,12 +526,29 @@ class CollaborationManager {
    */
   _processBufferedMessages() {
     let nextSeq = this.lastProcessedSeq + 1;
-    while (this.outOfOrderBuffer.has(nextSeq)) {
+    let safetyCounter = 0;
+    const MAX_ITERATIONS = 1000; // Prevent infinite loops
+    
+    while (this.outOfOrderBuffer.has(nextSeq) && safetyCounter < MAX_ITERATIONS) {
       const bufferedMessage = this.outOfOrderBuffer.get(nextSeq);
       this.outOfOrderBuffer.delete(nextSeq);
       this.lastProcessedSeq = nextSeq;
-      this._routeMessage(bufferedMessage);
+      
+      try {
+        this._routeMessage(bufferedMessage);
+      } catch (error) {
+        console.warn("[CollabManager] Error processing buffered message:", error);
+        // Continue processing other messages
+      }
+      
       nextSeq++;
+      safetyCounter++;
+    }
+    
+    if (safetyCounter >= MAX_ITERATIONS) {
+      console.warn("[CollabManager] Stopped processing buffered messages - too many iterations");
+      // Clear remaining buffer to prevent memory issues
+      this.outOfOrderBuffer.clear();
     }
   }
 
@@ -1349,28 +1433,50 @@ class CollaborationManager {
    * Flush stroke batch
    */
   _flushStrokeBatch(strokeId) {
+    if (!strokeId) return;
+    
     const batch = this.strokeBatches.get(strokeId);
-    if (!batch || batch.points.length === 0) return;
+    if (!batch || !batch.points || batch.points.length === 0) return;
 
-    // Clear timeout
-    if (batch.timeout) {
-      clearTimeout(batch.timeout);
-      batch.timeout = null;
+    try {
+      // Clear timeout first to prevent double-flush
+      if (batch.timeout) {
+        clearTimeout(batch.timeout);
+        batch.timeout = null;
+      }
+
+      // *** CRITICAL FIX: Create a copy of points before clearing ***
+      const pointsToSend = [...batch.points];
+      const strokeInitToSend = batch.strokeInit;
+
+      // Clear batch points immediately to prevent race conditions
+      batch.points = [];
+      batch.strokeInit = null; // Only send init once
+
+      if (pointsToSend.length === 0) return;
+
+      // Compress and send points
+      const compressedPoints = this._compressPoints(pointsToSend);
+
+      this._sendEvent(EventTypes.STROKE_APPEND, {
+        pageId: batch.pageId,
+        strokeId,
+        points: compressedPoints,
+        strokeInit: strokeInitToSend,
+      });
+
+    } catch (error) {
+      console.warn("[CollabManager] Error flushing stroke batch:", error);
+      // Clear the batch to prevent it from getting stuck
+      if (batch) {
+        batch.points = [];
+        batch.strokeInit = null;
+        if (batch.timeout) {
+          clearTimeout(batch.timeout);
+          batch.timeout = null;
+        }
+      }
     }
-
-    // Compress and send points
-    const compressedPoints = this._compressPoints(batch.points);
-
-    this._sendEvent(EventTypes.STROKE_APPEND, {
-      pageId: batch.pageId,
-      strokeId,
-      points: compressedPoints,
-      strokeInit: batch.strokeInit,
-    });
-
-    // Clear batch points but keep batch for more points
-    batch.points = [];
-    batch.strokeInit = null; // Only send init once
   }
 
   /**
@@ -1573,9 +1679,41 @@ class CollaborationManager {
    * Cleanup old message IDs to prevent memory leak
    */
   _cleanupMessageIds() {
-    // Keep last 1000 message IDs or clear if too many
-    if (this.processedMessageIds.size > 1000) {
+    try {
+      // *** CRITICAL FIX: More aggressive cleanup to prevent OOM ***
+      if (this.processedMessageIds.size > 500) {
+        this.processedMessageIds.clear();
+        console.log("[CollabManager] Cleared processed message IDs cache");
+      }
+
+      // *** FIX: Also cleanup other collections ***
+      if (this.outOfOrderBuffer.size > 100) {
+        console.warn("[CollabManager] OutOfOrder buffer too large, clearing oldest entries");
+        const entries = Array.from(this.outOfOrderBuffer.entries()).sort((a, b) => a[0] - b[0]);
+        // Keep only the latest 50 entries
+        this.outOfOrderBuffer.clear();
+        entries.slice(-50).forEach(([seq, msg]) => {
+          this.outOfOrderBuffer.set(seq, msg);
+        });
+      }
+
+      if (this.syncChunks.length > 50) {
+        console.warn("[CollabManager] SyncChunks array too large, clearing");
+        this.syncChunks = [];
+      }
+
+      if (this.pendingOperations.length > 100) {
+        console.warn("[CollabManager] PendingOperations array too large, clearing oldest");
+        this.pendingOperations = this.pendingOperations.slice(-50);
+      }
+
+    } catch (error) {
+      console.warn("[CollabManager] Error during cleanup:", error);
+      // Force clear everything in case of error
       this.processedMessageIds.clear();
+      this.outOfOrderBuffer.clear();
+      this.syncChunks = [];
+      this.pendingOperations = [];
     }
   }
 
@@ -1634,8 +1772,32 @@ class CollaborationManager {
 }
 
 // =============================================================================
-// SINGLETON EXPORT
+// SINGLETON EXPORT - CRITICAL FIX FOR MEMORY LEAKS
 // =============================================================================
 
-export const collaborationManager = new CollaborationManager();
+let collaborationManagerInstance = null;
+
+/**
+ * Get the singleton instance of CollaborationManager
+ * This prevents multiple instances that can cause memory leaks
+ */
+export function getCollaborationManager() {
+  if (!collaborationManagerInstance) {
+    collaborationManagerInstance = new CollaborationManager();
+  }
+  return collaborationManagerInstance;
+}
+
+/**
+ * Force destroy the singleton instance (for testing or cleanup)
+ */
+export function destroyCollaborationManager() {
+  if (collaborationManagerInstance) {
+    collaborationManagerInstance.disconnect();
+    collaborationManagerInstance = null;
+  }
+}
+
+// Default export for backward compatibility
+export const collaborationManager = getCollaborationManager();
 export default collaborationManager;

@@ -60,6 +60,7 @@ import {
   isEncodedData,
 } from "../../../utils/dataEncoder";
 import { useCollaboration } from "../../../hooks/useCollaboration";
+import CollaborationErrorBoundary from "../../../components/common/CollaborationErrorBoundary";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 // ✅ Suppress specific warnings
 LogBox.ignoreLogs([
@@ -812,6 +813,15 @@ export default function DrawingScreen({ route }) {
     (id, newName) => {
       updateCurrentPageLayers((prev) =>
         prev.map((l) => (l.id === id ? { ...l, name: newName } : l))
+      );
+    },
+    [updateCurrentPageLayers]
+  );
+
+  const handleLayerClear = useCallback(
+    (id) => {
+      updateCurrentPageLayers((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, strokes: [] } : l))
       );
     },
     [updateCurrentPageLayers]
@@ -3119,6 +3129,7 @@ export default function DrawingScreen({ route }) {
       <HeaderToolbar
         onBack={() => setExitModalVisible(true)}
         onToggleToolbar={() => setToolbarVisible((v) => !v)}
+        isToolbarVisible={toolbarVisible}
         onPreview={() => { }} // Sidebar đã tích hợp trong MultiPageCanvas
         onCamera={handleOpenCamera}
         onToggleLayerPanel={() => setShowLayerPanel((v) => !v)}
@@ -3368,6 +3379,7 @@ export default function DrawingScreen({ route }) {
           onAdd={handleLayerAdd}
           onDelete={handleLayerDelete}
           onRename={handleLayerRename}
+          onClearLayer={handleLayerClear}
           onClose={handleCloseLayerPanel}
         />
       )}
