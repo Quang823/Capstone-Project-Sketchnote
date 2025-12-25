@@ -260,11 +260,13 @@ export const myBlogStyles = StyleSheet.create({
     backgroundColor: "#1E293B",
   },
 
-  // Image Container
+  // Image Container - Now on left side
   blogImageContainer: {
     position: "relative",
-    height: 200,
-    width: "100%",
+    width: 120,
+    height: 120,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   blogImage: {
     width: "100%",
@@ -280,46 +282,48 @@ export const myBlogStyles = StyleSheet.create({
   },
   statusBadge: {
     position: "absolute",
-    top: 12,
-    right: 12,
+    top: 8,
+    right: 8,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 3,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 3,
+    elevation: 2,
   },
   statusBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 
-  // Content
+  // Content - Now on right side
   blogContent: {
-    padding: 20,
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
   },
   blogTitle: {
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: "800",
     color: "#0F172A",
-    marginBottom: 8,
-    lineHeight: 28,
-    letterSpacing: -0.3,
+    marginBottom: 4,
+    lineHeight: 20,
+    letterSpacing: -0.2,
   },
   blogTitleDark: {
     color: "#F8FAFC",
   },
   blogDesc: {
-    fontSize: 14,
+    fontSize: 12,
     color: "#64748B",
-    lineHeight: 22,
-    marginBottom: 16,
+    lineHeight: 18,
+    marginBottom: 8,
   },
   blogDescDark: {
     color: "#CBD5E1",
@@ -329,11 +333,8 @@ export const myBlogStyles = StyleSheet.create({
   blogMeta: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-    marginBottom: 16,
+    gap: 10,
+    paddingTop: 4,
   },
   blogMetaDark: {
     borderBottomColor: "#334155",
@@ -344,7 +345,7 @@ export const myBlogStyles = StyleSheet.create({
     gap: 6,
   },
   metaText: {
-    fontSize: 13,
+    fontSize: 11,
     color: "#64748B",
     fontWeight: "600",
   },
@@ -362,11 +363,11 @@ export const myBlogStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
+    paddingVertical: 8,
     gap: 6,
   },
   actionButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
     color: "#084F8C",
   },
@@ -380,5 +381,23 @@ export const myBlogStyles = StyleSheet.create({
   },
   actionDividerDark: {
     backgroundColor: "#334155",
+  },
+
+  // Vertical Actions (Right Side)
+  blogActionsVertical: {
+    flexDirection: "column",
+    justifyContent: "center",
+    gap: 12,
+    paddingLeft: 12,
+  },
+  actionButtonVertical: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F8FAFC",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
 });

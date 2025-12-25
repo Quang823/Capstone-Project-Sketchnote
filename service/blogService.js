@@ -160,5 +160,15 @@ export const blogService = {
           error.response?.data?.message || error.message || "Get blog with status pending failed.";
         throw new Error(message);
       }
+    },
+    getBLogwithModeration : async (id) =>{
+      try {
+        const res = await blogApiController.getBLogwithModeration(id);
+        return res.data;
+      } catch (error) {
+        const message =
+          error.response?.data?.message || error.message || "Get blog with moderation failed.";
+        throw new Error(message);
+      }
     }
 }
