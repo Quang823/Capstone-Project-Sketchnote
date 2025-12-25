@@ -102,31 +102,48 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     lastParentLayersRef.current = layers;
 
     setInternalLayers((prev) => {
+      // If parent layers are empty but we have internal layers, only sync if parent is explicitly empty
+      if (layers.length === 0 && prev.length > 0) return [];
+
+      // ✅ FIX: Detect if number of layers changed (deletion/addition)
+      if (layers.length !== prev.length) {
+        return layers.map((l) => ({ ...l }));
+      }
+
       const prevMap = new Map(
-        (Array.isArray(prev) ? prev : []).map((l) => [l.id, { ...l }])
+        (Array.isArray(prev) ? prev : []).map((l) => [l.id, l])
       );
+
+      let hasChanges = false;
       const next = layers.map((inLayer) => {
         const ex = prevMap.get(inLayer.id);
         if (ex) {
-          // Check if strokes actually changed in the parent
+          // Check if anything actually changed
           const strokesChanged = inLayer.strokes !== ex.strokes;
+          const nameChanged = inLayer.name !== ex.name;
+          const visibleChanged = inLayer.visible !== ex.visible;
+          const lockedChanged = inLayer.locked !== ex.locked;
 
+          if (!strokesChanged && !nameChanged && !visibleChanged && !lockedChanged) {
+            return ex;
+          }
+
+          hasChanges = true;
           return {
             ...ex,
             name: inLayer.name ?? ex.name,
             visible: inLayer.visible ?? ex.visible,
             locked: inLayer.locked ?? ex.locked,
-            // Only update strokes if they actually changed in the parent
-            // OR if we don't have internal strokes yet.
-            strokes:
-              strokesChanged && Array.isArray(inLayer.strokes)
-                ? inLayer.strokes
-                : ex.strokes || [],
+            strokes: strokesChanged && Array.isArray(inLayer.strokes)
+              ? inLayer.strokes
+              : ex.strokes || [],
           };
         }
+        hasChanges = true;
         return { ...inLayer };
       });
-      return next;
+
+      return hasChanges ? next : prev;
     });
   }, [layers]);
 
@@ -633,6 +650,13 @@ const CanvasContainer = forwardRef(function CanvasContainer(
       return;
     }
 
+    // 🔒 Check if active layer is locked - prevent adding strokes to locked layers
+    const activeLayer = internalLayers.find((l) => l?.id === activeLayerId);
+    if (activeLayer?.locked) {
+      console.warn("[CanvasContainer] Cannot add stroke to locked layer:", activeLayerId);
+      return;
+    }
+
     try {
       updateActiveLayer((strokes) => [...strokes, stroke]);
       pushUndo({ type: "add", stroke, layerId: activeLayerId });
@@ -668,6 +692,108 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     }
   };
 
+  // 🔥 REALTIME: Modify a stroke by its ID (for collaboration & local tools)
+  const modifyStrokeById = useCallback(
+    (strokeId, newProps) => {
+      if (!strokeId) return;
+
+      let oldStroke = null;
+      let updatedStroke = null;
+      let layerIdFound = null;
+      let strokeIndex = -1;
+
+      const { __transient, ...cleanProps } = newProps || {};
+
+      const updater = (prev) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map((layer) => {
+          // 🔒 Skip locked layers - don't allow modification on locked layers
+          if (layer.locked) return layer;
+
+          const idx = (layer.strokes || []).findIndex((s) => s.id === strokeId);
+          if (idx !== -1) {
+            oldStroke = layer.strokes[idx];
+            layerIdFound = layer.id;
+            strokeIndex = idx;
+            updatedStroke = { ...oldStroke, ...cleanProps };
+            const nextStrokes = [...layer.strokes];
+            nextStrokes[idx] = updatedStroke;
+            return { ...layer, strokes: nextStrokes };
+          }
+          return layer;
+        });
+      };
+
+      setInternalLayers(updater);
+
+      // ✅ OPTIMIZATION: Skip parent sync and undo for transient updates (dragging/resizing)
+      // to ensure 60fps local performance and avoid jitter from parent state loops.
+      if (__transient) return;
+
+      if (typeof setLayers === "function") {
+        requestAnimationFrame(() => {
+          setLayers(updater);
+          if (oldStroke && updatedStroke) {
+            pushUndo({
+              type: "modify",
+              index: strokeIndex,
+              before: oldStroke,
+              after: updatedStroke,
+              layerId: layerIdFound,
+            });
+          }
+        });
+      }
+    },
+    [setLayers, pushUndo]
+  );
+
+  // 🔥 REALTIME: Delete a stroke by its ID (for collaboration & local tools)
+  const deleteStrokeById = useCallback(
+    (strokeId) => {
+      if (!strokeId) return;
+
+      let removed = null;
+      let removedLayerId = null;
+      let removedIndex = -1;
+
+      const updater = (prev) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map((layer) => {
+          // 🔒 Skip locked layers - don't allow deletion from locked layers
+          if (layer.locked) return layer;
+
+          const idx = (layer.strokes || []).findIndex((s) => s.id === strokeId);
+          if (idx !== -1) {
+            removed = layer.strokes[idx];
+            removedLayerId = layer.id;
+            removedIndex = idx;
+            const nextStrokes = [...layer.strokes];
+            nextStrokes.splice(idx, 1);
+            return { ...layer, strokes: nextStrokes };
+          }
+          return layer;
+        });
+      };
+
+      setInternalLayers(updater);
+      if (typeof setLayers === "function") {
+        requestAnimationFrame(() => {
+          setLayers(updater);
+          if (removed) {
+            pushUndo({
+              type: "delete",
+              index: removedIndex,
+              stroke: removed,
+              layerId: removedLayerId,
+            });
+          }
+        });
+      }
+    },
+    [setLayers, pushUndo]
+  );
+
   const deleteStrokeAt = (index) => {
     // ⚠️ Deprecated: Use deleteStrokeById for better multi-layer support.
     // Keeping for backward compatibility but redirecting to ID-based logic if possible.
@@ -679,45 +805,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     }
   };
 
-  const deleteStrokeById = (strokeId) => {
-    if (!strokeId) return;
-
-    let removed = null;
-    let removedLayerId = null;
-    let removedIndex = -1;
-
-    const updater = (prev) => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.map((layer) => {
-        const idx = (layer.strokes || []).findIndex((s) => s.id === strokeId);
-        if (idx !== -1) {
-          removed = layer.strokes[idx];
-          removedLayerId = layer.id;
-          removedIndex = idx;
-          const nextStrokes = [...layer.strokes];
-          nextStrokes.splice(idx, 1);
-          return { ...layer, strokes: nextStrokes };
-        }
-        return layer;
-      });
-    };
-
-    setInternalLayers(updater);
-    if (typeof setLayers === "function") {
-      requestAnimationFrame(() => {
-        setLayers(updater);
-        if (removed) {
-          pushUndo({
-            type: "delete",
-            index: removedIndex,
-            stroke: removed,
-            layerId: removedLayerId,
-          });
-        }
-      });
-    }
-  };
-
   const modifyStrokeAt = (index, newProps) => {
     // ⚠️ Deprecated: Use modifyStrokeById for better multi-layer support.
     if (!activeLayerId) return;
@@ -725,55 +812,6 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     const stroke = layer?.strokes?.[index];
     if (stroke?.id) {
       modifyStrokeById(stroke.id, newProps);
-    }
-  };
-
-  const modifyStrokeById = (strokeId, newProps) => {
-    if (!strokeId) return;
-
-    let oldStroke = null;
-    let updatedStroke = null;
-    let layerIdFound = null;
-    let strokeIndex = -1;
-
-    const { __transient, ...cleanProps } = newProps || {};
-
-    const updater = (prev) => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.map((layer) => {
-        const idx = (layer.strokes || []).findIndex((s) => s.id === strokeId);
-        if (idx !== -1) {
-          oldStroke = layer.strokes[idx];
-          layerIdFound = layer.id;
-          strokeIndex = idx;
-          updatedStroke = { ...oldStroke, ...cleanProps };
-          const nextStrokes = [...layer.strokes];
-          nextStrokes[idx] = updatedStroke;
-          return { ...layer, strokes: nextStrokes };
-        }
-        return layer;
-      });
-    };
-
-    setInternalLayers(updater);
-
-    // ✅ OPTIMIZATION: Skip parent sync and undo for transient updates (dragging/resizing)
-    // to ensure 60fps local performance and avoid jitter from parent state loops.
-    if (__transient) return;
-
-    if (typeof setLayers === "function") {
-      requestAnimationFrame(() => {
-        setLayers(updater);
-        if (oldStroke && updatedStroke) {
-          pushUndo({
-            type: "modify",
-            index: strokeIndex,
-            before: oldStroke,
-            after: updatedStroke,
-            layerId: layerIdFound,
-          });
-        }
-      });
     }
   };
 
@@ -1054,7 +1092,24 @@ const CanvasContainer = forwardRef(function CanvasContainer(
     // Xóa layer hiện tại
     clear: () => {
       if (!activeLayerId) return;
-      updateLayerById(activeLayerId, () => []);
+
+      const updater = (prev) => {
+        if (!Array.isArray(prev)) return prev;
+        return prev.map((l) => {
+          if (l.id === activeLayerId) {
+            return { ...l, strokes: [] };
+          }
+          return l;
+        });
+      };
+
+      // ✅ Direct update for immediate effect
+      setInternalLayers(updater);
+      if (typeof setLayers === "function") {
+        requestAnimationFrame(() => {
+          setLayers(updater);
+        });
+      }
       setUndoStack([]);
       setRedoStack([]);
       setCurrentPoints([]);
@@ -1442,62 +1497,8 @@ const CanvasContainer = forwardRef(function CanvasContainer(
         console.warn("[CanvasContainer] appendStrokes error:", e);
       }
     },
-
-    // 🔥 REALTIME: Update a stroke by its ID (for collaboration)
-    updateStrokeById: (strokeId, changes) => {
-      if (!strokeId || !changes) return;
-
-      const updater = (prevLayers) => {
-        if (!Array.isArray(prevLayers)) return prevLayers;
-        let found = false;
-        const next = prevLayers.map((layer) => {
-          const idx = (layer.strokes || []).findIndex((s) => s.id === strokeId);
-          if (idx !== -1) {
-            found = true;
-            const nextStrokes = [...layer.strokes];
-            nextStrokes[idx] = { ...nextStrokes[idx], ...changes };
-            return { ...layer, strokes: nextStrokes };
-          }
-          return layer;
-        });
-        return found ? next : prevLayers;
-      };
-
-      setInternalLayers(updater);
-      if (typeof setLayers === "function") {
-        requestAnimationFrame(() => {
-          setLayers(updater);
-        });
-      }
-    },
-
-    // 🔥 REALTIME: Delete a stroke by its ID (for collaboration)
-    deleteStrokeById: (strokeId) => {
-      if (!strokeId) return;
-
-      const updater = (prevLayers) => {
-        if (!Array.isArray(prevLayers)) return prevLayers;
-        let found = false;
-        const next = prevLayers.map((layer) => {
-          const idx = (layer.strokes || []).findIndex((s) => s.id === strokeId);
-          if (idx !== -1) {
-            found = true;
-            const nextStrokes = [...layer.strokes];
-            nextStrokes.splice(idx, 1);
-            return { ...layer, strokes: nextStrokes };
-          }
-          return layer;
-        });
-        return found ? next : prevLayers;
-      };
-
-      setInternalLayers(updater);
-      if (typeof setLayers === "function") {
-        requestAnimationFrame(() => {
-          setLayers(updater);
-        });
-      }
-    },
+    updateStrokeById: modifyStrokeById,
+    deleteStrokeById,
   }));
 
   // ====== Khi kết thúc stroke ======
@@ -1540,9 +1541,11 @@ const CanvasContainer = forwardRef(function CanvasContainer(
             activeLayerId={activeLayerId}
             onAddStroke={addStrokeInternal}
             onModifyStroke={modifyStrokeAt}
+            onModifyStrokeById={modifyStrokeById}
             onLiveUpdateStroke={liveUpdateStroke}
             onModifyStrokesBulk={modifyStrokesBulk}
             onDeleteStroke={deleteStrokeAt}
+            onDeleteStrokeById={deleteStrokeById}
             onSelectStroke={(id) => setSelectedId(id)}
             selectedId={selectedId}
             strokes={allStrokes}
