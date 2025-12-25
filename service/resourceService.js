@@ -203,4 +203,14 @@ export const resourceService = {
             throw new Error(message);
         }
     },
+    getProductDetail: async (resourceTemplateId) => {
+        try {
+            const response = await resourceController.getProductDetail(resourceTemplateId);
+            return response.data.result;
+        } catch (error) {
+            const message =
+                error.response?.data?.message || error.message || "Get product detail failed.";
+            throw new Error(message);
+        }
+    },
 }

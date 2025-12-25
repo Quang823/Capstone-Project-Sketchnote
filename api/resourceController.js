@@ -107,4 +107,7 @@ export const resourceController = {
   getDesignerPublicTemplate : async () => {
     return await privateApi.get(`/api/orders/user_resources/user/me/published-templates`);
   },
+  getProductDetail: async (resourceTemplateId) => {
+    return await privateApi.get(`/api/orders/designer/products/${resourceTemplateId}`);
+  },
 };
