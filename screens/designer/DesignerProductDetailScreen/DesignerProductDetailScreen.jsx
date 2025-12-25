@@ -94,13 +94,15 @@ export default function DesignerProductDetailScreen() {
             Toast.show({
                 type: "success",
                 text1: "Version Published",
-                text2: `Version ${selectedVersion.versionNumber} has been published successfully`,
+                text2: `Version ${selectedVersion.versionNumber} has been set as current successfully`,
             });
+            // Go back to refresh the product list
+            setTimeout(() => navigation.goBack(), 1000);
         } catch (error) {
             Toast.show({
                 type: "error",
                 text1: "Error",
-                text2: error.message || "Failed to publish version",
+                text2: error.message || "Failed to set current version",
             });
         }
     };

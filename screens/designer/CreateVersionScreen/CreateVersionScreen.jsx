@@ -247,14 +247,15 @@ export default function CreateVersionScreen() {
         isUpdateMode ? "Update version error:" : "Create version error:",
         err
       );
+      console.log(err);
       Toast.show({
         type: "error",
         text1: isUpdateMode ? "Update Failed" : "Create Failed",
         text2:
           err.message ||
           "Something went wrong while " +
-            (isUpdateMode ? "updating" : "creating") +
-            " version.",
+          (isUpdateMode ? "updating" : "creating") +
+          " version.",
       });
     } finally {
       setIsUploading(false);
@@ -293,8 +294,8 @@ export default function CreateVersionScreen() {
             {isUploading
               ? "..."
               : isUpdateMode
-              ? "Update Version"
-              : "Create Version"}
+                ? "Update Version"
+                : "Create Version"}
           </Text>
         </Pressable>
       </View>
@@ -465,7 +466,7 @@ export default function CreateVersionScreen() {
                     style={[
                       styles.projectCard,
                       selectedProjectId === proj.projectId &&
-                        styles.projectCardActive,
+                      styles.projectCardActive,
                     ]}
                   >
                     <Image
