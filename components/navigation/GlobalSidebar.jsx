@@ -1,4 +1,4 @@
-import { useContext, useRef, useEffect } from "react";
+import { useContext, useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   ScrollView,
   Animated,
   Easing,
+  Alert,
+  Modal,
+  TouchableOpacity
 } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,7 +23,7 @@ import { useNavigation } from "../../context/NavigationContext";
 import { AuthContext } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 
-export default function GlobalSidebar() {
+export default function GlobalSidebar({ currentRoute }) {
   const {
     sidebarOpen,
     activeNavItem,
@@ -37,6 +40,7 @@ export default function GlobalSidebar() {
   const navigation = useReactNavigation();
   const isDesigner = roles.includes("DESIGNER");
   const isGuest = !user;
+  const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false);
 
   const handleLogout = async () => {
     if (isGuest) {
@@ -59,9 +63,6 @@ export default function GlobalSidebar() {
         case "designerDashboard":
           navigation.navigate("DesignerDashboard");
           break;
-        case "home":
-          navigation.navigate("Home");
-          break;
         case "products":
           navigation.navigate("DesignerProducts");
           break;
@@ -69,10 +70,17 @@ export default function GlobalSidebar() {
           navigation.navigate("DesignerAnalytics");
           break;
         case "quickUpload":
+          if (!user?.hasActiveSubscription || !user?.subscriptionType?.includes("Designer")) {
+            setSubscriptionModalVisible(true);
+            return;
+          }
           navigation.navigate("DesignerQuickUpload");
           break;
         case "wallet":
           navigation.navigate("DesignerWallet");
+          break;
+        case "home":
+          navigation.navigate("Home");
           break;
         case "courses":
           navigation.navigate("CoursesScreen");
@@ -187,6 +195,45 @@ export default function GlobalSidebar() {
       ).start();
     }
   }, [user?.hasActiveSubscription]);
+
+  // Sync activeNavItem with currentRoute
+  useEffect(() => {
+    if (!currentRoute) return;
+
+    const routeToId = {
+      // Designer
+      DesignerDashboard: "designerDashboard",
+      DesignerProducts: "products",
+      DesignerAnalytics: "analytics",
+      DesignerQuickUpload: "quickUpload",
+      DesignerWallet: "wallet",
+
+      // Main
+      Home: "home",
+      GuestHome: "home",
+      CoursesScreen: "courses",
+      MyCourses: "myCourses",
+      Gallery: "gallery",
+
+      // Store
+      ResourceStore: "store",
+      OrderHistory: "orderHistory",
+
+      // Blog
+      BlogList: "blogAll",
+      MyBlog: "blogMine",
+
+      // Account/Settings
+      Profile: "profile",
+      Policy: "policy",
+      Settings: "settings",
+    };
+
+    const newActiveId = routeToId[currentRoute];
+    if (newActiveId && newActiveId !== activeNavItem) {
+      setActiveNavItem(newActiveId);
+    }
+  }, [currentRoute]);
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayAnimation.value,
@@ -680,7 +727,42 @@ export default function GlobalSidebar() {
             Version 1.0.0
           </Text>
         </View>
-      </Reanimated.View>
+      </Reanimated.View >
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={subscriptionModalVisible}
+        onRequestClose={() => setSubscriptionModalVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <View style={{ width: "40%", backgroundColor: isDark ? "#1E293B" : "white", borderRadius: 20, padding: 20, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}>
+            <Icon name="workspace-premium" size={50} color="#F59E0B" style={{ marginBottom: 15 }} />
+            <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10, textAlign: "center", color: isDark ? "white" : "black" }}>
+              Subscription Required
+            </Text>
+            <Text style={{ fontSize: 14, color: isDark ? "#CBD5E1" : "#64748B", textAlign: "center", marginBottom: 20 }}>
+              Your subscription has expired or is invalid. Please upgrade to a Designer plan to upload resources.
+            </Text>
+            <View style={{ flexDirection: "row", gap: 10, width: "100%" }}>
+              <TouchableOpacity
+                style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: isDark ? "#334155" : "#F1F5F9", alignItems: "center" }}
+                onPress={() => setSubscriptionModalVisible(false)}
+              >
+                <Text style={{ color: isDark ? "white" : "#475569", fontWeight: "600" }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: "#3B82F6", alignItems: "center" }}
+                onPress={() => {
+                  setSubscriptionModalVisible(false);
+                  navigation.navigate("DesignerSubscription");
+                }}
+              >
+                <Text style={{ color: "white", fontWeight: "600" }}>Upgrade Now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }

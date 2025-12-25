@@ -7,8 +7,8 @@ export const projectAPIController = {
       const res = await privateApi.get(`/api/projects/me`);
       return res;
     } catch (err) {
-      // console.error("❌ Error getting user projects:", err);
-      //  console.error("❌ Error response:", err.response?.data);
+      // console.warn("❌ Error getting user projects:", err);
+      //  console.warn("❌ Error response:", err.response?.data);
       throw err;
     }
   },
@@ -39,7 +39,7 @@ export const projectAPIController = {
       });
       return res;
     } catch (err) {
-      // console.error("❌ Error getting presign:", err);
+      // console.warn("❌ Error getting presign:", err);
       throw err;
     }
   },
@@ -50,8 +50,8 @@ export const projectAPIController = {
       const res = await privateApi.post(`/api/projects/me`, projectData);
       return res;
     } catch (err) {
-      console.error("❌ Error saving project:", err);
-      console.error("❌ Error response:", err.response?.data);
+      console.warn("❌ Error saving project:", err);
+      console.warn("❌ Error response:", err.response?.data);
       throw err;
     }
   },
@@ -68,8 +68,8 @@ export const projectAPIController = {
       });
       return res;
     } catch (err) {
-      console.error("❌ Error creating project:", err);
-      console.error("❌ Error response:", err.response?.data);
+      console.warn("❌ Error creating project:", err);
+      console.warn("❌ Error response:", err.response?.data);
       throw err;
     }
   },
@@ -83,7 +83,7 @@ export const projectAPIController = {
       });
       return res;
     } catch (err) {
-      console.error("Error updating project:", err.response?.data || err);
+      console.warn("Error updating project:", err.response?.data || err);
       throw err;
     }
   },
@@ -93,7 +93,7 @@ export const projectAPIController = {
       const res = await privateApi.delete(`/api/projects/${projectId}`);
       return res;
     } catch (err) {
-      console.error("Error deleting project:", err.response?.data || err);
+      console.warn("Error deleting project:", err.response?.data || err);
       throw err;
     }
   },
@@ -103,8 +103,8 @@ export const projectAPIController = {
       const res = await privateApi.get(`/api/projects/${projectId}`);
       return res;
     } catch (err) {
-      console.error("Error getting project by ID:", err);
-      console.error("Error response:", err.response?.data);
+      console.warn("Error getting project by ID:", err);
+      console.warn("Error response:", err.response?.data);
       throw err;
     }
   },
@@ -127,8 +127,8 @@ export const projectAPIController = {
       const res = await privateApi.post(`/api/pages`, payload);
       return res;
     } catch (err) {
-      console.error("Error creating page:", err);
-      console.error("Error response:", err.response?.data);
+      console.warn("Error creating page:", err);
+      console.warn("Error response:", err.response?.data);
       throw err;
     }
   },
@@ -165,7 +165,7 @@ export const projectAPIController = {
       const res = await privateApi.get(`/api/projects/${projectId}/versions`);
       return res;
     } catch (err) {
-      console.error("Error getting project versions:", err);
+      console.warn("Error getting project versions:", err);
       throw err;
     }
   },
@@ -178,7 +178,20 @@ export const projectAPIController = {
       );
       return res;
     } catch (err) {
-      console.error("Error restoring project version:", err);
+      console.warn("Error restoring project version:", err);
+      throw err;
+    }
+  },
+  // 🔹 Chấp nhận lời mời tham gia project
+  acceptCollaboration: async (projectId, accepted = true) => {
+    try {
+      const res = await privateApi.put(`/api/collaborations/accept`, {
+        projectId,
+        accepted,
+      });
+      return res;
+    } catch (err) {
+      console.warn("Error accepting collaboration:", err);
       throw err;
     }
   },

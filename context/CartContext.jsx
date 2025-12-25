@@ -46,14 +46,13 @@ export const CartProvider = ({ children }) => {
       // Chuẩn hóa thông tin designer
       const designerData = item.designer
         ? {
-            name:
-              item.designer.name ||
-              `${item.designer.firstName || ""} ${
-                item.designer.lastName || ""
+          name:
+            item.designer.name ||
+            `${item.designer.firstName || ""} ${item.designer.lastName || ""
               }`.trim(),
-            email: item.designer.email || "",
-            avatarUrl: item.designer.avatarUrl || null,
-          }
+          email: item.designer.email || "",
+          avatarUrl: item.designer.avatarUrl || null,
+        }
         : null;
 
       const newItem = {

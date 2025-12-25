@@ -30,6 +30,7 @@ const DocumentBrowserContent = ({
   pageLayout = "grid", // 'grid' or 'list'
   onClose, // For modal's page selection
   showTabLabels = false, // To show labels in modal tabs
+  isViewOnly = false, // View-only mode flag
 }) => {
   const safeActivePageId = activePageId != null ? String(activePageId) : null;
   const [activeTab, setActiveTab] = useState("pages");
@@ -220,7 +221,8 @@ const DocumentBrowserContent = ({
     }
   };
 
-  const tabs = [
+  // Filter tabs based on view-only mode
+  const allTabs = [
     { id: "pages", label: "Pages", icon: "insert-drive-file" },
     { id: "resources", label: "Resources", icon: "collections" },
     { id: "icons", label: "Icons", icon: "photo" },
@@ -229,18 +231,25 @@ const DocumentBrowserContent = ({
     { id: "history", label: "History", icon: "history" },
   ];
 
+  // In view-only mode, show only Pages tab
+  const tabs = isViewOnly
+    ? allTabs.filter(tab => tab.id === "pages")
+    : allTabs;
+
   const renderPages = () => {
     const isListLayout = pageLayout === "list";
 
     return (
       <View style={{ flex: 1 }}>
-        {/* Floating Add Page button */}
-        <Pressable onPress={onAddPage} style={styles.floatingAddButton}>
-          <Icon name="add" size={20} color="#3B82F6" />
-          <Text style={{ color: "#3B82F6", marginLeft: 6, fontWeight: "600" }}>
-            Add Page
-          </Text>
-        </Pressable>
+        {/* Floating Add Page button - hide in view-only mode */}
+        {!isViewOnly && (
+          <Pressable onPress={onAddPage} style={styles.floatingAddButton}>
+            <Icon name="add" size={20} color="#3B82F6" />
+            <Text style={{ color: "#3B82F6", marginLeft: 6, fontWeight: "600" }}>
+              Add Page
+            </Text>
+          </Pressable>
+        )}
 
         {/* Scrollable list of pages */}
         <ScrollView

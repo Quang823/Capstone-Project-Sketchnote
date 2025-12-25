@@ -151,7 +151,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
   useEffect(() => {
     try {
       pathCacheRef.current.clear();
-    } catch {}
+    } catch { }
   }, [activeLayerId]);
   const canvasRef = useCanvasRef();
 
@@ -159,7 +159,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
     return () => {
       try {
         pathCacheRef.current.clear();
-      } catch {}
+      } catch { }
     };
   }, []);
 
@@ -177,7 +177,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
         if (backgroundImage && typeof backgroundImage.dispose === "function") {
           backgroundImage.dispose();
         }
-      } catch {}
+      } catch { }
     };
   }, [backgroundImage]);
 
@@ -514,6 +514,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       (s.tool === "image" || s.tool === "sticker") &&
       (s.uri || s.imageUri || s.image)
     ) {
+      const vo = visualOffsets?.[s.id];
       return (
         <CanvasImage
           key={s.id}
@@ -526,6 +527,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
           stroke={s}
           selectedId={selectedId}
           onSelectImage={onSelectImage}
+          visualOffset={vo}
         />
       );
     }
@@ -926,9 +928,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
       const last = s.points?.[s.points.length - 1];
       const ax = Math.round(((first?.x || 0) + (last?.x || 0)) * 10) / 10;
       const ay = Math.round(((first?.y || 0) + (last?.y || 0)) * 10) / 10;
-      const cacheKey = `${s.id}:${s.points?.length || 0}:${
-        s.width || strokeWidth || 0
-      }:${s.tool || "pen"}:${ax}:${ay}`;
+      const cacheKey = `${s.id}:${s.points?.length || 0}:${s.width || strokeWidth || 0
+        }:${s.tool || "pen"}:${ax}:${ay}`;
       let path = pathCacheRef.current.get(cacheKey);
       if (!path) {
         path = makePathFromPoints(s.points);
@@ -946,7 +947,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               if (oldPath && typeof oldPath.delete === "function") {
                 oldPath.delete(); // Dispose Skia Path object
               }
-            } catch {}
+            } catch { }
             pathCacheRef.current.delete(k);
           });
         }
@@ -1350,7 +1351,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 const path = makePathFromPoints(s.points);
                 try {
                   path.close();
-                } catch {}
+                } catch { }
                 fillNode = (
                   <Path
                     key={`${layer.id}-${s.id}-fill`}
@@ -1366,8 +1367,8 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
               // --- Part 2: Get Stroke Node ---
               const strokeNode =
                 realtimeText?.id &&
-                s.id === realtimeText.id &&
-                ["sticky", "comment", "text"].includes(s.tool)
+                  s.id === realtimeText.id &&
+                  ["sticky", "comment", "text"].includes(s.tool)
                   ? null
                   : renderStroke(s, index);
 
@@ -1388,10 +1389,7 @@ const CanvasRenderer = forwardRef(function CanvasRenderer(
                 return (
                   <Group key={s.id}>
                     {fillNode}
-                    {React.cloneElement(strokeNode, {
-                      // ✅ Pass visualOffset to CanvasImage
-                      visualOffset: vo,
-                    })}
+                    {strokeNode}
                   </Group>
                 );
               }

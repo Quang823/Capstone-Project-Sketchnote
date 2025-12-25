@@ -20,6 +20,7 @@ import { resourceService } from "../../../service/resourceService";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
 import { useTheme } from "../../../context/ThemeContext";
 import getStyles from "./GalleryScreen.styles";
+import NotificationButton from "../../../components/common/NotificationButton";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -612,9 +613,7 @@ export default function GalleryScreen() {
           <Text style={styles.headerTitle}>My Gallery</Text>
         </View>
         <View style={styles.headerRight}>
-          <Pressable style={styles.headerButton} onPress={fetchTemplates}>
-            <Icon name="refresh" size={22} color={colors.primaryWhite} />
-          </Pressable>
+          <NotificationButton />
         </View>
       </View>
 

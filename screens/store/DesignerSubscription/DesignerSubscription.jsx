@@ -116,7 +116,7 @@ export default function SubscriptionPlansScreen() {
     try {
       const res = await subscriptionService.createUserSubscription({
         planId: plan.planId,
-        autoRenew: true,
+        autoRenew: false,
         confirmUpgrade: true,
       });
 

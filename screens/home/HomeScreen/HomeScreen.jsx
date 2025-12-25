@@ -38,9 +38,8 @@ import TypeFloatText from "./TypeFloatText";
 import { useToast } from "../../../hooks/use-toast";
 import { AuthContext } from "../../../context/AuthContext";
 import { useTheme } from "../../../context/ThemeContext";
-
+import { useNotifications } from "../../../context/NotificationContext";
 import { notiService } from "../../../service/notiService";
-
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { uploadToCloudinary } from "../../../service/cloudinary";
@@ -89,8 +88,15 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
   return (
     <Animated.View style={[styles.popoverContainer, animatedStyle]}>
       <View style={[styles.popover, isDark && styles.popoverDark]}>
-        <View style={[styles.popoverArrowBorder, isDark && styles.popoverArrowBorderDark]} />
-        <View style={[styles.popoverArrow, isDark && styles.popoverArrowDark]} />
+        <View
+          style={[
+            styles.popoverArrowBorder,
+            isDark && styles.popoverArrowBorderDark,
+          ]}
+        />
+        <View
+          style={[styles.popoverArrow, isDark && styles.popoverArrowDark]}
+        />
         {options.map((opt, idx) => (
           <TouchableOpacity
             key={opt.id}
@@ -111,8 +117,16 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
             }}
           >
             <View style={styles.popoverRow}>
-              <Icon name={opt.icon} size={22} color={isDark ? "#60A5FA" : "#2563EB"} />
-              <Text style={[styles.popoverLabel, isDark && styles.popoverLabelDark]}>{opt.label}</Text>
+              <Icon
+                name={opt.icon}
+                size={22}
+                color={isDark ? "#60A5FA" : "#2563EB"}
+              />
+              <Text
+                style={[styles.popoverLabel, isDark && styles.popoverLabelDark]}
+              >
+                {opt.label}
+              </Text>
               {opt.badge && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{opt.badge}</Text>
@@ -122,7 +136,9 @@ const CreatePopover = React.memo(({ visible, onClose, onSelect }) => {
           </TouchableOpacity>
         ))}
         <View style={[styles.popoverTip, isDark && styles.popoverTipDark]}>
-          <Text style={[styles.popoverTipText, isDark && styles.popoverTipTextDark]}>
+          <Text
+            style={[styles.popoverTipText, isDark && styles.popoverTipTextDark]}
+          >
             Double tap "+ New" to create Quick note
           </Text>
         </View>
@@ -154,13 +170,30 @@ const ProjectMenu = React.memo(
         activeOpacity={1}
         onPress={onClose}
       >
-        <Animated.View style={[styles.menu, isDark && styles.menuDark, animatedStyle, position]}>
+        <Animated.View
+          style={[
+            styles.menu,
+            isDark && styles.menuDark,
+            animatedStyle,
+            position,
+          ]}
+        >
           <TouchableOpacity style={styles.menuItem} onPress={onEdit}>
-            <Icon name="edit" size={18} color={isDark ? "#60A5FA" : "#2563EB"} />
-            <Text style={[styles.menuText, isDark && styles.menuTextDark]}>Edit Project</Text>
+            <Icon
+              name="edit"
+              size={18}
+              color={isDark ? "#60A5FA" : "#2563EB"}
+            />
+            <Text style={[styles.menuText, isDark && styles.menuTextDark]}>
+              Edit Project
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.menuItem, styles.menuItemDelete, isDark && styles.menuItemDeleteDark]}
+            style={[
+              styles.menuItem,
+              styles.menuItemDelete,
+              isDark && styles.menuItemDeleteDark,
+            ]}
             onPress={onDelete}
           >
             <Icon name="delete-outline" size={18} color="#EF4444" />
@@ -174,6 +207,84 @@ const ProjectMenu = React.memo(
   }
 );
 
+// Accept Invitation Modal
+const AcceptInvitationModal = React.memo(
+  ({ visible, onClose, onAccept, onReject, project, isDark }) => {
+    if (!visible || !project) return null;
+
+    return (
+      <Modal visible={visible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+          >
+            <View
+              style={[
+                styles.modalIconCircle,
+                { backgroundColor: "#DBEAFE", marginBottom: 20 },
+              ]}
+            >
+              <Icon name="mail-outline" size={36} color="#3B82F6" />
+            </View>
+
+            <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>
+              Project Invitation
+            </Text>
+            <Text
+              style={[styles.modalMessage, isDark && styles.modalMessageDark]}
+            >
+              You have been invited to collaborate on{" "}
+              <Text style={{ fontWeight: "700", color: "#3B82F6" }}>
+                "{project.name}"
+              </Text>
+              . Do you want to accept this invitation?
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButtonCancel,
+                  isDark && styles.modalButtonCancelDark,
+                  { flex: 1 },
+                ]}
+                onPress={onClose}
+              >
+                <Text
+                  style={[
+                    styles.modalButtonTextCancel,
+                    isDark && styles.modalButtonTextCancelDark,
+                  ]}
+                >
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modalButtonCancel,
+                  { flex: 1, borderColor: "#EF4444", borderWidth: 1 },
+                ]}
+                onPress={onReject}
+              >
+                <Text style={{ color: "#EF4444", fontWeight: "600", textAlign: "center" }}>
+                  Reject
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, { flex: 1.2 }]}
+                onPress={onAccept}
+              >
+                <Text style={styles.modalButtonText}>Accept</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+);
+
 export default function HomeScreen({ navigation }) {
   const [projects, setProjects] = useState([]);
   const [sharedProjects, setSharedProjects] = useState([]);
@@ -181,10 +292,19 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [popoverVisible, setPopoverVisible] = useState(false);
-  const [notiCount, setNotiCount] = useState(0);
   const [notiOpen, setNotiOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
   const [loadingNoti, setLoadingNoti] = useState(false);
+
+  // Use NotificationContext for real-time notifications
+  const {
+    notifications,
+    setNotifications,
+    unreadCount: notiCount,
+    setUnreadCount: setNotiCount,
+    setPanelOpen,
+    markAsRead,
+    markAllAsRead,
+  } = useNotifications();
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(0);
@@ -202,8 +322,10 @@ export default function HomeScreen({ navigation }) {
   const [editImageUrl, setEditImageUrl] = useState(null);
   const [editPaperSize, setEditPaperSize] = useState("");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-
-
+  const [limitModalVisible, setLimitModalVisible] = useState(false);
+  const [limitInfo, setLimitInfo] = useState({ current: 0, max: 0 });
+  const [acceptModalVisible, setAcceptModalVisible] = useState(false);
+  const [pendingProject, setPendingProject] = useState(null);
   const { toast } = useToast();
   const { user, fetchUser } = useContext(AuthContext);
   const { theme } = useTheme();
@@ -226,41 +348,51 @@ export default function HomeScreen({ navigation }) {
   // }));
 
   // Fetch data with pagination
-  const fetchProjects = useCallback(async (page) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchProjects = useCallback(
+    async (page) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      // If page is not a number (e.g. event object), default to 0
-      const targetPage = typeof page === "number" ? page : 0;
+        // If page is not a number (e.g. event object), default to 0
+        const targetPage = typeof page === "number" ? page : 0;
 
-      // Load cloud projects with pagination, and local projects in parallel
-      const results = await Promise.allSettled([
-        projectService.getUserProjectsPaged(targetPage, pageSize),
-        projectService.getSharedProjects(),
-        offlineStorage.getAllGuestProjects(),
-      ]);
+        // Load cloud projects with pagination, and local projects in parallel
+        const results = await Promise.allSettled([
+          projectService.getUserProjectsPaged(targetPage, pageSize),
+          projectService.getSharedProjects(),
+          offlineStorage.getAllGuestProjects(),
+        ]);
 
-      const myPaged = results[0].status === "fulfilled" ? results[0].value : { content: [], totalPages: 0 };
-      const shared = results[1].status === "fulfilled" ? results[1].value : [];
-      const local = results[2].status === "fulfilled" ? results[2].value : [];
+        const myPaged =
+          results[0].status === "fulfilled"
+            ? results[0].value
+            : { content: [], totalPages: 0 };
+        const shared =
+          results[1].status === "fulfilled" ? results[1].value : [];
+        const local = results[2].status === "fulfilled" ? results[2].value : [];
 
-      // Log errors if any
-      if (results[0].status === "rejected") console.warn("Failed to load user projects:", results[0].reason);
-      if (results[1].status === "rejected") console.warn("Failed to load shared projects:", results[1].reason);
-      if (results[2].status === "rejected") console.warn("Failed to load local projects:", results[2].reason);
+        // Log errors if any
+        if (results[0].status === "rejected")
+          console.warn("Failed to load user projects:", results[0].reason);
+        if (results[1].status === "rejected")
+          console.warn("Failed to load shared projects:", results[1].reason);
+        if (results[2].status === "rejected")
+          console.warn("Failed to load local projects:", results[2].reason);
 
-      setProjects(myPaged.content || []);
-      setTotalPages(myPaged.totalPages || 0);
-      setCurrentPage(targetPage);
-      setSharedProjects(shared || []);
-      setLocalProjects(local || []);
-    } catch (err) {
-      setError("Failed to load projects. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [pageSize]);
+        setProjects(myPaged.content || []);
+        setTotalPages(myPaged.totalPages || 0);
+        setCurrentPage(targetPage);
+        setSharedProjects(shared || []);
+        setLocalProjects(local || []);
+      } catch (err) {
+        setError("Failed to load projects. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [pageSize]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -269,24 +401,20 @@ export default function HomeScreen({ navigation }) {
   );
 
   // Pagination handlers
-  const handlePageChange = useCallback((newPage) => {
-    if (newPage >= 0 && newPage < totalPages) {
-      fetchProjects(newPage);
-    }
-  }, [totalPages, fetchProjects]);
-
-  useEffect(() => {
-    const loadNotiCount = async () => {
-      try {
-        const data = await notiService.getCountNotiUnRead();
-        const count = Number(data?.unread ?? 0);
-        setNotiCount(count);
-      } catch (error) {
+  const handlePageChange = useCallback(
+    (newPage) => {
+      if (newPage >= 0 && newPage < totalPages) {
+        fetchProjects(newPage);
       }
-    };
+    },
+    [totalPages, fetchProjects]
+  );
 
-    loadNotiCount();
-  }, []);
+
+  // Sync panel open state with NotificationContext
+  useEffect(() => {
+    setPanelOpen(notiOpen);
+  }, [notiOpen, setPanelOpen]);
 
   // Render Local Project Item
   const renderLocalProjectItem = ({ item }) => (
@@ -301,7 +429,9 @@ export default function HomeScreen({ navigation }) {
       }
     >
       <View style={[styles.card, isDark && styles.cardDark]}>
-        <View style={[styles.imageContainer, isDark && styles.imageContainerDark]}>
+        <View
+          style={[styles.imageContainer, isDark && styles.imageContainerDark]}
+        >
           <LazyImage
             source={
               item.imageUrl
@@ -321,16 +451,31 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
         <View style={styles.cardInfo}>
-          <Text style={[styles.projectTitle, isDark && styles.projectTitleDark]} numberOfLines={1}>
+          <Text
+            style={[styles.projectTitle, isDark && styles.projectTitleDark]}
+            numberOfLines={1}
+          >
             {item.name}
           </Text>
-          <Text style={[styles.projectDescription, isDark && styles.projectDescriptionDark]} numberOfLines={1}>
+          <Text
+            style={[
+              styles.projectDescription,
+              isDark && styles.projectDescriptionDark,
+            ]}
+            numberOfLines={1}
+          >
             {item.description || "Local Draft"}
           </Text>
           <View style={styles.cardFooter}>
             <View style={styles.dateContainer}>
-              <Icon name="schedule" size={14} color={isDark ? "#60A5FA" : "#60A5FA"} />
-              <Text style={[styles.dateText, isDark && styles.dateTextDark]}>{formatDate(item.updatedAt)}</Text>
+              <Icon
+                name="schedule"
+                size={14}
+                color={isDark ? "#60A5FA" : "#60A5FA"}
+              />
+              <Text style={[styles.dateText, isDark && styles.dateTextDark]}>
+                {formatDate(item.updatedAt)}
+              </Text>
             </View>
           </View>
         </View>
@@ -361,9 +506,7 @@ export default function HomeScreen({ navigation }) {
 
   const handleReadAllNoti = async () => {
     try {
-      await notiService.readAllNoti();
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      setNotiCount(0);
+      await markAllAsRead();
     } catch (error) {
       toast({
         title: "Error",
@@ -374,32 +517,15 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleReadSingleNoti = async (item) => {
-    // Mark as read if not already read
-    if (!item.read) {
-      try {
-        await notiService.readNotiByNotiId(item.id);
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
-        );
-        setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to mark notification as read",
-          variant: "destructive",
-        });
-      }
-    }
-
-    // Navigate based on notification type
-    setNotiOpen(false); // Close dropdown first
-
-    if (item.type === "VERSION_AVAILABLE") {
-      // Navigate to Drawing screen to view/upgrade resources
-      navigation.navigate("Gallery");
-    } else if (item.type === "PURCHASE_CONFIRM" && item.orderId) {
-      // Navigate to order history
-      navigation.navigate("OrderHistory");
+    if (item.read) return;
+    try {
+      await markAsRead(item.id);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to mark notification as read",
+        variant: "destructive",
+      });
     }
   };
 
@@ -421,9 +547,7 @@ export default function HomeScreen({ navigation }) {
     async (project) => {
       try {
         // Load the project and navigate to it
-        const details = await projectService.getProjectById(
-          project.projectId
-        );
+        const details = await projectService.getProjectById(project.projectId);
         const meta = await offlineStorage.loadProjectLocally(
           `${details.projectId}_meta`
         );
@@ -445,9 +569,20 @@ export default function HomeScreen({ navigation }) {
           paper: { template: "blank" },
           pages: details.pages || [],
           projectDetails: details,
+          // 🔒 Pass view-only mode flag
+          isViewOnly: details.hasCollaboration && details.edited === false,
         };
+
+        // 🛑 Check if project is shared but not yet accepted
+        if (activeTab === "shared" && project.accepted === false) {
+          setPendingProject({ ...project, config });
+          setAcceptModalVisible(true);
+          return;
+        }
+
         navigation.navigate("DrawingScreen", { noteConfig: config });
       } catch (error) {
+        console.warn("❌ Error in handleProjectClick:", error);
         console.warn("❌ Error in handleProjectClick:", error);
         toast({
           title: "Error",
@@ -456,7 +591,7 @@ export default function HomeScreen({ navigation }) {
         });
       }
     },
-    [navigation, toast]
+    [navigation, toast, activeTab, fetchProjects, currentPage]
   );
 
   // 3-dot menu
@@ -614,7 +749,8 @@ export default function HomeScreen({ navigation }) {
         } catch (error) {
           toast({
             title: "Decode Failed",
-            description: "Failed to decode file. It may be corrupted or invalid.",
+            description:
+              "Failed to decode file. It may be corrupted or invalid.",
             variant: "destructive",
           });
           return;
@@ -657,7 +793,10 @@ export default function HomeScreen({ navigation }) {
       const projectDetails = config.projectDetails || {};
       const projectData = {
         name: config.title || projectDetails.name || "Imported Project",
-        description: config.description || projectDetails.description || "Imported from JSON",
+        description:
+          config.description ||
+          projectDetails.description ||
+          "Imported from JSON",
         imageUrl: config.cover?.imageUrl || projectDetails.imageUrl || "",
         orientation: config.orientation || "portrait",
         paperSize: config.paperSize || "A4",
@@ -689,6 +828,7 @@ export default function HomeScreen({ navigation }) {
           };
         } catch (error) {
           console.warn(`Failed to import page ${page.pageNumber}:`, error);
+          console.warn(`Failed to import page ${page.pageNumber}:`, error);
           return null;
         }
       });
@@ -702,7 +842,7 @@ export default function HomeScreen({ navigation }) {
       // Create pages in backend
       await projectService.createPage({
         projectId: newProjectId,
-        pages: uploadedPages.map(p => ({
+        pages: uploadedPages.map((p) => ({
           pageNumber: p.pageNumber,
           strokeUrl: p.strokeUrl,
         })),
@@ -731,10 +871,12 @@ export default function HomeScreen({ navigation }) {
         hasCover: !!projectData.imageUrl,
         orientation: projectData.orientation,
         paperSize: projectData.paperSize,
-        cover: projectData.imageUrl ? {
-          template: "custom_image",
-          imageUrl: projectData.imageUrl
-        } : null,
+        cover: projectData.imageUrl
+          ? {
+            template: "custom_image",
+            imageUrl: projectData.imageUrl,
+          }
+          : null,
         paper: config.paper || { template: "blank" },
         pages: uploadedPages.map((p, idx) => ({
           pageId: 10000 + idx,
@@ -751,6 +893,7 @@ export default function HomeScreen({ navigation }) {
       navigation.navigate("DrawingScreen", { noteConfig });
     } catch (error) {
       console.warn("Import JSON error:", error);
+      console.warn("Import JSON error:", error);
       toast({
         title: "Import Failed",
         description: error.message || "Failed to import project",
@@ -758,7 +901,6 @@ export default function HomeScreen({ navigation }) {
       });
     }
   }, [navigation, toast, fetchProjects]);
-
 
   const pickImage = async () => {
     try {
@@ -812,7 +954,13 @@ export default function HomeScreen({ navigation }) {
       setProjects((prev) =>
         prev.map((p) =>
           p.projectId === selectedProject.projectId
-            ? { ...p, name: editName.trim(), description: editDesc.trim(), imageUrl: finalImageUrl || "", paperSize: editPaperSize }
+            ? {
+              ...p,
+              name: editName.trim(),
+              description: editDesc.trim(),
+              imageUrl: finalImageUrl || "",
+              paperSize: editPaperSize,
+            }
             : p
         )
       );
@@ -823,7 +971,7 @@ export default function HomeScreen({ navigation }) {
       });
       setEditModalVisible(false);
     } catch (err) {
-      console.error(err);
+      console.warn(err);
       toast({
         title: "Error",
         description: "Failed to update project",
@@ -865,7 +1013,9 @@ export default function HomeScreen({ navigation }) {
         onPress={() => handleProjectClick(item)}
       >
         <View style={[styles.card, isDark && styles.cardDark]}>
-          <View style={[styles.imageContainer, isDark && styles.imageContainerDark]}>
+          <View
+            style={[styles.imageContainer, isDark && styles.imageContainerDark]}
+          >
             {item.imageUrl ? (
               <LazyImage
                 source={{ uri: item.imageUrl }}
@@ -880,23 +1030,53 @@ export default function HomeScreen({ navigation }) {
               colors={["transparent", "rgba(0,0,0,0.08)"]}
               style={styles.imageGradient}
             />
-            <TouchableOpacity
-              style={[styles.threeDotButton, isDark && styles.threeDotButtonDark]}
-              onPress={(e) => openMenu(item, e)}
-            >
-              <Icon name="more-vert" size={24} color={isDark ? "#94A3B8" : "#64748B"} />
-            </TouchableOpacity>
+            {(item.owner === true || activeTab === "local") && (
+              <TouchableOpacity
+                style={[
+                  styles.threeDotButton,
+                  isDark && styles.threeDotButtonDark,
+                ]}
+                onPress={(e) => openMenu(item, e)}
+              >
+                <Icon
+                  name="more-vert"
+                  size={24}
+                  color={isDark ? "#94A3B8" : "#64748B"}
+                />
+              </TouchableOpacity>
+            )}
+            {activeTab === "shared" && item.accepted === false && (
+              <View style={styles.cardBadges}>
+                <View style={[styles.badge, { backgroundColor: "#EF4444" }]}>
+                  <Icon name="warning" size={12} color="#FFF" style={{ marginRight: 4 }} />
+                  <Text style={styles.badgeText}>Pending</Text>
+                </View>
+              </View>
+            )}
           </View>
           <View style={styles.cardInfo}>
-            <Text style={[styles.projectTitle, isDark && styles.projectTitleDark]} numberOfLines={1}>
+            <Text
+              style={[styles.projectTitle, isDark && styles.projectTitleDark]}
+              numberOfLines={1}
+            >
               {item.name || "Untitled"}
             </Text>
-            <Text style={[styles.projectDescription, isDark && styles.projectDescriptionDark]} numberOfLines={2}>
+            <Text
+              style={[
+                styles.projectDescription,
+                isDark && styles.projectDescriptionDark,
+              ]}
+              numberOfLines={2}
+            >
               {item.description || ""}
             </Text>
             <View style={styles.cardFooter}>
               <View style={styles.dateContainer}>
-                <Icon name="schedule" size={14} color={isDark ? "#60A5FA" : "#60A5FA"} />
+                <Icon
+                  name="schedule"
+                  size={14}
+                  color={isDark ? "#60A5FA" : "#60A5FA"}
+                />
                 <Text style={[styles.dateText, isDark && styles.dateTextDark]}>
                   {formatDate(item.createdAt)}
                 </Text>
@@ -907,7 +1087,7 @@ export default function HomeScreen({ navigation }) {
         </View>
       </TouchableOpacity>
     ),
-    [handleProjectClick]
+    [handleProjectClick, isDark, activeTab]
   );
 
   return (
@@ -918,8 +1098,16 @@ export default function HomeScreen({ navigation }) {
           {/* HEADER */}
           <View style={[styles.header, isDark && styles.headerDark]}>
             <View style={styles.headerLeft}>
-              <SidebarToggleButton iconSize={26} iconColor={isDark ? "#FFFFFF" : "#1E40AF"} />
-              <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>Projects</Text>
+              <SidebarToggleButton
+                iconSize={26}
+                iconColor={isDark ? "#FFFFFF" : "#1E40AF"}
+              />
+              <Text
+                style={[styles.headerTitle, isDark && styles.headerTitleDark]}
+              >
+                Projects
+              </Text>
+
               <LottieView
                 source={require("../../../assets/cat.json")}
                 autoPlay
@@ -948,7 +1136,21 @@ export default function HomeScreen({ navigation }) {
                 >
                   <View style={styles.premiumContent}>
                     <View style={styles.premiumTextBox}>
-                      {user?.hasActiveSubscription ? (
+                      {user?.role === "DESIGNER" &&
+                        !user?.hasActiveSubscription ? (
+                        <>
+                          <TypeFloatText
+                            text="Your subscription has expired"
+                            style={styles.premiumTitle}
+                            speed={40}
+                          />
+                          <TypeFloatText
+                            text="Would you like to renew?"
+                            style={styles.premiumSubtitle}
+                            speed={35}
+                          />
+                        </>
+                      ) : user?.hasActiveSubscription ? (
                         <>
                           <TypeFloatText
                             text={user?.subscriptionType || "Subscribed"}
@@ -1056,7 +1258,6 @@ export default function HomeScreen({ navigation }) {
                       backgroundColor: "#3375f0ff",
                       justifyContent: "center",
                       alignItems: "center",
-
                     }}
                   >
                     <LottieView
@@ -1103,87 +1304,175 @@ export default function HomeScreen({ navigation }) {
                 const max = user.maxProjects || 3;
 
                 if (current >= max) {
-                  toast({
-                    type: "error",
-                    text1: "Project Limit Reached",
-                    text2: `You have reached the limit of ${max} projects for the Free plan. Please upgrade to a Premium plan to create more projects.`,
-                  });
+                  // ✅ FIX: Show modal instead of toast
+                  setLimitInfo({ current, max });
+                  setLimitModalVisible(true);
                   return;
                 }
               }
 
               if (type === "sketchnote") navigation.navigate("NoteSetupScreen");
-              if (type === "custom_note") navigation.navigate("CustomNoteSetupScreen");
+              if (type === "custom_note")
+                navigation.navigate("CustomNoteSetupScreen");
               if (type === "quick_note") setQuickNoteModalVisible(true);
-              if (type === "template") navigation.navigate("TemplateSelectionScreen");
+              if (type === "template")
+                navigation.navigate("TemplateSelectionScreen");
               if (type === "import") handleImportJSON();
             }}
           />
 
-          {/* TABS */}
-          <View style={{ flexDirection: "row", paddingHorizontal: 16, marginBottom: 12, gap: 12 }}>
-            <TouchableOpacity
-              onPress={() => {
-                setActiveTab("cloud");
-                fetchProjects(0);
-              }}
+          {/* TABS AND TOTAL PROJECTS - SAME ROW */}
+          <View
+            style={{
+              flexDirection: "row",
+              paddingHorizontal: 16,
+              marginBottom: 16,
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            {/* Tabs Container */}
+            <View
               style={{
-                paddingVertical: 8,
-                paddingHorizontal: 16,
-                borderRadius: 20,
-                backgroundColor: activeTab === "cloud" ? "#2563EB" : "#E0F2FE",
+                flexDirection: "row",
+                gap: 12,
+                flex: 1,
               }}
             >
-              <Text style={{
-                color: activeTab === "cloud" ? "#FFF" : "#2563EB",
-                fontWeight: "700",
-                fontSize: 14
-              }}>
-                My Projects
-              </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveTab("cloud");
+                  fetchProjects(0);
+                }}
+                style={{
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderRadius: 20,
+                  backgroundColor: activeTab === "cloud" ? "#2563EB" : "#E0F2FE",
+                }}
+              >
+                <Text
+                  style={{
+                    color: activeTab === "cloud" ? "#FFF" : "#2563EB",
+                    fontWeight: "700",
+                    fontSize: 14,
+                  }}
+                >
+                  My Projects ({user?.currentProjects || 0})
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => {
-                setActiveTab("local");
-                fetchProjects(0);
-              }}
-              style={{
-                paddingVertical: 8,
-                paddingHorizontal: 16,
-                borderRadius: 20,
-                backgroundColor: activeTab === "local" ? "#F59E0B" : "#FEF3C7",
-              }}
-            >
-              <Text style={{
-                color: activeTab === "local" ? "#FFF" : "#D97706",
-                fontWeight: "700",
-                fontSize: 14
-              }}>
-                Local Projects
-              </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveTab("local");
+                  fetchProjects(0);
+                }}
+                style={{
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderRadius: 20,
+                  backgroundColor: activeTab === "local" ? "#F59E0B" : "#FEF3C7",
+                }}
+              >
+                <Text
+                  style={{
+                    color: activeTab === "local" ? "#FFF" : "#D97706",
+                    fontWeight: "700",
+                    fontSize: 14,
+                  }}
+                >
+                  Local Projects ({localProjects.length})
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => {
-                setActiveTab("shared");
-                fetchProjects(0);
-              }}
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveTab("shared");
+                  fetchProjects(0);
+                }}
+                style={{
+                  paddingVertical: 8,
+                  paddingHorizontal: 16,
+                  borderRadius: 20,
+                  backgroundColor: activeTab === "shared" ? "#10B981" : "#D1FAE5",
+                }}
+              >
+                <Text
+                  style={{
+                    color: activeTab === "shared" ? "#FFF" : "#059669",
+                    fontWeight: "700",
+                    fontSize: 14,
+                  }}
+                >
+                  Shared Projects ({sharedProjects.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Total Projects Badge */}
+            <View
               style={{
-                paddingVertical: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: isDark ? "#1F2937" : "#F3F4F6",
                 paddingHorizontal: 16,
-                borderRadius: 20,
-                backgroundColor: activeTab === "shared" ? "#10B981" : "#D1FAE5",
+                paddingVertical: 10,
+                borderRadius: 24,
+                borderWidth: 1,
+                borderColor: isDark ? "#374151" : "#E5E7EB",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+                marginLeft: 12,
               }}
             >
-              <Text style={{
-                color: activeTab === "shared" ? "#FFF" : "#059669",
-                fontWeight: "700",
-                fontSize: 14
-              }}>
-                Shared Projects
+              <Icon
+                name="folder"
+                size={20}
+                color={isDark ? "#60A5FA" : "#3B82F6"}
+                style={{ marginRight: 8 }}
+              />
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#E5E7EB" : "#374151",
+                  fontWeight: "600",
+                  marginRight: 8,
+                }}
+              >
+                Total Projects:
               </Text>
-            </TouchableOpacity>
+              <Text
+                style={{
+                  fontSize: 16,
+                  color: isDark ? "#60A5FA" : "#3B82F6",
+                  fontWeight: "700",
+                }}
+              >
+                {user?.currentProjects || 0}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#9CA3AF" : "#6B7280",
+                  fontWeight: "600",
+                  marginHorizontal: 4,
+                }}
+              >
+                /
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: isDark ? "#9CA3AF" : "#6B7280",
+                  fontWeight: "600",
+                }}
+              >
+                {user?.maxProjects || 3}
+              </Text>
+            </View>
           </View>
 
           {/* MAIN CONTENT */}
@@ -1199,8 +1488,14 @@ export default function HomeScreen({ navigation }) {
           ) : error ? (
             <View style={styles.centerContainer}>
               <Icon name="error-outline" size={48} color="#EF4444" />
-              <Text style={[styles.errorTitle, isDark && styles.errorTitleDark]}>Oops!</Text>
-              <Text style={[styles.errorText, isDark && styles.errorTextDark]}>{error}</Text>
+              <Text
+                style={[styles.errorTitle, isDark && styles.errorTitleDark]}
+              >
+                Oops!
+              </Text>
+              <Text style={[styles.errorText, isDark && styles.errorTextDark]}>
+                {error}
+              </Text>
               <TouchableOpacity
                 style={styles.retryButton}
                 onPress={() => fetchProjects(currentPage)}
@@ -1215,11 +1510,32 @@ export default function HomeScreen({ navigation }) {
                 <>
                   {localProjects.length === 0 ? (
                     <View style={styles.centerContainer}>
-                      <View style={[styles.emptyIcon, isDark && styles.emptyIconDark]}>
-                        <Icon name="smartphone" size={64} color={isDark ? "#FDE68A" : "#FDE68A"} />
+                      <View
+                        style={[
+                          styles.emptyIcon,
+                          isDark && styles.emptyIconDark,
+                        ]}
+                      >
+                        <Icon
+                          name="smartphone"
+                          size={64}
+                          color={isDark ? "#FDE68A" : "#FDE68A"}
+                        />
                       </View>
-                      <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>No Local Projects</Text>
-                      <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
+                      <Text
+                        style={[
+                          styles.emptyTitle,
+                          isDark && styles.emptyTitleDark,
+                        ]}
+                      >
+                        No Local Projects
+                      </Text>
+                      <Text
+                        style={[
+                          styles.emptyText,
+                          isDark && styles.emptyTextDark,
+                        ]}
+                      >
                         Projects created offline will appear here.
                       </Text>
                     </View>
@@ -1237,8 +1553,12 @@ export default function HomeScreen({ navigation }) {
                         <Text style={{ fontSize: 16, color: "#6B7280" }}>
                           Showing {localProjects.length} local project(s)
                         </Text>
-                        <TouchableOpacity onPress={() => navigation.navigate("GuestHome")}>
-                          <Text style={{ color: "#3B82F6", fontWeight: "600" }}>Manage</Text>
+                        <TouchableOpacity
+                          onPress={() => navigation.navigate("GuestHome")}
+                        >
+                          <Text style={{ color: "#3B82F6", fontWeight: "600" }}>
+                            Manage
+                          </Text>
                         </TouchableOpacity>
                       </View>
 
@@ -1265,11 +1585,32 @@ export default function HomeScreen({ navigation }) {
                 <>
                   {projects.length === 0 ? (
                     <View style={styles.centerContainer}>
-                      <View style={[styles.emptyIcon, isDark && styles.emptyIconDark]}>
-                        <Icon name="cloud-off" size={64} color={isDark ? "#BFDBFE" : "#BFDBFE"} />
+                      <View
+                        style={[
+                          styles.emptyIcon,
+                          isDark && styles.emptyIconDark,
+                        ]}
+                      >
+                        <Icon
+                          name="cloud-off"
+                          size={64}
+                          color={isDark ? "#BFDBFE" : "#BFDBFE"}
+                        />
                       </View>
-                      <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>No Cloud Projects</Text>
-                      <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
+                      <Text
+                        style={[
+                          styles.emptyTitle,
+                          isDark && styles.emptyTitleDark,
+                        ]}
+                      >
+                        No Cloud Projects
+                      </Text>
+                      <Text
+                        style={[
+                          styles.emptyText,
+                          isDark && styles.emptyTextDark,
+                        ]}
+                      >
                         Create a new project to get started!
                       </Text>
                       <TouchableOpacity
@@ -1317,11 +1658,32 @@ export default function HomeScreen({ navigation }) {
                 <>
                   {sharedProjects.length === 0 ? (
                     <View style={styles.centerContainer}>
-                      <View style={[styles.emptyIcon, isDark && styles.emptyIconDark]}>
-                        <Icon name="folder-shared" size={64} color={isDark ? "#A7F3D0" : "#A7F3D0"} />
+                      <View
+                        style={[
+                          styles.emptyIcon,
+                          isDark && styles.emptyIconDark,
+                        ]}
+                      >
+                        <Icon
+                          name="folder-shared"
+                          size={64}
+                          color={isDark ? "#A7F3D0" : "#A7F3D0"}
+                        />
                       </View>
-                      <Text style={[styles.emptyTitle, isDark && styles.emptyTitleDark]}>No Shared Projects</Text>
-                      <Text style={[styles.emptyText, isDark && styles.emptyTextDark]}>
+                      <Text
+                        style={[
+                          styles.emptyTitle,
+                          isDark && styles.emptyTitleDark,
+                        ]}
+                      >
+                        No Shared Projects
+                      </Text>
+                      <Text
+                        style={[
+                          styles.emptyText,
+                          isDark && styles.emptyTextDark,
+                        ]}
+                      >
                         Projects shared with you will appear here.
                       </Text>
                     </View>
@@ -1356,16 +1718,24 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text
-              style={[{
-                fontSize: 18,
-                fontWeight: "700",
-                color: "#111827",
-                marginBottom: 12,
-              }, isDark && { color: "#F1F5F9" }]}
+              style={[
+                {
+                  fontSize: 18,
+                  fontWeight: "700",
+                  color: "#111827",
+                  marginBottom: 12,
+                },
+                isDark && { color: "#F1F5F9" },
+              ]}
             >
               Create Quick Note
             </Text>
-            <Text style={[{ fontSize: 14, color: "#374151", marginBottom: 16 }, isDark && { color: "#94A3B8" }]}>
+            <Text
+              style={[
+                { fontSize: 14, color: "#374151", marginBottom: 16 },
+                isDark && { color: "#94A3B8" },
+              ]}
+            >
               Choose orientation for the first page
             </Text>
             <View style={{ flexDirection: "row", gap: 12 }}>
@@ -1381,9 +1751,17 @@ export default function HomeScreen({ navigation }) {
                 }}
                 onPress={() => createQuickNote("portrait")}
               >
-                <Icon name="smartphone" size={22} color={isDark ? "#60A5FA" : "#1E40AF"} />
+                <Icon
+                  name="smartphone"
+                  size={22}
+                  color={isDark ? "#60A5FA" : "#1E40AF"}
+                />
                 <Text
-                  style={{ marginTop: 6, color: isDark ? "#F1F5F9" : "#1E293B", fontWeight: "600" }}
+                  style={{
+                    marginTop: 6,
+                    color: isDark ? "#F1F5F9" : "#1E293B",
+                    fontWeight: "600",
+                  }}
                 >
                   Portrait
                 </Text>
@@ -1400,9 +1778,17 @@ export default function HomeScreen({ navigation }) {
                 }}
                 onPress={() => createQuickNote("landscape")}
               >
-                <Icon name="stay-current-landscape" size={22} color={isDark ? "#60A5FA" : "#1E40AF"} />
+                <Icon
+                  name="stay-current-landscape"
+                  size={22}
+                  color={isDark ? "#60A5FA" : "#1E40AF"}
+                />
                 <Text
-                  style={{ marginTop: 6, color: isDark ? "#F1F5F9" : "#1E293B", fontWeight: "600" }}
+                  style={{
+                    marginTop: 6,
+                    color: isDark ? "#F1F5F9" : "#1E293B",
+                    fontWeight: "600",
+                  }}
                 >
                   Landscape
                 </Text>
@@ -1420,7 +1806,11 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => setQuickNoteModalVisible(false)}
               >
                 <Text
-                  style={{ color: isDark ? "#94A3B8" : "#111827", fontSize: 14, fontWeight: "600" }}
+                  style={{
+                    color: isDark ? "#94A3B8" : "#111827",
+                    fontSize: 14,
+                    fontWeight: "600",
+                  }}
                 >
                   Cancel
                 </Text>
@@ -1434,7 +1824,7 @@ export default function HomeScreen({ navigation }) {
           style={{
             position: "absolute",
             top: 125,
-            right: 250,
+            right: 310,
             width: 320,
             maxHeight: 360,
             backgroundColor: "#FFFFFF",
@@ -1538,107 +1928,52 @@ export default function HomeScreen({ navigation }) {
               data={notifications}
               keyExtractor={(item) => item.id?.toString()}
               style={{ maxHeight: 300 }}
-              renderItem={({ item }) => {
-                // Get icon based on notification type
-                const getNotificationIcon = (type) => {
-                  switch (type) {
-                    case "VERSION_AVAILABLE":
-                      return { name: "upgrade", color: "#10B981", bg: "#ECFDF5" };
-                    case "PURCHASE_CONFIRM":
-                      return { name: "shopping-cart", color: "#3B82F6", bg: "#EFF6FF" };
-                    default:
-                      return { name: "notifications", color: "#6B7280", bg: "#F3F4F6" };
-                  }
-                };
-                const iconInfo = getNotificationIcon(item.type);
-
-                return (
-                  <TouchableOpacity
-                    onPress={() => handleReadSingleNoti(item)}
-                    activeOpacity={0.8}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => handleReadSingleNoti(item)}
+                  activeOpacity={0.8}
+                  style={{
+                    paddingVertical: 8,
+                    paddingHorizontal: 8,
+                    borderRadius: 10,
+                    backgroundColor: item.read ? "#F9FAFB" : "#DBEAFE",
+                    marginBottom: 4,
+                  }}
+                >
+                  <Text
                     style={{
-                      paddingVertical: 10,
-                      paddingHorizontal: 10,
-                      borderRadius: 12,
-                      backgroundColor: item.read ? "#F9FAFB" : "#DBEAFE",
-                      marginBottom: 6,
+                      fontSize: 14,
+                      fontWeight: "700",
+                      color: "#111827",
+                      marginBottom: 2,
                     }}
+                    numberOfLines={1}
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
-                      {/* Icon */}
-                      <View
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 10,
-                          backgroundColor: iconInfo.bg,
-                          justifyContent: "center",
-                          alignItems: "center",
-                          marginRight: 10,
-                        }}
-                      >
-                        <Icon name={iconInfo.name} size={18} color={iconInfo.color} />
-                      </View>
-
-                      {/* Content */}
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                          <Text
-                            style={{
-                              fontSize: 14,
-                              fontWeight: "700",
-                              color: "#111827",
-                              flex: 1,
-                            }}
-                            numberOfLines={1}
-                          >
-                            {item.title || "Notification"}
-                          </Text>
-                          {item.type === "VERSION_AVAILABLE" && (
-                            <View
-                              style={{
-                                backgroundColor: "#10B981",
-                                paddingHorizontal: 6,
-                                paddingVertical: 2,
-                                borderRadius: 4,
-                              }}
-                            >
-                              <Text style={{ fontSize: 10, fontWeight: "600", color: "#FFFFFF" }}>
-                                Upgrade
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            color: "#4B5563",
-                            marginBottom: 2,
-                            lineHeight: 16,
-                          }}
-                          numberOfLines={2}
-                        >
-                          {item.message}
-                        </Text>
-                        {item.createdAt && (
-                          <Text
-                            style={{
-                              fontSize: 11,
-                              color: "#9CA3AF",
-                              marginTop: 2,
-                            }}
-                          >
-                            {new Date(item.createdAt).toLocaleString("vi-VN")}
-                          </Text>
-                        )}
-                      </View>
-
-                      {/* Arrow */}
-                      <Icon name="chevron-right" size={18} color="#9CA3AF" />
-                    </View>
-                  </TouchableOpacity>
-                );
-              }}
+                    {item.title || "Notification"}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: "#4B5563",
+                      marginBottom: 2,
+                    }}
+                    numberOfLines={2}
+                  >
+                    {item.message}
+                  </Text>
+                  {item.createdAt && (
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        color: "#6B7280",
+                        marginTop: 2,
+                      }}
+                    >
+                      {new Date(item.createdAt).toLocaleString("vi-VN")}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
             />
           )}
         </View>
@@ -1655,48 +1990,70 @@ export default function HomeScreen({ navigation }) {
 
       <Modal visible={editModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+          <View
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+          >
             {/* Icon bút chì + tiêu đề */}
             <View style={{ alignItems: "center", marginBottom: 20 }}>
-              <View style={[styles.modalIconCircle, isDark && styles.modalIconCircleDark]}>
+              <View
+                style={[
+                  styles.modalIconCircle,
+                  isDark && styles.modalIconCircleDark,
+                ]}
+              >
                 <Icon name="edit" size={28} color="#3B82F6" />
               </View>
-              <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>Edit Project</Text>
+              <Text
+                style={[styles.modalTitle, isDark && styles.modalTitleDark]}
+              >
+                Edit Project
+              </Text>
             </View>
 
             {/* Image Picker */}
-            <View style={{ marginBottom: 16, alignItems: 'center' }}>
-              <TouchableOpacity onPress={pickImage} style={{ position: 'relative' }}>
+            <View style={{ marginBottom: 16, alignItems: "center" }}>
+              <TouchableOpacity
+                onPress={pickImage}
+                style={{ position: "relative" }}
+              >
                 <LazyImage
-                  source={editImageUrl ? { uri: editImageUrl } : require("../../../assets/default_image.png")}
+                  source={
+                    editImageUrl
+                      ? { uri: editImageUrl }
+                      : require("../../../assets/default_image.png")
+                  }
                   style={{
                     width: 200,
                     height: 120,
                     borderRadius: 12,
-                    backgroundColor: '#F1F5F9'
+                    backgroundColor: "#F1F5F9",
                   }}
                   resizeMode="cover"
                 />
-                <View style={{
-                  position: 'absolute',
-                  bottom: -10,
-                  right: -10,
-                  backgroundColor: '#3B82F6',
-                  padding: 8,
-                  borderRadius: 20,
-                  borderWidth: 2,
-                  borderColor: '#FFF'
-                }}>
+                <View
+                  style={{
+                    position: "absolute",
+                    bottom: -10,
+                    right: -10,
+                    backgroundColor: "#3B82F6",
+                    padding: 8,
+                    borderRadius: 20,
+                    borderWidth: 2,
+                    borderColor: "#FFF",
+                  }}
+                >
                   <Icon name="camera-alt" size={20} color="#FFF" />
                 </View>
               </TouchableOpacity>
-              <Text style={{ marginTop: 12, color: '#64748B', fontSize: 13 }}>
+              <Text style={{ marginTop: 12, color: "#64748B", fontSize: 13 }}>
                 Tap to change cover image
               </Text>
             </View>
 
             {/* Input tên */}
-            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}>
+            <View
+              style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}
+            >
               <Icon
                 name="title"
                 size={18}
@@ -1713,7 +2070,9 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             {/* Input mô tả */}
-            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}>
+            <View
+              style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}
+            >
               <Icon
                 name="description"
                 size={18}
@@ -1734,7 +2093,9 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             {/* Read-only Paper Size */}
-            <View style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}>
+            <View
+              style={[styles.inputWrapper, isDark && styles.inputWrapperDark]}
+            >
               <Icon
                 name="aspect-ratio"
                 size={18}
@@ -1742,12 +2103,18 @@ export default function HomeScreen({ navigation }) {
                 style={styles.inputIcon}
               />
               <TextInput
-                style={[styles.modalInput, { backgroundColor: isDark ? '#334155' : '#F1F5F9', color: isDark ? '#94A3B8' : '#64748B' }]}
+                style={[
+                  styles.modalInput,
+                  {
+                    backgroundColor: isDark ? "#334155" : "#F1F5F9",
+                    color: isDark ? "#94A3B8" : "#64748B",
+                  },
+                ]}
                 value={editPaperSize}
                 editable={false}
                 placeholder="Paper Size"
               />
-              <View style={{ position: 'absolute', right: 12, top: 20 }}>
+              <View style={{ position: "absolute", right: 12, top: 20 }}>
                 <Icon name="lock" size={16} color="#94A3B8" />
               </View>
             </View>
@@ -1755,10 +2122,20 @@ export default function HomeScreen({ navigation }) {
             {/* Nút */}
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButtonCancel, isDark && styles.modalButtonCancelDark]}
+                style={[
+                  styles.modalButtonCancel,
+                  isDark && styles.modalButtonCancelDark,
+                ]}
                 onPress={() => setEditModalVisible(false)}
               >
-                <Text style={[styles.modalButtonTextCancel, isDark && styles.modalButtonTextCancelDark]}>Cancel</Text>
+                <Text
+                  style={[
+                    styles.modalButtonTextCancel,
+                    isDark && styles.modalButtonTextCancelDark,
+                  ]}
+                >
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalButton} onPress={saveEdit}>
                 <Text style={styles.modalButtonText}>Save Changes</Text>
@@ -1770,7 +2147,9 @@ export default function HomeScreen({ navigation }) {
 
       <Modal visible={deleteModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDark && styles.modalContentDark]}>
+          <View
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+          >
             {/* Icon cảnh báo đỏ cam */}
             <View
               style={[
@@ -1781,8 +2160,12 @@ export default function HomeScreen({ navigation }) {
               <Icon name="warning" size={36} color="#EF4444" />
             </View>
 
-            <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>Delete Project Permanently?</Text>
-            <Text style={[styles.modalMessage, isDark && styles.modalMessageDark]}>
+            <Text style={[styles.modalTitle, isDark && styles.modalTitleDark]}>
+              Delete Project Permanently?
+            </Text>
+            <Text
+              style={[styles.modalMessage, isDark && styles.modalMessageDark]}
+            >
               Project{" "}
               <Text style={{ fontWeight: "700", color: "#DC2626" }}>
                 "{selectedProject?.name}"
@@ -1793,10 +2176,20 @@ export default function HomeScreen({ navigation }) {
             {/* Nút */}
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButtonCancel, isDark && styles.modalButtonCancelDark]}
+                style={[
+                  styles.modalButtonCancel,
+                  isDark && styles.modalButtonCancelDark,
+                ]}
                 onPress={() => setDeleteModalVisible(false)}
               >
-                <Text style={[styles.modalButtonTextCancel, isDark && styles.modalButtonTextCancelDark]}>Cancel</Text>
+                <Text
+                  style={[
+                    styles.modalButtonTextCancel,
+                    isDark && styles.modalButtonTextCancelDark,
+                  ]}
+                >
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonDelete]}
@@ -1815,9 +2208,220 @@ export default function HomeScreen({ navigation }) {
         </View>
       </Modal>
 
+      <Modal
+        visible={limitModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLimitModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, isDark && styles.modalContentDark]}
+          >
+            {/* Warning Icon */}
+            <View
+              style={[
+                styles.modalIconCircle,
+                { backgroundColor: "#FEF3C7", marginBottom: 16 },
+              ]}
+            >
+              <Icon name="warning" size={36} color="#F59E0B" />
+            </View>
 
+            {/* Title */}
+            <Text
+              style={[
+                styles.modalTitle,
+                isDark && styles.modalTitleDark,
+                { marginBottom: 12 },
+              ]}
+            >
+              Project Limit Reached
+            </Text>
 
+            {/* Message */}
+            <Text
+              style={[
+                styles.modalMessage,
+                isDark && styles.modalMessageDark,
+                { textAlign: "center", lineHeight: 22 },
+              ]}
+            >
+              You have reached the limit of{" "}
+              <Text style={{ fontWeight: "700", color: "#F59E0B" }}>
+                {limitInfo.max} projects
+              </Text>{" "}
+              for the Free plan.
+            </Text>
 
+            <Text
+              style={[
+                styles.modalMessage,
+                isDark && styles.modalMessageDark,
+                { textAlign: "center", marginTop: 8, lineHeight: 22 },
+              ]}
+            >
+              Upgrade to{" "}
+              <Text style={{ fontWeight: "700", color: "#3B82F6" }}>
+                Premium
+              </Text>{" "}
+              to create unlimited projects and unlock exclusive features!
+            </Text>
+
+            {/* Current Usage */}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: 16,
+                paddingVertical: 12,
+                paddingHorizontal: 20,
+                backgroundColor: isDark ? "#334155" : "#F1F5F9",
+                borderRadius: 12,
+              }}
+            >
+              <Icon
+                name="folder"
+                size={20}
+                color={isDark ? "#60A5FA" : "#3B82F6"}
+              />
+              <Text
+                style={{
+                  marginLeft: 8,
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: isDark ? "#E2E8F0" : "#334155",
+                }}
+              >
+                {limitInfo.current} / {limitInfo.max} projects used
+              </Text>
+            </View>
+
+            {/* Progress Bar */}
+            <View
+              style={{
+                width: "100%",
+                height: 6,
+                backgroundColor: isDark ? "#475569" : "#E2E8F0",
+                borderRadius: 3,
+                marginTop: 12,
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: "#EF4444",
+                  borderRadius: 3,
+                }}
+              />
+            </View>
+
+            {/* Buttons */}
+            <View style={[styles.modalButtons, { marginTop: 24 }]}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButtonCancel,
+                  isDark && styles.modalButtonCancelDark,
+                ]}
+                onPress={() => setLimitModalVisible(false)}
+              >
+                <Text
+                  style={[
+                    styles.modalButtonTextCancel,
+                    isDark && styles.modalButtonTextCancelDark,
+                  ]}
+                >
+                  Maybe Later
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  {
+                    backgroundColor: "#3B82F6",
+                    flexDirection: "row",
+                    alignItems: "center",
+                  },
+                ]}
+                onPress={() => {
+                  setLimitModalVisible(false);
+                  navigation.navigate("DesignerSubscription");
+                }}
+              >
+                <Text style={styles.modalButtonText}>Upgrade Now</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <AcceptInvitationModal
+        visible={acceptModalVisible}
+        project={pendingProject}
+        isDark={isDark}
+        onClose={() => {
+          setAcceptModalVisible(false);
+          setPendingProject(null);
+        }}
+        onAccept={async () => {
+          if (!pendingProject) return;
+          try {
+            setAcceptModalVisible(false);
+            setLoading(true);
+            await projectService.acceptCollaboration(
+              pendingProject.projectId,
+              true
+            );
+            toast({
+              title: "Success",
+              description: "Invitation accepted!",
+              variant: "success",
+            });
+            await fetchProjects(currentPage);
+            navigation.navigate("DrawingScreen", {
+              noteConfig: pendingProject.config,
+            });
+          } catch (err) {
+            toast({
+              title: "Error",
+              description: "Failed to accept invitation",
+              variant: "destructive",
+            });
+          } finally {
+            setLoading(false);
+            setPendingProject(null);
+          }
+        }}
+        onReject={async () => {
+          if (!pendingProject) return;
+          try {
+            setAcceptModalVisible(false);
+            setLoading(true);
+            await projectService.acceptCollaboration(
+              pendingProject.projectId,
+              false
+            );
+            toast({
+              title: "Rejected",
+              description: "Invitation declined",
+            });
+            await fetchProjects(currentPage);
+          } catch (err) {
+            toast({
+              title: "Error",
+              description: "Failed to reject invitation",
+              variant: "destructive",
+            });
+          } finally {
+            setLoading(false);
+            setPendingProject(null);
+          }
+        }}
+      />
     </View>
   );
 }

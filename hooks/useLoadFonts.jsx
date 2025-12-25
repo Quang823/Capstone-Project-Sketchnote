@@ -53,7 +53,7 @@ export default function useLoadFonts() {
 
         if (isMounted) setFontsLoaded(true);
       } catch (err) {
-        console.error("❌ Font loading failed:", err);
+        console.warn("❌ Font loading failed:", err);
       }
     }
 

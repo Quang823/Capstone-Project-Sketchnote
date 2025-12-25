@@ -188,9 +188,8 @@ const ProfileScreen = () => {
 
       toast({
         title: "Upload Successful!",
-        description: `Avatar updated${
-          uploadResult.format === "gif" ? " (animated)" : ""
-        }.`,
+        description: `Avatar updated${uploadResult.format === "gif" ? " (animated)" : ""
+          }.`,
         variant: "success",
       });
     } catch (err) {
@@ -597,8 +596,8 @@ const ProfileScreen = () => {
                       ? ["#475569", "#334155"]
                       : ["#A5B4FC", "#93C5FD"]
                     : isDark
-                    ? ["#3B82F6", "#2563EB"]
-                    : ["#3B82F6", "#2563EB"]
+                      ? ["#3B82F6", "#2563EB"]
+                      : ["#3B82F6", "#2563EB"]
                 }
                 style={styles.saveButton}
               >

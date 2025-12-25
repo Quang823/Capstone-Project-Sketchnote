@@ -16,7 +16,7 @@ export const orderController = {
   getPurchasedTemplates: async () => {
     return await privateApi.get(`api/orders/user_resources/user/me/templates`);
   },
-   getPurchasedTemplatesV2: async () => {
+  getPurchasedTemplatesV2: async () => {
     return await privateApi.get(`api/orders/user_resources/user/me/templates/v2`);
   },
   createOrderRetry: async (orderId) => {
@@ -34,7 +34,13 @@ export const orderController = {
       params: { page, size },
     });
   },
-  upgradeTemplateVersionLatest: async (resourceTemplateId ) => {
+
+  getAllTemplates: async (page = 0, size = 10, sortBy, sortDir) => {
+    return await privateApi.get(`api/orders/template`, {
+      params: { page, size, sortBy, sortDir },
+    });
+  },
+  upgradeTemplateVersionLatest: async (resourceTemplateId) => {
     return await privateApi.post(`api/orders/user_resources/user/me/resource/${resourceTemplateId}/upgrade`);
   },
 };

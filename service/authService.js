@@ -181,13 +181,13 @@ export const authService = {
 
           return { accessToken, refreshToken, roles };
         } catch (decodeError) {
-          console.error("Error decoding token during Google mobile login:", decodeError);
+          console.warn("Error decoding token during Google mobile login:", decodeError);
           return { accessToken, refreshToken, roles: [] };
         }
       }
       throw new Error("Login failed. Token not received.");
     } catch (err) {
-      console.error("Google Mobile Login Error:", err);
+      console.warn("Google Mobile Login Error:", err);
       const message =
         err.response?.data?.message || err.message || "Login failed.";
       throw new Error(message);

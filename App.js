@@ -16,6 +16,7 @@ import { BackgroundJsonParser } from "./utils/jsonUtils";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider, AuthContext } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import ChatWidget from "./components/ChatWidget";
 import LottieView from "lottie-react-native";
 // Ngăn splash tự ẩn sớm
@@ -26,7 +27,7 @@ SplashScreen.preventAutoHideAsync();
 if (typeof ErrorUtils !== "undefined") {
   const originalHandler = ErrorUtils.getGlobalHandler();
   ErrorUtils.setGlobalHandler((error, isFatal) => {
-    console.error("🚨 Global Error Handler:", error, "isFatal:", isFatal);
+    console.warn("🚨 Global Error Handler:", error, "isFatal:", isFatal);
     // Log error nhưng không crash app ngay lập tức
     if (originalHandler) {
       originalHandler(error, isFatal);
@@ -39,7 +40,7 @@ if (typeof ErrorUtils !== "undefined") {
 if (typeof global !== "undefined") {
   const originalUnhandledRejection = global.onunhandledrejection;
   global.onunhandledrejection = (event) => {
-    console.error("🚨 Unhandled Promise Rejection:", event?.reason || event);
+    console.warn("🚨 Unhandled Promise Rejection:", event?.reason || event);
     // Prevent default crash behavior
     if (event && typeof event.preventDefault === "function") {
       event.preventDefault();
@@ -119,31 +120,33 @@ export default function App() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <ErrorBoundary fallbackText="The background parser has crashed. Please restart the app.">
-              <BackgroundJsonParser />
-            </ErrorBoundary>
-            <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-              <CartProvider>
-                <FontProvider fontsLoaded={fontsLoaded}>
-                  <ToastProvider>
-                    <NavigationProvider>
-                      <NavigationContainer
-                        onStateChange={(state) => {
-                          const routeName = state?.routes[state.index]?.name;
-                          if (routeName) {
-                            setCurrentRoute(routeName);
-                          }
-                        }}
-                      >
-                        <AppNavigator />
-                        <GlobalSidebar />
-                        <ChatContainer currentRoute={currentRoute} />
-                      </NavigationContainer>
-                    </NavigationProvider>
-                  </ToastProvider>
-                </FontProvider>
-              </CartProvider>
-            </View>
+            <NotificationProvider>
+              <ErrorBoundary fallbackText="The background parser has crashed. Please restart the app.">
+                <BackgroundJsonParser />
+              </ErrorBoundary>
+              <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+                <CartProvider>
+                  <FontProvider fontsLoaded={fontsLoaded}>
+                    <ToastProvider>
+                      <NavigationProvider>
+                        <NavigationContainer
+                          onStateChange={(state) => {
+                            const routeName = state?.routes[state.index]?.name;
+                            if (routeName) {
+                              setCurrentRoute(routeName);
+                            }
+                          }}
+                        >
+                          <AppNavigator />
+                          <GlobalSidebar currentRoute={currentRoute} />
+                          <ChatContainer currentRoute={currentRoute} />
+                        </NavigationContainer>
+                      </NavigationProvider>
+                    </ToastProvider>
+                  </FontProvider>
+                </CartProvider>
+              </View>
+            </NotificationProvider>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

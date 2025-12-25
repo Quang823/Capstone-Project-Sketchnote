@@ -418,7 +418,7 @@ export default function DesignerQuickUploadScreen() {
                     style={[
                       styles.projectCard,
                       selectedProjectId === proj.projectId &&
-                        styles.projectCardActive,
+                      styles.projectCardActive,
                     ]}
                   >
                     <Image

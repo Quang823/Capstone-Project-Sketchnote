@@ -47,7 +47,7 @@ export const paperService = {
             });
             return result;
         } catch (error) {
-            console.error("Error fetching cover templates:", error);
+            console.warn("Error fetching cover templates:", error);
             throw error;
         }
     },
@@ -78,7 +78,7 @@ export const paperService = {
             });
             return result;
         } catch (error) {
-            console.error("Error fetching paper templates:", error);
+            console.warn("Error fetching paper templates:", error);
             throw error;
         }
     },

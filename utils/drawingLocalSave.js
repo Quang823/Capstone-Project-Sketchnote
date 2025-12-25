@@ -87,7 +87,7 @@ export const saveDrawingLocally = async (projectId, canvasRef, noteConfig) => {
 
         return true;
     } catch (error) {
-        console.error('❌ Failed to save drawing locally:', error);
+        console.warn('❌ Failed to save drawing locally:', error);
         throw error;
     }
 };
@@ -119,7 +119,7 @@ export const loadDrawingLocally = async (projectId) => {
 
         return projectData;
     } catch (error) {
-        console.error('❌ Failed to load drawing from FileSystem:', error);
+        console.warn('❌ Failed to load drawing from FileSystem:', error);
         return null;
     }
 };
@@ -143,7 +143,7 @@ export const setupAutoSave = (projectId, canvasRef, noteConfig, delay = 2000) =>
             try {
                 await saveDrawingLocally(projectId, canvasRef, noteConfig);
             } catch (error) {
-                console.error('Auto-save failed:', error);
+                console.warn('Auto-save failed:', error);
             }
         }, delay);
     };

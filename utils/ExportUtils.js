@@ -27,7 +27,7 @@ export async function saveStrokesToJSON(allPages) {
 
     return fileUri;
   } catch (e) {
-    console.error("saveStrokesToJSON error:", e);
+    console.warn("saveStrokesToJSON error:", e);
     throw e;
   }
 }
@@ -106,7 +106,7 @@ async function exportToPdf(canvasRef, fileName, quality = 90) {
       return uri;
     }
   } catch (error) {
-    console.error("Failed to export to PDF:", error);
+    console.warn("Failed to export to PDF:", error);
     throw error;
   }
 }
@@ -137,7 +137,7 @@ export async function handleExport(options, canvasRef) {
       });
     }
   } catch (error) {
-    console.error("Export failed:", error);
+    console.warn("Export failed:", error);
     alert(`Export failed: ${error.message}`);
   }
 }
@@ -225,7 +225,7 @@ export async function exportPagesToPdf(
     // SAF logic removed - handled in DrawingScreen
     return finalDest;
   } catch (error) {
-    console.error("exportPagesToPdf failed:", error);
+    console.warn("exportPagesToPdf failed:", error);
     throw error;
   }
 }

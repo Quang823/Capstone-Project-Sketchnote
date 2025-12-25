@@ -14,6 +14,7 @@ const DocumentOverviewModal = ({
   onPageSelect,
   onAddPage,
   onResourceSelect,
+  isViewOnly = false,
 }) => {
   return (
     <Modal
@@ -43,6 +44,7 @@ const DocumentOverviewModal = ({
             pageLayout="grid"
             onClose={onClose}
             showTabLabels={true}
+            isViewOnly={isViewOnly}
           />
         </View>
       </View>

@@ -12,10 +12,10 @@ import {
 import Icon from "react-native-vector-icons/MaterialIcons";
 import LottieView from "lottie-react-native";
 import { useTheme } from "../../context/ThemeContext";
-import { notiService } from "../../service/notiService";
 import { useToast } from "../../hooks/use-toast";
 import loadingAnimation from "../../assets/loading.json";
 import { useNavigation } from "@react-navigation/native";
+import { useNotifications } from "../../context/NotificationContext";
 
 export default function NotificationButton() {
     const { theme } = useTheme();
@@ -24,25 +24,23 @@ export default function NotificationButton() {
     const navigation = useNavigation();
     const buttonRef = useRef(null);
 
-    const [notiCount, setNotiCount] = useState(0);
+    const {
+        unreadCount: notiCount,
+        notifications,
+        isLoading: loadingNoti,
+        fetchNotifications,
+        markAsRead,
+        markAllAsRead,
+        setPanelOpen,
+    } = useNotifications();
+
     const [notiOpen, setNotiOpen] = useState(false);
-    const [notifications, setNotifications] = useState([]);
-    const [loadingNoti, setLoadingNoti] = useState(false);
     const [buttonPosition, setButtonPosition] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
+    // Sync local open state with context
     useEffect(() => {
-        const loadNotiCount = async () => {
-            try {
-                const data = await notiService.getCountNotiUnRead();
-                const count = Number(data?.unread ?? 0);
-                setNotiCount(count);
-            } catch (error) {
-                console.warn("Failed to load notification count", error);
-            }
-        };
-
-        loadNotiCount();
-    }, []);
+        setPanelOpen(notiOpen);
+    }, [notiOpen, setPanelOpen]);
 
     const toggleNotiDropdown = async () => {
         if (!notiOpen && buttonRef.current) {
@@ -53,29 +51,15 @@ export default function NotificationButton() {
 
         const next = !notiOpen;
         setNotiOpen(next);
-        if (!next) return;
 
-        try {
-            setLoadingNoti(true);
-            const data = await notiService.getAllNoti(0, 20);
-            const list = Array.isArray(data) ? data : data?.content || [];
-            setNotifications(Array.isArray(list) ? list : []);
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: error.message || "Failed to load notifications",
-                variant: "destructive",
-            });
-        } finally {
-            setLoadingNoti(false);
+        if (next) {
+            fetchNotifications(0, 20);
         }
     };
 
     const handleReadAllNoti = async () => {
         try {
-            await notiService.readAllNoti();
-            setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-            setNotiCount(0);
+            await markAllAsRead();
         } catch (error) {
             toast({
                 title: "Error",
@@ -89,11 +73,7 @@ export default function NotificationButton() {
         // Mark as read if not already read
         if (!item.read) {
             try {
-                await notiService.readNotiByNotiId(item.id);
-                setNotifications((prev) =>
-                    prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
-                );
-                setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
+                await markAsRead(item.id);
             } catch (error) {
                 toast({
                     title: "Error",

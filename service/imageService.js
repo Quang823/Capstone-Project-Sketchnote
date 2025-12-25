@@ -27,7 +27,7 @@ export const imageService = {
             }
             throw new Error("Invalid response from server");
         } catch (error) {
-            console.error("❌ Error generating image:", error);
+            console.warn("❌ Error generating image:", error);
             throw error;
         }
     },
@@ -47,7 +47,7 @@ export const imageService = {
             }
             throw new Error("Invalid response from server");
         } catch (error) {
-            console.error("❌ Error fetching image history:", error);
+            console.warn("❌ Error fetching image history:", error);
             throw error;
         }
     },

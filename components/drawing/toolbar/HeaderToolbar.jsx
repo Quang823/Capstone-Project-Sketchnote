@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   TouchableOpacity,
@@ -17,6 +17,7 @@ import { authService } from "../../../service/authService";
 import { creditService } from "../../../service/creditService";
 import Toast from "react-native-toast-message";
 import LottieView from "lottie-react-native";
+import { AuthContext } from "../../../context/AuthContext";
 
 export default function HeaderToolbar({
   onBack,
@@ -30,7 +31,10 @@ export default function HeaderToolbar({
   onAIChat,
   onRefreshCredit,
   onHistory,
-
+  collaborators = [],
+  isViewOnly = false,
+  isOwner = false,
+  onCollaboratorsClick,
 }) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -41,6 +45,7 @@ export default function HeaderToolbar({
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [creditBalance, setCreditBalance] = useState(null);
   const [loadingBalance, setLoadingBalance] = useState(true);
+  const { user } = useContext(AuthContext);
 
   // Fetch credit balance on mount
   useEffect(() => {
@@ -49,7 +54,7 @@ export default function HeaderToolbar({
         const balanceData = await creditService.getCreditBalance();
         setCreditBalance(balanceData?.currentBalance ?? null);
       } catch (error) {
-        console.error("Failed to fetch credit balance:", error);
+        console.warn("Failed to fetch credit balance:", error);
         setCreditBalance(null);
       } finally {
         setLoadingBalance(false);
@@ -67,7 +72,7 @@ export default function HeaderToolbar({
           const balanceData = await creditService.getCreditBalance();
           setCreditBalance(balanceData?.currentBalance ?? null);
         } catch (error) {
-          console.error("Failed to refresh credit balance:", error);
+          console.warn("Failed to refresh credit balance:", error);
         }
       };
 
@@ -120,10 +125,13 @@ export default function HeaderToolbar({
         {/* Left */}
         <View style={[styles.row, { gap: 12 }]}>
           {renderButton("arrow-back", onBack, Ionicons)}
-          {renderButton("person-add-outline", () => setInviteVisible(true), Ionicons)}
+          {!isViewOnly && user?.hasActiveSubscription && renderButton("person-add-outline", () => setInviteVisible(true), Ionicons)}
 
-          {renderButton("camera-outline", onCamera, Ionicons)}
-          {onAIChat && creditBalance !== null && creditBalance >= 5 && (
+          {/* Collaborators */}
+
+
+          {!isViewOnly && renderButton("camera-outline", onCamera, Ionicons)}
+          {!isViewOnly && onAIChat && creditBalance !== null && creditBalance >= 5 && (
             <TouchableOpacity onPress={onAIChat} style={styles.iconButton}>
               <LottieView
                 source={require("../../../assets/AI loading.json")}
@@ -133,7 +141,7 @@ export default function HeaderToolbar({
               />
             </TouchableOpacity>
           )}
-          {!loadingBalance && creditBalance !== null && creditBalance >= 5 && (
+          {!isViewOnly && !loadingBalance && creditBalance !== null && creditBalance >= 5 && (
             <View style={styles.creditBadge}>
               <MaterialIcons name="auto-awesome" size={14} color="#3B82F6" />
               <Text style={styles.creditText}>
@@ -143,22 +151,78 @@ export default function HeaderToolbar({
           )}
         </View>
 
+        {/* Center - View Only Badge */}
+        {isViewOnly && (
+          <View style={styles.viewOnlyBadge}>
+            <MaterialIcons name="visibility" size={18} color="#EF4444" />
+            <Text style={styles.viewOnlyText}>View Only</Text>
+          </View>
+        )}
         {/* Right */}
         <View style={[styles.row, { gap: 12 }]}>
 
+          {/* Collaborators & Status */}
+          <View style={[styles.row, { gap: 8, marginRight: 4 }]}>
+            <View style={styles.activeStatusBadge}>
+              <View style={styles.activeDot} />
+              <Text style={styles.activeStatusText}>Active</Text>
+            </View>
 
-          {renderButton("share-outline", onExportPress, Ionicons)}
-          {renderButton("time-outline", onHistory, Ionicons)}
+            {collaborators.length > 0 && (
+              <TouchableOpacity
+                style={{ flexDirection: "row", alignItems: "center" }}
+                onPress={onCollaboratorsClick}
+                disabled={!isOwner}
+              >
+                {collaborators.slice(0, 3).map((c, index) => (
+                  <Image
+                    key={c.userId || index}
+                    source={{ uri: c.avatarUrl || "https://ui-avatars.com/api/?name=User" }}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      marginLeft: index === 0 ? 0 : -10,
+                      borderWidth: 2,
+                      borderColor: "#FFFFFF",
+                    }}
+                  />
+                ))}
+                {collaborators.length > 3 && (
+                  <View
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: "#F3F4F6",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      marginLeft: -10,
+                      borderWidth: 2,
+                      borderColor: "#FFFFFF",
+                    }}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: "700", color: "#6B7280" }}>
+                      +{collaborators.length - 3}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {!isViewOnly && renderButton("share-outline", onExportPress, Ionicons)}
+          {!isViewOnly && renderButton("time-outline", onHistory, Ionicons)}
           {renderButton("preview", onPreview, MaterialIcons)}
-          {renderButton(
+          {!isViewOnly && renderButton(
             "layers",
             onToggleLayerPanel,
             MaterialIcons,
             isLayerPanelVisible,
           )}
-          {renderButton("circle-with-cross", onToggleToolbar, Entypo)}
+          {!isViewOnly && renderButton("circle-with-cross", onToggleToolbar, Entypo)}
         </View>
-      </View>
+      </View >
       <Modal
         visible={inviteVisible}
         transparent
@@ -264,9 +328,7 @@ export default function HeaderToolbar({
           </View>
         </View>
       </Modal>
-
-
-    </View>
+    </View >
   );
 }
 
@@ -386,5 +448,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#1E40AF",
+  },
+  viewOnlyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  viewOnlyText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#EF4444",
+  },
+  activeStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#DCFCE7",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#22C55E",
+  },
+  activeStatusText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#166534",
+    textTransform: "uppercase",
   },
 });

@@ -21,6 +21,7 @@ import Reanimated, {
 } from "react-native-reanimated";
 import { getStyles } from "./CourseDetailScreen.styles";
 import { courseService } from "../../../service/courseService";
+import { paymentService } from "../../../service/paymentService";
 import Toast from "react-native-toast-message";
 import { feedbackService } from "../../../service/feedbackService";
 import LottieView from "lottie-react-native";
@@ -65,6 +66,7 @@ export default function CourseDetailScreen() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [feedbackData, setFeedbackData] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   // Biến này dùng để chặn double-click/double-tap
   const isProcessing = useRef(false);
@@ -79,8 +81,20 @@ export default function CourseDetailScreen() {
     fetchCourseDetail(courseId);
     if (user) {
       fetchFeedback(courseId);
+      fetchWallet();
     }
   }, [courseId, user]);
+
+  const fetchWallet = async () => {
+    try {
+      const data = await paymentService.getWallet();
+      if (data && data.result) {
+        setWalletBalance(data.result.balance || 0);
+      }
+    } catch (error) {
+      console.warn("Error fetching wallet:", error);
+    }
+  };
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -141,7 +155,7 @@ export default function CourseDetailScreen() {
       console.warn("Error in handleBuyCourse:", error);
 
       // Xử lý lỗi không đủ tiền
-      if (error.message && error.message.includes("Insufficient balance")) {
+      if (error.message && error.message.toLowerCase().includes("insufficient balance")) {
         setShowConfirmModal(true);
       } else {
         Toast.show({
@@ -174,6 +188,16 @@ export default function CourseDetailScreen() {
         text2: "You need to login to buy courses",
       });
     }
+
+    // Proactive check for insufficient funds
+    if (course && course.price) {
+      const price = Number(course.price) || 0;
+      if (walletBalance < price) {
+        setShowConfirmModal(true);
+        return;
+      }
+    }
+
     setShowPurchaseModal(true);
   };
 

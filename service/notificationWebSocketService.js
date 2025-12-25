@@ -22,13 +22,15 @@ class NotificationWebSocketService {
      * @param {function} onError - Callback on error
      */
     connect(url, userId, token, onMessage, onError) {
+        // Always update the callback reference
+        this.onMessageCallback = onMessage;
+
         if (this.client && this.client.active) {
-            this.onMessageCallback = onMessage;
+            console.log("🔌 WebSocket already connected, updated callback");
             return;
         }
 
         this.userId = userId;
-        this.onMessageCallback = onMessage;
 
         this.client = new Client({
             brokerURL: url,
@@ -50,27 +52,35 @@ class NotificationWebSocketService {
 
             onConnect: (frame) => {
                 this.connected = true;
+                console.log("✅ WebSocket connected successfully");
 
                 // Subscribe to user-specific notification queue
                 // Based on user's previous request: /queue/notifications/{userId}
                 const destination = `/queue/notifications/${this.userId}`;
+                console.log("📡 Subscribing to:", destination);
+
                 this.client.subscribe(destination, (message) => {
+                    console.log("📨 Raw message received:", message.body);
                     if (message.body) {
                         try {
                             const notification = JSON.parse(message.body);
+                            console.log("📬 Parsed notification:", notification);
                             if (this.onMessageCallback) {
+                                console.log("🔔 Calling onMessageCallback...");
                                 this.onMessageCallback(notification);
+                            } else {
+                                console.warn("⚠️ No onMessageCallback set!");
                             }
                         } catch (e) {
-                            console.error("Failed to parse notification:", e);
+                            console.warn("Failed to parse notification:", e);
                         }
                     }
                 });
             },
 
             onStompError: (frame) => {
-                console.error('❌ Broker reported error: ' + frame.headers['message']);
-                console.error('Additional details: ' + frame.body);
+                console.warn('❌ Broker reported error: ' + frame.headers['message']);
+                console.warn('Additional details: ' + frame.body);
                 if (onError) onError(frame);
             },
 

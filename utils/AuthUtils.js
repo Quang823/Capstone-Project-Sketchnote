@@ -25,7 +25,7 @@ export const getUserFromToken = async () => {
       return null;
     }
 
-    console.error("Error getting user from token:", e);
+    console.warn("Error getting user from token:", e);
     return null;
   }
 };
