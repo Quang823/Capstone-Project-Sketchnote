@@ -62,7 +62,7 @@ export const orderService = {
     }
   },
 
-  
+
   createOrderRetry: async (orderId) => {
     try {
       const res = await orderController.createOrderRetry(orderId);
@@ -99,7 +99,19 @@ export const orderService = {
       throw new Error(message);
     }
   },
-  upgradeTemplateVersionLatest: async (resourceTemplateId ) => {
+  getAllTemplates: async (page = 0, size = 10, sortBy, sortDir) => {
+    try {
+      const res = await orderController.getAllTemplates(page, size, sortBy, sortDir);
+      return res.data.result;
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Get all templates failed.";
+      throw new Error(message);
+    }
+  },
+  upgradeTemplateVersionLatest: async (resourceTemplateId) => {
     try {
       const res = await orderController.upgradeTemplateVersionLatest(resourceTemplateId);
       return res.data.result;

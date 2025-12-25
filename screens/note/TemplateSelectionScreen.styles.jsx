@@ -1,73 +1,59 @@
 import { StyleSheet, Dimensions } from "react-native";
 
-const { width } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-// 👉 Card nhỏ hơn và khoảng cách vừa phải
-const CARD_GAP = 12;
-const CARD_WIDTH = (width - CARD_GAP * 3) / 2.2;
-
+// Light theme colors
 const lightColors = {
     background: "#F8FAFC",
-    gradient: ["#F0F9FF", "#E0F2FE", "#BAE6FD"],
-    headerTitle: "#0F172A",
-    headerSubtitle: "#64748B",
-    backButtonBg: "#FFFFFF",
-    backButtonShadow: "#0C4A6E",
-    backButtonIcon: "#0C4A6E",
-    cardBg: "#FFFFFF",
-    cardShadow: "#000",
-    imageBg: "#F1F5F9",
-    imagePlaceholderIcon: "#93C5FD",
-    imagePlaceholderGradient: ["#EFF6FF", "#DBEAFE"],
-    title: "#0F172A",
-    description: "#64748B",
-    badgeText: "#FFFFFF",
-    badgeGradient: ["#F59E0B", "#D97706"],
-    pageCountBadgeBg: "#EFF6FF",
-    pageCountText: "#3B82F6",
-    useButtonBg: "#EFF6FF",
-    useButtonText: "#3B82F6",
-    loadingBoxBg: "#FFFFFF",
-    loadingText: "#475569",
-    emptyIconGradient: ["#EFF6FF", "#DBEAFE"],
-    emptyIcon: "#3B82F6",
-    emptyTitle: "#0F172A",
-    emptyDescription: "#64748B",
-    storeButtonText: "#FFFFFF",
+    cardBackground: "#FFFFFF",
+    headerBackground: "rgba(255,255,255,0.96)",
+    primaryBlue: "#084F8C",
+    primaryWhite: "#0F172A",
+    textPrimary: "#0F172A",
+    textSecondary: "#475569",
+    textMuted: "#94A3B8",
+    borderColor: "#E2E8F0",
+    dividerColor: "#E0E7FF",
+    shadowColor: "#000",
+    filterButtonBg: "#F1F5F9",
+    filterButtonBorder: "#E2E8F0",
+    filterButtonActiveBg: "#084F8C",
+    filterButtonActiveText: "#FFFFFF",
+    filterButtonText: "#64748B",
+    emptyIconColor: "#CBD5E1",
+    loadingColor: "#084F8C",
+    cardBorder: "#E2E8F0",
+    badgeBg: "#E0F2FE",
+    badgeText: "#084F8C",
     creatingOverlay: "rgba(15, 23, 42, 0.7)",
     creatingBoxBg: "#FFFFFF",
     creatingText: "#0F172A",
     creatingSubtext: "#64748B",
 };
 
+// Dark theme colors
 const darkColors = {
     background: "#0F172A",
-    gradient: ["#0F172A", "#1E293B", "#334155"],
-    headerTitle: "#FFFFFF",
-    headerSubtitle: "#94A3B8",
-    backButtonBg: "#1E293B",
-    backButtonShadow: "#000",
-    backButtonIcon: "#F1F5F9",
-    cardBg: "#1E293B",
-    cardShadow: "#000",
-    imageBg: "#334155",
-    imagePlaceholderIcon: "#60A5FA",
-    imagePlaceholderGradient: ["#1E293B", "#334155"],
-    title: "#F1F5F9",
-    description: "#94A3B8",
-    badgeText: "#FFFFFF",
-    badgeGradient: ["#D97706", "#B45309"],
-    pageCountBadgeBg: "#1E293B",
-    pageCountText: "#60A5FA",
-    useButtonBg: "#1E293B",
-    useButtonText: "#60A5FA",
-    loadingBoxBg: "#1E293B",
-    loadingText: "#94A3B8",
-    emptyIconGradient: ["#1E293B", "#334155"],
-    emptyIcon: "#60A5FA",
-    emptyTitle: "#F1F5F9",
-    emptyDescription: "#94A3B8",
-    storeButtonText: "#FFFFFF",
+    cardBackground: "#1E293B",
+    headerBackground: "rgba(30,41,59,0.96)",
+    primaryBlue: "#60A5FA",
+    primaryWhite: "#FFFFFF",
+    textPrimary: "#F1F5F9",
+    textSecondary: "#94A3B8",
+    textMuted: "#64748B",
+    borderColor: "#334155",
+    dividerColor: "#334155",
+    shadowColor: "#000",
+    filterButtonBg: "#1E293B",
+    filterButtonBorder: "#334155",
+    filterButtonActiveBg: "#60A5FA",
+    filterButtonActiveText: "#FFFFFF",
+    filterButtonText: "#94A3B8",
+    emptyIconColor: "#475569",
+    loadingColor: "#60A5FA",
+    cardBorder: "#334155",
+    badgeBg: "#1E3A5F",
+    badgeText: "#60A5FA",
     creatingOverlay: "rgba(0, 0, 0, 0.8)",
     creatingBoxBg: "#1E293B",
     creatingText: "#F1F5F9",
@@ -83,98 +69,87 @@ export const getStyles = (theme = "light") => {
             backgroundColor: colors.background,
         },
 
-        background: {
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: 0,
-            bottom: 0,
-        },
-
+        // Header
         header: {
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
             paddingHorizontal: 20,
-            paddingTop: 40,
-            paddingBottom: 20,
-            backgroundColor: "transparent",
-        },
-
-        backButton: {
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: colors.backButtonBg,
-            alignItems: "center",
-            justifyContent: "center",
-            shadowColor: colors.backButtonShadow,
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.1,
-            shadowRadius: 10,
+            paddingVertical: 16,
+            backgroundColor: colors.headerBackground,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.borderColor,
+            shadowColor: colors.shadowColor,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: theme === "dark" ? 0.3 : 0.06,
+            shadowRadius: 8,
             elevation: 4,
+            paddingTop: 40,
         },
-
-        headerTitleContainer: {
-            alignItems: "left",
+        headerLeft: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 15,
             flex: 1,
         },
-
         headerTitle: {
-            fontSize: 30,
             fontFamily: "Pacifico-Regular",
-            color: colors.headerTitle,
-            marginLeft: 20,
-            letterSpacing: -0.6,
+            fontSize: 26,
+            color: theme === "dark" ? "#FFFFFF" : colors.primaryBlue,
+            letterSpacing: -0.5,
+        },
+        headerRight: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+        headerButton: {
+            width: 40,
+            height: 40,
+            borderRadius: 12,
+            backgroundColor: colors.filterButtonBg,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1,
+            borderColor: colors.borderColor,
         },
 
-        headerSubtitle: {
-            fontSize: 12,
-            fontWeight: "500",
-            marginLeft: 20,
-            color: colors.headerSubtitle,
-            marginTop: 2,
-        },
-
+        // Content
         listContent: {
-            padding: CARD_GAP,
+            padding: 16,
             paddingBottom: 100,
         },
-
         columnWrapper: {
             justifyContent: "space-between",
         },
 
+        // Card
         templateCard: {
-            width: CARD_WIDTH,
-            marginBottom: CARD_GAP,
+            width: (SCREEN_WIDTH - 32 - 3 * 8) / 4,
+            marginBottom: 12,
         },
-
         card: {
-            backgroundColor: colors.cardBg,
-            borderRadius: 16,
+            backgroundColor: colors.cardBackground,
+            borderRadius: 12,
             overflow: "hidden",
-
-            // 👉 Giảm shadow cho nhẹ – premium look
-            shadowColor: colors.cardShadow,
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.06,
+            borderWidth: 1,
+            borderColor: colors.cardBorder,
+            shadowColor: colors.shadowColor,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: theme === "dark" ? 0.3 : 0.08,
             shadowRadius: 8,
             elevation: 3,
         },
-
         imageContainer: {
             width: "100%",
-            height: CARD_WIDTH * 0.65, // nhỏ gọn hơn
-            backgroundColor: colors.imageBg,
+            height: 140,
+            backgroundColor: colors.borderColor,
             position: "relative",
         },
-
         templateImage: {
             width: "100%",
             height: "100%",
         },
-
         placeholderImage: {
             width: "100%",
             height: "100%",
@@ -182,106 +157,91 @@ export const getStyles = (theme = "light") => {
             justifyContent: "center",
         },
 
-        imageGradient: {
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: "50%",
+        // Card Content
+        cardContent: {
+            padding: 8,
+        },
+        cardTitle: {
+            fontSize: 12,
+            fontWeight: "700",
+            color: colors.textPrimary,
+            marginBottom: 4,
+        },
+        cardSubtitle: {
+            fontSize: 10,
+            color: colors.textSecondary,
+            marginBottom: 8,
+            lineHeight: 14,
         },
 
+        // Card Footer
+        cardFooter: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: 4,
+        },
+        pageCountBadge: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: colors.filterButtonBg,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 6,
+        },
+        itemCountText: {
+            fontSize: 9,
+            fontWeight: "600",
+            color: colors.textSecondary,
+        },
+        useButton: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: colors.primaryBlue,
+            paddingHorizontal: 8,
+            paddingVertical: 5,
+            borderRadius: 8,
+        },
+        useButtonText: {
+            fontSize: 10,
+            fontWeight: "700",
+            color: "#FFFFFF",
+        },
+
+        // Badge
         badge: {
             position: "absolute",
-            top: 10,
-            right: 10,
-            borderRadius: 8,
+            top: 8,
+            right: 8,
+            borderRadius: 6,
             overflow: "hidden",
             elevation: 4,
         },
-
         badgeGradient: {
             flexDirection: "row",
             alignItems: "center",
             paddingHorizontal: 8,
             paddingVertical: 4,
             gap: 4,
+            backgroundColor: "#F59E0B",
         },
-
         badgeText: {
             fontSize: 9,
             fontWeight: "800",
-            color: colors.badgeText,
-            letterSpacing: 0.7,
+            color: "#FFFFFF",
+            letterSpacing: 0.5,
         },
 
-        cardInfo: {
-            padding: 10,
-            gap: 4,
-        },
-
-        templateTitle: {
-            fontSize: 14,
-            fontWeight: "800",
-            color: colors.title,
-            letterSpacing: -0.3,
-        },
-
-        templateDescription: {
-            fontSize: 11,
-            color: colors.description,
-            lineHeight: 16,
-            marginBottom: 2,
-        },
-
-        cardFooter: {
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: 2,
-        },
-
-        pageCountBadge: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 3,
-            backgroundColor: colors.pageCountBadgeBg,
-            paddingHorizontal: 7,
-            paddingVertical: 3,
-            borderRadius: 6,
-        },
-
-        itemCountText: {
-            fontSize: 10,
-            fontWeight: "700",
-            color: colors.pageCountText,
-            letterSpacing: 0.2,
-        },
-
-        useButton: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 3,
-            backgroundColor: colors.useButtonBg,
-            paddingHorizontal: 8,
-            paddingVertical: 4,
-            borderRadius: 6,
-        },
-
-        useButtonText: {
-            fontSize: 11,
-            fontWeight: "700",
-            color: colors.useButtonText,
-        },
-
+        // Loading
         loadingContainer: {
             flex: 1,
             alignItems: "center",
             justifyContent: "center",
-            paddingHorizontal: 32,
         },
-
         loadingBox: {
-            backgroundColor: colors.loadingBoxBg,
+            backgroundColor: colors.cardBackground,
             borderRadius: 20,
             padding: 32,
             alignItems: "center",
@@ -293,69 +253,61 @@ export const getStyles = (theme = "light") => {
             elevation: 8,
             minWidth: 200,
         },
-
         loadingText: {
-            fontSize: 15,
-            color: colors.loadingText,
+            fontSize: 14,
+            color: colors.textSecondary,
             fontWeight: "600",
         },
 
+        // Empty State
         emptyContainer: {
             flex: 1,
             alignItems: "center",
             justifyContent: "center",
             paddingHorizontal: 40,
         },
-
         emptyIconContainer: {
-            width: 110,
-            height: 110,
-            borderRadius: 55,
+            width: 100,
+            height: 100,
+            borderRadius: 50,
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 20,
-            shadowColor: "#3B82F6",
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.15,
-            shadowRadius: 14,
-            elevation: 8,
+            backgroundColor: colors.filterButtonBg,
         },
-
         emptyTitle: {
-            fontSize: 26,
+            fontSize: 20,
             fontWeight: "800",
-            color: colors.emptyTitle,
-            marginBottom: 10,
+            color: colors.textPrimary,
+            marginBottom: 8,
         },
-
         emptyDescription: {
-            fontSize: 15,
-            color: colors.emptyDescription,
+            fontSize: 14,
+            color: colors.textMuted,
             textAlign: "center",
-            lineHeight: 22,
-            marginBottom: 28,
+            lineHeight: 20,
+            marginBottom: 24,
         },
-
         storeButton: {
-            borderRadius: 14,
+            borderRadius: 12,
             overflow: "hidden",
-            elevation: 8,
+            elevation: 4,
         },
-
         storeButtonGradient: {
             flexDirection: "row",
             alignItems: "center",
-            paddingHorizontal: 28,
-            paddingVertical: 14,
-            gap: 10,
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            gap: 8,
+            backgroundColor: colors.primaryBlue,
         },
-
         storeButtonText: {
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: "700",
-            color: colors.storeButtonText,
+            color: "#FFFFFF",
         },
 
+        // Creating Overlay
         creatingOverlay: {
             position: "absolute",
             top: 0,
@@ -365,38 +317,37 @@ export const getStyles = (theme = "light") => {
             backgroundColor: colors.creatingOverlay,
             alignItems: "center",
             justifyContent: "center",
+            zIndex: 1000,
         },
-
         creatingBox: {
             backgroundColor: colors.creatingBoxBg,
             borderRadius: 24,
-            padding: 36,
+            padding: 32,
             alignItems: "center",
             minWidth: 260,
             elevation: 10,
         },
-
         creatingIconContainer: {
-            width: 70,
-            height: 70,
-            borderRadius: 35,
+            width: 64,
+            height: 64,
+            borderRadius: 32,
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 16,
+            backgroundColor: colors.primaryBlue,
         },
-
         creatingText: {
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: "800",
             color: colors.creatingText,
-            marginBottom: 6,
+            marginBottom: 4,
         },
-
         creatingSubtext: {
-            fontSize: 13,
+            fontSize: 12,
             color: colors.creatingSubtext,
             fontWeight: "500",
         },
+
         colors: colors,
     });
 };

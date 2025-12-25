@@ -138,7 +138,7 @@ export const projectService = {
               pageNumber,
               remoteData
             );
-          } catch {}
+          } catch { }
         }
         return remoteData;
       }
@@ -170,7 +170,7 @@ export const projectService = {
             pageNumber,
             remoteData
           );
-        } catch {}
+        } catch { }
       }
       return remoteData;
     } catch (error) {
@@ -318,8 +318,8 @@ export const projectService = {
       const content = Array.isArray(r?.projects)
         ? r.projects
         : Array.isArray(r?.content)
-        ? r.content
-        : [];
+          ? r.content
+          : [];
       const totalElements =
         r?.totalElements ??
         r?.page?.totalElements ??
@@ -563,7 +563,7 @@ export const projectService = {
             return new WebSocket(wsUrl);
           },
 
-          debug: (str) => {},
+          debug: (str) => { },
 
           reconnectDelay: 5000,
           heartbeatIncoming: 4000,
@@ -575,11 +575,11 @@ export const projectService = {
 
           connectHeaders: token
             ? {
-                Authorization: `Bearer ${token}`,
-              }
+              Authorization: `Bearer ${token}`,
+            }
             : undefined,
 
-          beforeConnect: () => {},
+          beforeConnect: () => { },
 
           onConnect: (frame) => {
             isConnected = true;
@@ -598,7 +598,7 @@ export const projectService = {
                   onMessageCb(json);
                 }
               } catch (err) {
-                console.error("❌ [Realtime] Error processing message:", err);
+                console.warn("❌ [Realtime] Error processing message:", err);
               }
             });
 
@@ -615,7 +615,7 @@ export const projectService = {
                     });
                   }
                 } catch (err) {
-                  console.error("❌ [Realtime] Error flushing message:", err);
+                  console.warn("❌ [Realtime] Error flushing message:", err);
                 }
               });
               pendingQueue = [];
@@ -623,11 +623,11 @@ export const projectService = {
           },
 
           onWebSocketError: (e) => {
-            console.error("❌❌❌ [Realtime] WebSocket ERROR ❌❌❌", e);
+            console.warn("❌❌❌ [Realtime] WebSocket ERROR ❌❌❌", e);
           },
 
           onStompError: (frame) => {
-            console.error("❌❌❌ [Realtime] STOMP ERROR ❌❌❌", frame);
+            console.warn("❌❌❌ [Realtime] STOMP ERROR ❌❌❌", frame);
           },
 
           onWebSocketClose: (e) => {
@@ -641,7 +641,7 @@ export const projectService = {
 
         return true;
       } catch (err) {
-        console.error("❌❌❌ [Realtime] CONNECT ERROR ❌❌❌", err);
+        console.warn("❌❌❌ [Realtime] CONNECT ERROR ❌❌❌", err);
         throw err;
       }
     };
@@ -719,7 +719,7 @@ export const projectService = {
         } else {
           pendingQueue.push(frame);
         }
-      } catch {}
+      } catch { }
     };
 
     const sendDraw = (projectId, userId, tool, points = []) => {
@@ -819,6 +819,12 @@ export const projectService = {
       if (stroke.uri) minimalStroke.uri = stroke.uri;
       if (stroke.rows) minimalStroke.rows = stroke.rows;
       if (stroke.cols) minimalStroke.cols = stroke.cols;
+      if (stroke.shape) minimalStroke.shape = stroke.shape;
+      if (stroke.sides) minimalStroke.sides = stroke.sides;
+      if (stroke.tapeSettings) minimalStroke.tapeSettings = stroke.tapeSettings;
+      if (stroke.fill != null) minimalStroke.fill = stroke.fill;
+      if (stroke.fillColor) minimalStroke.fillColor = stroke.fillColor;
+      if (stroke.shapeSettings) minimalStroke.shapeSettings = stroke.shapeSettings;
 
       // Build optimized payload - NO DUPLICATES
       const payload = {

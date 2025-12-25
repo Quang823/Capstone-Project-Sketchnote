@@ -220,7 +220,7 @@ export function useCollaboration(options) {
         setIsConnected(true);
       })
       .catch((error) => {
-        console.error("[useCollaboration] Connection failed:", error);
+        console.warn("[useCollaboration] Connection failed:", error);
         setIsConnected(false);
         setIsSyncing(false);
       });

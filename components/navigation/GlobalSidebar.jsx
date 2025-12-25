@@ -23,7 +23,7 @@ import { useNavigation } from "../../context/NavigationContext";
 import { AuthContext } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 
-export default function GlobalSidebar() {
+export default function GlobalSidebar({ currentRoute }) {
   const {
     sidebarOpen,
     activeNavItem,
@@ -195,6 +195,45 @@ export default function GlobalSidebar() {
       ).start();
     }
   }, [user?.hasActiveSubscription]);
+
+  // Sync activeNavItem with currentRoute
+  useEffect(() => {
+    if (!currentRoute) return;
+
+    const routeToId = {
+      // Designer
+      DesignerDashboard: "designerDashboard",
+      DesignerProducts: "products",
+      DesignerAnalytics: "analytics",
+      DesignerQuickUpload: "quickUpload",
+      DesignerWallet: "wallet",
+
+      // Main
+      Home: "home",
+      GuestHome: "home",
+      CoursesScreen: "courses",
+      MyCourses: "myCourses",
+      Gallery: "gallery",
+
+      // Store
+      ResourceStore: "store",
+      OrderHistory: "orderHistory",
+
+      // Blog
+      BlogList: "blogAll",
+      MyBlog: "blogMine",
+
+      // Account/Settings
+      Profile: "profile",
+      Policy: "policy",
+      Settings: "settings",
+    };
+
+    const newActiveId = routeToId[currentRoute];
+    if (newActiveId && newActiveId !== activeNavItem) {
+      setActiveNavItem(newActiveId);
+    }
+  }, [currentRoute]);
 
   const overlayStyle = useAnimatedStyle(() => ({
     opacity: overlayAnimation.value,

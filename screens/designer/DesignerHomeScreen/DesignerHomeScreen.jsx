@@ -12,8 +12,10 @@ import {
     Image,
 } from "react-native";
 
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useNavigation } from "@react-navigation/native";
+import React, { useState, useEffect, useMemo, useCallback, useRef, useContext } from "react";
+import { AuthContext } from "../../../context/AuthContext";
+import { Modal, TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import SidebarToggleButton from "../../../components/navigation/SidebarToggleButton";
@@ -23,9 +25,7 @@ import { formatCurrencyVN } from "../../../common/formatCurrencyVN";
 import { notiService } from "../../../service/notiService";
 import { useNavigation as useNavContext } from "../../../context/NavigationContext";
 import { paymentService } from "../../../service/paymentService";
-import { notificationWebSocketService } from "../../../service/notificationWebSocketService";
-import { authService } from "../../../service/authService";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNotifications } from "../../../context/NotificationContext";
 import { useTheme } from "../../../context/ThemeContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -33,16 +33,28 @@ const HEADER_HEIGHT = 180;
 
 export default function DesignerHomeScreen() {
     const navigation = useNavigation();
+    const { user } = useContext(AuthContext);
+    const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false);
     const { setActiveNavItem } = useNavContext();
     const [activeNavItemLocal, setActiveNavItemLocal] = useState("home");
     const [dashboardSummary, setDashboardSummary] = useState({});
-    const [notiCount, setNotiCount] = useState(0);
     const [notiOpen, setNotiOpen] = useState(false);
-    const [notifications, setNotifications] = useState([]);
     const [loadingNoti, setLoadingNoti] = useState(false);
     const [topTemplates, setTopTemplates] = useState([]);
     const [wallet, setWallet] = useState({});
-    const [currentUserId, setCurrentUserId] = useState(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Use NotificationContext for real-time notifications
+    const {
+        notifications,
+        setNotifications,
+        unreadCount: notiCount,
+        setUnreadCount: setNotiCount,
+        setPanelOpen,
+        markAsRead,
+        markAllAsRead,
+        subscribeToNotifications,
+    } = useNotifications();
 
     const { theme } = useTheme();
     const isDark = theme === "dark";
@@ -53,14 +65,18 @@ export default function DesignerHomeScreen() {
         setActiveNavItemLocal("home");
     }, [setActiveNavItem]);
 
-    const notiOpenRef = useRef(notiOpen);
+    // Sync panel open state with NotificationContext
     useEffect(() => {
-        notiOpenRef.current = notiOpen;
-    }, [notiOpen]);
+        setPanelOpen(notiOpen);
+    }, [notiOpen, setPanelOpen]);
 
     const handleQuickAction = (action) => {
         switch (action) {
             case "quickUpload":
+                if (!user?.hasActiveSubscription || !user?.subscriptionType?.includes("Designer")) {
+                    setSubscriptionModalVisible(true);
+                    return;
+                }
                 navigation.navigate("DesignerQuickUpload");
                 break;
             case "products":
@@ -101,13 +117,7 @@ export default function DesignerHomeScreen() {
         } catch (error) { }
     };
 
-    const loadNotiCount = async () => {
-        try {
-            const data = await notiService.getCountNotiUnRead();
-            const count = Number(data?.unread ?? 0);
-            setNotiCount(count);
-        } catch (error) { }
-    };
+    // Note: loadNotiCount is now handled by NotificationContext
 
     const toggleNotiDropdown = async () => {
         const next = !notiOpen;
@@ -128,90 +138,67 @@ export default function DesignerHomeScreen() {
 
     const handleReadAllNoti = async () => {
         try {
-            await notiService.readAllNoti();
-            setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-            setNotiCount(0);
+            await markAllAsRead();
         } catch (error) {
+            console.warn("Error marking all as read:", error);
         }
     };
 
     const handleReadSingleNoti = async (item) => {
         if (item.read) return;
         try {
-            await notiService.readNotiByNotiId(item.id);
-            setNotifications((prev) =>
-                prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
-            );
-            setNotiCount((prev) => (prev > 0 ? prev - 1 : 0));
+            await markAsRead(item.id);
         } catch (error) {
+            console.warn("Error marking notification as read:", error);
         }
     };
 
-    // Get current user ID
-    useEffect(() => {
-        const getCurrentUser = async () => {
-            try {
-                const profile = await authService.getMyProfile();
-                if (profile && profile.id) {
-                    setCurrentUserId(profile.id);
-                }
-            } catch (error) {
-                console.warn("Error fetching current user:", error);
-            }
-        };
-        getCurrentUser();
+    // Refresh dashboard data (wallet, summary) - used for real-time updates
+    const refreshDashboardData = useCallback(async () => {
+        setIsRefreshing(true);
+        try {
+            await Promise.all([
+                fetchSashboardSummary(),
+                fetchWallet(),
+            ]);
+            console.log("📊 Dashboard data refreshed");
+        } catch (error) {
+            console.warn("Error refreshing dashboard:", error);
+        } finally {
+            // Small delay to show refresh animation
+            setTimeout(() => setIsRefreshing(false), 500);
+        }
     }, []);
 
     useEffect(() => {
         fetchSashboardSummary();
         fetchTopTemplates();
-        loadNotiCount();
         fetchWallet();
+        // Note: Notification count is now managed by NotificationContext
     }, []);
 
-    // Connect to WebSocket for real-time notifications
-    useFocusEffect(
-        useCallback(() => {
-            if (!currentUserId) return;
+    // Subscribe to notification events for real-time dashboard updates
+    useEffect(() => {
+        if (!subscribeToNotifications) return;
 
-            const connectWebSocket = async () => {
-                try {
-                    const token = await AsyncStorage.getItem("accessToken");
-                    if (!token) {
-                        console.warn("❌ No access token, cannot connect WebSocket");
-                        return;
-                    }
+        const unsubscribe = subscribeToNotifications((notification) => {
+            console.log("🔔 Designer received notification:", notification?.type);
 
-                    const apiUrl = process.env.EXPO_PUBLIC_API_URL || "https://sketchnote.litecsys.com/";
-                    const wsUrl = apiUrl.replace(/^http/, "ws").replace(/\/$/, "") + `/ws-notifications`;
+            // Refresh dashboard when receiving purchase-related notifications
+            const refreshTypes = ["PURCHASE", "PURCHASE_CONFIRM", "WALLET_TRANSACTION"];
+            if (refreshTypes.includes(notification?.type)) {
+                console.log("💰 Refreshing dashboard due to:", notification?.type);
+                refreshDashboardData();
+            }
+        });
 
-                    notificationWebSocketService.connect(
-                        wsUrl,
-                        currentUserId,
-                        token,
-                        (notification) => {
-                            const isRead = notification.read ?? false;
-                            if (!isRead) {
-                                setNotiCount((prev) => prev + 1);
-                            }
-                            if (notiOpenRef.current) {
-                                setNotifications((prev) => [{ ...notification, read: isRead }, ...prev]);
-                            }
-                        },
-                        (error) => console.warn("❌ WebSocket error:", error)
-                    );
-                } catch (error) {
-                    console.warn("❌ Error connecting WebSocket:", error);
-                }
-            };
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [subscribeToNotifications, refreshDashboardData]);
 
-            connectWebSocket();
-
-            return () => {
-                notificationWebSocketService.disconnect();
-            };
-        }, [currentUserId])
-    );
+    // Note: WebSocket connection is now managed globally by NotificationContext
+    // All users (not just designers) will receive real-time notifications
 
     return (
         <View style={styles.container}>
@@ -232,20 +219,36 @@ export default function DesignerHomeScreen() {
                     style={styles.notificationButton}
                     onPress={toggleNotiDropdown}
                 >
-                    <Icon name="notifications" size={24} color={styles.iconColor} />
-                    {notiCount > 0 && (
-                        <View style={styles.notificationBadge}>
-                            <Text
+                    <View style={{ position: "relative" }}>
+                        <Icon name="notifications" size={22} color="#1E40AF" />
+                        {notiCount > 0 && (
+                            <View
                                 style={{
-                                    color: "#FFF",
-                                    fontSize: 10,
-                                    fontWeight: "700",
+                                    position: "absolute",
+                                    top: -8,
+                                    right: -8,
+                                    minWidth: 16,
+                                    height: 16,
+                                    borderRadius: 8,
+                                    backgroundColor: "#EF4444",
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    paddingHorizontal: 3,
                                 }}
                             >
-                                {notiCount > 99 ? "99+" : notiCount}
-                            </Text>
-                        </View>
-                    )}
+                                <Text
+                                    style={{
+                                        color: "#FFF",
+                                        fontSize: 10,
+                                        fontWeight: "700",
+                                    }}
+                                    numberOfLines={1}
+                                >
+                                    {notiCount > 99 ? "99+" : notiCount}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
                 </Pressable>
             </View>
 
@@ -288,11 +291,16 @@ export default function DesignerHomeScreen() {
                                 <View style={styles.walletHeaderRow}>
                                     <View>
                                         <Text style={styles.walletLabel}>Available Balance</Text>
-                                        <Text style={styles.walletAmount}>
-                                            {formatCurrencyVN(
-                                                wallet?.balance || 0
+                                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                                            <Text style={[styles.walletAmount, isRefreshing && { opacity: 0.5 }]}>
+                                                {formatCurrencyVN(
+                                                    wallet?.balance || 0
+                                                )}
+                                            </Text>
+                                            {isRefreshing && (
+                                                <Icon name="sync" size={16} color="#084F8C" style={{ opacity: 0.7 }} />
                                             )}
-                                        </Text>
+                                        </View>
                                     </View>
                                     <View style={styles.walletIconBg}>
                                         <Icon
@@ -340,9 +348,14 @@ export default function DesignerHomeScreen() {
                     <View style={styles.statCard}>
                         <View style={styles.statContent}>
                             <View>
-                                <Text style={styles.statNumber}>
-                                    {dashboardSummary?.totalSoldCount || 0}
-                                </Text>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                    <Text style={[styles.statNumber, isRefreshing && { opacity: 0.5 }]}>
+                                        {dashboardSummary?.totalSoldCount || 0}
+                                    </Text>
+                                    {isRefreshing && (
+                                        <Icon name="sync" size={14} color="#084F8C" style={{ opacity: 0.7 }} />
+                                    )}
+                                </View>
                                 <Text style={styles.statLabel}>Purchases</Text>
                             </View>
                             <Image
@@ -359,9 +372,14 @@ export default function DesignerHomeScreen() {
                     <View style={styles.statCard}>
                         <View style={styles.statContent}>
                             <View>
-                                <Text style={styles.statNumber}>
-                                    {formatCurrencyVN(dashboardSummary?.totalRevenue || 0)}
-                                </Text>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                    <Text style={[styles.statNumber, isRefreshing && { opacity: 0.5 }]}>
+                                        {formatCurrencyVN(dashboardSummary?.totalRevenue || 0)}
+                                    </Text>
+                                    {isRefreshing && (
+                                        <Icon name="sync" size={14} color="#084F8C" style={{ opacity: 0.7 }} />
+                                    )}
+                                </View>
                                 <Text style={styles.statLabel}>Revenue</Text>
                             </View>
                             <Image
@@ -534,6 +552,42 @@ export default function DesignerHomeScreen() {
                     )}
                 </View>
             )}
+            {/* Subscription Modal */}
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={subscriptionModalVisible}
+                onRequestClose={() => setSubscriptionModalVisible(false)}
+            >
+                <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" }}>
+                    <View style={{ width: "80%", backgroundColor: isDark ? "#1E293B" : "white", borderRadius: 20, padding: 20, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}>
+                        <Icon name="workspace-premium" size={50} color="#F59E0B" style={{ marginBottom: 15 }} />
+                        <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10, textAlign: "center", color: isDark ? "white" : "black" }}>
+                            Subscription Required
+                        </Text>
+                        <Text style={{ fontSize: 14, color: isDark ? "#CBD5E1" : "#64748B", textAlign: "center", marginBottom: 20 }}>
+                            Your subscription has expired or is invalid. Please upgrade to a Designer plan to upload resources.
+                        </Text>
+                        <View style={{ flexDirection: "row", gap: 10, width: "100%" }}>
+                            <TouchableOpacity
+                                style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: isDark ? "#334155" : "#F1F5F9", alignItems: "center" }}
+                                onPress={() => setSubscriptionModalVisible(false)}
+                            >
+                                <Text style={{ color: isDark ? "white" : "#475569", fontWeight: "600" }}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: "#3B82F6", alignItems: "center" }}
+                                onPress={() => {
+                                    setSubscriptionModalVisible(false);
+                                    navigation.navigate("DesignerSubscription");
+                                }}
+                            >
+                                <Text style={{ color: "white", fontWeight: "600" }}>Upgrade Now</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }

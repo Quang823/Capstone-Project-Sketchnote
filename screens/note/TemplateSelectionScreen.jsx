@@ -8,8 +8,8 @@ import {
     Dimensions,
     Image,
     Animated,
+    StatusBar,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { orderService } from "../../service/orderService";
 import { projectService } from "../../service/projectService";
@@ -42,7 +42,7 @@ const AnimatedTemplateCard = ({ item, onPress, disabled, styles }) => {
 
     return (
         <TouchableOpacity
-            activeOpacity={1}
+            activeOpacity={0.9}
             style={styles.templateCard}
             onPress={onPress}
             onPressIn={handlePressIn}
@@ -51,57 +51,44 @@ const AnimatedTemplateCard = ({ item, onPress, disabled, styles }) => {
         >
             <Animated.View style={[styles.card, { transform: [{ scale: scaleAnim }] }]}>
                 <View style={styles.imageContainer}>
-                    {item.images && item.images.length > 0 ? (
+                    {item.bannerUrl && item.bannerUrl.length > 0 ? (
                         <Image
-                            source={{ uri: item.images[0] }}
+                            source={{ uri: item.bannerUrl }}
                             style={styles.templateImage}
                             resizeMode="cover"
                         />
                     ) : (
-                        <LinearGradient
-                            colors={styles.colors.imagePlaceholderGradient}
-                            style={styles.placeholderImage}
-                        >
-                            <Icon name="image" size={56} color={styles.colors.imagePlaceholderIcon} />
-                        </LinearGradient>
+                        <View style={styles.placeholderImage}>
+                            <Icon name="image" size={40} color={styles.colors.textMuted} />
+                        </View>
                     )}
-                    <LinearGradient
-                        colors={["transparent", "rgba(0,0,0,0.4)"]}
-                        style={styles.imageGradient}
-                    />
+
                     <View style={styles.badge}>
-                        <LinearGradient
-                            colors={styles.colors.badgeGradient}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.badgeGradient}
-                        >
-                            <Icon name="stars" size={12} color="#FFF" />
+                        <View style={styles.badgeGradient}>
+                            <Icon name="stars" size={10} color="#FFF" />
                             <Text style={styles.badgeText}>PREMIUM</Text>
-                        </LinearGradient>
+                        </View>
                     </View>
                 </View>
 
-                <View style={styles.cardInfo}>
-                    <Text style={styles.templateTitle} numberOfLines={1}>
+                <View style={styles.cardContent}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
                         {item.name}
                     </Text>
-                    <Text style={styles.templateDescription} numberOfLines={2}>
+                    <Text style={styles.cardSubtitle} numberOfLines={2}>
                         {item.description || "Professional template ready to use"}
                     </Text>
 
                     <View style={styles.cardFooter}>
-                        <View style={styles.itemCount}>
-                            <View style={styles.pageCountBadge}>
-                                <Icon name="layers" size={14} color={styles.colors.pageCountText} />
-                                <Text style={styles.itemCountText}>
-                                    {item.items?.length || 0} {item.items?.length !== 1 ? "pages" : "page"}
-                                </Text>
-                            </View>
+                        <View style={styles.pageCountBadge}>
+                            <Icon name="layers" size={12} color={styles.colors.textSecondary} />
+                            <Text style={styles.itemCountText}>
+                                {item.items?.length || 0} {item.items?.length !== 1 ? "pages" : "page"}
+                            </Text>
                         </View>
                         <View style={styles.useButton}>
                             <Text style={styles.useButtonText}>Use</Text>
-                            <Icon name="arrow-forward" size={14} color={styles.colors.useButtonText} />
+                            <Icon name="arrow-forward" size={12} color="#FFF" />
                         </View>
                     </View>
                 </View>
@@ -127,7 +114,9 @@ export default function TemplateSelectionScreen({ navigation }) {
         try {
             setLoading(true);
             const data = await orderService.getPurchasedTemplates();
-            setTemplates(data || []);
+            // Filter to only show TEMPLATES
+            const filteredTemplates = (data || []).filter(item => item.type === "TEMPLATES");
+            setTemplates(filteredTemplates);
         } catch (error) {
             console.warn("Failed to fetch templates:", error);
             toast({
@@ -211,6 +200,7 @@ export default function TemplateSelectionScreen({ navigation }) {
                     title: "Success",
                     description: `Project created with ${uploadedPages.length} page(s)!`,
                     variant: "success",
+                    visibilityTime: 2000,
                 });
 
                 const noteConfig = {
@@ -262,61 +252,60 @@ export default function TemplateSelectionScreen({ navigation }) {
         />
     );
 
+    const isDark = theme === "dark";
+
     return (
         <View style={styles.container}>
-            <LinearGradient
-                colors={styles.colors.gradient}
-                style={styles.background}
+            <StatusBar
+                barStyle={isDark ? "light-content" : "dark-content"}
+                backgroundColor={styles.colors.headerBackground}
             />
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity
-                    style={styles.backButton}
-                    onPress={() => navigation.goBack()}
-                >
-                    <Icon name="arrow-back" size={24} color={styles.colors.backButtonIcon} />
-                </TouchableOpacity>
-                <View style={styles.headerTitleContainer}>
-                    <Text style={styles.headerTitle}>Choose Template</Text>
-                    <Text style={styles.headerSubtitle}>{templates.length} templates available</Text>
+                <View style={styles.headerLeft}>
+                    <TouchableOpacity
+                        style={styles.headerButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Icon name="arrow-back" size={22} color={styles.colors.textSecondary} />
+                    </TouchableOpacity>
+                    <View>
+                        <Text style={styles.headerTitle}>
+                            Choose Template
+                        </Text>
+                        <Text style={{ fontSize: 12, color: styles.colors.textSecondary }}>
+                            {templates.length} templates available
+                        </Text>
+                    </View>
                 </View>
-                <View style={{ width: 40 }} />
             </View>
 
             {/* Content */}
             {loading ? (
                 <View style={styles.loadingContainer}>
                     <View style={styles.loadingBox}>
-                        <ActivityIndicator size="large" color="#3B82F6" />
+                        <ActivityIndicator size="large" color={styles.colors.loadingColor} />
                         <Text style={styles.loadingText}>Loading templates...</Text>
                     </View>
                 </View>
             ) : templates.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                    <LinearGradient
-                        colors={styles.colors.emptyIconGradient}
-                        style={styles.emptyIconContainer}
-                    >
-                        <Icon name="inventory-2" size={64} color={styles.colors.emptyIcon} />
-                    </LinearGradient>
+                    <View style={styles.emptyIconContainer}>
+                        <Icon name="inventory-2" size={48} color={styles.colors.primaryBlue} />
+                    </View>
                     <Text style={styles.emptyTitle}>No Templates Yet</Text>
                     <Text style={styles.emptyDescription}>
                         Discover beautiful templates in our store{"\n"}and start creating amazing projects
                     </Text>
                     <TouchableOpacity
                         style={styles.storeButton}
-                        onPress={() => navigation.navigate("StoreScreen")}
+                        onPress={() => navigation.navigate("ResourceStore")}
                     >
-                        <LinearGradient
-                            colors={["#3B82F6", "#2563EB"]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.storeButtonGradient}
-                        >
+                        <View style={styles.storeButtonGradient}>
                             <Icon name="store" size={20} color="#FFF" />
                             <Text style={styles.storeButtonText}>Browse Store</Text>
-                        </LinearGradient>
+                        </View>
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -324,7 +313,7 @@ export default function TemplateSelectionScreen({ navigation }) {
                     data={templates}
                     renderItem={renderTemplateItem}
                     keyExtractor={(item) => item.resourceTemplateId.toString()}
-                    numColumns={2}
+                    numColumns={4}
                     contentContainerStyle={styles.listContent}
                     columnWrapperStyle={styles.columnWrapper}
                     showsVerticalScrollIndicator={false}
@@ -335,12 +324,9 @@ export default function TemplateSelectionScreen({ navigation }) {
             {creating && (
                 <View style={styles.creatingOverlay}>
                     <View style={styles.creatingBox}>
-                        <LinearGradient
-                            colors={["#3B82F6", "#2563EB"]}
-                            style={styles.creatingIconContainer}
-                        >
+                        <View style={styles.creatingIconContainer}>
                             <ActivityIndicator size="large" color="#FFF" />
-                        </LinearGradient>
+                        </View>
                         <Text style={styles.creatingText}>Creating your project</Text>
                         <Text style={styles.creatingSubtext}>This will only take a moment...</Text>
                     </View>
