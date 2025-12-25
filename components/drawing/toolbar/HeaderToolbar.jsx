@@ -26,6 +26,7 @@ export default function HeaderToolbar({
   onCamera,
   onToggleLayerPanel,
   isLayerPanelVisible = false,
+  isToolbarVisible = true,
   onExportPress,
   projectId,
   onAIChat,
@@ -112,6 +113,7 @@ export default function HeaderToolbar({
           onPressIn={onPressIn}
           onPressOut={onPressOut}
           style={styles.iconButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <IconComponent name={icon} size={22} color="#111827" />
         </TouchableOpacity>
@@ -220,7 +222,11 @@ export default function HeaderToolbar({
             MaterialIcons,
             isLayerPanelVisible,
           )}
-          {!isViewOnly && renderButton("circle-with-cross", onToggleToolbar, Entypo)}
+          {!isViewOnly && renderButton(
+            isToolbarVisible ? "circle-with-cross" : "brush",
+            onToggleToolbar,
+            isToolbarVisible ? Entypo : Ionicons
+          )}
         </View>
       </View >
       <Modal
@@ -345,6 +351,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
+    zIndex: 50, // Ensure it's on top
   },
   row: {
     flexDirection: "row",
@@ -353,7 +360,7 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     borderRadius: 12,
-    padding: 6,
+    padding: 10, // Increased padding for better touch target
   },
   modalBackdrop: {
     flex: 1,

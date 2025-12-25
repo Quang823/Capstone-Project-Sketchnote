@@ -43,4 +43,7 @@ export const orderController = {
   upgradeTemplateVersionLatest: async (resourceTemplateId) => {
     return await privateApi.post(`api/orders/user_resources/user/me/resource/${resourceTemplateId}/upgrade`);
   },
+  getDesignerPublishedTemplates: async () => {
+    return await privateApi.get(`api/orders/user_resources/user/me/published-templates`);
+  },
 };

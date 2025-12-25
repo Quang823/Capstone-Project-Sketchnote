@@ -3119,6 +3119,7 @@ export default function DrawingScreen({ route }) {
       <HeaderToolbar
         onBack={() => setExitModalVisible(true)}
         onToggleToolbar={() => setToolbarVisible((v) => !v)}
+        isToolbarVisible={toolbarVisible}
         onPreview={() => { }} // Sidebar đã tích hợp trong MultiPageCanvas
         onCamera={handleOpenCamera}
         onToggleLayerPanel={() => setShowLayerPanel((v) => !v)}
