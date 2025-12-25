@@ -7,6 +7,7 @@ import {
   Pressable,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -26,6 +27,9 @@ export default function MyBlogScreen({ navigation }) {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [blogToDelete, setBlogToDelete] = useState(null);
+  const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
+  const [moderationInfo, setModerationInfo] = useState(null);
+  const [loadingModeration, setLoadingModeration] = useState(false);
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
@@ -45,8 +49,29 @@ export default function MyBlogScreen({ navigation }) {
     navigation.navigate("UpdateBlog", { blog });
   };
 
-  const handleViewBlog = (blogId) => {
-    navigation.navigate("BlogDetail", { blogId });
+  const handleViewBlog = async (item) => {
+    // If AI_REJECTED, show rejection reason modal
+    if (item.status === "AI_REJECTED") {
+      try {
+        setLoadingModeration(true);
+        setRejectionModalVisible(true);
+        const moderationData = await blogService.getBLogwithModeration(item.id);
+        if (moderationData.result && moderationData.result.length > 0) {
+          setModerationInfo(moderationData.result[0]);
+        }
+      } catch (error) {
+        console.warn("❌ Error fetching moderation info:", error);
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Failed to load rejection details",
+        });
+      } finally {
+        setLoadingModeration(false);
+      }
+    } else {
+      navigation.navigate("BlogDetail", { blogId: item.id });
+    }
   };
 
   const handleDeleteBlog = (blogId) => {
@@ -83,7 +108,7 @@ export default function MyBlogScreen({ navigation }) {
     }, [])
   );
 
-  const statuses = ["ALL", "PUBLISHED", "PENDING_REVIEW", "REJECTED"];
+  const statuses = ["ALL", "PUBLISHED", "PENDING_REVIEW", "REJECTED", "AI_REJECTED"];
   const visibleBlogs =
     statusFilter === "ALL"
       ? blogs
@@ -258,90 +283,92 @@ export default function MyBlogScreen({ navigation }) {
                     isDark && myBlogStyles.blogCardDark,
                     { opacity: (item.status === "REJECTED" || item.status === "AI_REJECTED") ? 0.7 : 1 }
                   ]}
-                  onPress={() => handleViewBlog(item.id)}
+                  onPress={() => handleViewBlog(item)}
                 >
-                  {/* Image Section */}
-                  <View style={myBlogStyles.blogImageContainer}>
-                    <Image
-                      source={{
-                        uri: item.imageUrl || "https://i.imgur.com/9Y2w2fQ.jpeg",
-                      }}
-                      style={myBlogStyles.blogImage}
-                    />
-                    <LinearGradient
-                      colors={['transparent', 'rgba(0,0,0,0.5)']}
-                      style={myBlogStyles.blogImageGradient}
-                    />
-                    <View style={[
-                      myBlogStyles.statusBadge,
-                      { backgroundColor: statusStyle.backgroundColor }
-                    ]}>
-                      <Icon name={statusStyle.icon} size={12} color={statusStyle.color} />
-                      <Text style={[
-                        myBlogStyles.statusBadgeText,
-                        { color: statusStyle.color }
-                      ]}>
-                        {String(item.status || "PENDING_REVIEW").toUpperCase()}
-                      </Text>
+                  {/* Horizontal Layout */}
+                  <View style={{ flexDirection: 'row' }}>
+                    {/* Image Section - Left Side */}
+                    <View style={myBlogStyles.blogImageContainer}>
+                      <Image
+                        source={{
+                          uri: item.imageUrl || "https://i.imgur.com/9Y2w2fQ.jpeg",
+                        }}
+                        style={myBlogStyles.blogImage}
+                      />
+                      <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.3)']}
+                        style={myBlogStyles.blogImageGradient}
+                      />
                     </View>
-                  </View>
 
-                  {/* Content Section */}
-                  <View style={myBlogStyles.blogContent}>
-                    <Text style={[myBlogStyles.blogTitle, isDark && myBlogStyles.blogTitleDark]} numberOfLines={2}>
-                      {item.title}
-                    </Text>
-                    <Text style={[myBlogStyles.blogDesc, isDark && myBlogStyles.blogDescDark]} numberOfLines={3}>
-                      {item.summary || "No summary available"}
-                    </Text>
-
-                    {/* Meta Info */}
-                    <View style={[myBlogStyles.blogMeta, isDark && myBlogStyles.blogMetaDark]}>
-                      <View style={myBlogStyles.metaItem}>
-                        <Icon name="schedule" size={14} color={isDark ? "#94A3B8" : "#94A3B8"} />
-                        <Text style={[myBlogStyles.metaText, isDark && myBlogStyles.metaTextDark]}>
-                          {new Date(item.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </Text>
-                      </View>
-                      {item.contents && item.contents.length > 0 && (
-                        <View style={myBlogStyles.metaItem}>
-                          <Icon name="article" size={14} color={isDark ? "#94A3B8" : "#94A3B8"} />
-                          <Text style={[myBlogStyles.metaText, isDark && myBlogStyles.metaTextDark]}>
-                            {item.contents.length} {item.contents.length > 1 ? "sections" : "section"}
+                    {/* Content Section - Middle */}
+                    <View style={myBlogStyles.blogContent}>
+                      {/* Top Row: Status Badge + Action Buttons */}
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        {/* Status Badge */}
+                        <View style={[
+                          myBlogStyles.statusBadge,
+                          { backgroundColor: statusStyle.backgroundColor, position: 'relative', top: 0, right: 0 }
+                        ]}>
+                          <Icon name={statusStyle.icon} size={10} color={statusStyle.color} />
+                          <Text style={[
+                            myBlogStyles.statusBadgeText,
+                            { color: statusStyle.color }
+                          ]}>
+                            {String(item.status || "PENDING_REVIEW").toUpperCase()}
                           </Text>
                         </View>
-                      )}
-                    </View>
 
-                    {/* Action Buttons */}
-                    <View style={myBlogStyles.blogActions}>
-                      <Pressable
-                        onPress={() => handleUpdateBlog(item)}
-                        style={myBlogStyles.actionButton}
-                      >
-                        <Icon name="edit" size={18} color={isDark ? "#60A5FA" : "#084F8C"} />
-                        <Text style={[myBlogStyles.actionButtonText, isDark && myBlogStyles.actionButtonTextDark]}>Edit</Text>
-                      </Pressable>
-                      <View style={[myBlogStyles.actionDivider, isDark && myBlogStyles.actionDividerDark]} />
-                      <Pressable
-                        onPress={() => handleDeleteBlog(item.id)}
-                        style={myBlogStyles.actionButton}
-                      >
-                        <DeleteConfirmModal
-                          visible={deleteModalVisible}
-                          onClose={() => setDeleteModalVisible(false)}
-                          onConfirm={confirmDelete}
-                          blogTitle={blogToDelete?.title}
-                        />
-                        <Icon name="delete-outline" size={18} color="#EF4444" />
-                        <Text style={[myBlogStyles.actionButtonText, { color: "#EF4444" }]}>
-                          Delete
-                        </Text>
-                      </Pressable>
+                        {/* Action Buttons */}
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          <Pressable
+                            onPress={() => handleUpdateBlog(item)}
+                            style={myBlogStyles.actionButtonVertical}
+                          >
+                            <Icon name="edit" size={18} color={isDark ? "#60A5FA" : "#084F8C"} />
+                          </Pressable>
+                          <Pressable
+                            onPress={() => handleDeleteBlog(item.id)}
+                            style={myBlogStyles.actionButtonVertical}
+                          >
+                            <DeleteConfirmModal
+                              visible={deleteModalVisible}
+                              onClose={() => setDeleteModalVisible(false)}
+                              onConfirm={confirmDelete}
+                              blogTitle={blogToDelete?.title}
+                            />
+                            <Icon name="delete-outline" size={18} color="#EF4444" />
+                          </Pressable>
+                        </View>
+                      </View>
+
+                      <Text style={[myBlogStyles.blogTitle, isDark && myBlogStyles.blogTitleDark]} numberOfLines={2}>
+                        {item.title}
+                      </Text>
+                      <Text style={[myBlogStyles.blogDesc, isDark && myBlogStyles.blogDescDark]} numberOfLines={2}>
+                        {item.summary || "No summary available"}
+                      </Text>
+
+                      {/* Meta Info */}
+                      <View style={[myBlogStyles.blogMeta, isDark && myBlogStyles.blogMetaDark]}>
+                        <View style={myBlogStyles.metaItem}>
+                          <Icon name="schedule" size={12} color={isDark ? "#94A3B8" : "#94A3B8"} />
+                          <Text style={[myBlogStyles.metaText, isDark && myBlogStyles.metaTextDark]}>
+                            {new Date(item.createdAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </Text>
+                        </View>
+                        {item.contents && item.contents.length > 0 && (
+                          <View style={myBlogStyles.metaItem}>
+                            <Icon name="article" size={12} color={isDark ? "#94A3B8" : "#94A3B8"} />
+                            <Text style={[myBlogStyles.metaText, isDark && myBlogStyles.metaTextDark]}>
+                              {item.contents.length}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   </View>
                 </Pressable>
@@ -353,6 +380,139 @@ export default function MyBlogScreen({ navigation }) {
           </ScrollView>
         </>
       )}
+
+      {/* AI Rejection Reason Modal */}
+      <Modal
+        visible={rejectionModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setRejectionModalVisible(false)}
+      >
+        <Pressable
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+          onPress={() => setRejectionModalVisible(false)}
+        >
+          <Pressable
+            style={[
+              myBlogStyles.emptyCard,
+              isDark && myBlogStyles.emptyCardDark,
+              { maxWidth: '95%', width: 550, maxHeight: '85%' }
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={[myBlogStyles.emptyTitle, { fontSize: 20, marginTop: 0 }]}>AI Rejection Details</Text>
+              <Pressable onPress={() => setRejectionModalVisible(false)}>
+                <Icon name="close" size={24} color={isDark ? "#F8FAFC" : "#0F172A"} />
+              </Pressable>
+            </View>
+
+            {/* Scrollable Content */}
+            <ScrollView
+              showsVerticalScrollIndicator={true}
+              style={{ maxHeight: 400 }}
+              contentContainerStyle={{ paddingBottom: 8 }}
+            >
+              {loadingModeration ? (
+                <ActivityIndicator size="large" color="#084F8C" />
+              ) : moderationInfo ? (
+                <View>
+                  {/* Safety Score */}
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={[myBlogStyles.emptySubtitle, { fontSize: 13, fontWeight: '600', marginBottom: 8 }]}>Safety Score</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ flex: 1, height: 8, backgroundColor: '#E2E8F0', borderRadius: 4, overflow: 'hidden' }}>
+                        <View style={{
+                          width: `${moderationInfo.safetyScore}%`,
+                          height: '100%',
+                          backgroundColor: moderationInfo.safetyScore >= 70 ? '#52c41a' : moderationInfo.safetyScore >= 40 ? '#faad14' : '#ff4d4f'
+                        }} />
+                      </View>
+                      <Text style={{ fontWeight: '700', fontSize: 16, color: moderationInfo.safetyScore >= 70 ? '#52c41a' : moderationInfo.safetyScore >= 40 ? '#faad14' : '#ff4d4f' }}>
+                        {moderationInfo.safetyScore}/100
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Rejection Reason */}
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={[myBlogStyles.emptySubtitle, { fontSize: 13, fontWeight: '600', marginBottom: 8 }]}>Violations Detected</Text>
+                    <View style={{
+                      padding: 14,
+                      backgroundColor: isDark ? '#450a0a' : '#FEE2E2',
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: isDark ? '#7f1d1d' : '#fca5a5',
+                    }}>
+                      {moderationInfo.reason.split('\\n').filter(line => !line.toLowerCase().includes('safety score')).map((line, index) => {
+                        const trimmedLine = line.trim();
+                        if (!trimmedLine) return null;
+
+                        if (trimmedLine.startsWith('- ')) {
+                          return (
+                            <View key={index} style={{ flexDirection: 'row', marginBottom: 6, alignItems: 'flex-start' }}>
+                              <Text style={{ color: '#DC2626', marginRight: 8, fontWeight: '700' }}>•</Text>
+                              <Text style={{ flex: 1, color: isDark ? '#fca5a5' : '#DC2626', fontSize: 13, lineHeight: 20 }}>
+                                {trimmedLine.substring(2)}
+                              </Text>
+                            </View>
+                          );
+                        }
+                        return (
+                          <Text key={index} style={{
+                            fontWeight: trimmedLine.includes('Violations detected') ? '700' : '400',
+                            color: isDark ? '#fca5a5' : '#DC2626',
+                            fontSize: 13,
+                            marginBottom: 6,
+                            lineHeight: 20
+                          }}>
+                            {trimmedLine}
+                          </Text>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  {/* Checked At */}
+                  <View style={{ marginBottom: 8 }}>
+                    <Text style={[myBlogStyles.emptySubtitle, { fontSize: 11, textAlign: 'center' }]}>
+                      Checked at: {new Date(moderationInfo.checkedAt).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <Text style={[myBlogStyles.emptySubtitle, { textAlign: 'center' }]}>No moderation information available</Text>
+              )}
+            </ScrollView>
+
+            {/* Close Button */}
+            <Pressable
+              onPress={() => setRejectionModalVisible(false)}
+              style={{
+                marginTop: 20,
+                backgroundColor: '#084F8C',
+                paddingVertical: 12,
+                borderRadius: 8,
+                alignItems: 'center'
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>Close</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

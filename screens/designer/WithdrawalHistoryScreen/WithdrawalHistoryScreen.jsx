@@ -6,6 +6,8 @@ import {
   FlatList,
   Modal,
   ActivityIndicator,
+  Image,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/MaterialIcons";
@@ -38,6 +40,8 @@ export default function WithdrawalHistoryScreen() {
   const [withdrawals, setWithdrawals] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedTx, setSelectedTx] = useState(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     fetchHistory(0);
@@ -291,6 +295,44 @@ export default function WithdrawalHistoryScreen() {
                     </Text>
                   </View>
 
+                  {selectedTx.status === "APPROVED" && selectedTx.billImage && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Bill Image</Text>
+                      <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                        <Pressable
+                          onPress={() => {
+                            setSelectedImage(selectedTx.billImage);
+                            setImageModalVisible(true);
+                          }}
+                        >
+                          <Image
+                            source={{ uri: selectedTx.billImage }}
+                            style={{
+                              width: 180,
+                              height: 120,
+                              borderRadius: 8,
+                              borderWidth: 1,
+                              borderColor: '#E5E7EB',
+                            }}
+                            resizeMode="cover"
+                          />
+                          <Text style={{ color: '#3B82F6', marginTop: 4, textAlign: 'center', fontSize: 11 }}>
+                            Tap to enlarge
+                          </Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  )}
+
+                  {selectedTx.status === "REJECTED" && selectedTx.rejectionReason && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Rejection Reason</Text>
+                      <Text style={[styles.detailValue, { color: '#DC2626', flex: 1, textAlign: 'right' }]}>
+                        {selectedTx.rejectionReason}
+                      </Text>
+                    </View>
+                  )}
+
                   {selectedTx.note && (
                     <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
                       <Text style={styles.detailLabel}>Note</Text>
@@ -308,6 +350,45 @@ export default function WithdrawalHistoryScreen() {
               <Text style={styles.closeBtnText}>Close</Text>
             </Pressable>
           </View>
+        </View>
+      </Modal>
+
+      {/* Full Screen Image Modal */}
+      <Modal visible={imageModalVisible} transparent animationType="fade">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.9)' }}>
+          <SafeAreaView style={{ flex: 1 }}>
+            <View style={{ flex: 1 }}>
+              {/* Close Button */}
+              <Pressable
+                onPress={() => setImageModalVisible(false)}
+                style={{
+                  position: 'absolute',
+                  top: 20,
+                  right: 20,
+                  zIndex: 10,
+                  backgroundColor: 'rgba(255,255,255,0.3)',
+                  borderRadius: 20,
+                  padding: 8,
+                }}
+              >
+                <Icon name="close" size={28} color="#FFFFFF" />
+              </Pressable>
+
+              {/* Image */}
+              {selectedImage && (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  <Image
+                    source={{ uri: selectedImage }}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                    }}
+                    resizeMode="contain"
+                  />
+                </View>
+              )}
+            </View>
+          </SafeAreaView>
         </View>
       </Modal>
     </SafeAreaView>

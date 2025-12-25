@@ -63,4 +63,7 @@ export const blogApiController = {
   getBlogWithStatusPending: async (pageNo, pageSize,status) => {
     return await privateApi.get(`/api/blogs?pageNo=${pageNo}&pageSize=${pageSize}&status=${status}`);
   },
+  getBLogwithModeration: async (id) => {
+    return await privateApi.get(`/api/blogs/${id}/moderation/history`);
+  },
 };
