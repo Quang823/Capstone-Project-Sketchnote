@@ -21,6 +21,7 @@ const ExportModal = ({
   hasActiveSubscription,
   projectId,
   pages: initialPages,
+  liveSnapshots = [], // Array of { pageNumber, base64 }
 }) => {
   const [selected, setSelected] = useState("noneditable");
   const [fileName, setFileName] = useState("Unnamed note");
@@ -95,6 +96,26 @@ const ExportModal = ({
     };
   }, [visible, projectId, initialPages]);
 
+  // 🔥 Merge live snapshots into pagePreviews
+  const mergedPages = useMemo(() => {
+    if (!Array.isArray(pagePreviews)) return [];
+    if (!Array.isArray(liveSnapshots) || liveSnapshots.length === 0)
+      return pagePreviews;
+
+    return pagePreviews.map((p) => {
+      const live = liveSnapshots.find((ls) => ls.pageNumber === p.pageNumber);
+      if (live && live.base64) {
+        return {
+          ...p,
+          snapshotUrl: `data:image/png;base64,${live.base64}`,
+        };
+      }
+      return p;
+    });
+  }, [pagePreviews, liveSnapshots]);
+
+  const currentPage = mergedPages[selectedPageIndex];
+
   const isPro = !!(hasPro || hasActiveSubscription);
 
   const [resolutionKey, setResolutionKey] = useState("medium");
@@ -156,10 +177,10 @@ const ExportModal = ({
           <View style={styles.bodyRow}>
             <View style={styles.leftPane}>
               <View style={styles.pageThumbnail}>
-                {pagePreviews[selectedPageIndex]?.snapshotUrl ? (
+                {currentPage?.snapshotUrl ? (
                   <Image
                     source={{
-                      uri: pagePreviews[selectedPageIndex].snapshotUrl,
+                      uri: currentPage.snapshotUrl,
                     }}
                     style={styles.thumbnailImage}
                   />
@@ -168,7 +189,7 @@ const ExportModal = ({
                 )}
               </View>
               <View style={styles.thumbRow}>
-                {pagePreviews.slice(0, 5).map((p, idx) => (
+                {mergedPages.slice(0, 5).map((p, idx) => (
                   <Pressable
                     key={`${p.pageNumber}-${idx}`}
                     onPress={() => setSelectedPageIndex(idx)}

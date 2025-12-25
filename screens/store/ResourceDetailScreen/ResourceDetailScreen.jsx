@@ -520,18 +520,6 @@ export default function ResourceDetailScreen() {
                 </View>
 
                 <View style={styles.infoGrid}>
-                  {/* Expired Time */}
-                  <View style={[styles.infoItem, isDark && styles.infoItemDark]}>
-                    <Icon name="event-busy" size={18} color="#F59E0B" />
-                    <View style={styles.infoTextContainer}>
-                      <Text style={[styles.infoLabel, isDark && styles.infoLabelDark]}>Expired Time</Text>
-                      <Text style={[styles.infoValue, isDark && styles.infoValueDark]}>
-                        {new Date(resource.expiredTime).toLocaleDateString(
-                          "vi-VN"
-                        )}
-                      </Text>
-                    </View>
-                  </View>
 
                   {/* Release Date */}
                   <View style={[styles.infoItem, isDark && styles.infoItemDark]}>
@@ -572,7 +560,7 @@ export default function ResourceDetailScreen() {
                 {owned && purchasedResourceData && purchasedResourceData.hasNewerVersion && purchasedResourceData.latestVersionNumber && (
                   <View style={[styles.sectionInner, styles.sectionInnerLast, isDark && styles.sectionInnerDark]}>
                     {/* New Version Available */}
-                    <View style={{ backgroundColor: "#FEF3C7", borderRadius: 12, padding: 16 }}>
+                    <View style={{ backgroundColor: "#FEF3C7", borderRadius: 12, padding: 16, marginTop: 16 }}>
                       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
                         <Icon name="new-releases" size={22} color="#F59E0B" />
                         <Text style={{ fontSize: 15, fontWeight: "700", color: "#B45309", marginLeft: 8, flex: 1 }}>
