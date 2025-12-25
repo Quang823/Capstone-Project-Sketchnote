@@ -560,7 +560,7 @@ export default function DesignerHomeScreen() {
                 onRequestClose={() => setSubscriptionModalVisible(false)}
             >
                 <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" }}>
-                    <View style={{ width: "80%", backgroundColor: isDark ? "#1E293B" : "white", borderRadius: 20, padding: 20, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}>
+                    <View style={{ width: "40%", backgroundColor: isDark ? "#1E293B" : "white", borderRadius: 20, padding: 20, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}>
                         <Icon name="workspace-premium" size={50} color="#F59E0B" style={{ marginBottom: 15 }} />
                         <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10, textAlign: "center", color: isDark ? "white" : "black" }}>
                             Subscription Required

@@ -38,11 +38,27 @@ export default function SubscriptionPlansScreen() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [upgradeCheckData, setUpgradeCheckData] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorMessage, setErrorMessage] = useState({ title: "", message: "" });
+  const [errorMessage, setErrorMessage] = useState("");
   const [isInsufficientFunds, setIsInsufficientFunds] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const errorScaleAnim = useRef(new Animated.Value(0.85)).current;
+  const successScaleAnim = useRef(new Animated.Value(0.85)).current;
+
+  useEffect(() => {
+    if (showSuccessModal) {
+      Animated.spring(successScaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        friction: 6,
+        tension: 50,
+      }).start();
+    } else {
+      successScaleAnim.setValue(0.85);
+    }
+  }, [showSuccessModal]);
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -114,26 +130,57 @@ export default function SubscriptionPlansScreen() {
     if (buyingPlanId) return;
     setBuyingPlanId(plan.planId);
     try {
-      const res = await subscriptionService.createUserSubscription({
+      await subscriptionService.createUserSubscription({
         planId: plan.planId,
         autoRenew: false,
         confirmUpgrade: true,
       });
 
-      Toast.show({
-        type: "success",
-        text1: "Subscription Successful 🎉",
-        text2: "You have been upgraded to Designer. Please log in again.",
-        position: "top",
-        visibilityTime: 2500,
-        onHide: async () => {
+      // Check plan type
+      // Check both type and planType properties just in case
+      const rawType = plan.type || plan.planType || "";
+      const pType = rawType.toUpperCase();
+
+      // Prioritize checking for DESIGNER first
+      // If it contains DESIGNER, it's a designer plan -> Modal + Logout
+      if (pType.includes("DESIGNER")) {
+        setSuccessMessage(`You have been upgraded to ${plan.planName}. Please log in again.`);
+        setShowSuccessModal(true);
+
+        // Delay 3 seconds then logout
+        setTimeout(async () => {
+          setShowSuccessModal(false);
           await logout();
           navigation.reset({
             index: 0,
             routes: [{ name: "Login" }],
           });
-        },
-      });
+        }, 3000);
+      }
+      // Otherwise if it contains CUSTOMER -> Refresh
+      else if (pType.includes("CUSTOMER")) {
+        Toast.show({
+          type: "success",
+          text1: "Subscription Successful 🎉",
+          text2: `You have subscribed to ${plan.planName}`,
+          position: "top",
+          visibilityTime: 2500,
+        });
+        await loadUserSubscriptions();
+      }
+      // Fallback for other types (default to Refresh or Logout? Let's default to Refresh for safety, or Modal if it's a major upgrade)
+      // For now, let's assume if it's not DESIGNER, it's likely a normal plan -> Refresh
+      else {
+        Toast.show({
+          type: "success",
+          text1: "Subscription Successful 🎉",
+          text2: `You have subscribed to ${plan.planName}`,
+          position: "top",
+          visibilityTime: 2500,
+        });
+        await loadUserSubscriptions();
+      }
+
     } catch (e) {
       const msg = e.message || "";
       setErrorMessage({ title: "Purchase failed", message: msg });
@@ -207,12 +254,11 @@ export default function SubscriptionPlansScreen() {
         {/* Features */}
         <View style={styles.featuresGrid}>
           {[
-            { icon: "auto-awesome", text: "AI Smart Charts" },
+            { icon: "auto-awesome", text: "AI Image Generator" },
             { icon: "4k", text: "8K Export Quality" },
-            { icon: "cloud-upload", text: "500GB Cloud" },
             { icon: "groups", text: "Team Collaboration" },
             { icon: "support-agent", text: "24/7 Support" },
-            { icon: "library-books", text: "10,000+ Templates" },
+            { icon: "library-books", text: "Beautiful Templates" },
           ].map((f, i) => (
             <View key={i} style={styles.featureBox}>
               <LinearGradient
@@ -233,6 +279,13 @@ export default function SubscriptionPlansScreen() {
             Start free. Scale when you're ready.
           </Text>
 
+          {/* Warning Note */}
+          <View style={{ paddingHorizontal: 20, marginTop: 10, marginBottom: 5 }}>
+            <Text style={{ fontSize: 13, color: isDark ? "#94A3B8" : "#64748B", textAlign: "center", fontStyle: "italic" }}>
+              Note: Purchasing or renewing a plan will increase your allowed project creation limit.
+            </Text>
+          </View>
+
           {loading ? (
             <ActivityIndicator
               size="large"
@@ -252,15 +305,23 @@ export default function SubscriptionPlansScreen() {
             >
               <View style={styles.plansGridCompact}>
                 {plans.map((plan) => {
-                  const isPopular = plan.planId === popularPlanId;
                   const isActivePlan =
                     hasActiveSubscription && plan.planId === activePlanId;
+
+                  // Find the active plan object to compare prices
+                  const activePlan = plans.find((p) => p.planId === activePlanId);
+
+                  // Calculate isBuy: 
+                  // If no active subscription, all are buyable (default logic or true)
+                  // If active subscription, only plans with higher price are buyable
+                  let isBuy = true;
+                  if (hasActiveSubscription && activePlan) {
+                    isBuy = plan.price > activePlan.price;
+                  }
 
                   let gradientColors = [styles.planCardGradientStart, styles.planCardGradientEnd];
                   if (isActivePlan) {
                     gradientColors = [styles.planCardActiveGradientStart, styles.planCardActiveGradientEnd];
-                  } else if (isPopular) {
-                    gradientColors = [styles.planCardPopularGradientStart, styles.planCardPopularGradientEnd];
                   }
 
                   return (
@@ -275,20 +336,9 @@ export default function SubscriptionPlansScreen() {
                           styles.planCardCompact,
                           isActivePlan
                             ? styles.planCardActiveCompact
-                            : isPopular
-                              ? styles.planCardPopularCompact
-                              : styles.planCardInactiveCompact,
+                            : styles.planCardInactiveCompact,
                         ]}
                       >
-                        {/* Badge Popular */}
-                        {isPopular && (
-                          <View style={styles.popularBadgeCompact}>
-                            <Text style={styles.popularTextCompact}>
-                              MOST POPULAR
-                            </Text>
-                          </View>
-                        )}
-
                         {isActivePlan && (
                           <View style={styles.activeBadgeCompact}>
                             <Text style={styles.activeTextCompact}>
@@ -300,7 +350,7 @@ export default function SubscriptionPlansScreen() {
                         <Text
                           style={[
                             styles.planNameCompact,
-                            (isActivePlan || isPopular) && { color: "#FFF" },
+                            isActivePlan && { color: "#FFF" },
                           ]}
                         >
                           {plan.planName}
@@ -309,17 +359,18 @@ export default function SubscriptionPlansScreen() {
                         <Text
                           style={[
                             styles.planDescCompact,
-                            (isActivePlan || isPopular) && { color: "#E0F2FE" },
+                            isActivePlan && { color: "#E0F2FE" },
                           ]}
                         >
                           {plan.description}
+                          {plan.numberOfProjects && `\n• ${plan.numberOfProjects} Projects allowed`}
                         </Text>
 
                         <View style={styles.priceBoxCompact}>
                           <Text
                             style={[
                               styles.priceCompact,
-                              (isActivePlan || isPopular) && { color: "#FFF" },
+                              isActivePlan && { color: "#FFF" },
                             ]}
                           >
                             {plan.price === 0
@@ -330,7 +381,7 @@ export default function SubscriptionPlansScreen() {
                             <Text
                               style={[
                                 styles.periodCompact,
-                                (isActivePlan || isPopular) && {
+                                isActivePlan && {
                                   color: "#BAE6FD",
                                 },
                               ]}
@@ -343,20 +394,20 @@ export default function SubscriptionPlansScreen() {
                         <TouchableOpacity
                           style={[
                             styles.chooseBtnCompact,
-                            isPopular
-                              ? styles.chooseBtnPopularCompact
-                              : styles.chooseBtnNormalCompact,
+                            styles.chooseBtnNormalCompact,
+                            !isBuy && styles.chooseBtnDisabledCompact
                           ]}
-                          disabled={!!buyingPlanId}
+                          disabled={!!buyingPlanId || !isBuy}
                           onPress={() => handleChoosePlan(plan)}
                         >
                           <Text
                             style={[
                               styles.chooseBtnTextCompact,
-                              { color: isPopular ? "#136bb8ff" : styles.chooseBtnText },
+                              { color: styles.chooseBtnText },
+                              !isBuy && { color: "#9CA3AF" }
                             ]}
                           >
-                            {isActivePlan ? "Manage Plan" : "Choose Plan"}
+                            {isActivePlan ? "Current Plan" : isBuy ? "Choose Plan" : "Unavailable"}
                           </Text>
                         </TouchableOpacity>
 
@@ -366,12 +417,11 @@ export default function SubscriptionPlansScreen() {
                               <Icon
                                 name="check"
                                 size={14}
-                                color={isPopular ? "#BAE6FD" : "#136bb8ff"}
+                                color="#136bb8ff"
                               />
                               <Text
                                 style={[
                                   styles.featureItemCompact,
-                                  isPopular && { color: "#E0F2FE" },
                                 ]}
                               >
                                 {feat}
@@ -395,9 +445,9 @@ export default function SubscriptionPlansScreen() {
         >
           <Icon name="verified" size={48} color="#FFFFFF" />
           <Text style={styles.trustTitle}>100% Safe & Secure</Text>
-          <Text style={styles.trustText}>
+          {/* <Text style={styles.trustText}>
             7-day free trial • Cancel anytime • Full refund in 14 days
-          </Text>
+          </Text> */}
         </LinearGradient>
       </ScrollView>
 
@@ -489,6 +539,32 @@ export default function SubscriptionPlansScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={showSuccessModal}
+        onRequestClose={() => { }} // Disable closing by tapping outside/back
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View
+            style={[styles.modalContent, { transform: [{ scale: successScaleAnim }] }]}
+          >
+            <View style={[styles.errorIconContainer, { backgroundColor: "#DEF7EC" }]}>
+              <Icon name="check-circle" size={56} color="#059669" />
+            </View>
+
+            <Text style={[styles.errorTitle, { color: "#059669" }]}>Success!</Text>
+
+            <Text style={styles.errorText}>{successMessage}</Text>
+
+            <Text style={[styles.errorText, { fontSize: 13, color: "#6B7280", marginTop: 8 }]}>
+              Logging out in a few seconds...
+            </Text>
           </Animated.View>
         </View>
       </Modal>

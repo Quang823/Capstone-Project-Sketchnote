@@ -1784,6 +1784,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         onOpenOverview={() => setOverviewVisible(true)}
         onResourceSelect={handleResourceSelect}
         isViewOnly={isViewOnly}
+        paperSize={noteConfig?.paperSize}
       />
       <DocumentOverviewModal
         visible={overviewVisible}
@@ -1796,6 +1797,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
         onAddPage={addPage}
         onResourceSelect={handleResourceSelect}
         isViewOnly={isViewOnly}
+        paperSize={noteConfig?.paperSize}
       />
 
       <Modal
@@ -1814,7 +1816,7 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
                 </View>
                 <View>
                   <Text style={styles.title}>Apply Template</Text>
-                  {templateConfirm?.name && (
+                  {!!templateConfirm?.name && (
                     <Text style={styles.templateName} numberOfLines={1}>
                       {templateConfirm.name}
                     </Text>
@@ -1829,37 +1831,38 @@ const MultiPageCanvas = forwardRef(function MultiPageCanvas(
             {/* ===== SECTION: Apply Mode ===== */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Apply Mode</Text>
-              <View style={styles.optionRow}>                <TouchableOpacity
-                style={[
-                  styles.option,
-                  applyMode === "append" && styles.optionActive,
-                ]}
-                onPress={() => {
-                  setApplyMode("append");
-                }}
-              >
-                <Icon
-                  name="playlist-add"
-                  size={22}
-                  color={applyMode === "append" ? "#2563EB" : "#64748B"}
-                />
-                <View style={styles.optionText}>
-                  <Text
-                    style={[
-                      styles.optionLabel,
-                      applyMode === "append" && styles.activeText,
-                    ]}
-                  >
-                    Append
-                  </Text>
-                  <Text style={styles.optionDesc}>
-                    Keep current content, add template to the end
-                  </Text>
-                </View>
-                {applyMode === "append" && (
-                  <Icon name="check" size={24} color="#2563EB" />
-                )}
-              </TouchableOpacity>
+              <View style={styles.optionRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.option,
+                    applyMode === "append" && styles.optionActive,
+                  ]}
+                  onPress={() => {
+                    setApplyMode("append");
+                  }}
+                >
+                  <Icon
+                    name="playlist-add"
+                    size={22}
+                    color={applyMode === "append" ? "#2563EB" : "#64748B"}
+                  />
+                  <View style={styles.optionText}>
+                    <Text
+                      style={[
+                        styles.optionLabel,
+                        applyMode === "append" && styles.activeText,
+                      ]}
+                    >
+                      Append
+                    </Text>
+                    <Text style={styles.optionDesc}>
+                      Keep current content, add template to the end
+                    </Text>
+                  </View>
+                  {applyMode === "append" && (
+                    <Icon name="check" size={24} color="#2563EB" />
+                  )}
+                </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[
