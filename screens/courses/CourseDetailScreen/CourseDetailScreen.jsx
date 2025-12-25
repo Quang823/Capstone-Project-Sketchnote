@@ -406,19 +406,7 @@ export default function CourseDetailScreen() {
                     About this course
                   </Text>
 
-                  <View style={styles.instructorRow}>
-                    <View style={styles.instructorAvatar}>
-                      <Text style={styles.instructorInitial}>I</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.instructorName}>
-                        {course.instructor}
-                      </Text>
-                      <Text style={styles.instructorRole}>
-                        Course Instructor
-                      </Text>
-                    </View>
-                  </View>
+
 
                   <View style={styles.descriptionText}>
                     <Text style={styles.descriptionContent}>

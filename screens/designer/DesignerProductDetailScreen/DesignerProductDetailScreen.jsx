@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
     View,
     Text,
@@ -8,8 +8,9 @@ import {
     Dimensions,
     Modal,
     StyleSheet,
+    ActivityIndicator,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute, useFocusEffect } from "@react-navigation/native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 import { LinearGradient } from "expo-linear-gradient";
 import Toast from "react-native-toast-message";
@@ -21,10 +22,40 @@ import NotificationButton from "../../../components/common/NotificationButton";
 export default function DesignerProductDetailScreen() {
     const navigation = useNavigation();
     const route = useRoute();
-    const { product } = route.params || {};
+    const { product: initialProduct } = route.params || {};
     const { theme } = useTheme();
     const isDark = theme === "dark";
     const styles = useMemo(() => getStyles(theme), [theme]);
+
+    // State to hold product data (refreshable)
+    const [product, setProduct] = useState(initialProduct);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Refresh product data when screen focuses (e.g., returning from CreateVersionScreen)
+    useFocusEffect(
+        useCallback(() => {
+            const refreshProductData = async () => {
+                if (!initialProduct?.resourceTemplateId) return;
+
+                try {
+                    setIsRefreshing(true);
+                    const freshProduct = await resourceService.getProductDetail(
+                        initialProduct.resourceTemplateId
+                    );
+                    if (freshProduct) {
+                        setProduct(freshProduct);
+                    }
+                } catch (error) {
+                    console.warn("Error refreshing product data:", error);
+                    // Keep showing existing data if refresh fails
+                } finally {
+                    setIsRefreshing(false);
+                }
+            };
+
+            refreshProductData();
+        }, [initialProduct?.resourceTemplateId])
+    );
 
     // Local state for modals
     const [showPublishModal, setShowPublishModal] = useState(false);
