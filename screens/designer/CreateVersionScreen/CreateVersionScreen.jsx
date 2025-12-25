@@ -247,6 +247,7 @@ export default function CreateVersionScreen() {
         isUpdateMode ? "Update version error:" : "Create version error:",
         err
       );
+      console.log(err);
       Toast.show({
         type: "error",
         text1: isUpdateMode ? "Update Failed" : "Create Failed",
